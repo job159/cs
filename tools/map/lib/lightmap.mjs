@@ -42,14 +42,20 @@ export const LIGHTMAP_DEFAULTS = {
   maxAtlases: 0,          // > 0: scale the resolution down until everything fits in this many atlases
   chartAngle: 40,         // degrees: max deviation from the seed normal inside one chart
   samples: 64,            // sky / bounce rays per texel (pass B); pass A uses `directSamples`
-  directSamples: 0,       // 0 = max(16, samples / 2)
-  sunSamples: 16,
+  directSamples: 0,       // pass-A sky rays (bounce source + inside-geometry test); 0 = clamp(samples / 4, 8, 32)
+  sunSamples: 16,         // adaptive: 4 when the texel is uniformly lit / shadowed
   lightSamples: 8,
   bounces: 1,
   denoise: true,
+  denoiseIterations: 3,
+  denoiseSigma: 4,        // luminance edge stop in standard deviations of the per-texel noise
+  stitch: true,           // pull both sides of smooth seams (curved surfaces, split planes) together
+  stitchIterations: 8,
   mode: 'indirect+mask',  // or 'full'
-  range: 0,               // RGBM range; 0 = 8 (indirect) / 16 (full)
-  threads: 0,             // 0 = all cores
+  range: 'auto',          // RGBM range (power of two 4..64 holding 99.9 % of the texels) or a number
+  workers: 0,             // worker threads; 0 = min(6, cores - 1). `threads` is accepted as an alias
+  threads: 0,
+  leafSize: 4,            // BVH leaf size
   eps: 0.002,             // ray origin offset along the geometric normal (m)
   far: 5000,
   jitter: true,           // sun samples spread over the texel footprint (anti-aliased shadow edges)
@@ -697,21 +703,24 @@ export async function bakeLightmaps(input, options = {}) {
   const bvhTris = [];
   for (let t = 0; t < nAll; t++) if (inBVH[t]) bvhTris.push(t);
   const nB = bvhTris.length;
-  const bpos = new Float32Array(nB * 9);
+  let bpos = new Float32Array(Math.max(1, nB) * 9);
   for (let k = 0; k < nB; k++) bpos.set(P.subarray(bvhTris[k] * 9, bvhTris[k] * 9 + 9), k * 9);
-  const bgeo = new THREE.BufferGeometry();
+  if (!nB) bpos.set([0, -1e6, 0, 1e-3, -1e6, 0, 0, -1e6, 1e-3]); // nothing casts shadows: one far-away dummy triangle
+  let bgeo = new THREE.BufferGeometry();
   bgeo.setAttribute('position', new THREE.BufferAttribute(bpos, 3));
-  const bidx = new Uint32Array(nB * 3);
-  for (let i = 0; i < nB * 3; i++) bidx[i] = i;
+  const bidx = new Uint32Array(Math.max(1, nB) * 3);
+  for (let i = 0; i < bidx.length; i++) bidx[i] = i;
   bgeo.setIndex(new THREE.BufferAttribute(bidx, 1));
-  const bvh = new MeshBVH(bgeo, { strategy: SAH, maxLeafSize: 4, setBoundingBox: false });
+  const bvh = new MeshBVH(bgeo, { strategy: SAH, targetLeafSize: o.leafSize, setBoundingBox: false, verbose: false });
   const root = bvh._roots[0];
   // receivers excluded from the BVH still need triangle data for their texels: append them
-  const nExtra = nRecvTris - bvhTris.filter((t) => t < nRecvTris).length;
-  const nT = nB + nExtra;
+  const nBT = Math.max(1, nB);
+  let nExtra = 0;
+  for (let t = 0; t < nRecvTris; t++) if (!inBVH[t]) nExtra++;
+  const nT = nBT + nExtra;
   const sab = (n, Type) => new Type(new SharedArrayBuffer(Math.max(1, n) * Type.BYTES_PER_ELEMENT));
   const TRI = sab(nT * 9, Float32Array), TN = sab(nT * 9, Float32Array), TUVB = sab(nT * 6, Float32Array);
-  const TMAT = sab(nT, Int32Array), TATL = sab(nT, Int32Array);
+  const TMAT = sab(nT, Int32Array), TATL = sab(nT, Int32Array).fill(-1);
   const g2b = new Int32Array(nAll).fill(-1);
   const ix = bgeo.index.array;
   const putTri = (k, t) => {
@@ -724,206 +733,227 @@ export async function bakeLightmaps(input, options = {}) {
     if (t < nRecvTris && triChart[t] >= 0) { TATL[k] = allCharts[triChart[t]].atlas; TUVB.set(TUV.subarray(t * 6, t * 6 + 6), k * 6); }
     else TATL[k] = -1;
   };
-  for (let k = 0; k < nB; k++) putTri(k, bvhTris[ix[k * 3] / 3]);
-  let ke = nB;
+  if (nB) for (let k = 0; k < nB; k++) putTri(k, bvhTris[ix[k * 3] / 3]);
+  else { TRI.set([0, -1e6, 0, 1e-3, 0, 0, 0, 0, 1e-3]); TN.set([0, 1, 0, 0, 1, 0, 0, 1, 0]); }
+  let ke = nBT;
   for (let t = 0; t < nRecvTris; t++) if (!inBVH[t]) putTri(ke++, t);
   const nodes = new SharedArrayBuffer(root.byteLength);
   new Uint8Array(nodes).set(new Uint8Array(root));
+  bpos = null; bgeo = null;
   log(`BVH: ${nB} triangles, ${(root.byteLength / 32) | 0} nodes`);
   stage('bvh');
 
-  // ---- texels: conservative rasterisation of every chart triangle
-  const R = 1.0;            // ring radius (px) traced outside the chart
+  // ---- texels: conservative rasterisation of every chart triangle, one atlas at a time
+  const R = 1.0;            // ring radius (px) traced outside the chart triangles
   const insetPx = Math.max(0.02, 0.004 * o.resolution * densScale);
-  const atl = atlases.map((A) => ({ w: A.w, h: A.h, owner: new Int32Array(A.w * A.h).fill(-1), dist: new Float32Array(A.w * A.h).fill(1e9), bary: new Float32Array(A.w * A.h * 2), rect: new Int32Array(A.w * A.h).fill(-1) }));
-  for (const ch of allCharts) {
-    const a = atl[ch.atlas];
-    for (let y = ch.y; y < ch.y + ch.h; y++) a.rect.fill(ch.id, y * a.w + ch.x, y * a.w + ch.x + ch.w);
-    for (const t of ch.tris) {
-      const ax = TUV[t * 6], ay = TUV[t * 6 + 1], bx = TUV[t * 6 + 2], by = TUV[t * 6 + 3], cx = TUV[t * 6 + 4], cy = TUV[t * 6 + 5];
-      const A2 = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
-      if (Math.abs(A2) < 1e-10) continue;
-      const x0 = Math.max(ch.x, Math.floor(Math.min(ax, bx, cx) - R)), x1 = Math.min(ch.x + ch.w - 1, Math.ceil(Math.max(ax, bx, cx) + R));
-      const y0 = Math.max(ch.y, Math.floor(Math.min(ay, by, cy) - R)), y1 = Math.min(ch.y + ch.h - 1, Math.ceil(Math.max(ay, by, cy) + R));
-      const gx = (ax + bx + cx) / 3, gy = (ay + by + cy) / 3;
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-        const qx = x + 0.5, qy = y + 0.5;
-        let u = ((qx - ax) * (cy - ay) - (cx - ax) * (qy - ay)) / A2;
-        let v = ((bx - ax) * (qy - ay) - (qx - ax) * (by - ay)) / A2;
-        let d = 0;
-        if (u < 0 || v < 0 || u + v > 1) {
-          // closest point on the triangle
-          let best = Infinity, bu = 0, bv = 0;
-          const seg = (x1_, y1_, x2_, y2_, u1, v1, u2, v2) => {
-            const ex = x2_ - x1_, ey = y2_ - y1_;
-            let s = ((qx - x1_) * ex + (qy - y1_) * ey) / (ex * ex + ey * ey || 1);
-            s = s < 0 ? 0 : s > 1 ? 1 : s;
-            const dx = x1_ + ex * s - qx, dy = y1_ + ey * s - qy, dd = dx * dx + dy * dy;
-            if (dd < best) { best = dd; bu = u1 + (u2 - u1) * s; bv = v1 + (v2 - v1) * s; }
-          };
-          seg(ax, ay, bx, by, 0, 0, 1, 0); seg(bx, by, cx, cy, 1, 0, 0, 1); seg(cx, cy, ax, ay, 0, 1, 0, 0);
-          d = Math.sqrt(best);
-          if (d > R) continue;
-          // inset towards the centroid so rays never start exactly on a neighbouring surface
-          const px2 = ax + (bx - ax) * bu + (cx - ax) * bv, py2 = ay + (by - ay) * bu + (cy - ay) * bv;
-          const gd = Math.hypot(gx - px2, gy - py2);
-          const s = gd > 0 ? Math.min(1, insetPx / gd) : 0;
-          u = bu + (1 / 3 - bu) * s; v = bv + (1 / 3 - bv) * s;
-          d += 1e-3;
+  const atlasCharts = atlases.map(() => []);
+  for (const ch of allCharts) atlasCharts[ch.atlas].push(ch);
+  const texLists = [];
+  let nTex = 0;
+  for (let ai = 0; ai < atlases.length; ai++) {
+    const A = atlases[ai], W = A.w;
+    const owner = new Int32Array(A.w * A.h).fill(-1), dist = new Float32Array(A.w * A.h).fill(1e9), bary = new Float32Array(A.w * A.h * 2);
+    for (const ch of atlasCharts[ai]) {
+      for (const t of ch.tris) {
+        const ax = TUV[t * 6], ay = TUV[t * 6 + 1], bx = TUV[t * 6 + 2], by = TUV[t * 6 + 3], cx = TUV[t * 6 + 4], cy = TUV[t * 6 + 5];
+        const A2 = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+        if (Math.abs(A2) < 1e-10) continue;
+        const x0 = Math.max(ch.x, Math.floor(Math.min(ax, bx, cx) - R)), x1 = Math.min(ch.x + ch.w - 1, Math.ceil(Math.max(ax, bx, cx) + R));
+        const y0 = Math.max(ch.y, Math.floor(Math.min(ay, by, cy) - R)), y1 = Math.min(ch.y + ch.h - 1, Math.ceil(Math.max(ay, by, cy) + R));
+        const gx = (ax + bx + cx) / 3, gy = (ay + by + cy) / 3;
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+          const qx = x + 0.5, qy = y + 0.5;
+          let u = ((qx - ax) * (cy - ay) - (cx - ax) * (qy - ay)) / A2;
+          let v = ((bx - ax) * (qy - ay) - (qx - ax) * (by - ay)) / A2;
+          let d = 0;
+          if (u < 0 || v < 0 || u + v > 1) {
+            // closest point on the triangle
+            let best = Infinity, bu = 0, bv = 0;
+            const seg = (x1_, y1_, x2_, y2_, u1, v1, u2, v2) => {
+              const ex = x2_ - x1_, ey = y2_ - y1_;
+              let s = ((qx - x1_) * ex + (qy - y1_) * ey) / (ex * ex + ey * ey || 1);
+              s = s < 0 ? 0 : s > 1 ? 1 : s;
+              const dx = x1_ + ex * s - qx, dy = y1_ + ey * s - qy, dd = dx * dx + dy * dy;
+              if (dd < best) { best = dd; bu = u1 + (u2 - u1) * s; bv = v1 + (v2 - v1) * s; }
+            };
+            seg(ax, ay, bx, by, 0, 0, 1, 0); seg(bx, by, cx, cy, 1, 0, 0, 1); seg(cx, cy, ax, ay, 0, 1, 0, 0);
+            d = Math.sqrt(best);
+            if (d > R) continue;
+            // inset towards the centroid so rays never start exactly on a neighbouring surface
+            const px2 = ax + (bx - ax) * bu + (cx - ax) * bv, py2 = ay + (by - ay) * bu + (cy - ay) * bv;
+            const gd = Math.hypot(gx - px2, gy - py2);
+            const s = gd > 0 ? Math.min(1, insetPx / gd) : 0;
+            u = bu + (1 / 3 - bu) * s; v = bv + (1 / 3 - bv) * s;
+            d += 1e-3;
+          }
+          const k = y * W + x;
+          if (d < dist[k]) { dist[k] = d; owner[k] = t; bary[k * 2] = u; bary[k * 2 + 1] = v; }
         }
-        const k = y * a.w + x;
-        if (d < a.dist[k]) { a.dist[k] = d; a.owner[k] = t; a.bary[k * 2] = u; a.bary[k * 2 + 1] = v; }
       }
     }
-  }
-  let nTex = 0;
-  for (const a of atl) for (let k = 0; k < a.owner.length; k++) if (a.owner[k] >= 0) nTex++;
-  const texTri = sab(nTex, Int32Array), texBary = sab(nTex * 2, Float32Array);
-  const texAtl = new Uint16Array(nTex), texPix = new Int32Array(nTex);
-  {
+    let cnt = 0;
+    for (let k = 0; k < owner.length; k++) if (owner[k] >= 0) cnt++;
+    const lt = new Int32Array(cnt), lb = new Float32Array(cnt * 2), lp = new Int32Array(cnt);
     let i = 0;
-    atl.forEach((a, ai) => {
-      a.tex = new Int32Array(a.w * a.h).fill(-1);
-      for (let k = 0; k < a.owner.length; k++) {
-        if (a.owner[k] < 0) continue;
-        texTri[i] = g2b[a.owner[k]]; texBary[i * 2] = a.bary[k * 2]; texBary[i * 2 + 1] = a.bary[k * 2 + 1];
-        texAtl[i] = ai; texPix[i] = k; a.tex[k] = i;
-        i++;
-      }
-      a.owner = a.dist = a.bary = null;
-    });
+    for (let k = 0; k < owner.length; k++) {
+      if (owner[k] < 0) continue;
+      lt[i] = g2b[owner[k]]; lb[i * 2] = bary[k * 2]; lb[i * 2 + 1] = bary[k * 2 + 1]; lp[i] = k; i++;
+    }
+    A.t0 = nTex; A.t1 = nTex + cnt; nTex += cnt;
+    texLists.push([lt, lb, lp]);
   }
+  const texTri = sab(nTex, Int32Array), texBary = sab(nTex * 2, Float32Array), texPix = new Int32Array(nTex);
+  atlases.forEach((A, ai) => { const [lt, lb, lp] = texLists[ai]; texTri.set(lt, A.t0); texBary.set(lb, A.t0 * 2); texPix.set(lp, A.t0); });
+  texLists.length = 0;
   log(`${nTex} texels to trace`);
   stage('raster');
 
   // ---- shared buffers + workers
-  const S1 = o.directSamples || Math.max(16, Math.ceil(o.samples / 2));
+  const S1 = o.directSamples || Math.max(8, Math.min(32, Math.ceil(o.samples / 4)));
   const S2 = o.samples;
   const shared = {
     nodes, tri: TRI.buffer, triN: TN.buffer, triUV: TUVB.buffer, triMat: TMAT.buffer, triAtlas: TATL.buffer,
     mats: toShared(mats.pack()), texTri: texTri.buffer, texBary: texBary.buffer,
-    outDirect: sab(nTex * 4, Float32Array).buffer, outSky1: sab(nTex * 3, Float32Array).buffer, outLights: sab(nTex * 3, Float32Array).buffer,
-    outBack: sab(nTex, Float32Array).buffer, outSky2: sab(nTex * 3, Float32Array).buffer, outBounce: sab(nTex * 3, Float32Array).buffer,
+    outVis: sab(nTex, Float32Array).buffer, outSky1: sab(nTex * 3, Float32Array).buffer, outLights: sab(nTex * 3, Float32Array).buffer,
+    outBack: sab(nTex, Uint8Array).buffer, outInd: sab(nTex * 3, Float32Array).buffer,
     outVar: sab(nTex, Float32Array).buffer, valid: sab(nTex, Uint8Array).buffer,
     sky: toShared(sky.data), skyW: sky.w, skyH: sky.h, irr: toShared(sky.irr), irrW: sky.irrW, irrH: sky.irrH,
     lights: toShared(L),
     params: {
       sunDir, sunColor: sunColor.map((c) => c * sunIntensity), sunCos: Math.cos(sunAngle), sunSamples: o.sunSamples,
-      skySamples1: S1, skySamples2: S2, eps: o.eps, far: o.far, jitter: !!o.jitter, lightSamples: o.lightSamples,
+      skySamples1: S1, skySamples2: S2, eps: o.eps, far: o.far, jitter: !!o.jitter, lightSamples: o.lightSamples, nLights: lights.length,
     },
   };
   K.init(shared);
   const nThreads = Math.max(1, Math.min(o.workers || o.threads || Math.min(6, os.availableParallelism() - 1), 64));
   const pool = nThreads > 1 && nTex > 4096 ? await makePool(nThreads, shared) : null;
+  let totalRays = 0;
   const run = async (kernel, label, arg = 0) => {
     const t = performance.now();
-    if (pool) await pool.run(kernel, nTex, arg, (f) => log(`  ${label} ${(f * 100).toFixed(0)} %`));
+    let rays = 0;
+    if (pool) rays = await pool.run(kernel, nTex, arg, (f) => log(`  ${label} ${(f * 100).toFixed(0)} %`));
     else {
       const CH = 4096;
       let last = performance.now();
+      K.takeRayCount();
       for (let s = 0; s < nTex; s += CH) {
         K.kernels[kernel](s, Math.min(nTex, s + CH), arg);
         if (performance.now() - last > 5000) { last = performance.now(); log(`  ${label} ${(s / nTex * 100).toFixed(0)} %`); }
       }
+      rays = K.takeRayCount();
     }
-    log(`${label}: ${((performance.now() - t) / 1000).toFixed(1)} s`);
+    totalRays += rays;
+    const sec = (performance.now() - t) / 1000;
+    log(`${label}: ${sec.toFixed(1)} s, ${(rays / 1e6).toFixed(1)} M rays (${(rays / 1e6 / Math.max(sec, 1e-3)).toFixed(2)} M rays/s on ${pool ? nThreads : 1} thread(s))`);
   };
 
-  const O_DIRECT = new Float32Array(shared.outDirect), O_SKY1 = new Float32Array(shared.outSky1), O_LIGHTS = new Float32Array(shared.outLights);
-  const O_BACK = new Float32Array(shared.outBack), O_SKY2 = new Float32Array(shared.outSky2), O_BOUNCE = new Float32Array(shared.outBounce);
+  const O_VIS = new Float32Array(shared.outVis), O_SKY1 = new Float32Array(shared.outSky1), O_LIGHTS = new Float32Array(shared.outLights);
+  const O_BACK = new Uint8Array(shared.outBack), O_IND = new Float32Array(shared.outInd);
   const O_VAR = new Float32Array(shared.outVar), VALID = new Uint8Array(shared.valid);
-
-  // per-pixel guides (position, normal) for fill / denoise
+  const sc = sunColor.map((c) => c * sunIntensity);
   const frame = new Float64Array(6);
-  for (const a of atl) {
-    a.pos = new Float32Array(a.w * a.h * 3); a.nrm = new Float32Array(a.w * a.h * 3);
-    for (let k = 0; k < a.tex.length; k++) {
-      const i = a.tex[k];
-      if (i < 0) continue;
-      K.texelFrame(i, frame);
-      a.pos[k * 3] = frame[0]; a.pos[k * 3 + 1] = frame[1]; a.pos[k * 3 + 2] = frame[2];
-      a.nrm[k * 3] = frame[3]; a.nrm[k * 3 + 1] = frame[4]; a.nrm[k * 3 + 2] = frame[5];
-    }
-  }
+  const chartRect = (ai) => {
+    const A = atlases[ai], rect = new Int32Array(A.w * A.h).fill(-1);
+    for (const ch of atlasCharts[ai]) for (let y = ch.y; y < ch.y + ch.h; y++) rect.fill(ch.id, y * A.w + ch.x, y * A.w + ch.x + ch.w);
+    return rect;
+  };
 
   try {
-    await run('passDirect', 'pass A (sun, sky, lights)');
+    await run('passDirect', 'pass A (sun, lights, sky estimate)');
     stage('passA');
     let nInvalid = 0;
-    for (let i = 0; i < nTex; i++) { VALID[i] = O_BACK[i] <= o.invalidThreshold ? 1 : 0; if (!VALID[i]) nInvalid++; }
+    const thr = Math.round(o.invalidThreshold * 255);
+    for (let i = 0; i < nTex; i++) { VALID[i] = O_BACK[i] <= thr ? 1 : 0; if (!VALID[i]) nInvalid++; }
     log(`${nInvalid} texels inside geometry (${(100 * nInvalid / nTex).toFixed(1)} %) -> filled from neighbours`);
 
-    // irradiance source for the bounce: direct sun + sky + lights (+ previous bounce)
-    const skyC = new Float32Array(nTex * 3);
-    const bounce = new Float32Array(nTex * 3);
-    const sourceAtlases = (withBounce) => atl.map((a) => {
-      const E = new Float32Array(new SharedArrayBuffer(a.w * a.h * 3 * 4));
-      const st = new Uint8Array(a.w * a.h);
-      for (let k = 0; k < a.tex.length; k++) {
-        const i = a.tex[k];
-        if (i < 0) continue;
+    // irradiance source for the bounce: direct sun + sky + lights (pass 2+: + previous sky/bounce)
+    const sourceAtlases = (withInd) => atlases.map((A, ai) => {
+      const E = new Float32Array(new SharedArrayBuffer(A.w * A.h * 3 * 4));
+      const st = new Uint8Array(A.w * A.h);
+      for (let i = A.t0; i < A.t1; i++) {
+        const k = texPix[i];
         st[k] = VALID[i] ? 1 : 2;
-        for (let c = 0; c < 3; c++) {
-          const sk = withBounce ? skyC[i * 3 + c] : O_SKY1[i * 3 + c];
-          E[k * 3 + c] = O_DIRECT[i * 4 + c] + sk + O_LIGHTS[i * 3 + c] + (withBounce ? bounce[i * 3 + c] : 0);
-        }
+        K.texelFrame(i, frame);
+        const ndl = Math.max(0, frame[3] * sunDir[0] + frame[4] * sunDir[1] + frame[5] * sunDir[2]) * O_VIS[i];
+        const ind = withInd ? O_IND : O_SKY1;
+        for (let c = 0; c < 3; c++) E[k * 3 + c] = sc[c] * ndl + ind[i * 3 + c] + O_LIGHTS[i * 3 + c];
       }
-      fillLayers(a.w, a.h, st, a.rect, [E], [3], 2, 64);
-      fillLayers(a.w, a.h, st, a.rect, [E], [3], 0, pad + 1);
-      return { w: a.w, h: a.h, E: E.buffer };
+      const rect = chartRect(ai);
+      const key = lumKey(E, null, st, 0);
+      fillPixels(A.w, A.h, st, rect, [E], [3], 2, 64, key);
+      fillPixels(A.w, A.h, st, rect, [E], [3], 0, pad + 1, null);
+      return { w: A.w, h: A.h, E: E.buffer };
     });
     for (let b = 0; b < Math.max(1, o.bounces); b++) {
-      const src = sourceAtlases(b > 0);
+      let src = sourceAtlases(b > 0);
       if (pool) await pool.atlases(src); else K.setAtlases(src);
+      src = null;
       await run('passBounce', `pass B${o.bounces > 1 ? ' #' + (b + 1) : ''} (sky + bounce)`, b);
-      for (let i = 0; i < nTex * 3; i++) {
-        skyC[i] = (O_SKY1[i] * S1 + O_SKY2[i] * S2) / (S1 + S2);
-        bounce[i] = O_BOUNCE[i];
-      }
     }
-    if (o.bounces === 0) bounce.fill(0);
+    if (pool) await pool.atlases([]); else K.setAtlases([]);
     stage('passB');
 
-    // ---- per atlas: compose, fill, denoise, dilate, encode
+    // ---- per atlas: compose, fill, denoise, dilate, stitch seams, encode
     const full = o.mode === 'full';
-    const range = o.range || (full ? 16 : 8);
-    const sc = sunColor.map((c) => c * sunIntensity);
-    const out = [];
-    let clipped = 0, maxE = 0;
-    for (let ai = 0; ai < atl.length; ai++) {
-      const a = atl[ai], W = a.w, H = a.h, n = W * H;
+    const seams = o.stitch ? findSeams(recv, P, NRM, triChart, allCharts, TUV, atlases.length) : atlases.map(() => []);
+    const finals = [];
+    let maxE = 0, nSeam = 0;
+    const hist = [];
+    for (let ai = 0; ai < atlases.length; ai++) {
+      const A = atlases[ai], W = A.w, H = A.h, n = W * H;
+      const rect = chartRect(ai);
       const E = new Float32Array(n * 3), M = new Float32Array(n), V = new Float32Array(n), MV = new Float32Array(n);
+      const nrm = new Float32Array(n * 3);
       const st = new Uint8Array(n);
-      for (let k = 0; k < n; k++) {
-        const i = a.tex[k];
-        if (i < 0) continue;
+      for (let i = A.t0; i < A.t1; i++) {
+        const k = texPix[i];
         st[k] = VALID[i] ? 1 : 2;
-        for (let c = 0; c < 3; c++) E[k * 3 + c] = skyC[i * 3 + c] + bounce[i * 3 + c] + O_LIGHTS[i * 3 + c];
-        M[k] = O_DIRECT[i * 4 + 3];
-        // variance: pass-B estimate scaled to the combined sample count, + sky-1 share
-        V[k] = O_VAR[i] * (S2 / (S1 + S2));
-        MV[k] = M[k] * (1 - M[k]) / o.sunSamples;
+        for (let c = 0; c < 3; c++) E[k * 3 + c] = O_IND[i * 3 + c] + O_LIGHTS[i * 3 + c];
+        M[k] = O_VIS[i];
+        V[k] = O_VAR[i];
+        MV[k] = (M[k] * (1 - M[k])) / o.sunSamples;
+        K.texelFrame(i, frame);
+        nrm[k * 3] = frame[3]; nrm[k * 3 + 1] = frame[4]; nrm[k * 3 + 2] = frame[5];
       }
-      fillLayers(W, H, st, a.rect, [E, M, V, MV], [3, 1, 1, 1], 2, 128);
+      // texels inside geometry: take the darkest plausible neighbour (light never leaks into a room through a wall;
+      // the worst case is a thin contact-shadow line on the outside)
+      const key = lumKey(E, M, st, lum(sc[0], sc[1], sc[2]) * 0.5);
+      fillPixels(W, H, st, rect, [E, M, V, MV, nrm], [3, 1, 1, 1, 3], 2, 128, key);
+      for (let k = 0; k < n; k++) if (st[k] === 3) { const l = Math.hypot(nrm[k * 3], nrm[k * 3 + 1], nrm[k * 3 + 2]) || 1; nrm[k * 3] /= l; nrm[k * 3 + 1] /= l; nrm[k * 3 + 2] /= l; }
       if (o.denoise) {
-        atrous(W, H, E, V, st, a.rect, a.nrm, 3, 4);
-        atrous(W, H, M, MV, st, a.rect, a.nrm, 1, 3, 1);
+        atrous(W, H, E, 3, V, st, rect, nrm, o.denoiseIterations, o.denoiseSigma);
+        if (o.jitter && o.sunSamples > 1) atrous(W, H, M, 1, MV, st, rect, nrm, 2, 3);
       }
       if (full) {
         for (let k = 0; k < n; k++) {
           if (!st[k]) continue;
-          const ndl = Math.max(0, a.nrm[k * 3] * sunDir[0] + a.nrm[k * 3 + 1] * sunDir[1] + a.nrm[k * 3 + 2] * sunDir[2]);
+          const ndl = Math.max(0, nrm[k * 3] * sunDir[0] + nrm[k * 3 + 1] * sunDir[1] + nrm[k * 3 + 2] * sunDir[2]);
           for (let c = 0; c < 3; c++) E[k * 3 + c] += sc[c] * ndl * M[k];
         }
       }
-      fillLayers(W, H, st, a.rect, [E, M], [3, 1], 0, pad + 1);
-      // encode
+      fillPixels(W, H, st, rect, [E, M], [3, 1], 0, pad + 1, null);
+      if (seams[ai].length) { nSeam += seams[ai].length / 4; stitchSeams(W, H, [E, M], [3, 1], rect, seams[ai], o.stitchIterations); }
+      for (let k = 0; k < n; k++) {
+        if (!st[k] && rect[k] < 0) continue;
+        const m = Math.max(E[k * 3], E[k * 3 + 1], E[k * 3 + 2]);
+        if (m > maxE) maxE = m;
+        if (st[k] === 1 && (k & 7) === 0) hist.push(m);
+      }
+      finals.push({ W, H, E, M, st, rect });
+    }
+    if (nSeam) log(`stitched ${nSeam} seam samples`);
+    hist.sort((a, b) => a - b);
+    const p999 = hist.length ? hist[Math.min(hist.length - 1, Math.floor(hist.length * 0.999))] : 1;
+    const range = o.range && o.range !== 'auto' ? o.range : Math.min(64, Math.max(4, 2 ** Math.ceil(Math.log2(Math.max(1e-3, p999 * 1.05)))));
+    const out = [];
+    let clipped = 0;
+    for (let ai = 0; ai < finals.length; ai++) {
+      const { W, H, E, M } = finals[ai];
+      const n = W * H;
       const rgbm = Buffer.alloc(n * 4), mask = Buffer.alloc(n);
       for (let k = 0; k < n; k++) {
         let r = E[k * 3], g = E[k * 3 + 1], b = E[k * 3 + 2];
-        const mx = Math.max(r, g, b);
-        if (mx > maxE) maxE = mx;
-        if (mx > range) clipped++;
+        if (Math.max(r, g, b) > range) clipped++;
         r = Math.sqrt(Math.max(0, r) / range); g = Math.sqrt(Math.max(0, g) / range); b = Math.sqrt(Math.max(0, b) / range);
         let m = Math.min(1, Math.max(r, g, b, 1e-6));
         m = Math.ceil(m * 255) / 255;
@@ -935,9 +965,10 @@ export async function bakeLightmaps(input, options = {}) {
       }
       const rgbmPng = PNG.sync.write({ width: W, height: H, data: rgbm }, { colorType: 6, inputColorType: 6, deflateLevel: 6 });
       const maskPng = PNG.sync.write({ width: W, height: H, data: mask }, { colorType: 0, inputColorType: 0, deflateLevel: 6 });
-      out.push({ index: ai, width: W, height: H, rgbm: rgbmPng, sun: maskPng, ...(o.keepFloat ? { E, mask: M, state: st } : {}) });
+      out.push({ index: ai, width: W, height: H, rgbm: rgbmPng, png: rgbmPng, sun: maskPng, ...(o.keepFloat ? { E, mask: M, state: finals[ai].st } : {}) });
+      finals[ai] = null;
     }
-    if (clipped) log(`${clipped} texels above the RGBM range ${range} (max ${maxE.toFixed(2)}) were clipped`);
+    log(`RGBM range ${range} (99.9 % of texels <= ${p999.toFixed(2)}, max ${maxE.toFixed(2)}${clipped ? `, ${clipped} texels clipped` : ''})`);
     stage('post');
 
     // ---- apply uv1 to the meshes
@@ -964,12 +995,12 @@ export async function bakeLightmaps(input, options = {}) {
       }
     }
     stage('apply');
-    const stats = { texels: nTex, charts: allCharts.length, triangles: nAll, receivers: receivers.length, atlases: atlases.length,
-      seconds: (performance.now() - T0) / 1000, timings, densityScale: densScale, maxIrradiance: maxE, clipped };
-    log(`done in ${stats.seconds.toFixed(1)} s`, JSON.stringify(timings));
+    const stats = { texels: nTex, invalid: nInvalid, charts: allCharts.length, triangles: nAll, receivers: receivers.length, atlases: atlases.length,
+      rays: totalRays, seconds: (performance.now() - T0) / 1000, timings, densityScale: densScale, maxIrradiance: maxE, clipped, threads: pool ? nThreads : 1 };
+    log(`done in ${stats.seconds.toFixed(1)} s, ${(totalRays / 1e6).toFixed(0)} M rays`, JSON.stringify(timings));
     const res = {
-      atlases: out, meshes: result, range, mode: o.mode, encoding: 'rgbm-sqrt',
-      sun: { dir: sunDir, color: sunColor, intensity: sunIntensity }, sky: { sunDir: sky.sunDir, sunIrradiance: sky.sunIrradiance, clamp: sky.clampValue },
+      atlases: out, meshes: result, range, mode: o.mode, encoding: 'rgbm-sqrt', uv: o.uvAttribute,
+      sun: { dir: sunDir, color: sunColor, intensity: sunIntensity }, sky: { sunDir: sky.sunDir, sunIrradiance: sky.sunIrradiance, clamp: sky.clampValue, upIrradiance: sky.skyUpIrradiance },
       stats,
       /** Writes `${name}_${i}.png` (RGBM) and `${name}_${i}_sun.png` (sun mask); returns the metadata. */
       write(dir, name = 'lightmap') {
@@ -979,6 +1010,7 @@ export async function bakeLightmaps(input, options = {}) {
           const f1 = `${name}_${a.index}.png`, f2 = `${name}_${a.index}_sun.png`;
           fs.writeFileSync(path.join(dir, f1), a.rgbm);
           fs.writeFileSync(path.join(dir, f2), a.sun);
+          a.file = f1; a.sunFile = f2;
           meta.atlases.push({ rgbm: f1, sun: f2, width: a.width, height: a.height });
         }
         return meta;
@@ -999,9 +1031,9 @@ function toShared(arr) {
 async function makePool(n, shared) {
   const url = new URL('./lightmap-worker.mjs', import.meta.url);
   const workers = [];
-  for (let i = 0; i < n; i++) workers.push(new Worker(url, { workerData: { shared } }));
+  for (let i = 0; i < n; i++) workers.push(new Worker(url, { workerData: { shared }, resourceLimits: { maxOldGenerationSizeMb: 256 } }));
   const call = (w, msg) => new Promise((res, rej) => {
-    const onMsg = (m) => { w.off('error', onErr); res(m); };
+    const onMsg = (m) => { w.off('error', onErr); if (m.error) rej(new Error(m.error)); else res(m); };
     const onErr = (e) => { w.off('message', onMsg); rej(e); };
     w.once('message', onMsg); w.once('error', onErr);
     w.postMessage(msg);
@@ -1013,127 +1045,313 @@ async function makePool(n, shared) {
       const c = new Int32Array(counter);
       const chunk = Math.max(64, Math.min(2048, Math.ceil(total / (n * 24))));
       let last = performance.now();
-      const timer = setInterval(() => { if (performance.now() - last > 4900) { last = performance.now(); progress(Atomics.load(c, 1) / total); } }, 500);
-      try { await Promise.all(workers.map((w) => call(w, { cmd: 'run', kernel, total, chunk, arg, counter }))); } finally { clearInterval(timer); }
+      const timer = setInterval(() => { if (performance.now() - last > 9900) { last = performance.now(); progress(Atomics.load(c, 1) / total); } }, 500);
+      try {
+        const r = await Promise.all(workers.map((w) => call(w, { cmd: 'run', kernel, total, chunk, arg, counter })));
+        return r.reduce((s, m) => s + (m.rays || 0), 0);
+      } finally { clearInterval(timer); }
     },
     async close() { await Promise.all(workers.map((w) => w.terminate())); },
   };
 }
 
 // ------------------------------------------------------------------------------------------ post
+/** Per-pixel brightness key for the dark-biased invalid fill: lum(E) (+ sunWeight x mask). */
+function lumKey(E, M, st, sunWeight) {
+  const n = st.length, key = new Float32Array(n);
+  for (let k = 0; k < n; k++) if (st[k] === 1) key[k] = lum(E[k * 3], E[k * 3 + 1], E[k * 3 + 2]) + (M ? M[k] * sunWeight : 0);
+  return key;
+}
+
 /**
- * Breadth-first fill of pixels whose state === target from neighbours (8-connected) of the same chart
- * that hold values (state 1 or 3). Filled pixels become state 3.
+ * Breadth-first fill of pixels whose state === target from their 8 neighbours of the same chart that hold values
+ * (state 1 or 3); filled pixels become state 3. With `key`, neighbours are weighted by 1 / (key + eps)^2 so the
+ * darkest neighbour wins (used for texels inside geometry: prevents light leaking through walls).
  */
-function fillLayers(W, H, st, rect, bufs, chans, target, maxLayers) {
-  let frontier = [];
+function fillPixels(W, H, st, rect, bufs, chans, target, maxLayers, key) {
   const n = W * H;
+  const has = (q) => st[q] === 1 || st[q] === 3;
+  let front = new Int32Array(1024), nf = 0;
+  const push = (k) => { if (nf === front.length) { const f2 = new Int32Array(front.length * 2); f2.set(front); front = f2; } front[nf++] = k; };
   for (let k = 0; k < n; k++) {
     if (st[k] !== target || rect[k] < 0) continue;
-    const x = k % W, y = (k / W) | 0;
+    const x = k % W, y = (k / W) | 0, r = rect[k];
     let ok = false;
-    for (let dy = -1; dy <= 1 && !ok; dy++) for (let dx = -1; dx <= 1; dx++) {
-      const xx = x + dx, yy = y + dy;
-      if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-      const q = yy * W + xx;
-      if ((st[q] === 1 || st[q] === 3) && rect[q] === rect[k]) { ok = true; break; }
+    for (let dy = -1; dy <= 1 && !ok; dy++) {
+      const yy = y + dy;
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx;
+        if (xx < 0 || xx >= W) continue;
+        const q = yy * W + xx;
+        if (has(q) && rect[q] === r) { ok = true; break; }
+      }
     }
-    if (ok) frontier.push(k);
+    if (ok) push(k);
   }
-  for (let layer = 0; layer < maxLayers && frontier.length; layer++) {
-    const vals = [];
-    for (const k of frontier) {
-      const x = k % W, y = (k / W) | 0;
-      let wsum = 0;
-      const acc = bufs.map((b, bi) => new Float64Array(chans[bi]));
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if ((dx === 0 && dy === 0) || xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const q = yy * W + xx;
-        if (!(st[q] === 1 || st[q] === 3) || rect[q] !== rect[k]) continue;
-        const w = dx === 0 || dy === 0 ? 1 : 0.5;
-        wsum += w;
-        bufs.forEach((b, bi) => { const c = chans[bi]; for (let j = 0; j < c; j++) acc[bi][j] += b[q * c + j] * w; });
+  const nb = bufs.length;
+  let totalCh = 0;
+  for (const c of chans) totalCh += c;
+  let vals = new Float64Array(1024 * (totalCh + 2));
+  const KEPS = 0.02;
+  for (let layer = 0; layer < maxLayers && nf; layer++) {
+    if (vals.length < nf * (totalCh + 2)) vals = new Float64Array(nf * (totalCh + 2) * 2);
+    for (let f = 0; f < nf; f++) {
+      const k = front[f], x = k % W, y = (k / W) | 0, r = rect[k];
+      const o = f * (totalCh + 2);
+      for (let j = 0; j < totalCh + 2; j++) vals[o + j] = 0;
+      let wsum = 0, ksum = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if ((dx === 0 && dy === 0) || xx < 0 || xx >= W) continue;
+          const q = yy * W + xx;
+          if (!has(q) || rect[q] !== r) continue;
+          let w = dx === 0 || dy === 0 ? 1 : 0.5;
+          if (key) { const kk = key[q] + KEPS; w /= kk * kk; ksum += w * key[q]; }
+          wsum += w;
+          let off = o;
+          for (let bi = 0; bi < nb; bi++) {
+            const c = chans[bi], b = bufs[bi];
+            for (let j = 0; j < c; j++) vals[off + j] += b[q * c + j] * w;
+            off += c;
+          }
+        }
       }
-      vals.push(wsum > 0 ? acc.map((a) => a.map((v) => v / wsum)) : null);
+      vals[o + totalCh] = wsum; vals[o + totalCh + 1] = ksum;
     }
-    const next = [];
-    frontier.forEach((k, fi) => {
-      const v = vals[fi];
-      if (!v) return;
-      bufs.forEach((b, bi) => { const c = chans[bi]; for (let j = 0; j < c; j++) b[k * c + j] = v[bi][j]; });
+    // apply
+    for (let f = 0; f < nf; f++) {
+      const k = front[f], o = f * (totalCh + 2), wsum = vals[o + totalCh];
+      if (!(wsum > 0)) continue;
+      let off = o;
+      for (let bi = 0; bi < nb; bi++) {
+        const c = chans[bi], b = bufs[bi];
+        for (let j = 0; j < c; j++) b[k * c + j] = vals[off + j] / wsum;
+        off += c;
+      }
+      if (key) key[k] = vals[o + totalCh + 1] / wsum;
       st[k] = 3;
-    });
-    for (const k of frontier) {
+    }
+    // next frontier
+    const prev = front.slice(0, nf);
+    nf = 0;
+    for (let f = 0; f < prev.length; f++) {
+      const k = prev[f];
       if (st[k] !== 3) continue;
-      const x = k % W, y = (k / W) | 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const q = yy * W + xx;
-        if (st[q] === target && rect[q] === rect[k]) { st[q] = 255; next.push(q); }
+      const x = k % W, y = (k / W) | 0, r = rect[k];
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= W) continue;
+          const q = yy * W + xx;
+          if (st[q] === target && rect[q] === r) { st[q] = 254; push(q); }
+        }
       }
     }
-    for (const q of next) st[q] = target;
-    frontier = next;
+    for (let f = 0; f < nf; f++) st[front[f]] = target;
   }
 }
 
 /**
- * Edge-avoiding a-trous wavelet filter (5x5 B3 kernel, step 1,2,4..) over chart texels.
+ * Edge-avoiding a-trous wavelet filter (5x5 B3 kernel, step 1, 2, 4 ..) over chart texels.
  * Stops at chart borders, normal discontinuities and luminance differences larger than `sigmaL`
  * standard deviations of the (filtered) per-texel noise estimate.
  */
-function atrous(W, H, val, vari, st, rect, nrm, iterations, sigmaL, ch = 3) {
+function atrous(W, H, val, ch, vari, st, rect, nrm, iterations, sigmaL) {
   const h = [1 / 16, 1 / 4, 3 / 8, 1 / 4, 1 / 16];
   const n = W * H;
+  let cnt = 0;
+  for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) cnt++;
+  const act = new Int32Array(cnt), on = new Uint8Array(n);
+  cnt = 0;
+  for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) { act[cnt++] = k; on[k] = 1; }
+  const lumA = new Float32Array(n), sdA = new Float32Array(n);
   let src = val, sv = vari;
-  const has = (k) => st[k] === 1 || st[k] === 3;
-  const L = (b, k) => (ch === 3 ? lum(b[k * 3], b[k * 3 + 1], b[k * 3 + 2]) : b[k]);
+  let bufA = new Float32Array(n * ch), bufB = iterations > 1 ? new Float32Array(n * ch) : null;
+  let vA = new Float32Array(n), vB = iterations > 1 ? new Float32Array(n) : null;
+  const acc = new Float64Array(3);
   for (let it = 0; it < iterations; it++) {
     const step = 1 << it;
-    const dst = new Float32Array(n * ch), dv = new Float32Array(n);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const k = y * W + x;
-      if (!has(k)) { for (let c = 0; c < ch; c++) dst[k * ch + c] = src[k * ch + c]; continue; }
-      // 3x3 prefiltered variance
+    const dst = it % 2 === 0 ? bufA : bufB, dv = it % 2 === 0 ? vA : vB;
+    for (let a = 0; a < cnt; a++) { const k = act[a]; lumA[k] = ch === 3 ? lum(src[k * 3], src[k * 3 + 1], src[k * 3 + 2]) : src[k]; }
+    for (let a = 0; a < cnt; a++) {
+      const k = act[a], x = k % W, y = (k / W) | 0, r = rect[k];
       let pv = 0, pw = 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const q = yy * W + xx;
-        if (!has(q) || rect[q] !== rect[k]) continue;
-        const w = (dx === 0 ? 2 : 1) * (dy === 0 ? 2 : 1);
-        pv += sv[q] * w; pw += w;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= W) continue;
+          const q = yy * W + xx;
+          if (!on[q] || rect[q] !== r) continue;
+          const w = (dx === 0 ? 2 : 1) * (dy === 0 ? 2 : 1);
+          pv += sv[q] * w; pw += w;
+        }
       }
-      const sd = Math.sqrt(Math.max(0, pv / pw));
-      const lp = L(src, k);
+      sdA[k] = Math.sqrt(Math.max(0, pv / pw));
+    }
+    for (let a = 0; a < cnt; a++) {
+      const k = act[a], x = k % W, y = (k / W) | 0, r = rect[k];
+      const lp = lumA[k], inv = 1 / (sigmaL * sdA[k] + 1e-5);
       const nx = nrm[k * 3], ny = nrm[k * 3 + 1], nz = nrm[k * 3 + 2];
       let ws = 0, wv = 0;
-      const acc = [0, 0, 0];
-      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
-        const xx = x + i * step, yy = y + j * step;
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const q = yy * W + xx;
-        if (!has(q) || rect[q] !== rect[k]) continue;
-        let w = h[i + 2] * h[j + 2];
-        if (q !== k) {
-          const dn = nx * nrm[q * 3] + ny * nrm[q * 3 + 1] + nz * nrm[q * 3 + 2];
-          if (dn <= 0) continue;
-          w *= Math.pow(dn, 32);
-          const dl = Math.abs(L(src, q) - lp);
-          w *= Math.exp(-dl / (sigmaL * sd + 1e-5));
+      acc[0] = acc[1] = acc[2] = 0;
+      for (let j = -2; j <= 2; j++) {
+        const yy = y + j * step;
+        if (yy < 0 || yy >= H) continue;
+        const hj = h[j + 2];
+        for (let i = -2; i <= 2; i++) {
+          const xx = x + i * step;
+          if (xx < 0 || xx >= W) continue;
+          const q = yy * W + xx;
+          if (!on[q] || rect[q] !== r) continue;
+          let w = hj * h[i + 2];
+          if (q !== k) {
+            let dn = nx * nrm[q * 3] + ny * nrm[q * 3 + 1] + nz * nrm[q * 3 + 2];
+            if (dn <= 0) continue;
+            dn *= dn; dn *= dn; dn *= dn; dn *= dn; dn *= dn; // ^32
+            const dl = lumA[q] - lp;
+            w *= dn * Math.exp(-(dl < 0 ? -dl : dl) * inv);
+          }
+          ws += w; wv += w * w * sv[q];
+          if (ch === 3) { acc[0] += src[q * 3] * w; acc[1] += src[q * 3 + 1] * w; acc[2] += src[q * 3 + 2] * w; } else acc[0] += src[q] * w;
         }
-        ws += w; wv += w * w * sv[q];
-        for (let c = 0; c < ch; c++) acc[c] += src[q * ch + c] * w;
       }
-      for (let c = 0; c < ch; c++) dst[k * ch + c] = acc[c] / ws;
+      if (ch === 3) { dst[k * 3] = acc[0] / ws; dst[k * 3 + 1] = acc[1] / ws; dst[k * 3 + 2] = acc[2] / ws; } else dst[k] = acc[0] / ws;
       dv[k] = wv / (ws * ws);
     }
     src = dst; sv = dv;
   }
-  val.set(src);
+  if (src !== val) for (let a = 0; a < cnt; a++) { const k = act[a]; for (let c = 0; c < ch; c++) val[k * ch + c] = src[k * ch + c]; }
 }
+
+/**
+ * Seams: edges shared by two triangles of different charts (same mesh, same atlas) whose corner normals match
+ * (smooth edges - curved surfaces, big planes split across charts). Returns per atlas a flat list of sample pairs
+ * [ax, ay, bx, by] (pixel coordinates of the same world point on both sides), two per texel of edge length.
+ */
+function findSeams(recv, P, NRM, triChart, allCharts, TUV, nAtlas) {
+  const out = Array.from({ length: nAtlas }, () => []);
+  for (const r of recv) {
+    const vmap = new Map();
+    const vid = new Int32Array(r.nt * 3);
+    let nv = 0;
+    for (let k = 0; k < r.nt * 3; k++) {
+      const o = (r.t0 * 3 + k) * 3;
+      const key = Math.round(P[o] * 1e4) + ',' + Math.round(P[o + 1] * 1e4) + ',' + Math.round(P[o + 2] * 1e4);
+      let id = vmap.get(key);
+      if (id === undefined) { id = nv++; vmap.set(key, id); }
+      vid[k] = id;
+    }
+    vmap.clear();
+    const edges = new Map();
+    for (let lt = 0; lt < r.nt; lt++) {
+      const t = r.t0 + lt;
+      if (triChart[t] < 0) continue;
+      for (let e = 0; e < 3; e++) {
+        const a = vid[lt * 3 + e], b = vid[lt * 3 + ((e + 1) % 3)];
+        if (a === b) continue;
+        const key = a < b ? a * nv + b : b * nv + a;
+        const f = edges.get(key);
+        if (f === undefined) { edges.set(key, lt * 3 + e); continue; }
+        if (f < 0) continue; // already used (non-manifold edges are ignored)
+        edges.set(key, -1);
+        const lt2 = (f / 3) | 0, e2 = f % 3, t2 = r.t0 + lt2;
+        const c1 = allCharts[triChart[t]], c2 = allCharts[triChart[t2]];
+        if (c1 === c2 || c1.atlas !== c2.atlas) continue;
+        // corners of the shared edge on both sides (match by welded vertex id)
+        const A0 = lt * 3 + e, A1 = lt * 3 + ((e + 1) % 3);
+        let B0 = lt2 * 3 + e2, B1 = lt2 * 3 + ((e2 + 1) % 3);
+        if (vid[B0] !== vid[A0]) { const s = B0; B0 = B1; B1 = s; }
+        if (vid[B0] !== vid[A0] || vid[B1] !== vid[A1]) continue;
+        // smooth edge: shading normals equal at both ends
+        const nd = (i, j) => { const a2 = (r.t0 * 3 + i) * 3, b2 = (r.t0 * 3 + j) * 3; return NRM[a2] * NRM[b2] + NRM[a2 + 1] * NRM[b2 + 1] + NRM[a2 + 2] * NRM[b2 + 2]; };
+        if (nd(A0, B0) < 0.98 || nd(A1, B1) < 0.98) continue;
+        const uvA0 = [TUV[(r.t0 * 3 + A0) * 2], TUV[(r.t0 * 3 + A0) * 2 + 1]], uvA1 = [TUV[(r.t0 * 3 + A1) * 2], TUV[(r.t0 * 3 + A1) * 2 + 1]];
+        const uvB0 = [TUV[(r.t0 * 3 + B0) * 2], TUV[(r.t0 * 3 + B0) * 2 + 1]], uvB1 = [TUV[(r.t0 * 3 + B1) * 2], TUV[(r.t0 * 3 + B1) * 2 + 1]];
+        const len = Math.max(Math.hypot(uvA1[0] - uvA0[0], uvA1[1] - uvA0[1]), Math.hypot(uvB1[0] - uvB0[0], uvB1[1] - uvB0[1]));
+        const ns = Math.max(2, Math.ceil(len * 2));
+        const list = out[c1.atlas];
+        for (let s = 0; s < ns; s++) {
+          const f2 = (s + 0.5) / ns;
+          list.push(uvA0[0] + (uvA1[0] - uvA0[0]) * f2, uvA0[1] + (uvA1[1] - uvA0[1]) * f2,
+            uvB0[0] + (uvB1[0] - uvB0[0]) * f2, uvB0[1] + (uvB1[1] - uvB0[1]) * f2);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** Pulls the bilinear lookups on both sides of every seam sample together (Jacobi iterations). */
+function stitchSeams(W, H, bufs, chans, rect, samples, iterations) {
+  const ns = samples.length / 4;
+  // bilinear stencils (4 px + weights) per side, restricted to the side's own chart
+  const px = new Int32Array(ns * 8), wt = new Float32Array(ns * 8);
+  const local = new Map();
+  const stencil = (x, y, base, chartPx) => {
+    const fx = x - 0.5, fy = y - 0.5;
+    const x0 = Math.floor(fx), y0 = Math.floor(fy), ax = fx - x0, ay = fy - y0;
+    const r = rect[chartPx];
+    let s = 0;
+    const cand = [[x0, y0, (1 - ax) * (1 - ay)], [x0 + 1, y0, ax * (1 - ay)], [x0, y0 + 1, (1 - ax) * ay], [x0 + 1, y0 + 1, ax * ay]];
+    for (let c = 0; c < 4; c++) {
+      const [xx, yy, w] = cand[c];
+      const ok = xx >= 0 && yy >= 0 && xx < W && yy < H && rect[yy * W + xx] === r;
+      px[base + c] = ok ? yy * W + xx : -1; wt[base + c] = ok ? w : 0; s += ok ? w : 0;
+    }
+    for (let c = 0; c < 4; c++) wt[base + c] = s > 0 ? wt[base + c] / s : 0;
+  };
+  for (let i = 0; i < ns; i++) {
+    const ax = samples[i * 4], ay = samples[i * 4 + 1], bx = samples[i * 4 + 2], by = samples[i * 4 + 3];
+    stencil(ax, ay, i * 8, Math.min(H - 1, Math.max(0, Math.floor(ay))) * W + Math.min(W - 1, Math.max(0, Math.floor(ax))));
+    stencil(bx, by, i * 8 + 4, Math.min(H - 1, Math.max(0, Math.floor(by))) * W + Math.min(W - 1, Math.max(0, Math.floor(bx))));
+    for (let c = 0; c < 8; c++) { const p = px[i * 8 + c]; if (p >= 0 && !local.has(p)) local.set(p, local.size); }
+  }
+  const nl = local.size;
+  const loc = new Int32Array(ns * 8);
+  for (let j = 0; j < ns * 8; j++) loc[j] = px[j] >= 0 ? local.get(px[j]) : -1;
+  const pixOf = new Int32Array(nl);
+  for (const [p, l] of local) pixOf[l] = p;
+  for (let bi = 0; bi < bufs.length; bi++) {
+    const b = bufs[bi], ch = chans[bi];
+    const corr = new Float64Array(nl * ch), wsum = new Float64Array(nl);
+    const va = new Float64Array(ch), vb = new Float64Array(ch);
+    for (let it = 0; it < iterations; it++) {
+      corr.fill(0); wsum.fill(0);
+      for (let i = 0; i < ns; i++) {
+        va.fill(0); vb.fill(0);
+        let okA = 0, okB = 0;
+        for (let c = 0; c < 4; c++) {
+          const pa = px[i * 8 + c], pb = px[i * 8 + 4 + c], wa = wt[i * 8 + c], wb = wt[i * 8 + 4 + c];
+          if (pa >= 0) { okA += wa; for (let j = 0; j < ch; j++) va[j] += b[pa * ch + j] * wa; }
+          if (pb >= 0) { okB += wb; for (let j = 0; j < ch; j++) vb[j] += b[pb * ch + j] * wb; }
+        }
+        if (okA < 0.5 || okB < 0.5) continue;
+        for (let c = 0; c < 8; c++) {
+          const l = loc[i * 8 + c];
+          if (l < 0) continue;
+          const w = wt[i * 8 + c];
+          const mine = c < 4 ? va : vb, other = c < 4 ? vb : va;
+          for (let j = 0; j < ch; j++) corr[l * ch + j] += w * (other[j] - mine[j]) * 0.5;
+          wsum[l] += w;
+        }
+      }
+      for (let l = 0; l < nl; l++) {
+        if (!(wsum[l] > 0)) continue;
+        const p = pixOf[l];
+        for (let j = 0; j < ch; j++) b[p * ch + j] = Math.max(0, b[p * ch + j] + corr[l * ch + j] / wsum[l]);
+      }
+    }
+  }
+}
+
 
 function rebuildGeometry(r, charts, TUV, W, H, uvName) {
   const g = r.mesh.geometry;
@@ -1186,7 +1404,7 @@ function rebuildGeometry(r, charts, TUV, W, H, uvName) {
   return out;
 }
 
-/** Decodes an RGBM-sqrt atlas (+ optional sun mask) PNG back to floats: { width, height, E: rgb Float32Array, M }. */
+
 export function decodeRGBM(rgbmPng, sunPng, range) {
   const p = PNG.sync.read(Buffer.isBuffer(rgbmPng) ? rgbmPng : fs.readFileSync(rgbmPng));
   const n = p.width * p.height;

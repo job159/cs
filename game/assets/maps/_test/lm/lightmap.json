@@ -43,29 +43,37 @@
    0,
    0
   ],
-  "clamp": 0
+  "clamp": 0,
+  "upIrradiance": [
+   2.0188033281377495,
+   2.333048646452101,
+   2.9639444105361314
+  ]
  },
  "stats": {
   "texels": 183030,
+  "invalid": 9887,
   "charts": 123,
   "triangles": 1476,
   "receivers": 20,
   "atlases": 1,
-  "seconds": 70.3257208,
+  "rays": 14830248,
+  "seconds": 7.937591600000001,
   "timings": {
-   "collect": 1695,
-   "charts": 193,
-   "pack": 68,
-   "bvh": 162,
-   "raster": 887,
-   "passA": 26983,
-   "passB": 33493,
-   "post": 6789,
-   "apply": 56
+   "collect": 129,
+   "charts": 24,
+   "pack": 6,
+   "bvh": 25,
+   "raster": 262,
+   "passA": 1779,
+   "passB": 3611,
+   "post": 2095,
+   "apply": 7
   },
   "densityScale": 1,
-  "maxIrradiance": 36.25788116455078,
-  "clipped": 92
+  "maxIrradiance": 36.23936080932617,
+  "clipped": 92,
+  "threads": 6
  },
  "meshes": {
   "ground": 0,

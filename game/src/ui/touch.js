@@ -35,6 +35,7 @@ export class TouchControls {
       <button class="tb t-special" data-a="special">${SVG.special}</button>
       <button class="tb t-use" data-a="use">${SVG.use}</button>
       <button class="tb t-menu" data-a="pause">${SVG.menu}</button>
+      <button class="tb t-buy" data-a="buy">購買</button>
       <div class="t-slots"></div>`;
     root.appendChild(el);
     this.el = el;
@@ -109,6 +110,8 @@ export class TouchControls {
   update() {
     const ar = this.game.arsenal;
     if (!ar) return;
+    const canBuy = !!this.game.match?.canBuy();
+    if (canBuy !== this._canBuy) { this._canBuy = canBuy; this.el.classList.toggle('can-buy', canBuy); }
     const slots = Object.keys(ar.owned).map(Number).sort();
     const key = slots.map((s) => s + ':' + ar.owned[s].def.id).join(',') + '|' + ar.slot;
     if (key === this.slotCache) return;

@@ -738,15 +738,16 @@ class Room {
     while (used.has(slot)) slot++;
     const link = new Link(this, gid, { name: cleanName(it.n) || `玩家 ${slot + 1}`, slot });
     this._links.set(gid, link);
-    const p2p = this._rtcOk && it.rtc === 1;
+    // The offer is created asynchronously, so the welcome still goes out first; it only promises
+    // WebRTC if the connection could actually be created (some WebViews have it disabled).
+    const p2p = this._rtcOk && it.rtc === 1 && link.startRtc();
     this._sendWelcome(link, ts, p2p);
     this._status(`「${link.name}」加入中…`);
-    if (p2p) link.startRtc();
     this._infoDue = true;
     this._maybeAnnounce(link);
   }
 
-  _sendWelcome(link, ts, p2p = link.p2p !== 'off') {
+  _sendWelcome(link, ts, p2p = link.p2p === 'connecting' || link.p2p === 'open') {
     this._ctrl({
       k: 'welcome', to: link.id, slot: link.slot, n: this.name, v: this.version, max: this.maxPlayers,
       rn: this.roomName, meta: this.meta, roster: this._roster(), rtc: p2p ? 1 : 0, ts,

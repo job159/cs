@@ -7,6 +7,8 @@ import * as testArena from './world/maps/testArena.js';
 import { Vector3 } from 'three';
 import { HUD } from './ui/hud.js';
 import { TouchControls } from './ui/touch.js';
+import { Shop, PerkPicker } from './ui/shop.js';
+import { PERKS } from './match/rules.js';
 
 window.__shotReady = false;
 const canvas = document.getElementById('gl');
@@ -30,6 +32,8 @@ game.hud = new HUD(game);
 if (params.get('match') !== '0') game.matchOptions = { difficulty: params.get('diff') || 'normal', players: 1 };
 const touchMode = params.get('touch') === '1' || (params.get('touch') !== '0' && matchMedia('(pointer: coarse)').matches);
 if (touchMode) { game.touch = new TouchControls(input, game); document.body.classList.add('touch'); }
+game.shop = new Shop(game);
+game.perks = new PerkPicker(game, PERKS);
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;

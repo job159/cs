@@ -45,7 +45,7 @@ hardTimeout.unref?.();
 
 // System-wide semaphore: at most MAX_BROWSERS headless browsers at once (many agents share this
 // machine; unbounded browsers exhausted the RAM once). Stale locks (> 4 min) are reclaimed.
-const MAX_BROWSERS = +(process.env.SHOT_MAX || 3);
+const MAX_BROWSERS = +(process.env.SHOT_MAX || 2);
 const lockDir = path.join(os.tmpdir(), 'cf-shot-locks');
 fs.mkdirSync(lockDir, { recursive: true });
 let lockFile = null;

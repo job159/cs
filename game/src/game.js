@@ -113,6 +113,9 @@ export class Game {
     for (const sys of [...this.systems]) sys.update(dt, t);
     this.fx?.update(dt);
     this._updateCamera(dt);
+    if (s.pressed.buy) this.shop?.toggle();
+    if (this.shop?.open && !this.match?.canBuy()) this.shop.close();
+    this.perks?.update(dtReal);
     this.hud?.update(dtReal);
     this.touch?.update();
     this.input.endFrame();

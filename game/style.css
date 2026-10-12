@@ -10,6 +10,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
   user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; }
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
 #hud, #ui { position: fixed; inset: 0; pointer-events: none; }
+#ui { z-index: 30; }
 #hud > *, #ui > * { pointer-events: auto; }
 #boot { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: radial-gradient(ellipse at 50% 40%, #2a2420 0%, #0b0a09 70%); z-index: 50; transition: opacity .5s; }
@@ -110,3 +111,37 @@ body.touch .ammo .wicon { height: 20px; }
 body.touch .vitals { bottom: calc(6px + var(--safe-bottom)); }
 body.touch .vitals b { font-size: 28px; }
 body.touch .xpbar { bottom: calc(52px + var(--safe-bottom)); }
+
+/* ---------------------------------------------------------------- buy menu */
+#shop { position: fixed; inset: 0; z-index: 40; display: none; background: rgba(4,5,6,.62); backdrop-filter: blur(3px); pointer-events: auto; }
+#shop.on { display: flex; align-items: center; justify-content: center; }
+.shop-panel { width: min(1100px, 96vw); height: min(620px, 92vh); background: rgba(18,20,22,.94); border: 1px solid rgba(255,255,255,.12); display: flex; flex-direction: column; }
+.shop-head { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.shop-head b { font-size: 18px; letter-spacing: .2em; }
+.shop-money { font-family: var(--num); font-size: 24px; color: #8fe388; margin-left: auto; }
+.shop-close { background: none; border: 1px solid rgba(255,255,255,.25); color: #ddd; width: 36px; height: 36px; font-size: 16px; }
+.shop-body { flex: 1; display: flex; min-height: 0; }
+.shop-tabs { width: 120px; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,.08); overflow-y: auto; }
+.shop-tabs button { background: none; border: 0; border-left: 3px solid transparent; color: #bbb; text-align: left; padding: 11px 14px; font-family: var(--font); font-size: 14px; }
+.shop-tabs button.on { color: #fff; border-left-color: #f2b544; background: rgba(242,181,68,.08); }
+.shop-grid { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; align-content: start; }
+.card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.card img:not([src]) { visibility: hidden; }
+.card img { height: 58px; object-fit: contain; filter: drop-shadow(0 1px 1px #000); }
+.card .cn { font-size: 15px; font-weight: 700; } .card .cn small { font-family: var(--num); color: #9a9a9a; font-weight: 400; margin-left: 4px; }
+.card .cd { font-size: 12px; color: #aaa; }
+.card .cs div { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 6px; font-size: 11px; color: #aaa; }
+.card .cs i { display: block; height: 4px; background: linear-gradient(90deg, #d8b05a, #f2d38a); }
+.card .cm { font-family: var(--num); font-size: 13px; color: #bbb; }
+.card button { margin-top: auto; height: 34px; border: 1px solid #f2b544; background: rgba(242,181,68,.16); color: #fff; font-family: var(--num); font-size: 17px; }
+.card button:disabled { border-color: rgba(255,255,255,.15); background: none; color: #777; }
+.card.owned { border-color: rgba(143,227,136,.35); }
+/* perk picker */
+#perks { position: fixed; left: calc(16px + var(--safe-left)); top: calc(52px + var(--safe-top)); z-index: 30; display: none; pointer-events: auto; }
+#perks.on { display: block; }
+#perks .pk-title { font-size: 12px; letter-spacing: .2em; color: #f2b544; margin-bottom: 4px; text-shadow: 0 1px 2px #000; }
+#perks .pk-list { display: flex; gap: 6px; flex-wrap: wrap; max-width: 520px; }
+#perks button { background: rgba(10,12,14,.72); border: 1px solid rgba(242,181,68,.5); color: #eee; padding: 6px 10px; text-align: left; font-family: var(--font); }
+#perks button b { display: block; font-size: 13px; } #perks button span { font-size: 11px; color: #bbb; }
+#touch .t-buy { left: calc(210px + var(--safe-left)); top: calc(10px + var(--safe-top)); width: auto; height: 40px; border-radius: 4px; padding: 0 14px; color: #fff; font-family: var(--font); font-size: 14px; display: none; }
+#touch.can-buy .t-buy { display: flex; }

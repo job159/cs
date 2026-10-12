@@ -45,9 +45,10 @@ export class Input {
 
   _bind() {
     window.addEventListener('keydown', (e) => {
-      if (!this.enabled || e.repeat) return;
+      if (e.repeat) return;
       const a = KEYMAP[e.code];
       if (!a) return;
+      if (!this.enabled && a !== 'buy' && a !== 'pause') return;
       if (a.length === 1) this.keys[a] = 1; else this.press(a);
       if (e.code === 'Tab' || e.code === 'Space') e.preventDefault();
     });

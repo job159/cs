@@ -71,7 +71,7 @@ async function main() {
       obj.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
       const mixer = new THREE.AnimationMixer(obj);
       mixer.clipAction(clip).play();
-      mixer.setTime(t);
+      mixer.setTime(Math.min(t, clip.duration - 1e-4));
       const off = right.clone().multiplyScalar(i * spacing);
       if (mode === 'onion') off.z += (info.speed || 0) * t;
       off.y -= row * rowH;
