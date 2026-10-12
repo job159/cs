@@ -66,6 +66,20 @@ export class AudioEngine {
 
   has(name) { return !!this.defs[name]; }
 
+  /** Missing names fall back to a generic relative (runner_pain -> zombie_pain, impact_tile -> impact_concrete, x_far -> x_close). */
+  _resolve(name) {
+    let m;
+    const alts = [];
+    if ((m = /^[a-z]+_(idle|alert|attack|pain|death)$/.exec(name))) alts.push('zombie_' + m[1]);
+    if (name.endsWith('_far')) alts.push(name.slice(0, -4) + '_close');
+    if (name.startsWith('impact_')) alts.push('impact_concrete');
+    if (name.startsWith('footstep_')) alts.push('footstep_concrete');
+    if (name === 'headshot_kill') alts.push('killmarker');
+    if (name === 'hitmarker_head') alts.push('hitmarker');
+    for (const a of alts) if (this.defs[a]) return (this.defs[name] = this.defs[a]);
+    return null;
+  }
+
   _load(file) {
     let b = this.buffers.get(file);
     if (b) return b;
@@ -108,7 +122,7 @@ export class AudioEngine {
    * Returns a handle { stop(fade), setPos(p), setVolume(v), setRate(r) } or null.
    */
   play(name, opts = {}) {
-    const def = this.defs[name];
+    const def = this.defs[name] || (this.ready ? this._resolve(name) : null);
     if (!def) {
       if (!this.warned.has(name)) { this.warned.add(name); if (this.ready) console.debug('sound missing:', name); }
       return null;

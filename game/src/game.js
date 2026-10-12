@@ -15,6 +15,10 @@ import { Throwables } from './weapons/throwables.js';
 import { BotSquad } from './player/bots.js';
 import { RemotePlayer } from './player/remote.js';
 import { WEAPONS, registerWeapon } from './weapons/defs.js';
+import { SURF_NAMES } from './world/collision.js';
+
+const _down = new THREE.Vector3(), _feet = new THREE.Vector3(), _stepHit = {};
+const STEP_SURF = { concrete: 'concrete', tile: 'concrete', glass: 'concrete', metal: 'metal', grate: 'grate', wood: 'wood', dirt: 'dirt', sand: 'dirt', water: 'water', flesh: 'dirt' };
 
 export class Game {
   constructor({ renderer, input, audio, hud }) {
@@ -46,6 +50,26 @@ export class Game {
       spawnRemote: (opts = {}) => new RemotePlayer(this, { id: opts.id ?? 900 + Math.floor(Math.random() * 99), name: opts.name || '測試隊友', slot: opts.slot ?? 1 }),
       addBots: (n = 3) => { this.bots = new BotSquad(this, Math.min(3, n)); return this.bots; },
     };
+  }
+
+  /** Player footsteps by ground surface (one per stride, quiet when crouching) and landing thuds. */
+  _footsteps(p) {
+    const au = this.audio;
+    if (!au) return;
+    if (p.landImpact > 3) {
+      au.play(p.landImpact > 9 ? 'land_heavy' : 'land', { volume: Math.min(1, p.landImpact / 8) });
+      p.stepAccum = 0;
+      return;
+    }
+    const spd = p.horizontalSpeed;
+    if (!p.onGround || p.stepAccum < (spd > 4.2 ? 2.0 : 1.6)) return;
+    p.stepAccum = 0;
+    if (spd < 1.2) return;
+    _down.set(0, -1, 0);
+    _feet.set(p.pos.x, p.pos.y + 0.3, p.pos.z);
+    const hit = this.world.collision?.raycast(_feet, _down, 1.2, _stepHit);
+    const surf = STEP_SURF[SURF_NAMES[hit?.surf ?? 0]] || 'concrete';
+    au.play('footstep_' + surf, { volume: (p.crouch ? 0.3 : 0.55) * Math.min(1, spd / 5) });
   }
 
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */
@@ -148,6 +172,12 @@ export class Game {
       p.pitch = clamp(p.pitch + s.lookY / this.zoom, -1.5, 1.5);
       p.update(dt, s, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1) * (this.match?.speedMul ?? 1));
       if (p.landImpact > 2.5) this.landDip.impulse(-Math.min(p.landImpact, 14) * 0.09, 0, 0);
+      this._footsteps(p);
+    }
+    // ambience bed for the map (needs the audio context, which only exists after the first user gesture)
+    if (!this._ambStarted && this.audio?.ready && this.audio.ctx) {
+      this._ambStarted = true;
+      this.audio.play(this.world.def?.ambience || 'amb_city_dead', { loop: true, bus: 'amb' });
     }
     this.world.update(dt, t);
     if (this.arsenal) this.arsenal.update(dt, s);
@@ -245,6 +275,7 @@ export class Game {
   dispose() {
     this.disposed = true;
     try { this.net?.dispose?.(); } catch (e) { console.warn(e); }
+    try { this.fx?.particles?.dispose?.(); } catch (e) { console.warn(e); } // FX atlas render targets
     this.touch?.dispose?.();
     this.shop?.el?.remove();
     this.perks?.el?.remove();
