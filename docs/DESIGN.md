@@ -2,7 +2,7 @@
 
 > 1–4 人合作的回合制殭屍防禦 FPS（Android WebView + 瀏覽器）。玩法仿 CSO「殭屍劇本／災厄之章」，畫面走 CS2／PUBG 寫實風，
 > 武器再加上 CSO 近年「克金」武器的華麗演出。所有名稱、造型皆為原創（只借機制與幻想）。
-> 調研：`docs/research/01–05`；武器建模規範：`docs/WEAPON_MODELING.md`；高階武器規格：`docs/PREMIUM_WEAPONS.md`（調研中）。
+> 調研：`docs/research/01–05`；武器建模規範：`docs/WEAPON_MODELING.md`；高階武器規格：`docs/PREMIUM_WEAPONS.md`（v1.0 定案：24 把名冊、克金設計語言、塗裝系統、實作順序）。
 
 ## 1. 需求審視與改良決策
 
