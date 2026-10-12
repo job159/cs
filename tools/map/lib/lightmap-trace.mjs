@@ -62,9 +62,15 @@ function radicalInverse(i) {
   b = (((b & 0x00ff00ff) << 8) | ((b & 0xff00ff00) >>> 8)) >>> 0;
   return b * 2.3283064365386963e-10;
 }
-function hammersley(n) {
+/** Progressive 2D low-discrepancy set (Halton 2, 3): every prefix is well distributed (adaptive sampling). */
+function halton(n) {
   const x = new Float64Array(n), y = new Float64Array(n);
-  for (let i = 0; i < n; i++) { x[i] = (i + 0.5) / n; y[i] = radicalInverse(i); }
+  for (let i = 0; i < n; i++) {
+    x[i] = radicalInverse(i + 1);
+    let f = 1, r = 0, k = i + 1;
+    while (k > 0) { f /= 3; r += f * (k % 3); k = Math.floor(k / 3); }
+    y[i] = r;
+  }
   return [x, y];
 }
 
@@ -82,8 +88,8 @@ export function init(S) {
   IRR = new Float32Array(S.irr); IRR_W = S.irrW; IRR_H = S.irrH;
   P = S.params;
   LIGHTS = new Float32Array(S.lights); NLIGHTS = P.nLights;
-  [HAMX, HAMY] = hammersley(P.skySamples1);
-  [HAMX2, HAMY2] = hammersley(P.skySamples2);
+  [HAMX, HAMY] = halton(P.skySamples1);
+  [HAMX2, HAMY2] = halton(P.skySamples2);
   TRANS_ANY = false;
   for (let m = 0; m < MATS.length / 8; m++) if (MATS[m * 8 + 6] > 0) TRANS_ANY = true;
   sunL = P.sunDir;
@@ -284,13 +290,13 @@ const tmp3 = new Float64Array(3);
 // Returns the number of back-face hits; hemiSky (rgb sum of escaped sky radiance) and hemiEsc (escaped rays).
 const hemiSky = new Float64Array(3);
 let hemiEsc = 0;
-function hemiProbe(ox, oy, oz, S, step, r1, r2, wantSky) {
+function hemiProbe(ox, oy, oz, S, r1, r2, wantSky) {
   const hx = HAMX, hy = HAMY, far = P.far;
   const f = onb(nx, ny, nz);
   const tx = f[0], ty = f[1], tz = f[2], bx = f[3], by = f[4], bz = f[5];
   let back = 0;
   hemiSky[0] = hemiSky[1] = hemiSky[2] = 0; hemiEsc = 0;
-  for (let k = 0; k < S; k += step) {
+  for (let k = 0; k < S; k++) {
     let u1 = hx[k] + r1; if (u1 >= 1) u1 -= 1;
     let u2 = hy[k] + r2; if (u2 >= 1) u2 -= 1;
     const r = Math.sqrt(u1), phi = 2 * PI * u2;
@@ -317,7 +323,7 @@ export function passDirect(i0, i1) {
   const LS = P.lightSamples;
   const L = sunL, sT = sunT, sB = sunB;
   const thr = P.invalidThreshold;
-  const probeStep = Math.max(1, Math.floor(S1 / 12));
+  const nProbe = Math.min(S1, 12);
   const tri = TRI;
   for (let i = i0; i < i1; i++) {
     seed(i, 1);
@@ -325,7 +331,7 @@ export function passDirect(i0, i1) {
     let ox = px + gx * eps, oy = py + gy * eps, oz = pz + gz * eps;
     const r1 = rnd(), r2 = rnd();
     // --- sky estimate + inside-geometry test
-    let back = hemiProbe(ox, oy, oz, S1, 1, r1, r2, true);
+    let back = hemiProbe(ox, oy, oz, S1, r1, r2, true);
     if (back / S1 > thr && P.adjust) {
       // the texel centre is under / inside other geometry: look for a visible point in its footprint. Among the
       // visible candidates take the one that sees the least sky (a texel straddling a wall represents the room
@@ -344,17 +350,16 @@ export function passDirect(i0, i1) {
           // quick reject: a point inside geometry sees a back face straight up its normal
           const qh = intersect(px + gx * eps, py + gy * eps, pz + gz * eps, nx, ny, nz, far);
           if (qh >= 0 && HIT[3] < 0 && MATS[TMAT[qh] * 8 + 7] === 0) continue;
-          const nb = hemiProbe(px + gx * eps, py + gy * eps, pz + gz * eps, S1, probeStep, r1, r2, false);
-          const ns = Math.ceil(S1 / probeStep);
-          if (nb / ns > thr * 0.5) continue;
-          const score = hemiEsc / ns + 0.02 * (CAND[c] * CAND[c] + CAND[c + 1] * CAND[c + 1]);
+          const nb = hemiProbe(px + gx * eps, py + gy * eps, pz + gz * eps, nProbe, r1, r2, false);
+          if (nb / nProbe > thr * 0.5) continue;
+          const score = hemiEsc / nProbe + 0.02 * (CAND[c] * CAND[c] + CAND[c + 1] * CAND[c + 1]);
           if (score < bestS) { bestS = score; bu = u; bv = v; }
         }
         if (bestS < Infinity) {
           TEX_BARY[i * 2] = bu; TEX_BARY[i * 2 + 1] = bv;
           texelGeom(i);
           ox = px + gx * eps; oy = py + gy * eps; oz = pz + gz * eps;
-          back = hemiProbe(ox, oy, oz, S1, 1, r1, r2, true);
+          back = hemiProbe(ox, oy, oz, S1, r1, r2, true);
         } else texelGeom(i);
       }
     }
@@ -485,6 +490,7 @@ function occluderIrradiance(hx, hy, hz, fnx, fny, fnz, out) {
 /** Writes O_IND (sky + bounce, rgb) and O_VAR (variance of the mean luminance) for valid texels. */
 export function passBounce(i0, i1, passNo = 0) {
   const S2 = P.skySamples2, eps = P.eps, far = P.far;
+  const minS = Math.min(S2, P.minSamples || S2), relErr = P.adaptiveError || 0, absErr = P.adaptiveFloor || 0;
   const invPi = 1 / PI;
   const hx = HAMX2, hy = HAMY2;
   const tuv = TUV, tatl = TATL, tmat = TMAT, mats = MATS, tri = TRI;
@@ -496,8 +502,12 @@ export function passBounce(i0, i1, passNo = 0) {
     const f = onb(nx, ny, nz);
     const tx = f[0], ty = f[1], tz = f[2], bx = f[3], by = f[4], bz = f[5];
     const r1 = rnd(), r2 = rnd();
-    let ar = 0, ag = 0, ab = 0, m1 = 0, m2 = 0;
+    let ar = 0, ag = 0, ab = 0, m1 = 0, m2 = 0, n = S2;
     for (let k = 0; k < S2; k++) {
+      if (k >= minS && (k & 7) === 0 && relErr > 0) { // adaptive: stop once the standard error is small
+        const mean = m1 / k, se = Math.sqrt(Math.max(0, m2 / k - mean * mean) / k);
+        if (se <= relErr * mean + absErr) { n = k; break; }
+      }
       let u1 = hx[k] + r1; if (u1 >= 1) u1 -= 1;
       let u2 = hy[k] + r2; if (u2 >= 1) u2 -= 1;
       const r = Math.sqrt(u1), phi = 2 * PI * u2;
@@ -538,10 +548,10 @@ export function passBounce(i0, i1, passNo = 0) {
       const c = PI * (0.2126 * cr + 0.7152 * cg + 0.0722 * cb);
       m1 += c; m2 += c * c;
     }
-    const ks = PI / S2;
+    const ks = PI / n;
     O_IND[i * 3] = ar * ks; O_IND[i * 3 + 1] = ag * ks; O_IND[i * 3 + 2] = ab * ks;
-    const mean = m1 / S2;
-    O_VAR[i] = Math.max(0, m2 / S2 - mean * mean) / S2;
+    const mean = m1 / n;
+    O_VAR[i] = Math.max(0, m2 / n - mean * mean) / n;
   }
 }
 
@@ -554,4 +564,92 @@ export function texelFrame(i, out) {
 
 export function takeRayCount() { const r = rayCount; rayCount = 0; return r; }
 
-export const kernels = { passDirect, passBounce };
+// ---------------------------------------------------------------- post: edge-avoiding a-trous denoiser (row-parallel)
+// Job buffers are SharedArrayBuffers prepared by the main thread (lightmap.mjs denoise()):
+//   st u8 (1 traced, 3 filled = filter these), rect i32 (chart id), nrm f32x3, lum f32, sd f32,
+//   val[3] f32 x ch (input, ping, pong), vari[3] f32 (matching variance estimates).
+let PJ = null;
+export function setPost(job) {
+  if (!job) { PJ = null; return; }
+  PJ = {
+    W: job.W, H: job.H, ch: job.ch, sigma: job.sigma, skipFlat: job.skipFlat,
+    st: new Uint8Array(job.st), rect: new Int32Array(job.rect), nrm: new Float32Array(job.nrm),
+    lum: new Float32Array(job.lum), sd: new Float32Array(job.sd),
+    val: job.val.map((b) => new Float32Array(b)), vari: job.vari.map((b) => new Float32Array(b)),
+  };
+}
+const H5 = [1 / 16, 1 / 4, 3 / 8, 1 / 4, 1 / 16];
+const EXP_LUT = Float32Array.from({ length: 257 }, (_, i) => Math.exp(-(i + 0.5) / 32));
+const srcOf = (it) => (it === 0 ? 0 : it % 2 === 1 ? 1 : 2), dstOf = (it) => (it % 2 === 0 ? 1 : 2);
+
+/** Phase 1 of iteration `it` for rows [y0, y1): luminance + 3x3 prefiltered noise deviation. */
+export function atrousPrep(y0, y1, it) {
+  const { W, H, ch, st, rect, lum, sd } = PJ;
+  const src = PJ.val[srcOf(it)], sv = PJ.vari[srcOf(it)];
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
+    const k = y * W + x, s0 = st[k];
+    if (s0 !== 1 && s0 !== 3) continue;
+    lum[k] = ch === 3 ? 0.2126 * src[k * 3] + 0.7152 * src[k * 3 + 1] + 0.0722 * src[k * 3 + 2] : src[k];
+    const r = rect[k];
+    let pv = 0, pw = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const yy = y + dy;
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx;
+        if (xx < 0 || xx >= W) continue;
+        const q = yy * W + xx, sq = st[q];
+        if ((sq !== 1 && sq !== 3) || rect[q] !== r) continue;
+        const w = (dx === 0 ? 2 : 1) * (dy === 0 ? 2 : 1);
+        pv += sv[q] * w; pw += w;
+      }
+    }
+    sd[k] = Math.sqrt(Math.max(0, pv / pw));
+  }
+}
+
+/** Phase 2: the 5x5 B3 a-trous step (stride 2^it) with chart / normal / luminance edge stops. */
+export function atrousFilter(y0, y1, it) {
+  const { W, H, ch, st, rect, nrm, lum, sd, sigma, skipFlat } = PJ;
+  const src = PJ.val[srcOf(it)], sv = PJ.vari[srcOf(it)], dst = PJ.val[dstOf(it)], dv = PJ.vari[dstOf(it)];
+  const step = 1 << it;
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
+    const k = y * W + x, s0 = st[k];
+    if (s0 !== 1 && s0 !== 3) continue;
+    const sdk = sd[k];
+    if (skipFlat && sdk < 1e-6) { for (let c = 0; c < ch; c++) dst[k * ch + c] = src[k * ch + c]; dv[k] = sv[k]; continue; }
+    const r = rect[k], lp = lum[k], inv = 1 / (sigma * sdk + 1e-5);
+    const nx = nrm[k * 3], ny = nrm[k * 3 + 1], nz = nrm[k * 3 + 2];
+    let ws = 0, wv = 0, a0 = 0, a1 = 0, a2 = 0;
+    for (let j = -2; j <= 2; j++) {
+      const yy = y + j * step;
+      if (yy < 0 || yy >= H) continue;
+      const hj = H5[j + 2];
+      for (let i = -2; i <= 2; i++) {
+        const xx = x + i * step;
+        if (xx < 0 || xx >= W) continue;
+        const q = yy * W + xx, sq = st[q];
+        if ((sq !== 1 && sq !== 3) || rect[q] !== r) continue;
+        let w = hj * H5[i + 2];
+        if (q !== k) {
+          let dn = nx * nrm[q * 3] + ny * nrm[q * 3 + 1] + nz * nrm[q * 3 + 2];
+          if (dn < 0.99999) {
+            if (dn <= 0.5) continue;
+            dn *= dn; dn *= dn; dn *= dn; dn *= dn; dn *= dn; // ^32
+            w *= dn;
+          }
+          let dl = (lum[q] - lp) * inv;
+          if (dl < 0) dl = -dl;
+          if (dl >= 8) continue;
+          w *= EXP_LUT[(dl * 32) | 0];
+        }
+        ws += w; wv += w * w * sv[q];
+        if (ch === 3) { a0 += src[q * 3] * w; a1 += src[q * 3 + 1] * w; a2 += src[q * 3 + 2] * w; } else a0 += src[q] * w;
+      }
+    }
+    if (ch === 3) { dst[k * 3] = a0 / ws; dst[k * 3 + 1] = a1 / ws; dst[k * 3 + 2] = a2 / ws; } else dst[k] = a0 / ws;
+    dv[k] = wv / (ws * ws);
+  }
+}
+
+export const kernels = { passDirect, passBounce, atrousPrep, atrousFilter };

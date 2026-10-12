@@ -41,8 +41,11 @@ export const LIGHTMAP_DEFAULTS = {
   padding: 2,             // texels of border around every chart (>= 2)
   maxAtlases: 0,          // > 0: scale the resolution down until everything fits in this many atlases
   chartAngle: 40,         // degrees: max deviation from the seed normal inside one chart
-  samples: 64,            // sky / bounce rays per texel (pass B); pass A uses `directSamples`
-  directSamples: 0,       // pass-A sky rays (bounce source + inside-geometry test); 0 = clamp(samples / 4, 8, 32)
+  samples: 64,            // max sky / bounce rays per texel (pass B); pass A uses `directSamples`
+  minSamples: 0,          // adaptive pass B: at least this many rays (0 = max(16, samples / 4)) ...
+  adaptiveError: 0.03,    // ... then stop once the relative standard error of the estimate is below this (0 = off)
+  adaptiveFloor: 0.003,   //     (+ this absolute irradiance, so dark texels stop too)
+  directSamples: 0,       // pass-A sky rays (bounce source + inside-geometry test); 0 = clamp(samples / 8, 8, 24)
   sunSamples: 16,         // adaptive: 4 when the texel is uniformly lit / shadowed
   lightSamples: 8,
   bounces: 1,
@@ -810,7 +813,7 @@ export async function bakeLightmaps(input, options = {}) {
   stage('raster');
 
   // ---- shared buffers + workers
-  const S1 = o.directSamples || Math.max(8, Math.min(32, Math.ceil(o.samples / 4)));
+  const S1 = o.directSamples || Math.max(8, Math.min(24, Math.ceil(o.samples / 8)));
   const S2 = o.samples;
   const shared = {
     nodes, tri: TRI.buffer, triN: TN.buffer, triUV: TUVB.buffer, triMat: TMAT.buffer, triAtlas: TATL.buffer,
@@ -824,6 +827,7 @@ export async function bakeLightmaps(input, options = {}) {
       sunDir, sunColor: sunColor.map((c) => c * sunIntensity), sunCos: Math.cos(sunAngle), sunSamples: o.sunSamples,
       skySamples1: S1, skySamples2: S2, eps: o.eps, far: o.far, jitter: !!o.jitter, lightSamples: o.lightSamples, nLights: lights.length,
       invalidThreshold: o.invalidThreshold, adjust: o.adjustSamples !== false,
+      minSamples: o.minSamples || Math.max(16, Math.ceil(o.samples / 4)), adaptiveError: o.adaptiveError, adaptiveFloor: o.adaptiveFloor,
     },
   };
   K.init(shared);

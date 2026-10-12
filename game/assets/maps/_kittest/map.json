@@ -3,7 +3,7 @@
  "name": "套件測試街角",
  "nameEn": "Kit Test Corner",
  "version": 1,
- "built": "2026-10-12T09:33:20.907Z",
+ "built": "2026-10-12T09:36:08.627Z",
  "bounds": [
   -34,
   -2,
@@ -317,7 +317,7 @@
  },
  "lightmap": {
   "encoding": "rgbm-sqrt",
-  "range": 8,
+  "range": 32,
   "mode": "indirect+mask",
   "uv": "uv1",
   "atlases": [
@@ -876,15 +876,15 @@
    "lm": 1,
    "res": "1k"
   },
-  "car_paint": {
+  "car_paint_worn": {
    "color": "#ffffff",
    "maps": {
     "diff": "../common/metal_worn_diff.jpg",
     "nor": "../common/metal_worn_nor.jpg",
     "arm": "../common/metal_worn_arm.jpg"
    },
-   "rough": 0.75,
-   "env": 1.2,
+   "rough": 0.8,
+   "env": 0.8,
    "surf": "metal",
    "lm": 1,
    "res": "1k"
@@ -937,6 +937,14 @@
    "surf": "metal",
    "lm": 1,
    "res": "1k"
+  },
+  "car_paint": {
+   "color": "#ffffff",
+   "rough": 0.38,
+   "metal": 0.35,
+   "env": 1,
+   "surf": "metal",
+   "lm": 1
   },
   "car_glass": {
    "color": "#121a20",
@@ -1196,20 +1204,20 @@
   }
  },
  "stats": {
-  "meshes": 164,
-  "triangles": 48668,
+  "meshes": 165,
+  "triangles": 48068,
   "collisionTriangles": 1685,
   "chunks": 4,
-  "maxDrawCalls": 164,
-  "maxTriangles": 48668,
+  "maxDrawCalls": 165,
+  "maxTriangles": 48068,
   "viewRadius": 100,
   "zones": [
    "corner"
   ],
   "lightmap": {
-   "texels": 289498,
+   "texels": 285778,
    "atlases": 1,
-   "seconds": 19
+   "seconds": 27
   }
  }
 }

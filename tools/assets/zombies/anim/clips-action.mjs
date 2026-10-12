@@ -7,6 +7,8 @@ import { clonePose } from './skeleton.mjs';
 import { zombify } from './zombify.mjs';
 import { buildLate } from './clips-late.mjs';
 import { fromUAL, fromCMU } from './lib.mjs';
+import { groundFeet, clampFeetAboveGround } from './ik.mjs';
+import { blendIn, blendOut } from './clips-late.mjs';
 
 const SIDED = new Set(['clavicle', 'upperarm', 'lowerarm', 'hand', 'thigh', 'calf', 'foot', 'ball']);
 const SWAP = { footL: 'footR', footR: 'footL', handL: 'handR', handR: 'handL', plantL: 'plantR', plantR: 'plantL' };
@@ -65,6 +67,11 @@ export function buildActions(skel, only, loco) {
     const r0 = c.poses[0].root.clone();
     for (const p of c.poses) { p.root.x -= r0.x; p.root.z -= r0.z; }
     zombify(skel, c, { slump: 2, headTilt: 8, claw: 30, twitch: 0.4, seed: 21 });
+    // ground on the standing start, keep the feet out of the floor, start/end on our idle
+    groundFeet(skel, c, { pct: 0 });
+    clampFeetAboveGround(skel, c);
+    blendIn(c, base, 0.2);
+    blendOut(c, base, 0.3);
     c.meta.events = { hit: hitTime(skel, c, 'r') };
     c.meta.notes = 'Quaternius UAL2 Zombie_Scratch: right-arm overhead rake with a lurch forward';
     out.attack_a = c;

@@ -106,7 +106,7 @@ async function main() {
     for (let i = 0; i < N; i++) {
       const t = N === 1 ? t0 : loop ? t0 + ((t1 - t0) * i) / N : t0 + ((t1 - t0) * i) / (N - 1);
       const obj = skClone(model.scene);
-      obj.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+      obj.traverse((o) => { if (o.isMesh) { if (!qs.has('keepMat')) o.material = mat; o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
       const mixer = new THREE.AnimationMixer(obj);
       mixer.clipAction(clip).play();
       mixer.setTime(Math.min(t, clip.duration - 1e-4));

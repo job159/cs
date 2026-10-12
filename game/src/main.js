@@ -115,7 +115,7 @@ class App {
   /** Switches the base screen ('game' and 'loading' have none). */
   show(name, data) {
     const next = this.screens[name] || null;
-    if (this.screen && this.screen !== next) { this.screen.leave(); this.screen.el.classList.remove('on'); }
+    if (this.screen && this.screen !== next) { this.screen.leave(); this.screen.el.classList.remove('on', 'under'); }
     const prev = this.state;
     this.state = name;
     this.screen = next;
@@ -132,6 +132,8 @@ class App {
   openOverlay(name, data) {
     const s = this.screens[name];
     if (!s || this.overlays.includes(s)) return;
+    // an opaque overlay (settings) hides what is under it; the pause menu shows the game through
+    if (!s.el.classList.contains('pause')) (this.overlays[this.overlays.length - 1] || this.screen)?.el.classList.add('under');
     this.overlays.push(s);
     s.el.classList.add('on', 'ovl');
     s.el.style.zIndex = String(10 + this.overlays.length);
@@ -145,11 +147,17 @@ class App {
     this.overlays.splice(i, 1);
     s.leave();
     s.el.classList.remove('on', 'ovl');
-    this.overlays[this.overlays.length - 1]?.enter?.();
+    const top = this.overlays[this.overlays.length - 1];
+    (top || this.screen)?.el.classList.remove('under');
+    top?.enter?.();
     this._syncMode();
   }
 
-  closeOverlays() { for (const s of [...this.overlays].reverse()) { this.overlays.pop(); s.leave(); s.el.classList.remove('on', 'ovl'); } this._syncMode(); }
+  closeOverlays() {
+    for (const s of [...this.overlays].reverse()) { this.overlays.pop(); s.leave(); s.el.classList.remove('on', 'ovl', 'under'); }
+    this.screen?.el.classList.remove('under');
+    this._syncMode();
+  }
 
   /** Android Back / Esc: dialogs, then overlays, then the screen. Returns true when consumed. */
   back() {
@@ -228,18 +236,22 @@ class App {
     applySettings(this);
   }
 
-  startSolo({ map, difficulty }) {
+  startSolo({ map, difficulty, bots = this.botCount }) {
     this.mapId = map;
     this.lastDiff = difficulty;
-    return this.startMatch({ map, difficulty, seed: (Math.random() * 2 ** 31) | 0 });
+    return this.startMatch({ map, difficulty, bots, seed: (Math.random() * 2 ** 31) | 0 });
   }
+
+  /** AI teammates for solo (0 = off), persisted. */
+  get botCount() { return Math.max(0, Math.min(3, +store.get('cf.bots', '0') || 0)); }
+  set botCount(n) { store.set('cf.bots', String(Math.max(0, Math.min(3, n | 0)))); }
 
   /**
    * Loads a match and enters it. Multiplayer: the host already broadcast 'start'; after loading the
    * host attaches NetSync, waits for every guest's 'ready' and says 'go'; guests buffer the host's
    * traffic while loading (coop detached), attach NetSync, report ready and wait for 'go'.
    */
-  async startMatch({ map, difficulty = 'normal', seed = 0, n = 0, room = null }) {
+  async startMatch({ map, difficulty = 'normal', seed = 0, n = 0, room = null, bots = 0 }) {
     const token = ++this.loadToken;
     this.loadingMatch = true;
     const info = mapInfo(map);
@@ -262,10 +274,10 @@ class App {
       this.loading.progress(0.4, '準備武器與感染者…');
       this.attachGameUI(g);
       g.spawnIndex = room ? Math.max(0, room.slot) : 0;
-      g.matchOptions = this.dev.noMatch ? null : { difficulty, players: room ? room.players().length : 1, seed };
+      g.matchOptions = this.dev.noMatch ? null : { difficulty, players: room ? room.players().length : 1, seed, bots: room ? 0 : bots };
       await g.loadPlayer((p) => this.loading.progress(0.4 + p * 0.55));
       if (!alive()) return;
-      this.matchInfo = { map: info.id, difficulty, seed, n, t0: performance.now() };
+      this.matchInfo = { map: info.id, difficulty, seed, n, bots, t0: performance.now() };
       if (room) {
         new NetSync(g, room);
         this.coop?.attach();
@@ -333,7 +345,7 @@ class App {
     const m = this.game?.match;
     const mi = this.matchInfo || {};
     const data = { victory, stats: { ...stats }, round: Math.max(1, m?.round || 1), map: mi.map, difficulty: mi.difficulty,
-      time: (performance.now() - (mi.t0 || performance.now())) / 1000, mp: !!this.room };
+      time: (performance.now() - (mi.t0 || performance.now())) / 1000, mp: !!this.room, bots: mi.bots || 0 };
     this.coop?.final();
     setTimeout(() => { if (this.state === 'game' && this.ending) this.showResults(data); }, 3500);
   }

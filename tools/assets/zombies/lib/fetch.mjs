@@ -52,7 +52,7 @@ function writeAtomic(file, buf) {
 export async function mpfb2(rel) {
   const file = path.join(SRC, 'mpfb2', rel);
   const parts = rel.split('/');
-  usage.add('mpfb2:' + (parts[0] === 'targets' ? parts.slice(0, 2).join('/').replace(/.json$/, '') : parts[0] === 'rigs' ? 'rigs/game_engine' : parts[0]));
+  usage.add('mpfb2:' + (parts[0] === 'targets' ? parts.slice(0, 2).join('/').replace(/.json$/, '') : parts[0] === 'rigs' ? 'rigs/standard' : parts[0]));
   if (!fs.existsSync(file)) {
     const buf = await get(MPFB2_RAW + rel);
     writeAtomic(file, buf);

@@ -375,20 +375,19 @@ export function paintCloth(part, o = {}) {
       const f = tearField(P, Nn);
       // frayed fringe: inside a narrow band around each hole only thin warp/weft threads survive (more of
       // them further from the hole); thread lines run along the UV axes, ~6 texels apart
-      const fw = (tear.fray ?? 0.6) * 0.07;
+      const fw = (tear.fray ?? 0.6) * 0.03; // ~1 cm band at the default noise scale
       let cut = f > 0;
       if (!cut && f > -fw) {
         const t = -f / fw;
         const tu = Math.abs(N3.noise(u * S / 6, v * 6, 1.3)), tv = Math.abs(N3.noise(u * 6, v * S / 6, 2.1));
-        cut = Math.min(tu, tv) > 0.12 + 0.6 * t * t;
+        cut = Math.min(tu, tv) > 0.07 + 0.9 * t * t * t;
       }
       if (cut) { alpha = 0; anyCut = true; }
       else {
         // surviving threads in the fray band show the pale undyed yarn (denim weft) when threadColor is set
-        if (f > -fw && tear.threadColor) over(c, tear.threadColor, (1 + f / fw) * 0.75);
-        const edge = 1 - smoothstep(0, fw * 2.5, -f);
-        mul(c, [0.62, 0.57, 0.52], edge * 0.55);
-        over(c, COLORS.grime, edge * 0.25);
+        if (f > -fw && tear.threadColor) over(c, tear.threadColor, (1 + f / fw) * 0.6);
+        const edge = 1 - smoothstep(0, fw * 3, -f);
+        mul(c, [0.6, 0.58, 0.55], edge * 0.6);
         bl = Math.max(bl, edge * (blood.edges ?? 0.4) * smoothstep(0, 0.5, N3.noise(P[0] * 40, P[1] * 40, P[2] * 40) + 0.3));
       }
     }

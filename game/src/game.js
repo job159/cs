@@ -12,6 +12,7 @@ import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';
 import { AimAssist } from './player/aimassist.js';
 import { Throwables } from './weapons/throwables.js';
+import { BotSquad } from './player/bots.js';
 import { WEAPONS, registerWeapon } from './weapons/defs.js';
 
 export class Game {
@@ -44,9 +45,18 @@ export class Game {
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */
   hitStop(sec) { this.hitStopT = Math.max(this.hitStopT, sec); }
   noise() {}
+  /** Everyone zombies can target: local player, network teammates, AI bots. */
+  playerList() {
+    const st = this.status;
+    const list = this.net ? this.net.playerList() : [{ id: this.localId, pos: this.player.pos, alive: !!st?.alive && !st.downed, downed: !!st?.downed, local: true }];
+    if (this.bots) list.push(...this.bots.players());
+    return list;
+  }
+
   /** Damage a player: the local one directly, remote ones through the network (host only). */
   damagePlayer(amount, opts = {}) {
     const target = opts.player;
+    if (target?.bot) { this.bots?.damage(target.id, amount); return amount; }
     if (target && target.id !== undefined && target.id !== this.localId) { this.net?.sendPlayerDamage(target.id, amount, opts); return amount; }
     return this.status?.damage(amount, opts) ?? 0;
   }
@@ -57,7 +67,11 @@ export class Game {
   }
   playerStatus(kind, time, value) { if (kind === 'slow') this.status?.applySlow(time, value); }
   get playerDead() { return !this.status || !this.status.alive; }
-  onZombieKilled(z, info) { this.match?.onKill(z, info); }
+  onZombieKilled(z, info) {
+    this.match?.onKill(z, info);
+    const bot = this.bots?.bots.find((b) => b.id === info?.shooter);
+    if (bot) this.hud?.killFeed(bot.name, info.weapon || 'ump', z.def.zh, !!info.headshot);
+  }
   onPlayerDowned() { this.hud?.toast('你倒下了！', 2000); }
 
   async loadMap(map) {
@@ -87,6 +101,7 @@ export class Game {
     await this.zombies.init();
     progress?.(0.8);
     if (this.matchOptions) { this.match = new Match(this, this.matchOptions); this.match.start(); }
+    if (this.matchOptions?.bots > 0) this.bots = new BotSquad(this, Math.min(3, this.matchOptions.bots));
     this.fx = new FX(this, this.renderer.q);
     this.projectiles = new Projectiles(this);
     this.throwables = new Throwables(this);
@@ -140,6 +155,7 @@ export class Game {
     this.zombies?.update(dt);
     this.match?.update(dt);
     this.net?.update(dt);
+    this.bots?.update(dt);
     if (this.status?.downed && this.match && this.match.selfRevives > 0) {
       this.hud?.setPrompt(`按 E 使用腎上腺素自救（剩 ${this.match.selfRevives}）`);
       if (s.pressed.use) { this.match.selfRevives--; this.status.revive(40); this.hud?.setPrompt(''); }

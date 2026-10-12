@@ -35,7 +35,7 @@ export class NetSync {
     game.net = this;
     game.zombies.net = this;
     game.zombies.authority = this.host;
-    game.playerList = () => this.playerList();
+    // game.playerList() merges our list with AI bots
     if (!this.host && game.match) game.match.isMirror = true;
     for (const p of room.players ? room.players() : []) if (p.id !== room.selfId) this._addRemote(p);
     this._h = { join: (p) => this._addRemote(p), leave: (p) => this._removeRemote(p.id ?? p), msg: (m) => this._onMessage(m) };

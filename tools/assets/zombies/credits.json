@@ -5,12 +5,6 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
- "mpfb2:rigs/game_engine": {
-  "asset": "rigs/game_engine",
-  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/rigs/game_engine",
-  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
-  "license": "CC0-1.0"
- },
  "mpfb2:targets/arms": {
   "asset": "targets/arms",
   "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/arms",

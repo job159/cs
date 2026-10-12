@@ -574,6 +574,7 @@ export class ZombieManager {
       const g = await loadGLB(`zombies/${id}.glb`);
       const ex = g.scene.userData || {};
       entry = { scene: g.scene, hitboxes: ex.hitboxes, height: ex.height, scale: 1, clips: g.animations };
+      try { entry.lod1 = (await loadGLB(`zombies/${id}_lod1.glb`)).scene; } catch { entry.lod1 = null; }
     } catch {
       const m = buildMannequin();
       entry = { scene: m.scene, hitboxes: null, height: 1.75, scale: 1, clips: m.animations, fallback: true };
@@ -595,6 +596,26 @@ export class ZombieManager {
     const entry = this.models.get(mid) || this.models.values().next().value;
     if (!entry) return null;
     const scene = cloneSkinned(entry.scene);
+    const lod0 = [], lod1 = [];
+    scene.traverse((o) => { if (o.isSkinnedMesh) lod0.push(o); });
+    if (entry.lod1 && lod0.length) {
+      // bind the low-poly meshes to this zombie's own skeleton (bone order by name)
+      const bones = {};
+      scene.traverse((o) => { if (o.isBone) bones[o.name] = o; });
+      entry.lod1.traverse((o) => {
+        if (!o.isSkinnedMesh) return;
+        const list = o.skeleton.bones.map((b) => bones[b.name]);
+        if (list.some((b) => !b)) return;
+        const m = new THREE.SkinnedMesh(o.geometry, o.material);
+        m.name = o.name + '_lod1';
+        const sk = new THREE.Skeleton(list, o.skeleton.boneInverses);
+        lod0[0].parent.add(m);
+        m.bind(sk, o.bindMatrix);
+        m.visible = false;
+        m.frustumCulled = false;
+        lod1.push(m);
+      });
+    }
     // library clips are retargeted once per model (rest poses / armature orientation may differ)
     if (!entry.fallback && this.animSrc && !entry.retargeted) {
       try { entry.retargeted = retargetClips(this.animSrc.animations, this.animSrc.scene, entry.scene); } catch (e) { console.warn('retarget failed', e); entry.retargeted = this.clips; }
@@ -605,6 +626,7 @@ export class ZombieManager {
     if (opts.elite) this._makeElite(z, opts.elite);
     if (this.nav) { const k = this.nav.nearestWalkable(pos.x, pos.z, 10); if (k >= 0) { this.nav.cellCenter(k, _v); z.pos.set(_v.x, _v.y, _v.z); z.groundY = _v.y; } }
     if (opts.id) z.id = opts.id;
+    z.lod0 = lod0; z.lod1 = lod1;
     // bosses rendered with a stand-in model (or the mannequin) get scaled up to their real size
     const fs = entry.fallback || (def.boss && mid !== def.models[0]) ? (def.fallbackScale || 1) : 1;
     if (fs !== 1) { z.root.scale.setScalar(fs); for (const h of z.hitboxes) h.r *= fs; }
@@ -734,7 +756,15 @@ export class ZombieManager {
         z.animAcc = 0;
         z.applyFlinch(dt * every);
       }
-      z.root.traverse((o) => { if (o.isSkinnedMesh) o.castShadow = dist < 18; });
+      // mesh LOD + shadow casting by distance (bosses always full detail)
+      const far = !z.def.boss && z.lod1?.length && dist > 22;
+      if (far !== z.isFar) {
+        z.isFar = far;
+        for (const m of z.lod0 || []) m.visible = !far;
+        for (const m of z.lod1 || []) m.visible = far;
+      }
+      const shadow = dist < 18 || z.def.boss;
+      if (shadow !== z.castsShadow) { z.castsShadow = shadow; z.root.traverse((o) => { if (o.isSkinnedMesh) o.castShadow = shadow; }); }
     }
   }
 

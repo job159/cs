@@ -145,7 +145,7 @@ export class MultiplayerScreen extends Screen {
     let code = '';
     const body = el(`<div class="kp">
       <div class="kp-l"><div class="kp-digits">${'<i></i>'.repeat(5)}</div><p class="kp-msg">輸入房主提供的 5 位數房號</p>
-        <button class="fe-btn pri big kp-go" disabled>加入房間</button></div>
+        <div class="kp-btns"><button class="fe-btn big kp-no">取消</button><button class="fe-btn pri big kp-go" disabled>加入房間</button></div></div>
       <div class="kp-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button data-k="${n}">${n}</button>`).join('')}
         <button data-k="clr" class="fn">清除</button><button data-k="0">0</button><button data-k="del" class="fn" aria-label="刪除">${ICON.del}</button></div>
     </div>`);
@@ -170,7 +170,8 @@ export class MultiplayerScreen extends Screen {
     };
     window.addEventListener('keydown', onKey);
     go.addEventListener('click', () => d.close(code));
-    const d = app.dialogs.show({ title: '輸入房號', body, cls: 'kp-dlg', buttons: [{ label: '取消', value: null }], onClose: () => window.removeEventListener('keydown', onKey) });
+    body.querySelector('.kp-no').addEventListener('click', () => d.close(null));
+    const d = app.dialogs.show({ title: '輸入房號', body, cls: 'kp-dlg', onClose: () => window.removeEventListener('keydown', onKey) });
     upd();
     d.done.then((c) => { if (c && /^\d{5}$/.test(c)) joinRoomFlow(app, c); });
   }

@@ -139,7 +139,8 @@ export const SURFACES = [
     polys: ['row minus carriageway for every street; corner plazas at the chamfers'] },
   { id: 'CROSSWALKS', kind: 'paint', y: G + 0.005, mat: 'road_paint white, worn 40%', surf: 'concrete',
     polys: [rect(-5.5, -14.5, 5.5, -11), rect(-5, 11, 5, 14.5), rect(-14.5, -5.5, -11, 5.5), rect(11, -5.5, 14.5, 5.5)], note: 'zebra bars 0.5 m / gaps 0.5 m along the walking direction' },
-  { id: 'LANE_LINES', kind: 'paint', y: G + 0.005, mat: 'road_paint: white dashed centre line (3 m dash / 6 m gap), solid yellow 0.12 m edge lines 0.4 m off each curb', surf: 'concrete' },
+  { id: 'LANE_LINES', kind: 'paint', y: G + 0.005, mat: 'road_paint: white dashed centre line 0.12 m (3 m dash / 6 m gap), solid yellow 0.12 m edge lines 0.4 m off each curb', surf: 'concrete',
+    phase: 'dashes start at world multiples of 9 m along the street axis (dash = [9k, 9k+3]) so zone seams line up; no centre line inside the core rect(-14.5,-14.5,14.5,14.5) or on crosswalks' },
   { id: 'TUNNEL_FLOOR', kind: 'asphalt', y: G, mat: 'asphalt_cracked, wet (roughness 0.35, puddles)', surf: 'concrete', polys: [rect(-5.5, -76, 5.5, -62)] },
   { id: 'FORT_DECK', kind: 'steel', y: LEVEL.fortDeck, mat: 'container roofs (corrugated container_side / corrugated) + plank boards (wood_planks) + perforated ramps (grate)', surf: 'metal' },
 ];
@@ -430,12 +431,16 @@ export const BUILDINGS = [
 for (const b of BUILDINGS) b.height = r2(b.floors.reduce((a, v) => a + v, 0));
 
 // Low-detail masses that close the view (no interiors, merged per block). poly + height (top of roofline).
+// Skyline-zone masses live strictly OUTSIDE the five playable build-zone polygons. Block-interior gaps INSIDE a zone
+// (e.g. west x -40..-26 z -40..-24 behind W_N1, east x 26..43 z 24..40 behind E_S1) are closed by that zone's builder
+// with plain roof masses at the neighbouring building height (back walls never seen from the street, roofs seen from
+// the fort only at grazing angles).
 export const BACKDROP = [
-  { id: 'BD_NW', poly: rect(-82, -80, -24, -34), heights: [18, 26, 22], note: 'block interior + far side; roof clutter: water towers, AC, antennas' },
-  { id: 'BD_NE', poly: rect(24, -80, 84, -34), heights: [20, 24, 30] },
-  { id: 'BD_SE', poly: [[24, 24], [52, 24], [52, 34], [84, 34], [84, 84], [38, 84], [38, 40], [24, 40]], heights: [16, 22, 26] },
-  { id: 'BD_SW', poly: [[-52, 24], [-24, 24], [-24, 40], [-38, 40], [-38, 84], [-84, 84], [-84, 38], [-52, 38]], heights: [18, 24] },
-  { id: 'BD_RAIL', poly: rect(-84, -74, 84, -62), heights: [6.6], note: 'railway embankment/viaduct continuing both ways beyond the bridge (LM_BRIDGE owns x -26..26)' },
+  { id: 'BD_NW', poly: rect(-84, -80, -26, -40), heights: [18, 26, 22], note: 'far side of the north-west block; roof clutter: water towers, AC, antennas' },
+  { id: 'BD_NE', poly: rect(26, -80, 84, -40), heights: [20, 24, 30] },
+  { id: 'BD_SE', poly: rect(38, 40, 84, 84), heights: [16, 22, 26] },
+  { id: 'BD_SW', poly: rect(-84, 40, -38, 84), heights: [18, 24] },
+  { id: 'BD_RAIL', polys: [rect(-84, -74, -26, -62), rect(26, -74, 84, -62)], heights: [6.6], note: 'railway viaduct continuing both ways beyond the bridge (LM_BRIDGE in the north zone owns x -26..26), same girder/abutment style' },
   { id: 'BD_POCKETS', note: 'facades closing each spawn pocket: tunnel end wall (z -76, dark, sodium lamp), W stub (x -76), WX ends (z -34 / 38), EX ends (z -34 / 34), SX ends (x -38 / 38), S lane (z 76)' },
   {
     id: 'BD_SKYLINE', note: 'distant towers, silhouettes in fog. Ring 100-260 m: 1920s setback skyscrapers + 1960s concrete grid towers; signature: a gothic tower with a gilded spire NNW (x -70, z -190, 140 m) seen above the bridge; burning tower with smoke column ENE',

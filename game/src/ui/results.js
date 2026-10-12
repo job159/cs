@@ -71,7 +71,7 @@ export class ResultsScreen extends Screen {
     const app = this.app;
     if (act === 'again') {
       if (app.room) app.coop.hostStart();
-      else app.startSolo({ map: this.data.map, difficulty: this.data.difficulty });
+      else app.startSolo({ map: this.data.map, difficulty: this.data.difficulty, bots: this.data.bots ?? app.botCount });
     } else if (act === 'lobby') app.backToLobby();
     else if (act === 'menu') {
       if (app.room) {

@@ -46,7 +46,7 @@ for (let v = -90; v <= 90; v += focus ? 2 : 10) {
 }
 
 // --- backdrop masses -------------------------------------------------------------------------------------------
-for (const b of L.BACKDROP) if (b.poly) poly(b.poly, '#262825', { stroke: '#333631' });
+for (const b of L.BACKDROP) for (const pp of b.polys || (b.poly ? [b.poly] : [])) poly(pp, '#262825', { stroke: '#333631' });
 
 // --- streets: sidewalk (row) then carriageway ------------------------------------------------------------------
 for (const s of L.STREETS) poly(s.row, '#77756c');

@@ -99,9 +99,8 @@ export class SoloSetup extends Screen {
         <section class="solo-side">
           <div class="fe-panel solo-map"><div class="fe-ph"><span>地圖</span><small>MAP</small></div><div class="solo-maps"></div></div>
           <div class="fe-panel solo-ai">
-            <div class="st-l"><b>AI 隊友</b><small>人數不足時由電腦補位</small></div>
-            <span class="fe-tag">即將推出</span>
-            <button class="st-toggle" disabled aria-label="AI 隊友"><i></i></button>
+            <div class="st-l"><b>AI 隊友</b><small>由電腦補位的隊友</small></div>
+            <div class="fe-seg ai-seg"></div>
           </div>
           <button class="fe-btn pri big" data-act="start">${ICON.play}<span>開始作戰</span></button>
         </section>
@@ -127,12 +126,15 @@ export class SoloSetup extends Screen {
       ? MAPS.map((m) => `<button class="map-pick${m.id === app.mapId ? ' on' : ''}" data-act="map" data-id="${m.id}">${mapCard(m, { small: true })}</button>`).join('')
       : mapCard(mapInfo(app.mapId));
     this.$('.solo-maps').innerHTML = maps;
+    const n = app.botCount;
+    this.$('.ai-seg').innerHTML = [[0, '關'], [1, '1'], [2, '2'], [3, '3']].map(([v, t]) => `<button data-act="bots" data-v="${v}" class="${v === n ? 'on' : ''}" aria-label="AI 隊友 ${t}">${t}</button>`).join('');
   }
 
   onAct(act, t) {
     const app = this.app;
     if (act === 'diff') { this.diff = t.dataset.id; app.lastDiff = this.diff; this.render(); }
     else if (act === 'map') { app.mapId = t.dataset.id; this.render(); app.ensureBackdrop(app.mapId); }
+    else if (act === 'bots') { app.botCount = +t.dataset.v; this.render(); }
     else if (act === 'start') app.startSolo({ map: app.mapId, difficulty: this.diff });
   }
 }
@@ -152,6 +154,15 @@ function weaponStats(w) {
     ['精準', acc],
     ['機動', Math.min(1, ((w.speed ?? 5) - 3.6) / 2)],
   ];
+}
+
+function weaponNums(w) {
+  const rows = [['傷害', w.pellets ? `${w.dmg}×${w.pellets}` : String(w.dmg)], ['爆頭倍率', `×${w.head ?? 4}`]];
+  if (w.rpm && w.cat !== 'melee') rows.push(['射速', `${w.rpm} RPM`]);
+  if (w.reload) rows.push(['換彈', `${w.reload.toFixed(1)} 秒`]);
+  if (w.speed) rows.push(['移動速度', `${w.speed.toFixed(1)} m/s`]);
+  if (w.range) rows.push(['有效距離', `${w.range[0]}–${w.range[1]} m`]);
+  return rows;
 }
 
 export class Armory extends Screen {
@@ -188,7 +199,8 @@ export class Armory extends Screen {
     det.innerHTML = `<div class="ad-img ar-img big"><img alt=""><i class="ar-ph"></i></div>
       <div class="ad-n"><b>${esc(w.zh)}</b><small>${esc(w.en)}</small></div>
       <div class="ad-tags"><span>${CATS[w.cat]?.zh || ''}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${w.mag ? `<span>彈匣 ${w.mag} / ${w.reserve}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
-      <div class="ad-stats">${w.cat === 'melee' ? '' : weaponStats(w).map(([k, v]) => `<div><span>${k}</span><i><u style="width:${(v * 100).toFixed(0)}%"></u></i></div>`).join('')}</div>`;
+      <div class="ad-stats">${w.cat === 'melee' ? '' : weaponStats(w).map(([k, v]) => `<div><span>${k}</span><i><u style="width:${(v * 100).toFixed(0)}%"></u></i></div>`).join('')}</div>
+      <div class="ad-nums">${weaponNums(w).map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>`;
     this._icon(det.querySelector('.ad-img'), w.id, true);
   }
 

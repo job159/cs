@@ -137,6 +137,6 @@ export default function build() {
 
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
   const g = build();
-  const res = await g.export('game/assets/arms.glb', { tessellate: 10 });
+  const res = await g.export('game/assets/arms.glb', { tessellate: 28 });
   console.log(res);
 }
