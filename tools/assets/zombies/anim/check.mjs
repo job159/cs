@@ -84,6 +84,33 @@ if (model) {
   else console.log(`${path.basename(model)}: all ${BONES.length} bones present in its skin`);
 }
 
+// Load with three.js GLTFLoader exactly like the game: skeleton must come back as THREE.Bone, every
+// clip must bind and evaluate to finite transforms.
+{
+  const THREE = await import('three');
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const buf = fs.readFileSync(file);
+  const g = await new Promise((res, rej) => new GLTFLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '', res, rej));
+  let bones = 0;
+  g.scene.traverse((o) => { if (o.isBone) bones++; });
+  if (bones !== BONES.length) errors.push(`GLTFLoader: ${bones} THREE.Bone objects (want ${BONES.length})`);
+  if (!g.scene.userData?.clips) errors.push('GLTFLoader: scene.userData.clips missing');
+  const mixer = new THREE.AnimationMixer(g.scene);
+  for (const clip of g.animations) {
+    const a = mixer.clipAction(clip);
+    a.play();
+    for (const u of [0, 0.37, 0.71, 0.999]) {
+      mixer.setTime(clip.duration * u);
+      g.scene.updateMatrixWorld(true);
+      let bad = false;
+      g.scene.traverse((o) => { if (o.isBone && o.matrixWorld.elements.some((v) => !Number.isFinite(v))) bad = true; });
+      if (bad) { errors.push(`GLTFLoader: ${clip.name} produces non-finite bone matrices`); break; }
+    }
+    a.stop();
+  }
+  console.log(`three.js GLTFLoader: ${bones} bones, ${g.animations.length} clips evaluated`);
+}
+
 for (const w of warns) console.log('WARN', w);
 for (const e of errors) console.log('ERROR', e);
 console.log(errors.length ? `FAILED (${errors.length} errors)` : 'OK');

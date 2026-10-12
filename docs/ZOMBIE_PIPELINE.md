@@ -8,8 +8,14 @@ MakeHuman / MPFB2 的 CC0 資產 → 寫實殭屍 `game/assets/zombies/<type>.gl
 node tools/assets/zombies/build.mjs walker_a        # 建一種（LOD0 + LOD1，約 1.5–3 分鐘，RAM < 600 MB）
 node tools/assets/zombies/build.mjs --all           # types/ 底下全部（檔名以 _ 開頭的略過）
 node tools/assets/zombies/build.mjs walker_a --nolod
+node tools/assets/zombies/build.mjs walker_a --preview   # 貼圖半解析度（調外觀用，約快 3–4 倍；別拿去出貨）
 node tools/assets/zombies/inspect.mjs game/assets/zombies/walker_a.glb --extras   # 網格/材質/貼圖大小/extras
+node tools/assets/zombies/validate.mjs game/assets/zombies/walker_a.glb game/assets/zombies/walker_a_lod1.glb
+                                                    # Khronos glTF validator + 合約檢查（骨名、_SEG、角色材質名、三角形上限、extras）
 ```
+
+下載的原始資料快取在 `tools/assets/zombies/src/`（git-ignore，約 170 MB；第一次 build 自動抓）。每次 build 會把用到的
+資產資料夾併入 `tools/assets/zombies/credits.json` 並重寫 `docs/CREDITS.md` 的 zombie 區塊。
 
 QA 檢視器（dev server `node scripts/dev.mjs` → http://127.0.0.1:5190）：
 
@@ -18,7 +24,7 @@ QA 檢視器（dev server `node scripts/dev.mjs` → http://127.0.0.1:5190）：
 | `grid=1` | 2×2：正面、3/4、側面、背面 |
 | `cam=face` / `upper` / `feet`，`yaw=`、`pitch=` | 特寫與角度 |
 | `lod=1` | 看 `_lod1.glb` |
-| `anim=walk_a&t=0.25`（`play=1` 連續播放） | 從 `anims.glb` 取 clip，經 `zretarget.js` 對齊後擺到該時間點 |
+| `anim=walk_a&t=0.25`（`play=1` 連續播放） | 從 `anims.glb` 取 clip，經 `game/src/zombies/retarget.js` 對齊後擺到該時間點 |
 | `wpose=test` | 蒙皮壓力測試姿勢（舉手、彎肘、抬腿深蹲、轉身）；`wpose=bone:x,y,z;…` 以**世界軸**旋轉（度） |
 | `pose=bone:x,y,z;…` | 以骨骼**區域軸**旋轉（Blender 慣例：Y 沿骨頭） |
 | `noOffsets=1` | 不套用 `extras.poseOffsets`（例如駝背） |
@@ -36,7 +42,7 @@ QA 檢視器（dev server `node scripts/dev.mjs` → http://127.0.0.1:5190）：
   - `Root`：原點、**單位旋轉**（與 `anims.glb` 相同）。其餘骨頭的 rest frame 依 Blender 慣例：區域 +Y 由 head 指向 tail，
     X/Z 由 rig JSON 的 roll 決定；位置在**變形後**的 base mesh 上重新計算（每種體型骨長不同）。
   - 動作 clip 直接套用即可（`anims.glb` 用同一慣例，只是預設體型）；要精確貼合（腳不穿地、骨長差異）就用
-    `game/src/tools/zretarget.js` 的 `retargetClips(clips, animsScene, characterScene)`——它依兩邊 rest pose 對每根骨頭做
+    `game/src/zombies/retarget.js` 的 `retargetClips(clips, animsScene, characterScene)`——它依兩邊 rest pose 對每根骨頭做
     共軛修正，並把 pelvis 位移按骨盆高度比例縮放。
 - **檔案**：`<type>.glb` 一個 skin、所有網格都綁同一副骨架；LOD0 ≤ 9k 三角形；`<type>_lod1.glb` ≤ 2.5k（同 UV 佈局，
   可共用 LOD0 材質）。

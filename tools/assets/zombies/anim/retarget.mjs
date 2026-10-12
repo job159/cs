@@ -17,9 +17,6 @@ function legLen(src, names) {
   return P[idx(names[0])].distanceTo(P[idx(names[1])]) + P[idx(names[1])].distanceTo(P[idx(names[2])]);
 }
 
-/** Yaw (radians, about +Y) that turns direction (x, z) onto +Z. */
-export function yawToPlusZ(dx, dz) { return -Math.atan2(dx, dz); }
-
 /**
  * @param src     source motion (sources.mjs)
  * @param map     { targetBone: [sourceJoint, tipJoint|null] }

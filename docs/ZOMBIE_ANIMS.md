@@ -80,7 +80,7 @@ the first frame of `get_up`. `death_*` end lying still (hold the last frame or h
 | `crawl_attack` | 1.30 | once | - | procedural | keyframed: from the crawl pose, rears up on the left arm and rakes forward with the right (ankle height) (events: hit 0.52s) |
 | `scream` | 2.20 | once | - | procedural | keyframed: rear back, chest out, head up, arms spread with clawed hands, trembling (events: scream 0.5s) |
 | `spit` | 1.40 | once | - | procedural | keyframed: gather (retching), rear back, whip the torso and head forward to spit; projectile at events.spit from the head (events: spit 0.55s) |
-| `leap` | 2.27 | once | - | Quaternius UAL2 NinjaJump_Start + NinjaJump_Idle_Loop + NinjaJump_Land | crouch, spring, tucked flight with clawing arms, heavy landing. In place: the game moves the zombie along its jump arc between takeoff and land (pelvis keeps standing height while airborne) (events: takeoff 0.4s, land 1.11s) |
+| `leap` | 2.40 | once | - | Quaternius UAL2 NinjaJump_Start + NinjaJump_Idle_Loop + NinjaJump_Land | crouch, spring, tucked flight with clawing arms, heavy landing. In place: the game moves the zombie along its jump arc between takeoff and land (pelvis keeps standing height while airborne) (events: takeoff 0.5s, land 1.28s) |
 | `climb` | 1.40 | loop | - | procedural | in-place wall-climbing loop: hand-over-hand with a diagonal leg gait on a wall ~0.4 m in front (+Z); the game raises the zombie at climbSpeed m/s (planted hands/feet slide down at exactly that speed); feet are off the ground (climbSpeed 0.45 m/s) |
 | `eat` | 2.93 | loop | - | Quaternius UAL1 Crouch_Idle_Loop + procedural arms/head | crouched over a body: one hand pins, the other tears up to the mouth, head dips, bites and rips with shakes (loop) |
 <!-- clips:end -->
@@ -116,3 +116,32 @@ mannequin (left limbs blue, right limbs orange). Parameters: `clips`, `n`, `view
 `mode=strip|onion|trail` (`trail` plots heel/toe paths with the treadmill speed added back - planted feet show as
 dots stacked in one place), `t0`/`t1`, `across` (rows side by side), `center=x,y,z&zoom=h`, `anims`, `model`.
 Screenshots: `node tools/shot.mjs "<url>" --w 1600 --h 900 --out captures/anim/x.png`.
+
+## 4. Notes for the game code
+
+- **Speed sync.** `game/src/zombies/defs.js` currently uses hand-picked `nominal` speeds (walk 1.0-1.1, run 3.6,
+  runner 5.0). The clips' real treadmill speeds on the default body are walk_a 0.94, walk_b 0.46, walk_c 0.68,
+  walk_limp 0.43, run 3.80, sprint 5.48, crawl 0.32 m/s (x pelvis-height ratio, ~1.12 for `walker_a`). Reading
+  `userData.clips[name].speed` instead avoids foot sliding; zombies that should shuffle faster than a clip's
+  natural speed can still use `timeScale` up to ~1.6 before it looks hurried.
+- **One-shots** end on (or close to) the `idle` pose; fade back to locomotion over 0.15-0.25 s. `attack_lunge`
+  and `leap` are in place: move the zombie forward between their `launch`/`takeoff` and `land` events.
+- **Deaths / knockdown** keep the body where it falls (pelvis drift listed as `rootMotion`); keep the zombie's
+  root where it was, hold the last frame (`clampWhenFinished`) or switch to ragdoll after `events.ground`.
+- **`crawl` / `crawl_attack`** are for legless crawlers (legs drag behind the body, prone); `climb` assumes a
+  wall about 0.4 m in front of the root.
+- Clip tracks never touch `Root`; if the character's armature has a rotated root (Blender Z-up export) use
+  `retargetClips`, which handles it.
+
+## 5. Known limitations
+
+- `walk_b` (CMU 104_41) is a genuine foot-dragging shuffle: the swing toe scrapes the floor, which the slide metric
+  counts as sliding (planted feet themselves are locked).
+- The mocap clips were captured by human actors with full-length strides; `run` / `sprint` legs come from
+  Quaternius' athletic jog / sprint with the stride warped to 68 % / 66 %, so the gait is still fairly athletic
+  below the zombie upper body.
+- Keyframed clips are authored on the hunched idle; on characters with very different proportions the hands of
+  `bite` / `eat` / `crawl` (IK targets in metres) land a few centimetres off.
+- No facial / jaw bones in the game_engine rig: screams and bites are body-only (jaw motion would need a morph).
+- `death_front` is keyframed (no suitable CC0/CMU "collapse forward" take); it reads well from gameplay
+  distance but is less organic than the mocap falls.

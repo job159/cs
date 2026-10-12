@@ -30,6 +30,9 @@ export function mirrorKeys(keys) {
   });
 }
 
+/** Scales every rotation / root offset of a key list (stronger or softer variant of the same motion). */
+export const scaleKeys = (keys, k) => keys.map((key) => Object.fromEntries(Object.entries(key).map(([n, v]) => [n, Array.isArray(v) && !/^(plant|ik)/.test(n) ? v.map((x) => x * k) : v])));
+
 /** Layer: extra finger curl following an envelope fn(t) (degrees). */
 const clawLayer = (env, side = 'both') => (t, pose, { skel }) => {
   const a = env(t);
@@ -111,18 +114,19 @@ export function buildActions(skel, only, loco) {
 
   // ------------------------------------------------------------------ bite (grab + bite + tear)
   out.bite = A('bite', 1.8, [
-    { t: 0 },
-    { t: 0.28, upperarm_l: [-68, 0, -26], upperarm_r: [-50, 0, -62], lowerarm: [-40, 0, 0], spine_01: [-8, 0, 0], spine_02: [-12, 0, 0], spine_03: [-8, 0, 0], root: [0, -0.03, 0.06], head: [-14, 0, 0], footR: [0, 0.05, 0.08] },
-    { t: 0.4, footR: [0, 0, 0.14] },
-    { t: 0.46, upperarm_l: [-52, 0, -30], upperarm_r: [-38, 0, -64], lowerarm: [-100, 0, 0], spine_01: [-5, 0, 0], spine_02: [-8, 0, 0], spine_03: [-5, 0, 0], neck_01: [-12, 0, 0], head: [-24, 0, 0], root: [0, -0.05, 0.08] },
-    { t: 0.62, neck_01: [18, 0, 0], head: [20, 0, 8], spine_01: [0, 0, 0], spine_02: [2, 0, 0], spine_03: [2, 0, 0], root: [0, -0.07, 0.11] },
+    // (keys are cumulative: a channel not named in a key holds its value there - so the foot step keys
+    // also name the hands, otherwise the hands would pause and then snap)
+    { t: 0, ikL: [0, 0, 0], ikR: [0, 0, 0], handL: [0.2, 1.0, 0.3], handR: [-0.22, 1.0, 0.3] },
+    { t: 0.28, ikL: [1, 0, 0], ikR: [1, 0, 0], handL: [0.22, 1.12, 0.64], handR: [-0.24, 1.1, 0.62], upperarm_l: [-68, 0, -26], upperarm_r: [-50, 0, -62], lowerarm: [-40, 0, 0], spine_01: [-8, 0, 0], spine_02: [-12, 0, 0], spine_03: [-8, 0, 0], root: [0, -0.03, 0.06], head: [-14, 0, 0], footR: [0, 0.05, 0.08] },
+    { t: 0.48, handL: [0.2, 1.1, 0.48], handR: [-0.22, 1.08, 0.46], upperarm_l: [-52, 0, -30], upperarm_r: [-38, 0, -64], lowerarm: [-100, 0, 0], spine_01: [-5, 0, 0], spine_02: [-8, 0, 0], spine_03: [-5, 0, 0], neck_01: [-12, 0, 0], head: [-24, 0, 0], root: [0, -0.05, 0.08], footR: [0, 0, 0.14] },
+    { t: 0.64, handL: [0.19, 1.04, 0.5], handR: [-0.21, 1.02, 0.48], neck_01: [18, 0, 0], head: [20, 0, 8], spine_01: [0, 0, 0], spine_02: [2, 0, 0], spine_03: [2, 0, 0], root: [0, -0.07, 0.11] },
     { t: 0.8, neck_01: [16, 10, 0], head: [16, 24, 12] },
     { t: 0.95, neck_01: [16, -8, 0], head: [20, -20, 2] },
     { t: 1.1, neck_01: [12, 6, 0], head: [12, 18, 10] },
-    { t: 1.32, neck_01: [-8, 0, 0], head: [-14, 0, 6], spine_01: [-3, 0, 0], spine_02: [-4, 0, 0], spine_03: [-3, 0, 0], upperarm_l: [-45, 0, -24], upperarm_r: [-32, 0, -50], lowerarm: [-70, 0, 0], root: [0, -0.04, 0.08] },
-    { t: 1.5, footR: [0, 0.05, 0.06] },
-    { t: 1.62, footR: [0, 0, 0] },
-    { t: 1.8, neck_01: [0, 0, 0], head: [0, 0, 0], spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], upperarm_l: [0, 0, 0], upperarm_r: [0, 0, 0], lowerarm: [0, 0, 0], root: [0, 0, 0] },
+    { t: 1.32, ikL: [1, 0, 0], ikR: [1, 0, 0], handL: [0.21, 1.08, 0.52], handR: [-0.23, 1.06, 0.5], neck_01: [-8, 0, 0], head: [-14, 0, 6], spine_01: [-3, 0, 0], spine_02: [-4, 0, 0], spine_03: [-3, 0, 0], upperarm_l: [-45, 0, -24], upperarm_r: [-32, 0, -50], lowerarm: [-70, 0, 0], root: [0, -0.04, 0.08] },
+    { t: 1.52, ikL: [0.45, 0, 0], ikR: [0.45, 0, 0], handL: [0.21, 1.0, 0.42], handR: [-0.23, 0.98, 0.4], neck_01: [-3, 0, 0], head: [-6, 0, 3], spine_01: [-1, 0, 0], spine_02: [-2, 0, 0], spine_03: [-1, 0, 0], upperarm_l: [-22, 0, -12], upperarm_r: [-16, 0, -25], lowerarm: [-35, 0, 0], root: [0, -0.02, 0.04], footR: [0, 0.05, 0.06] },
+    { t: 1.66, footR: [0, 0, 0], ikL: [0.1, 0, 0], ikR: [0.1, 0, 0], handL: [0.2, 0.95, 0.35], handR: [-0.22, 0.95, 0.33], neck_01: [-1, 0, 0], head: [-2, 0, 1], upperarm_l: [-6, 0, -3], upperarm_r: [-5, 0, -6], lowerarm: [-10, 0, 0], root: [0, -0.01, 0.01] },
+    { t: 1.8, neck_01: [0, 0, 0], head: [0, 0, 0], spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], upperarm_l: [0, 0, 0], upperarm_r: [0, 0, 0], lowerarm: [0, 0, 0], root: [0, 0, 0], ikL: [0, 0, 0], ikR: [0, 0, 0] },
   ], { layers: [clawLayer(env([[0, 0], [0.25, 15], [0.38, 65], [1.35, 60], [1.7, 0]])), shakeLayer(['head', 'neck_01'], 5, 12, env([[0.6, 0], [0.7, 1], [1.2, 1], [1.3, 0]]), 4)] });
   out.bite.meta.events = { grab: 0.3, hit: 0.62 };
   out.bite.meta.notes = 'keyframed: grab with both hands, pull in, bite and tear (head shakes)';
@@ -135,14 +139,14 @@ export function buildActions(skel, only, loco) {
     { t: 0.38, spine_01: [3, 0, 0], spine_02: [4, 0, 0], spine_03: [3, 0, 0], neck_01: [3, 0, 0], head: [10, 0, 2], clavicle: [0, 0, 0], upperarm: [-4, 0, 2], lowerarm: [0, 0, 0], root: [0, -0.03, -0.01] },
     { t: 0.7, spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], neck_01: [0, 0, 0], head: [0, 0, 0], upperarm: [0, 0, 0], root: [0, 0, 0] },
   ];
-  out.hit_front = A('hit_front', 0.7, hitFront);
-  out.hit_back = A('hit_back', 0.7, [
+  out.hit_front = A('hit_front', 0.7, scaleKeys(hitFront, 1.35));
+  out.hit_back = A('hit_back', 0.7, scaleKeys([
     { t: 0 },
     { t: 0.07, spine_01: [7, 0, 0], spine_02: [12, 0, 0], spine_03: [9, 0, 0], neck_01: [10, 0, 0], head: [16, 0, -4], clavicle: [0, 0, 6], upperarm: [-24, 0, 6], lowerarm: [-12, 0, 0], root: [0, -0.03, 0.07] },
     { t: 0.2, spine_01: [4, 0, 0], spine_02: [7, 0, 0], spine_03: [5, 0, 0], neck_01: [-2, 0, 0], head: [-12, 0, 4], upperarm: [-10, 0, 4], root: [0, -0.04, 0.05] },
     { t: 0.38, spine_01: [-2, 0, 0], spine_02: [-3, 0, 0], spine_03: [-2, 0, 0], neck_01: [-3, 0, 0], head: [-6, 0, 0], clavicle: [0, 0, 0], upperarm: [4, 0, 0], lowerarm: [0, 0, 0], root: [0, -0.02, 0.01] },
     { t: 0.7, spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], neck_01: [0, 0, 0], head: [0, 0, 0], upperarm: [0, 0, 0], root: [0, 0, 0] },
-  ]);
+  ], 1.3));
   // impact from the character's left (+X) pushes the body to its right
   const hitLeft = [
     { t: 0 },
@@ -151,8 +155,8 @@ export function buildActions(skel, only, loco) {
     { t: 0.4, spine_01: [0, 1, -2], spine_02: [0, 2, -3], spine_03: [0, 1, -2], neck_01: [0, 0, 0], head: [2, 2, -3], clavicle_l: [0, 0, 0], upperarm_l: [0, 0, -2], lowerarm_l: [0, 0, 0], upperarm_r: [0, 0, 2], root: [-0.02, -0.02, 0] },
     { t: 0.7, spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], neck_01: [0, 0, 0], head: [0, 0, 0], upperarm_l: [0, 0, 0], upperarm_r: [0, 0, 0], root: [0, 0, 0] },
   ];
-  out.hit_left = A('hit_left', 0.7, hitLeft);
-  out.hit_right = A('hit_right', 0.7, mirrorKeys(hitLeft));
+  out.hit_left = A('hit_left', 0.7, scaleKeys(hitLeft, 1.3));
+  out.hit_right = A('hit_right', 0.7, scaleKeys(mirrorKeys(hitLeft), 1.3));
   for (const k of ['hit_front', 'hit_back', 'hit_left', 'hit_right']) out[k].meta.notes = 'keyframed flinch on the breathing idle; starts and ends on idle (also usable additively)';
   out.hit_front.meta.notes += '; impact from the front pushes the torso back';
   out.hit_left.meta.notes += "; impact on the character's left side";

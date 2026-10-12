@@ -1,9 +1,9 @@
 // Zombie / character QA viewer (dev):
 //   index.html?view=zombie&id=walker_a[&lod=1][&grid=1][&anim=walk_a&t=0.3][&cam=face|upper|feet][&yaw=35&pitch=5]
 //             [&pose=upperarm_l:0,0,-60;lowerarm_l:0,0,-90][&wpose=test | &wpose=upperarm_l:0,0,80]
-//             [&noOffsets=1][&bg=#55595e][&wire=1][&seg=1][&bones=1][&play=1]
+//             [&noOffsets=1][&hide=body,hair][&bg=#55595e][&wire=1][&seg=1][&bones=1][&play=1]
 // grid=1 renders a 2x2 sheet (front, front 3/4, side, back). anim/t poses a clip from assets/zombies/anims.glb
-// (retargeted on load if that file's rest frames differ, see zretarget.js). pose= adds local euler rotations
+// (retargeted onto this character's rest pose with game/src/zombies/retarget.js, like the game does). pose= adds local euler rotations
 // (degrees, XYZ, applied after the clip), wpose= rotations about WORLD axes (wpose=test: stress pose with
 // raised arms, bent elbows/knees, twisted torso) for skinning QA. extras.poseOffsets are applied like the game
 // would (after the clip). seg=1 colours vertices by the _seg dismemberment attribute, bones=1 draws the skeleton.
@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { loadGLB } from '../engine/assets.js';
-import { retargetClips } from './zretarget.js';
+import { retargetClips } from '../zombies/retarget.js';
 
 // Skinning stress pose, as WORLD-axis rotations (degrees about world X, Y, Z; applied parent-first):
 // left arm raised sideways above the shoulder with the elbow bent 100 deg forward and the forearm twisted,
@@ -89,6 +89,8 @@ export async function runZombieViewer(renderer, params) {
     }
   });
   info.bones = skeleton ? skeleton.bones.length : 0;
+  // hide=body,hair hides meshes by name (debug: what shows through holes, layer order...)
+  for (const name of (params.get('hide') || '').split(',').filter(Boolean)) { const m = model.getObjectByName(name); if (m) m.visible = false; }
   scene.add(model);
   if (params.get('bones') && skeleton) {
     const helper = new THREE.SkeletonHelper(model);

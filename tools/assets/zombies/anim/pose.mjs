@@ -28,7 +28,7 @@ export function expand(offsets) {
     out.set(name, cur ? [cur[0] + v[0], cur[1] + v[1], cur[2] + v[2]] : [...v]);
   };
   for (const [k, v] of Object.entries(offsets || {})) {
-    if (!Array.isArray(v) || k === 'root' || /^(foot|hand|plant)[LR]$/.test(k)) continue;
+    if (!Array.isArray(v) || k === 'root' || /^(foot|hand|plant|ik)[LR]$/.test(k)) continue;
     if (SIDED.has(k)) { add(`${k}_l`, v); add(`${k}_r`, [v[0], -v[1], -v[2]]); }
     else if (k.endsWith('_r')) add(k, [v[0], -v[1], -v[2]]);
     else add(k, v);
@@ -132,7 +132,7 @@ export function curves(keys, { loop = false, period = null, flat = false } = {})
   for (const k of ks) {
     const exp = expand(k);
     for (const n of exp.keys()) allNames.add(n);
-    for (const extra of ['root', 'footL', 'footR', 'handL', 'handR', 'plantL', 'plantR']) if (k[extra]) allNames.add('#' + extra);
+    for (const extra of ['root', 'footL', 'footR', 'handL', 'handR', 'plantL', 'plantR', 'ikL', 'ikR']) if (k[extra]) allNames.add('#' + extra);
   }
   for (const k of ks) {
     const exp = expand(k);
@@ -141,7 +141,7 @@ export function curves(keys, { loop = false, period = null, flat = false } = {})
       if (n.startsWith('#')) v = k[n.slice(1)];
       else v = exp.get(n);
       if (v) state.set(n, v.slice());
-      const cur = state.get(n) || (n === '#handL' || n === '#handR' ? null : n.startsWith('#plant') ? [1, 0, 0] : [0, 0, 0]);
+      const cur = state.get(n) || (n.startsWith('#plant') ? [1, 0, 0] : [0, 0, 0]);
       if (!chans.has(n)) chans.set(n, { times: [], vals: [] });
       chans.get(n).times.push(k.t);
       chans.get(n).vals.push(cur ? cur.slice() : null);
@@ -254,12 +254,20 @@ export function proc(skel, opts) {
       if (w < 1) leg.forEach((i, k) => pose.q[i].copy(before[k].slerp(pose.q[i], w)));
     }
     for (const s of ['l', 'r']) {
+      // hand IK: world target handL/handR blended in by weight ikL/ikR (0..1)
       const h = ex[s === 'l' ? 'handL' : 'handR'];
-      if (!h) continue;
+      const wv = ex[s === 'l' ? 'ikL' : 'ikR'];
+      const w = wv ? Math.max(0, Math.min(1, wv[0])) : 0;
+      if (!h || w <= 0) continue;
       const fk = skel.fk(pose);
       const pq = fk.wq[skel.i('spine_03')];
-      const pole = new THREE.Vector3(s === 'l' ? 0.6 : -0.6, -0.2, -0.8).applyQuaternion(pq.clone().multiply(skel.restWorldQ[skel.i('spine_03')].clone().invert())).normalize();
-      twoBoneIK(skel, pose, ARM(skel, s), new THREE.Vector3(...h), pole, fk.wq[skel.i(`hand_${s}`)].clone(), fk);
+      // elbows out and down (world space: chest-relative poles flip on hunched poses)
+      const pole = new THREE.Vector3(s === 'l' ? 0.75 : -0.75, -0.6, -0.25).normalize();
+      void pq;
+      const arm = ARM(skel, s);
+      const before = arm.map((i) => pose.q[i].clone());
+      twoBoneIK(skel, pose, arm, new THREE.Vector3(...h), pole, 'local', fk, 0.08);
+      if (w < 1) arm.forEach((i, k) => pose.q[i].copy(before[k].slerp(pose.q[i], w)));
     }
     if (opts.post) opts.post(t, pose, ctx);
     poses.push(pose);

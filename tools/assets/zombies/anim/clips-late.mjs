@@ -173,7 +173,7 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
       const pole = new THREE.Vector3(s === 'l' ? 1 : -1, 0.6, -0.4).normalize();
       // palm down, fingers forward: hand world rotation from the rest hand rotation pitched down
       const hq = new THREE.Quaternion().setFromEuler(new THREE.Euler(-55 * DEG, (s === 'l' ? -10 : 10) * DEG, 0, 'YXZ')).multiply(skel.restWorldQ[skel.i(`hand_${s}`)]);
-      twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk);
+      twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk, 0.06);
     }
   };
   {
@@ -241,15 +241,18 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
     const st = fromUAL(skel, 2, 'NinjaJump_Start');
     const ld = fromUAL(skel, 2, 'NinjaJump_Land');
     const air = fromUAL(skel, 2, 'NinjaJump_Idle_Loop');
+    // the source jumps from its crouch (frame 0) to full extension (frame 1) in one frame: hold the crouch a
+    // frame and ease into the extension over 3 frames so the take-off reads without a pop
     const s1 = crop(st, 0, 0.45), a1 = crop(air, 0, 0.2);
+    const ease = [0.2, 0.5, 0.8].map((w) => blendPose(s1.poses[0], s1.poses[1], w));
     const poses = [];
     // 0.3 s anticipation: idle -> crouched take-off pose
     const nA = 10;
     for (let f = 0; f < nA; f++) poses.push(blendPose(idlePose(f / 30), s1.poses[0], smooth(f / nA)));
-    poses.push(...s1.poses, ...a1.poses.slice(1), ...ld.poses.slice(1));
+    poses.push(s1.poses[0], s1.poses[0], ...ease, ...s1.poses.slice(1), ...a1.poses.slice(1), ...ld.poses.slice(1));
     const c = { name: 'leap', fps: 30, poses: poses.map(clonePose), loop: false, meta: {} };
     // align pelvis over the origin at the start, then zombie arms reaching forward in the air
-    const takeoff = nA / 30 + 0.07, land = nA / 30 + 0.45 + 0.2 + 0.13;
+    const takeoff = (nA + 5) / 30, land = (nA + 5) / 30 + 0.45 + 0.2 + 0.13;
     const armEnv = env([[0, 0], [takeoff, 0], [takeoff + 0.12, 1], [land, 1], [land + 0.35, 0]]);
     c.poses.forEach((p, f) => {
       const t = f / 30, w = armEnv(t);
@@ -311,7 +314,7 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
           const pole = new THREE.Vector3(sg * 0.8, -0.4, -0.45).normalize();
           const dir = new THREE.Vector3(sg * 0.15, 0.85, 0.5).normalize();
           const hq = new THREE.Quaternion().setFromUnitVectors(skel.restDir(skel.i(`hand_${s}`)), dir).multiply(skel.restWorldQ[skel.i(`hand_${s}`)]);
-          twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk);
+          twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk, 0.06);
           fk = skel.fk(pose);
           // diagonal gait: the left foot moves with the right hand
           const f = limb(ph + (s === 'l' ? 0.5 : 0) + 0.08, 0.86);
@@ -360,7 +363,7 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
           const tgt = new THREE.Vector3(sg * (0.16 + 0.03 * tear), 0.05 + 0.32 * tear, 0.42 - 0.12 * tear);
           const pole = new THREE.Vector3(sg, 0.2, -0.5).normalize();
           const hq = new THREE.Quaternion().setFromEuler(new THREE.Euler((-60 + 40 * tear) * DEG, 0, 0, 'YXZ')).multiply(skel.restWorldQ[skel.i(`hand_${s}`)]);
-          twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk);
+          twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk, 0.06);
         }
       }, shakeLayer(['head', 'neck_01'], 4, 9, () => 1, 13)],
       post: (t, pose) => fingerCurl(skel, pose, 'both', 40, { thumb: 20, spread: 6 }),

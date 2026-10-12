@@ -17,9 +17,33 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
+ "mpfb2:targets/asym": {
+  "asset": "targets/asym",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/asym",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "mpfb2:targets/buttocks": {
+  "asset": "targets/buttocks",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/buttocks",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
  "mpfb2:targets/cheek": {
   "asset": "targets/cheek",
   "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/cheek",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "mpfb2:targets/chin": {
+  "asset": "targets/chin",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/chin",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "mpfb2:targets/ears": {
+  "asset": "targets/ears",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/ears",
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
@@ -29,9 +53,33 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
+ "mpfb2:targets/eyebrows": {
+  "asset": "targets/eyebrows",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/eyebrows",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
  "mpfb2:targets/eyes": {
   "asset": "targets/eyes",
   "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/eyes",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "mpfb2:targets/feet": {
+  "asset": "targets/feet",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/feet",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "mpfb2:targets/forehead": {
+  "asset": "targets/forehead",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/forehead",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "mpfb2:targets/hands": {
+  "asset": "targets/hands",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/hands",
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
@@ -89,11 +137,39 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
+ "skins03:skins/reizibarrientos_white_walker_skin": {
+  "asset": "skins/reizibarrientos_white_walker_skin",
+  "source": "http://www.makehumancommunity.org/node/1470",
+  "download": "https://files.makehumancommunity.org/asset_packs/skins03/skins03_cc0.zip",
+  "author": "reizibarrientos",
+  "license": "CC0-1.0"
+ },
  "skins03:skins/sohh_female_zombie_skin": {
   "asset": "skins/sohh_female_zombie_skin",
   "source": "http://www.makehumancommunity.org/node/2529",
   "download": "https://files.makehumancommunity.org/asset_packs/skins03/skins03_cc0.zip",
   "author": "sohh",
+  "license": "CC0-1.0"
+ },
+ "system:clothes/male_casualsuit02": {
+  "asset": "clothes/male_casualsuit02",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "system:clothes/male_casualsuit03": {
+  "asset": "clothes/male_casualsuit03",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "system:clothes/male_casualsuit04": {
+  "asset": "clothes/male_casualsuit04",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
  "system:clothes/male_worksuit01": {
@@ -110,8 +186,22 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
+ "system:clothes/shoes03": {
+  "asset": "clothes/shoes03",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
  "system:eyebrows/eyebrow001": {
   "asset": "eyebrows/eyebrow001",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "system:eyebrows/eyebrow009": {
+  "asset": "eyebrows/eyebrow009",
   "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
   "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
@@ -131,6 +221,13 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
+ "system:hair/short02": {
+  "asset": "hair/short02",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
  "system:hair/short04": {
   "asset": "hair/short04",
   "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
@@ -140,6 +237,20 @@
  },
  "system:proxymeshes/male1591": {
   "asset": "proxymeshes/male1591",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "system:skins/middleage_caucasian_male": {
+  "asset": "skins/middleage_caucasian_male",
+  "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
+ "system:skins/old_caucasian_male": {
+  "asset": "skins/old_caucasian_male",
   "source": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
   "download": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",

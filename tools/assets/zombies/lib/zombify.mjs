@@ -9,6 +9,8 @@ import { rasterUV, texelSurface, texelAttr } from './raster.mjs';
 import { makeNoise, rng, smoothstep, clamp01, mix } from './noise.mjs';
 import { createImage, cloneImage, resize, normalFromHeight, luminance, blurField, sample } from './image.mjs';
 
+// build.mjs --preview sets ZOMBIE_TEX_SCALE=0.5: every painted texture is made at half size (4x faster)
+const sz = (v, def) => Math.max(64, Math.round((v || def) * +(process.env.ZOMBIE_TEX_SCALE || 1)));
 const srgb2lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 const lin2srgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
 const LUT = new Float32Array(256).map((_, i) => srgb2lin(i / 255));
@@ -84,7 +86,7 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
  * @param o.extra     optional (P, N, c(linear rgb, mutable), state{height, rough}) => void for custom effects
  */
 export function paintSkin(human, o = {}) {
-  const S = o.size || 2048;
+  const S = sz(o.size, 2048);
   const seed = o.seed ?? 1;
   const N3 = makeNoise(seed);
   const body = human.basePart({ name: 'paint' });
@@ -95,6 +97,7 @@ export function paintSkin(human, o = {}) {
   const out = cloneImage(base);
   const height = new Float32Array(S * S);
   const rough = new Float32Array(S * S).fill(o.roughness ?? 0.62);
+  const ao = new Float32Array(S * S).fill(1);
   const A = anchors(human);
   const wounds = (o.wounds || []).map((w) => ({ ...w, ...surfacePoint(human, w.bone, w.t ?? 0.5, w.dir || [0, 0, 1]), r: w.r || 0.035 }));
   const tint = o.tint || lin([168, 178, 160]);
@@ -112,11 +115,12 @@ export function paintSkin(human, o = {}) {
       const cv = texelAttr(r, tris, covered, i) * coveredDarken;
       if (cv > 0) {
         // skin under clothes (seen through tears): darker, grimy, scraped and bruised
-        over(c, COLORS.grime, cv * 0.4);
-        const k = 1 - cv * 0.4; c[0] *= k; c[1] *= k; c[2] *= k;
+        // (strongly darkened: it sits in the contact shadow of the garment, which is what makes tears read as holes)
         const sc = N3.fbm(P[0] * 30 + 3, P[1] * 30, P[2] * 30, 3);
         over(c, COLORS.bloodDry, smoothstep(0.15, 0.5, sc) * cv * 0.6);
         over(c, COLORS.bruise, smoothstep(0.0, 0.4, -sc) * cv * 0.4);
+        const k = 1 - cv * 0.62; c[0] *= k; c[1] *= k; c[2] *= k;
+        ao[i] = 1 - cv * 0.6;
       }
     }
     // pallor: desaturate towards a grey-green corpse tone, keep luminance structure
@@ -247,14 +251,14 @@ export function paintSkin(human, o = {}) {
   const low = blurField(lum, S, S, o.bump ? 6 : 3, 2);
   const detail = o.bumpStrength ?? (o.bump ? 6 : 3);
   for (let i = 0; i < hf.length; i++) hf[i] = hf[i] * 1.2 + (lum[i] - low[i]) * detail * (o.bumpSign ?? 1);
-  const NS = o.normalSize || 1024;
+  const NS = sz(o.normalSize, 1024);
   const hfS = NS === S ? hf : downField(hf, S, NS);
   const normal = normalFromHeight(hfS, NS, NS, (o.normalStrength ?? 2.2) * NS / 1024);
-  const OS = o.ormSize || 512;
+  const OS = sz(o.ormSize, 512);
   const orm = createImage(OS, OS, [255, 160, 0, 255]);
-  const rS = downField(rough, S, OS);
-  for (let i = 0; i < OS * OS; i++) orm.data[i * 4 + 1] = Math.round(clamp01(rS[i]) * 255);
-  return { albedo: out, normal, orm, raster: null };
+  const rS = downField(rough, S, OS), aS = downField(ao, S, OS);
+  for (let i = 0; i < OS * OS; i++) { orm.data[i * 4] = Math.round(clamp01(aS[i]) * 255); orm.data[i * 4 + 1] = Math.round(clamp01(rS[i]) * 255); }
+  return { albedo: out, normal, orm };
 }
 
 function downField(f, S, D) {
@@ -279,7 +283,7 @@ function downField(f, S, D) {
  * @returns {albedo, normal, orm, holeAt(P)->bool, alpha:boolean}
  */
 export function paintCloth(part, o = {}) {
-  const S = o.size || 2048;
+  const S = sz(o.size, 2048);
   const N3 = makeNoise(o.seed ?? 7);
   const tris = part.tris();
   const nrm = part.normals();
@@ -300,6 +304,9 @@ export function paintCloth(part, o = {}) {
     f += (tear.where ? tear.where(P, Nn) : 0);
     return f - (1 - (tear.amount ?? 0.3) * 0.62);
   };
+  // inner layers (e.g. the T-shirt under the overall's bib): vertices whose outward normal ray hits the same
+  // garment within 4 cm are occluded -> painted dark so tears in the outer layer read as holes, not patches
+  const inner = o.innerDarken === 0 ? null : innerLayer(part, tris, nrm);
   const P = [0, 0, 0], Nn = [0, 0, 0], c = [0, 0, 0];
   let anyCut = false;
   for (let i = 0; i < S * S; i++) {
@@ -333,7 +340,7 @@ export function paintCloth(part, o = {}) {
       const hgt = A ? P[1] / A.height : P[1] / 1.75;
       const low = 1 - smoothstep(0.0, 0.55, hgt);
       const n = N3.fbm(P[0] * 9 + 11, P[1] * 9, P[2] * 9, 5);
-      const g = clamp01(low * 0.7 + smoothstep(-0.1, 0.7, n) * 0.6) * o.grime;
+      const g = clamp01(low * 0.7 + smoothstep(-0.1, 0.7, n) * (o.grimeNoise ?? 0.6)) * o.grime;
       over(c, COLORS.grime, g * 0.6);
       const mud = smoothstep(0.35, 0.75, N3.fbm(P[0] * 14, P[1] * 4, P[2] * 14, 3) + low * 0.5 - 0.2) * o.grime;
       over(c, COLORS.mud, mud * 0.5 * low);
@@ -398,6 +405,10 @@ export function paintCloth(part, o = {}) {
       over(c, bc, Math.min(1, bl) * 0.85);
       ro = mix(ro, mix(0.35, 0.75, age), Math.min(1, bl));
     }
+    if (inner) {
+      const k = texelAttr(r, tris, inner, i) * (o.innerDarken ?? 0.75);
+      if (k > 0) { over(c, COLORS.grime, k * 0.3); c[0] *= 1 - k; c[1] *= 1 - k; c[2] *= 1 - k; }
+    }
     if (o.extra) o.extra(P, Nn, c, u, v);
     out.data[di] = toByte(c[0]); out.data[di + 1] = toByte(c[1]); out.data[di + 2] = toByte(c[2]);
     out.data[di + 3] = Math.round(alpha * 255);
@@ -415,9 +426,9 @@ export function paintCloth(part, o = {}) {
       if ([...pts, cen].every((p) => tearField(p, [0, 0, 1]) > 0.06)) { part.keep[fi] = 0; removed++; }
     });
   }
-  const NS = o.normalSize || 1024;
+  const NS = sz(o.normalSize, 1024);
   const normal = o.normal ? resize(o.normal, NS, NS) : null;
-  const OS = o.ormSize || 1024;
+  const OS = sz(o.ormSize, 1024);
   const orm = createImage(OS, OS, [255, 230, 0, 255]);
   const ao = o.ao ? resize(o.ao, OS, OS) : null;
   const rS = downField(rough, S, OS);
@@ -430,6 +441,42 @@ export function paintCloth(part, o = {}) {
     holeAt: (p, margin = 0.08) => tear ? tearField(p, [0, 0, 1]) > -margin : false,
     tearField,
   };
+}
+
+/** Per-vertex 0/1: does a ray along the vertex normal hit the same mesh within maxDist (brute force)? */
+function innerLayer(part, tris, nrm, maxDist = 0.04) {
+  const pos = part.pos, n = part.nVerts, out = new Float32Array(n);
+  const nt = tris.length / 6;
+  const T = new Float32Array(nt * 9);
+  for (let t = 0; t < nt; t++) for (let k = 0; k < 3; k++) for (let a = 0; a < 3; a++) T[t * 9 + k * 3 + a] = pos[tris[t * 6 + k * 2] * 3 + a];
+  const used = new Uint8Array(n);
+  for (let t = 0; t < tris.length; t += 2) used[tris[t]] = 1;
+  for (let v = 0; v < n; v++) {
+    if (!used[v]) continue;
+    const ox = pos[v * 3] + nrm[v * 3] * 0.003, oy = pos[v * 3 + 1] + nrm[v * 3 + 1] * 0.003, oz = pos[v * 3 + 2] + nrm[v * 3 + 2] * 0.003;
+    const dx = nrm[v * 3], dy = nrm[v * 3 + 1], dz = nrm[v * 3 + 2];
+    for (let t = 0; t < nt; t++) {
+      const b = t * 9;
+      // quick reject: triangle centroid far from the ray origin
+      const cx = (T[b] + T[b + 3] + T[b + 6]) / 3 - ox, cy = (T[b + 1] + T[b + 4] + T[b + 7]) / 3 - oy, cz = (T[b + 2] + T[b + 5] + T[b + 8]) / 3 - oz;
+      if (cx * cx + cy * cy + cz * cz > 0.0064) continue;
+      const e1x = T[b + 3] - T[b], e1y = T[b + 4] - T[b + 1], e1z = T[b + 5] - T[b + 2];
+      const e2x = T[b + 6] - T[b], e2y = T[b + 7] - T[b + 1], e2z = T[b + 8] - T[b + 2];
+      const px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x;
+      const det = e1x * px + e1y * py + e1z * pz;
+      if (Math.abs(det) < 1e-12) continue;
+      const inv = 1 / det;
+      const sx = ox - T[b], sy = oy - T[b + 1], sz = oz - T[b + 2];
+      const uu = (sx * px + sy * py + sz * pz) * inv;
+      if (uu < 0 || uu > 1) continue;
+      const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+      const vv = (dx * qx + dy * qy + dz * qz) * inv;
+      if (vv < 0 || uu + vv > 1) continue;
+      const d = (e2x * qx + e2y * qy + e2z * qz) * inv;
+      if (d > 0 && d < maxDist) { out[v] = 1; break; }
+    }
+  }
+  return out;
 }
 
 /**

@@ -9,14 +9,17 @@ const _v = new THREE.Vector3();
  * target: world position for the end joint. pole: world direction the middle joint should bend
  * towards. endWorldQ (optional): world rotation to keep for the end bone.
  */
-export function twoBoneIK(skel, pose, chain, target, pole, endWorldQ = null, fkres = null) {
+export function twoBoneIK(skel, pose, chain, target, pole, endWorldQ = null, fkres = null, soft = 0) {
   const [u, l, e] = chain;
   const fk = fkres || skel.fk(pose);
   const a = fk.wp[u], b = fk.wp[l], c = fk.wp[e];
   const l1 = b.distanceTo(a), l2 = c.distanceTo(b);
-  const keepEnd = endWorldQ || fk.wq[e].clone();
+  const keepLocal = endWorldQ === 'local';
+  const keepEnd = keepLocal ? null : endWorldQ || fk.wq[e].clone();
   const toT = target.clone().sub(a);
   let d = toT.length();
+  // soft IK: ease into full extension instead of snapping straight (removes elbow/knee pops)
+  if (soft > 0) { const L = l1 + l2, ds = L * (1 - soft); if (d > ds) d = ds + (L - ds) * (1 - Math.exp(-(d - ds) / (L - ds))); }
   d = Math.min(Math.max(d, Math.abs(l1 - l2) + 1e-4), l1 + l2 - 1e-4);
   const dir = toT.clone().normalize();
   const cosA = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d);
@@ -34,7 +37,7 @@ export function twoBoneIK(skel, pose, chain, target, pole, endWorldQ = null, fkr
   const pu = skel.parent[u];
   pose.q[u] = fk.wq[pu].clone().invert().multiply(Gu);
   pose.q[l] = Gu.clone().invert().multiply(Gl);
-  pose.q[e] = Gl.clone().invert().multiply(keepEnd);
+  if (!keepLocal) pose.q[e] = Gl.clone().invert().multiply(keepEnd);
   return pose;
 }
 

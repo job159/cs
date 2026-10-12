@@ -1,4 +1,5 @@
-// Builds zombie characters: node tools/assets/zombies/build.mjs <type> [<type> ...] [--nolod] [--all]
+// Builds zombie characters: node tools/assets/zombies/build.mjs <type> [<type> ...] [--nolod] [--all] [--preview]
+// --preview paints textures at half resolution (quick look-dev iterations; don't ship those GLBs).
 // Each tools/assets/zombies/types/<type>.mjs exports `build(lib)` returning
 //   { human, parts, extras?, budget?, partBudget?, lod1?: { budget, drop: [partName], partBudget, texScale } }
 // and gets written to game/assets/zombies/<type>.glb (+ <type>_lod1.glb). See docs/ZOMBIE_PIPELINE.md.
@@ -14,6 +15,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(here, '..', '..', '..', 'game', 'assets', 'zombies');
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
+if (flags.has('--preview')) process.env.ZOMBIE_TEX_SCALE = '0.5';
 let types = args.filter((a) => !a.startsWith('--'));
 if (flags.has('--all') || !types.length) types = fs.readdirSync(path.join(here, 'types')).filter((f) => f.endsWith('.mjs') && !f.startsWith('_')).map((f) => f.slice(0, -4));
 

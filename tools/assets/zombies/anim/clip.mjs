@@ -131,21 +131,6 @@ export function makeLoop(c, s, e, blend = 8) {
   return { ...c, poses: out, loop: true };
 }
 
-/** Same as makeLoop but for an already-cropped clip: cross-fades end into start using the clip itself. */
-export function seamLoop(c, blend = 6) {
-  const n = c.poses.length;
-  const out = c.poses.map(clonePose);
-  // blend the tail towards the head (time-shifted): frame n-1-k gets (k-window) weight of frame 0-k...
-  for (let k = 0; k < blend; k++) {
-    const f = n - 1 - k;
-    const w = smooth(1 - k / blend);
-    // target: pose that continues into frame 0 -> approximate with frame 0 (k=0) easing out
-    out[f] = blendPose(out[f], c.poses[0], w * (k === 0 ? 1 : 1 - k / blend));
-  }
-  out[n - 1] = clonePose(out[0]);
-  return { ...c, poses: out, loop: true };
-}
-
 export const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 
 /** Concatenates clips with a cross-fade of `blend` frames between each. */

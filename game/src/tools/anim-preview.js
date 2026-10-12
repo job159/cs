@@ -86,7 +86,8 @@ function addTrails(model, clip, info, origin, scene, box) {
 }
 
 async function main() {
-  const [model, anims] = await Promise.all([load(qs.get('model') || 'dev/mannequin.glb'), load(qs.get('anims') || 'assets/zombies/anims.glb')]);
+  const bust = (u) => u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now(); // never show a cached GLB
+  const [model, anims] = await Promise.all([load(bust(qs.get('model') || 'dev/mannequin.glb')), load(bust(qs.get('anims') || 'assets/zombies/anims.glb'))]);
   const meta = anims.scene.userData?.clips || anims.parser?.json?.extras?.clips || {};
   const names = (qs.get('clips') || anims.animations.map((a) => a.name).join(',')).split(',');
   const { dir, right } = viewBasis();
