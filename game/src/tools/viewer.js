@@ -1,0 +1,93 @@
+// Asset QA viewer (dev): index.html?view=weapon&id=akm[&grid=1][&yaw=30&pitch=10&dist=1.2][&env=room]
+// grid=1 renders a 2x2 contact sheet (right side, left side, front 3/4, top 3/4) into one image so a
+// single screenshot shows the whole model. window.__shotReady flips true once rendered.
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { instanceGLB } from '../engine/assets.js';
+import { applyHardSurface, materialUniforms } from '../gfx/materials.js';
+
+export async function runViewer(renderer, params) {
+  const kind = params.get('view');
+  const id = params.get('id') || 'akm';
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(params.get('bg') || '#5d6166');
+  const pmrem = new THREE.PMREMGenerator(renderer.gl);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
+  scene.environmentIntensity = +(params.get('envi') || 0.9);
+  const key = new THREE.DirectionalLight(0xfff1e0, +(params.get('key') || 2.2));
+  key.position.set(1.5, 2.5, 1.2);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.left = key.shadow.camera.bottom = -1;
+  key.shadow.camera.right = key.shadow.camera.top = 1;
+  key.shadow.bias = -0.0002; key.shadow.normalBias = 0.002;
+  scene.add(key);
+  renderer.gl.shadowMap.enabled = true;
+
+  const path = kind === 'weapon' ? `weapons/${id}.glb` : `${kind}/${id}.glb`;
+  const model = await instanceGLB(path);
+  applyHardSurface(model, { wear: +(params.get('wear') || 1) });
+  // centre on bounds
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+  model.position.sub(center);
+  scene.add(model);
+  const radius = size.length() * 0.5;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.ShadowMaterial({ opacity: 0.25 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -size.y / 2 - 0.002; floor.receiveShadow = true;
+  scene.add(floor);
+
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.01, 50);
+  const W = window.innerWidth, H = window.innerHeight;
+  // grid: right side, left side, front-right 3/4, rear-right 3/4 from above
+  // fp:   roughly what the player sees in first person (behind, above and right of the grip)
+  const views = params.get('grid')
+    ? [[90, 6], [-90, 6], [35, 18], [150, 35]]
+    : params.get('fp') ? [['fp', 0]]
+    : [[+(params.get('yaw') || 90), +(params.get('pitch') || 8)]];
+  const dist = +(params.get('dist') || 0) || (params.get('fp') ? radius * 1.5 : (radius / Math.tan((15 * Math.PI) / 180)) * 1.02);
+  const look = params.get('fp') ? new THREE.Vector3(0, 0, -radius * 0.5) : new THREE.Vector3();
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  out.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:5';
+  const ctx = out.getContext('2d');
+  const cols = views.length > 1 ? 2 : 1, rows = views.length > 1 ? 2 : 1;
+  const vw = W / cols, vh = H / rows;
+  renderer.resize(vw, vh);
+  cam.aspect = vw / vh;
+  cam.updateProjectionMatrix();
+  renderer.fixedScale = true;
+  renderer.post.vignette = 0.15;
+  renderer.post.grain = 0.0;
+  const info = { size: size.toArray().map((v) => +v.toFixed(3)), tris: 0 };
+  model.traverse((o) => { if (o.isMesh) info.tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; });
+  const draw = (spin = 0) => {
+    views.forEach(([yaw, pitch], i) => {
+      if (yaw === 'fp') {
+        // close rear-right-high 3/4: the receiver/sight area the player stares at in first person
+        cam.position.set(size.z * 0.28, size.z * 0.2, size.z * 0.22);
+        cam.lookAt(0, size.y * 0.15, -size.z * 0.12);
+        cam.fov = 40; cam.updateProjectionMatrix();
+      } else {
+        const y = ((yaw + spin) * Math.PI) / 180, p = (pitch * Math.PI) / 180;
+        cam.position.set(Math.sin(y) * Math.cos(p) * dist, Math.sin(p) * dist, Math.cos(y) * Math.cos(p) * dist);
+        cam.lookAt(look);
+      }
+      renderer.render(scene, cam, 0);
+      ctx.drawImage(renderer.canvas, (i % cols) * vw, Math.floor(i / cols) * vh, vw, vh);
+    });
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, 0, 360, 22);
+    ctx.fillStyle = '#fff'; ctx.font = '13px monospace';
+    ctx.fillText(`${id}  ${info.size.join(' x ')} m  ${Math.round(info.tris)} tris`, 6, 15);
+  };
+  document.body.appendChild(out);
+  document.getElementById('boot')?.remove();
+  draw();
+  window.__viewer = { scene, model, cam, draw, info };
+  window.__shotReady = true;
+  if (params.get('spin')) {
+    let a = 0;
+    const loop = () => { a += 0.5; materialUniforms.time.value += 1 / 60; draw(a); requestAnimationFrame(loop); };
+    loop();
+  }
+}

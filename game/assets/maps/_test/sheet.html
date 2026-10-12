@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#222;display:flex;flex-wrap:wrap;font:11px sans-serif;color:#fff}div{width:212px;margin:1px}img{width:212px;height:212px;display:block}</style>
+<body><script>
+window.__shotReady = false;
+const kind = new URLSearchParams(location.search).get('k') || 'diff';
+fetch('../common/textures.json').then(r => r.json()).then(async m => {
+  document.body.innerHTML = Object.values(m.sets).map((s) => `<div><img src="../common/${s.maps[kind]}">${s.id}</div>`).join('');
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+  window.__shotReady = true;
+});
+</script>

@@ -1,0 +1,23 @@
+node_modules/
+build/
+dist/
+*.log
+# signing key: back it up privately, never publish it
+android/keystore/
+*.jks
+*.keystore
+keystore.properties
+*.apk
+# local tool settings
+.claude/
+game/game.js
+captures/
+
+# audio pipeline: downloaded CC0 sources + previews/reports (re-creatable via tools/audio/fetch.mjs / build.mjs)
+tools/audio/src/
+tools/audio/out/
+
+# downloaded third-party sources (re-creatable by the fetch scripts)
+tools/assets/zombies/src/
+tools/map/src/
+game/net-test.js
