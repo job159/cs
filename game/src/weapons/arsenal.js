@@ -6,6 +6,7 @@ import { fireBullet, splash } from './ballistics.js';
 import { drawClip, holsterClip, inspectClip, reloadClipFor, shellStart, shellInsert, shellEnd, pumpCycle, boltCycle, knifeSlash, knifeStab } from '../player/clips.js';
 import { gauss, clamp, DEG } from '../engine/util.js';
 import { hardSurface } from '../gfx/materials.js';
+import { TRACER_EVERY, FRAME, RAMP } from '../fx/fx.js';
 import { SPECIALS, specialOf } from './specials.js';
 
 const _dir = new THREE.Vector3();
@@ -274,7 +275,18 @@ export class Arsenal {
       kills += res.kills;
       if (res.headshot) head = true;
       this._lastEnd = res.end;
-      if ((def.tracer || mods.tracer) && (mods.tracer || ws.shots % def.tracer === 0 || pellets > 1 && i < 2) && muzzleApparent) g.fx?.tracer(muzzleApparent, res.end, mods.tracer ? { color: mods.tracer } : undefined);
+      // CS2 tracer cadence (weapons.vdata): pistols / snipers / shotguns / MGs every shot, rifles / SMGs every
+      // 3rd shot of a spray with the first one always traced, suppressed none; shotguns trace 3 pellets.
+      // Special modes (mods.tracer = HDR colour) trace every shot with a glowing coloured tracer.
+      if (muzzleApparent) {
+        // def.fx (premium look, docs/FX.md): { tracer: glowTracer opts, tracerEvery, ramp, flashScale }
+        const every = mods.tracer ? 1 : def.suppressed ? 0 : def.fx?.tracerEvery ?? TRACER_EVERY[def.cat] ?? (def.tracer ? 1 : 0);
+        if (every > 0 && (ws.shots - 1) % every === 0 && (pellets === 1 || i < 3)) {
+          if (mods.tracer) g.fx?.glowTracer(muzzleApparent, res.end, { color: mods.tracer, glow: mods.tracer.map((c) => c * 0.4) });
+          else if (def.fx?.tracer) g.fx?.glowTracer(muzzleApparent, res.end, def.fx.tracer);
+          else g.fx?.tracer(muzzleApparent, res.end, { cls: def.cat });
+        }
+      }
     }
     specialOf(ws)?.onFire?.(ws, { game: g, origin, dir: _dir, end: this._lastEnd });
     // ---- feedback
@@ -293,7 +305,10 @@ export class Arsenal {
     const mz = this.vm.socketWorld('muzzle', _p);
     if (mz && def.flash) {
       const dirW = this.vm.socketDir('muzzle', new THREE.Vector3());
-      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, lightPos: muzzleApparent || mz, color: mods.flash === 'energy' ? [2, 6, 9, 1] : mods.flash === 'magma' ? [9, 3, 0.6, 1] : null });
+      // mz is the TRUE position of the first-person muzzle: the flash is drawn in viewmodel space and its light
+      // sits at the real gun so the handguard / sights / glove flash orange (CS2). Special modes recolour it.
+      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, weapon: def.id, lightPos: mz, suppressed: !!def.suppressed, scale: def.fx?.flashScale ?? 1,
+        ramp: mods.flash === 'energy' ? RAMP.blue : mods.flash === 'magma' ? RAMP.red : def.fx?.ramp ?? null });
     }
     if (def.shell && def.mode !== 'pump' && def.mode !== 'bolt') this._ejectShell(def.shell);
     // audio: close layer (2D), tail, mechanics
@@ -319,11 +334,15 @@ export class Arsenal {
     const data = this.vm.weapon.socket('eject')?.data || {};
     const d = data.dir ? new THREE.Vector3(data.dir[2] ?? 1, data.dir[1] ?? 0.6, -(data.dir[0] ?? 0.15)) : new THREE.Vector3(1, 0.6, 0.15);
     d.normalize().applyQuaternion(this.vm.gunRoot.getWorldQuaternion(_q));
-    const sp = 2.2 + Math.random() * 1.2;
+    // CS2 ejection speeds: pistols 2.2-3.0 m/s, rifles 3-4, MGs 3.5 (+ belt link, a bit slower)
+    const cat = this.current?.def.cat;
+    const sp = cat === 'pistol' || cat === 'smg' ? 2.2 + Math.random() * 0.8 : cat === 'shotgun' ? 2.2 + Math.random() * 0.8 : 3 + Math.random();
     const v = d.multiplyScalar(sp).add(g.player.vel);
-    v.y += 0.8;
+    v.y += 0.6;
     const floorY = g.world.collision.floorBelow(ep, 0.2, 5);
-    g.fx?.shells.spawn(type, ep.clone(), v, isFinite(floorY) ? floorY : g.player.pos.y);
+    const fy = isFinite(floorY) ? floorY : g.player.pos.y;
+    g.fx?.shells.spawn(type, ep.clone(), v, fy);
+    if (cat === 'mg' && type !== '12g') g.fx?.shells.spawn('link', ep.clone(), v.clone().multiplyScalar(0.8), fy);
   }
 
   _launch(ws, origin, dir) {
@@ -342,8 +361,9 @@ export class Arsenal {
           if (p.age > 0.08 && p.vel.length() < 140) p.vel.addScaledVector(p.vel.clone().normalize(), 70 * dt);
           while (trailT > 0.012) {
             trailT -= 0.012;
-            g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, vx: (Math.random() - 0.5) * 0.6, vy: 0.3 + Math.random() * 0.3, vz: (Math.random() - 0.5) * 0.6, life: 1.6 + Math.random(), size: 0.15, size1: 1.1, color: [0.55, 0.54, 0.52, 0.45], color1: [0.6, 0.6, 0.6, 0], frame: 1, drag: 1.2, spin: 1 });
-            g.fx?.particles.spawn({ additive: true, x: p.pos.x, y: p.pos.y, z: p.pos.z, life: 0.06, size: 0.35, color: [8, 4, 1.5, 1], frame: 0 });
+            g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, vx: (Math.random() - 0.5) * 0.6, vy: 0.3 + Math.random() * 0.3, vz: (Math.random() - 0.5) * 0.6, life: 1.6 + Math.random(), size: 0.15, size1: 1.2, sizePow: 0.5, color: [0.62, 0.6, 0.58, 0.5], color1: [0.65, 0.65, 0.65, 0], frame: FRAME.puff + ((Math.random() * 4) | 0), lit: true, drag: 1.2, spin: 1 });
+            g.fx?.particles.spawn({ additive: true, x: p.pos.x, y: p.pos.y, z: p.pos.z, life: 0.06, size: 0.35, color: [8, 4, 1.5, 1], frame: FRAME.glow });
+            g.fx?.particles.spawn({ additive: true, x: p.pos.x, y: p.pos.y, z: p.pos.z, mode: 'align', dir: [-p.vel.x, -p.vel.y, -p.vel.z], aspect: 2.5, anchor: 0.47, life: 0.04, size: 0.16, color: [1, 1, 1, 1], frame: FRAME.cone + ((Math.random() * 2) | 0), ramp: RAMP.gunfire, heat: 1, heat1: 0.3 });
           }
         },
         onHit: (p, point) => {

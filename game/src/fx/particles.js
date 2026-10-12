@@ -24,7 +24,9 @@ attribute vec3 iDir;
 attribute vec4 iColor;
 attribute vec4 iMisc;    // size, rotation, frame (fractional = blend), line length (seconds of velocity)
 attribute vec4 iExtra;   // heat, ramp row + 1 (0 = none), packed mode, aspect (sign = mirror)
+attribute vec2 iGround;  // soft ground contact: floor height, fade height (0 = off)
 uniform float uVm;
+uniform float uZoom;     // weapon zoom (scopes / ADS): range compensation works on the apparent distance
 uniform mat4 vmProj;
 uniform vec2 uPx;        // NDC size of one pixel
 uniform float uMinPx;    // minimum streak width in pixels
@@ -36,6 +38,7 @@ varying vec4 vX;         // heat, ramp row, lit, alpha scale
 varying vec2 vRot;
 varying float vFade;
 varying vec3 vWorld;
+varying vec2 vGround;    // height above the floor, fade height
 
 vec4 project(vec4 mv) {
   if (uVm > 0.5) { vec4 p = vmProj * mv; p.z = p.z * 0.08 - 0.92 * p.w; return p; }
@@ -45,6 +48,8 @@ vec2 cellOf(float f) { return vec2(mod(f, uCols), uCols - 1.0 - floor(f / uCols)
 
 void main() {
   float packed = iExtra.z;
+  float far = floor(packed / 256.0);
+  packed -= far * 256.0;
   float anchor = floor(packed / 8.0) / 16.0;
   float rem = packed - floor(packed / 8.0) * 8.0;
   float lit = floor(rem / 4.0);
@@ -54,6 +59,12 @@ void main() {
   float rot = iMisc.y;
   float aScale = 1.0;
   vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+  // CS2: impacts stay readable at range. Scaled per viewer and per frame from the apparent distance (distance /
+  // weapon zoom), so a scoped view or walking up to a far hit never shows an oversized puff (far 1: full, 2: sqrt)
+  if (far > 0.5 && uVm < 0.5) {
+    float f = clamp(1.0 + (-mv.z / max(uZoom, 1.0) - 12.0) / 18.0, 1.0, 2.6);
+    size *= far > 1.5 ? sqrt(f) : f;
+  }
   vec2 cr = vec2(cos(rot), sin(rot));
   vRot = cr;
   vec4 clip;
@@ -81,8 +92,12 @@ void main() {
     clip.xy += (nrm * corner.y * 2.0 * hwEff + dir * corner.x * 2.0 * hwEff) * uPx * clip.w;
   } else if (mode < 2.5) {
     vec3 vv = mat3(modelViewMatrix) * iDir;
-    float l2 = length(vv.xy), lf = l2 / max(length(vv), 1e-5);
-    vec2 d2 = l2 > 1e-5 ? vv.xy / l2 : vec2(1.0, 0.0);
+    vv /= max(length(vv), 1e-5);
+    // perspective-correct screen direction of iDir at this point (d/dt of xy / -z): a barrel pointing into the
+    // screen projects towards its vanishing point, not along its raw xy
+    vec2 sd = vv.xy * (-mv.z) + mv.xy * vv.z;
+    float l2 = length(sd), lf = l2 / max(-mv.z, 1e-3);
+    vec2 d2 = l2 > 1e-6 ? sd / l2 : vec2(1.0, 0.0);
     d2 = vec2(d2.x * cr.x - d2.y * cr.y, d2.y * cr.x + d2.x * cr.y);   // rotation = angle jitter
     float k = smoothstep(0.02, 0.3, lf);
     if (l2 <= 1e-5) d2 = cr;
@@ -107,8 +122,11 @@ void main() {
   vColor = iColor;
   vX = vec4(iExtra.x, iExtra.y, lit, aScale);
   vFade = uVm > 0.5 ? 1.0 : clamp((-mv.z - 0.08) / 0.4, 0.0, 1.0);
+  // world position of this corner (the view matrix is a rigid transform: inverse = transposed rotation)
+  vec3 wp = transpose(mat3(viewMatrix)) * (mv.xyz - viewMatrix[3].xyz);
+  vGround = vec2(wp.y - iGround.x, iGround.y);
 #ifdef HOLES
-  vWorld = (inverse(viewMatrix) * mv).xyz;
+  vWorld = wp;
 #endif
 }`;
 
@@ -122,6 +140,7 @@ uniform vec3 uSunView;      // sun direction in view space
 uniform vec3 uSunCol;       // sun irradiance / PI
 uniform vec3 uUpView;
 uniform vec3 uSky, uGround; // hemisphere + environment terms / PI
+uniform float uFlat;        // 0..1: flattens the lit-puff normals (big soft smoke volumes)
 #ifdef HOLES
 uniform vec4 uHoleA[8];     // xyz start, radius
 uniform vec4 uHoleB[8];     // xyz end, strength
@@ -133,6 +152,7 @@ varying vec4 vX;
 varying vec2 vRot;
 varying float vFade;
 varying vec3 vWorld;
+varying vec2 vGround;
 
 vec4 cellTex(vec2 uv) {
   // clamp the mip level so tiny particles never bleed in their neighbours
@@ -144,6 +164,9 @@ void main() {
   vec4 t = cellTex(vUv.xy);
   if (vBlend > 0.002) t = mix(t, cellTex(vUv.zw), vBlend);
   float fade = vFade * vX.w;
+  // analytic soft particles against the floor plane: quads crossing the ground fade out at the contact line
+  // instead of being cut by the depth test (flames, ground dust, smoke)
+  if (vGround.y > 0.0) fade *= smoothstep(0.0, vGround.y, vGround.x);
 #ifdef HOLES
   {
     for (int i = 0; i < 8; i++) {
@@ -156,25 +179,28 @@ void main() {
     }
   }
 #endif
+  if (vX.z > 0.5) {
+    // lit smoke: tangent-space normal from the atlas, rotated with the particle
+    vec2 n2 = t.rg * 2.0 - 1.0;
+    n2 = vec2(vRot.x * n2.x - vRot.y * n2.y, vRot.y * n2.x + vRot.x * n2.y);
+    vec3 N = vec3(n2, sqrt(max(0.0, 1.0 - dot(n2, n2))));
+    N = normalize(mix(N, vec3(0.0, 0.0, 1.0), uFlat));
+    float ndl = dot(N, uSunView);
+    float sun = max(ndl * 0.55 + 0.45, 0.0) * (1.0 - t.b * 0.3 * (1.0 - max(ndl, 0.0)));
+    vec3 amb = mix(uGround, uSky, dot(N, uUpView) * 0.5 + 0.5);
+    vec3 c = vColor.rgb * (uSunCol * sun + amb);
+    // lit + ramp: an emissive fire core inside lit smoke (explosion fireballs cooling into charcoal smoke)
+    if (vX.y > 0.5) c += texture2D(tRamp, vec2(clamp(t.b * vX.x, 0.0, 1.0) * 0.996 + 0.002, (vX.y - 0.5) / 8.0)).rgb;
+    float a = t.a * vColor.a * fade;
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(c, a); return;
+  }
   if (vX.y > 0.5) {
     // fire: temperature (B) x heat -> HDR ramp, density (A) as coverage
     float T = clamp(t.b * vX.x, 0.0, 1.0);
     vec3 c = texture2D(tRamp, vec2(T * 0.996 + 0.002, (vX.y - 0.5) / 8.0)).rgb * vColor.rgb;
     float a = t.a * vColor.a * fade;
     if (uAdd > 0.5) { gl_FragColor = vec4(c * a, 1.0); return; }
-    if (a < 0.004) discard;
-    gl_FragColor = vec4(c, a); return;
-  }
-  if (vX.z > 0.5) {
-    // lit smoke: tangent-space normal from the atlas, rotated with the particle
-    vec2 n2 = t.rg * 2.0 - 1.0;
-    n2 = vec2(vRot.x * n2.x - vRot.y * n2.y, vRot.y * n2.x + vRot.x * n2.y);
-    vec3 N = vec3(n2, sqrt(max(0.0, 1.0 - dot(n2, n2))));
-    float ndl = dot(N, uSunView);
-    float sun = max(ndl * 0.7 + 0.3, 0.0) * (1.0 - t.b * 0.35 * (1.0 - max(ndl, 0.0)));
-    vec3 amb = mix(uGround, uSky, dot(N, uUpView) * 0.5 + 0.5);
-    vec3 c = vColor.rgb * (uSunCol * sun + amb);
-    float a = t.a * vColor.a * fade;
     if (a < 0.004) discard;
     gl_FragColor = vec4(c, a); return;
   }
@@ -188,9 +214,10 @@ void main() {
 const _m = new THREE.Matrix4();
 const _m2 = new THREE.Matrix4();
 const _v = new THREE.Vector3();
+const _v2 = new THREE.Vector3();
 
 export class Layer {
-  constructor(max, { additive, vm = false, shared, textures, holes = false, renderOrder }) {
+  constructor(max, { additive, vm = false, shared, textures, holes = false, renderOrder, flat = 0 }) {
     this.max = max;
     this.n = 0;
     this.additive = additive;
@@ -201,6 +228,7 @@ export class Layer {
     this.col = new Float32Array(max * 4);
     this.misc = new Float32Array(max * 4);
     this.extra = new Float32Array(max * 4);
+    this.ground = new Float32Array(max * 2);
     // simulation state
     this.vel = new Float32Array(max * 3);
     this.life = new Float32Array(max);
@@ -219,6 +247,7 @@ export class Layer {
     this.frame0 = new Float32Array(max);
     this.frames = new Float32Array(max);
     this.fps = new Float32Array(max);
+    this.fofs = new Float32Array(max);
     this.heat0 = new Float32Array(max);
     this.heat1 = new Float32Array(max);
     this.heatPow = new Float32Array(max);
@@ -228,22 +257,23 @@ export class Layer {
     this.arrays = [];
     for (const k of ['pos', 'dir', 'vel']) this.arrays.push([this[k], 3]);
     for (const k of ['col', 'misc', 'extra', 'c0', 'c1']) this.arrays.push([this[k], 4]);
-    for (const k of ['life', 'maxLife', 'size0', 'size1', 'sizePow', 'colPow', 'fadeIn', 'grav', 'drag', 'rotV', 'bounce', 'frame0', 'frames', 'fps', 'heat0', 'heat1', 'heatPow', 'stretch', 'inertia', 'flags']) this.arrays.push([this[k], 1]);
+    this.arrays.push([this.ground, 2]);
+    for (const k of ['life', 'maxLife', 'size0', 'size1', 'sizePow', 'colPow', 'fadeIn', 'grav', 'drag', 'rotV', 'bounce', 'frame0', 'frames', 'fps', 'fofs', 'heat0', 'heat1', 'heatPow', 'stretch', 'inertia', 'flags']) this.arrays.push([this[k], 1]);
 
     const g = new THREE.InstancedBufferGeometry();
     const quad = new THREE.PlaneGeometry(1, 1);
     g.index = quad.index;
     g.setAttribute('position', quad.attributes.position);
     const attr = (arr, n) => new THREE.InstancedBufferAttribute(arr, n).setUsage(THREE.DynamicDrawUsage);
-    this.attrs = [attr(this.pos, 3), attr(this.dir, 3), attr(this.col, 4), attr(this.misc, 4), attr(this.extra, 4)];
-    ['iPos', 'iDir', 'iColor', 'iMisc', 'iExtra'].forEach((n, i) => g.setAttribute(n, this.attrs[i]));
+    this.attrs = [attr(this.pos, 3), attr(this.dir, 3), attr(this.col, 4), attr(this.misc, 4), attr(this.extra, 4), attr(this.ground, 2)];
+    ['iPos', 'iDir', 'iColor', 'iMisc', 'iExtra', 'iGround'].forEach((n, i) => g.setAttribute(n, this.attrs[i]));
     g.instanceCount = 0;
     this.geo = g;
     const uniforms = {
       tAtlas: textures.fx, tRamp: textures.ramp, uAtlasSize: textures.size, uCols: { value: COLS },
-      uAdd: { value: additive ? 1 : 0 }, uVm: { value: vm ? 1 : 0 }, vmProj: materialUniforms.vmProj,
+      uAdd: { value: additive ? 1 : 0 }, uVm: { value: vm ? 1 : 0 }, vmProj: materialUniforms.vmProj, uZoom: shared.zoom,
       uPx: shared.px, uMinPx: shared.minPx,
-      uSceneLight: shared.sceneLight, uSunView: shared.sunView, uSunCol: shared.sunCol, uUpView: shared.upView, uSky: shared.sky, uGround: shared.ground,
+      uFlat: { value: flat ?? 0 }, uSceneLight: shared.sceneLight, uSunView: shared.sunView, uSunCol: shared.sunCol, uUpView: shared.upView, uSky: shared.sky, uGround: shared.ground,
     };
     if (holes) {
       this.holeA = Array.from({ length: 8 }, () => new THREE.Vector4());
@@ -293,6 +323,7 @@ export class Layer {
     this.frame0[i] = p.frame || 0;
     this.frames[i] = p.frames || 1;
     this.fps[i] = p.fps || 0;
+    this.fofs[i] = p.frameOffset || 0;
     this.heat0[i] = p.heat ?? 1;
     this.heat1[i] = p.heat1 ?? 0;
     this.heatPow[i] = p.heatPow ?? 1;
@@ -305,7 +336,10 @@ export class Layer {
     const anchor = Math.round(Math.min(1, Math.max(0, p.anchor || 0)) * 16);
     this.extra[o4] = this.heat0[i];
     this.extra[o4 + 1] = p.ramp !== undefined && p.ramp !== null && p.ramp !== false ? p.ramp + 1 : 0;
-    this.extra[o4 + 2] = mode + (p.lit ? 4 : 0) + anchor * 8;
+    this.extra[o4 + 2] = mode + (p.lit ? 4 : 0) + anchor * 8 + (p.far ? (p.far === 'sqrt' ? 2 : 1) : 0) * 256;
+    const o2 = i * 2;
+    if (p.ground !== undefined && p.ground !== null) { this.ground[o2] = p.ground; this.ground[o2 + 1] = p.soft ?? 0.2; }
+    else { this.ground[o2] = 0; this.ground[o2 + 1] = 0; }
     this.extra[o4 + 3] = (p.aspect ?? 1) * (p.mirror ? -1 : 1);
     // hidden until simulated once (so a delayed particle never flashes at full size)
     for (let k = 0; k < 4; k++) this.col[o4 + k] = this.c0[o4 + k];
@@ -352,7 +386,7 @@ export class Layer {
         }
       }
       if (fl & 2) { D[o3] = V[o3]; D[o3 + 1] = V[o3 + 1]; D[o3 + 2] = V[o3 + 2]; }
-      if (fl & 4) M[o4 + 3] = Math.min(this.stretch[i], life + 0.004);
+      if (fl & 4) M[o4 + 3] = Math.min(this.stretch[i], life);   // the tail never reaches behind the spawn point
       const sp = this.sizePow[i];
       M[o4] = this.size0[i] + (this.size1[i] - this.size0[i]) * (sp === 1 ? t : Math.pow(t, sp));
       M[o4 + 1] += this.rotV[i] * sdt;
@@ -366,7 +400,7 @@ export class Layer {
         const fps = this.fps[i];
         let f;
         if (fps > 0) {
-          f = life * fps;
+          f = life * fps + this.fofs[i];
           if (fl & 8) { f %= nf; if (f > nf - 1) f = nf - 1; } else f = Math.min(nf - 1, f);
         } else f = Math.min(nf - 1, t * (nf - 1) * 1.0001);
         M[o4 + 2] = this.frame0[i] + f;
@@ -409,7 +443,7 @@ export class Particles {
   constructor(scene, camera, quality, renderer) {
     this.camera = camera;
     const big = (quality?.particles ?? 3000) >= 2500;
-    this.textures = buildAtlases(renderer.gl, { size: big ? 2048 : 1024 });
+    this.textures = sharedAtlases(renderer.gl, big ? 2048 : 1024);
     const tx = { fx: { value: this.textures.fx }, ramp: { value: this.textures.ramp }, size: { value: this.textures.size } };
     this.tx = tx;
     this.atlas = this.textures.fx;
@@ -418,7 +452,7 @@ export class Particles {
       sceneLight: { value: new THREE.Vector3(1, 1, 1) },
       sunView: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Vector3(0.8, 0.75, 0.7) },
       upView: { value: new THREE.Vector3(0, 1, 0) }, sky: { value: new THREE.Vector3(0.3, 0.32, 0.36) }, ground: { value: new THREE.Vector3(0.12, 0.11, 0.1) },
-      px: { value: new THREE.Vector2(1 / 640, 1 / 360) }, minPx: { value: 1.3 },
+      px: { value: new THREE.Vector2(1 / 640, 1 / 360) }, minPx: { value: 2.4 }, zoom: { value: 1 },
       camWorld: { value: new THREE.Matrix4() },
     };
     this.renderer = renderer;
@@ -435,9 +469,6 @@ export class Particles {
     this.floorFn = null;
     this._prevCam = new THREE.Matrix4().copy(camera.matrixWorld);
     this._camDelta = new THREE.Matrix4();
-    // GPU textures are lost with the GL context: rebuild them when it comes back
-    this._onRestore = () => setTimeout(() => this.textures.regenerate(), 0);
-    renderer.gl.domElement?.addEventListener('webglcontextrestored', this._onRestore);
   }
 
   /** Extra layer sharing textures/lighting (smoke grenades with bullet holes, ...). */
@@ -451,7 +482,8 @@ export class Particles {
    * colorPow, fadeIn, gravity, drag, spin, rot, frame, frames, fps, loop, frameOffset, stretch (line length in
    * seconds of velocity), mode ('billboard'|'line'|'align'|'flat'), dir [x,y,z] (align axis / flat normal),
    * aspect, mirror, anchor (0..1: shift the quad forward along dir), ramp (row), heat, heat1, heatPow, lit,
-   * collide, bounce, inertia (vm only), additive, vm.
+   * collide, bounce, inertia (vm only), additive, vm, far (true | 'sqrt': grows with the viewer's apparent
+   * distance past 12 m, CS2 impact readability), ground + soft (floor height + fade height: soft floor contact).
    */
   spawn(o) {
     const layer = o.vm ? (o.additive ? this.vmAdd : this.vmAlpha) : (o.additive ? this.add : this.alpha);
@@ -463,18 +495,31 @@ export class Particles {
     const cam = this.camera;
     // camera motion since the last update (for viewmodel-space particles with inertia)
     this._camDelta.copy(cam.matrixWorld).invert().multiply(this._prevCam);
+    // teleports (spawn, respawn, spectator switches) are not camera motion: viewmodel smoke must not be flung
+    const jump = _v.setFromMatrixPosition(cam.matrixWorld).distanceToSquared(_v2.setFromMatrixPosition(this._prevCam)) > 2.25;
     this._prevCam.copy(cam.matrixWorld);
     this.shared.camWorld.value.copy(cam.matrixWorld);
     const r = this.renderer;
     if (r?.vw) this.shared.px.value.set(2 / r.vw, 2 / r.vh);
     this.add.update(dt, this.floorFn);
     this.alpha.update(dt, this.floorFn);
-    this.vmAdd.update(dt, null, this._camDelta);
-    this.vmAlpha.update(dt, null, this._camDelta);
+    this.vmAdd.update(dt, null, jump ? null : this._camDelta);
+    this.vmAlpha.update(dt, null, jump ? null : this._camDelta);
   }
 
-  dispose() {
-    this.renderer.gl.domElement?.removeEventListener('webglcontextrestored', this._onRestore);
-    this.textures.dispose();
+}
+
+// The generated textures are identical for every match: build them once per renderer and size and share
+// them (game teardown skips render-target textures, so per-game atlases would leak GPU memory).
+const atlasCache = new WeakMap();
+function sharedAtlases(gl, size) {
+  let m = atlasCache.get(gl);
+  if (!m) {
+    m = new Map();
+    atlasCache.set(gl, m);
+    // GPU textures are lost with the GL context: rebuild them when it comes back
+    gl.domElement?.addEventListener('webglcontextrestored', () => setTimeout(() => { for (const t of m.values()) t.regenerate(); }, 0));
   }
+  if (!m.has(size)) m.set(size, buildAtlases(gl, { size }));
+  return m.get(size);
 }

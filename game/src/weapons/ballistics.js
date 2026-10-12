@@ -51,6 +51,7 @@ export function fireBullet(game, origin, dir, def, opts = {}) {
       if (power < 0.12) { result.end.copy(h.point); return result; }
     }
   }
+  game.fx?.bulletPath?.(origin, result.end);   // CS2: every bullet carves a short-lived tunnel through smoke
   if (wh) {
     game.fx?.impact(wh.surf, wh.point, wh.normal, dir, { big: def.pellets ? 0.6 : (def.dmg > 100 ? 1.6 : 1) });
     if (Math.random() < (def.pellets ? 0.12 : 0.5)) game.audio?.play('impact_' + (SURF_SOUND[wh.surf] || 'concrete'), { pos: wh.point, volume: def.pellets ? 0.6 : 1 });

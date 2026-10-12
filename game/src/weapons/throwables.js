@@ -80,7 +80,7 @@ export class Throwables {
     } else {
       g.audio?.play('fire_burst', { pos });
       this.fireZones.push({ pos: pos.clone(), r: t.radius, t: t.burn, dps: t.dps, tick: 0 });
-      g.fx?.explosion(pos, { radius: t.radius * 0.6, scale: 0.5, color: [1, 0.45, 0.12] });
+      g.fx?.molotov(pos, { radius: t.radius, duration: t.burn });   // CS2 inferno: spreading flames, smoke, light, scorch
     }
     g.noise?.(pos, 40);
   }
@@ -94,12 +94,7 @@ export class Throwables {
       f.t -= dt;
       f.tick -= dt;
       if (f.t <= 0) { this.fireZones.splice(i, 1); continue; }
-      // flames
-      for (let k = 0; k < 3; k++) {
-        const a = Math.random() * 6.28, r = Math.sqrt(Math.random()) * f.r;
-        g.fx?.particles.spawn({ additive: true, x: f.pos.x + Math.cos(a) * r, y: f.pos.y + 0.05, z: f.pos.z + Math.sin(a) * r, vx: 0, vy: 1.2 + Math.random() * 1.5, vz: 0, life: 0.5 + Math.random() * 0.4, size: 0.35, size1: 0.9, color: [5, 2.2, 0.6, 1], color1: [1, 0.25, 0.05, 0], frame: 10, spin: 2 });
-      }
-      if (Math.random() < dt * 4) g.fx?.particles.spawn({ x: f.pos.x, y: f.pos.y + 1, z: f.pos.z, vx: (Math.random() - 0.5), vy: 1.5, vz: (Math.random() - 0.5), life: 3, size: 1, size1: 4, color: [0.12, 0.1, 0.09, 0.5], color1: [0.2, 0.2, 0.2, 0], frame: 2, drag: 0.8 });
+      // (flames, smoke and light are drawn by fx.molotov)
       if (f.tick <= 0) {
         f.tick = 0.25;
         for (const z of g.zombies?.inRadius(f.pos, f.r) || []) {
