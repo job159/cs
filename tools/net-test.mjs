@@ -198,9 +198,43 @@ async function launchBrowser() {
   throw new Error('browser did not start');
 }
 
+/** Browser-level CDP session (creates targets). */
+let browserWs = null; // Promise<WebSocket>, shared by concurrent callers
+let browserId = 0;
+const browserPending = new Map();
+async function browserCmd(method, params = {}) {
+  browserWs ||= (async () => {
+    const v = await getJson(`http://127.0.0.1:${CDP_PORT}/json/version`);
+    const ws = new WebSocket(v.webSocketDebuggerUrl);
+    await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.id && browserPending.has(m.id)) {
+        browserPending.get(m.id)(m);
+        browserPending.delete(m.id);
+      }
+    };
+    return ws;
+  })();
+  const ws = await browserWs;
+  return new Promise((resolve, reject) => {
+    const id = ++browserId;
+    browserPending.set(id, (m) => (m.error ? reject(new Error(m.error.message)) : resolve(m.result)));
+    ws.send(JSON.stringify({ id, method, params }));
+  });
+}
+
 class Tab {
   static async open(url, label) {
-    const target = await getJson(`http://127.0.0.1:${CDP_PORT}/json/new?about:blank`, { method: 'PUT' });
+    // Each tab in its own window: tabs sharing a window are hidden (all but one), and hidden pages
+    // get coarse timers, which would slow the relay pacing far beyond what a phone in hand sees.
+    const { targetId } = await browserCmd('Target.createTarget', { url: 'about:blank', newWindow: true });
+    let target = null;
+    for (let i = 0; i < 50 && !target; i++) {
+      target = (await getJson(`http://127.0.0.1:${CDP_PORT}/json/list`)).find((t) => t.id === targetId);
+      if (!target) await sleep(100);
+    }
+    if (!target) throw new Error(`${label}: no target`);
     const tab = new Tab(target, label);
     await tab._connect();
     await tab.cmd('Runtime.enable');
@@ -210,7 +244,10 @@ class Tab {
     const t0 = now();
     while (now() - t0 < 45000) { // a loaded machine can take a while
       await sleep(100);
-      if ((await tab.eval('window.__netReady === true').catch(() => false)) === true) return tab;
+      if ((await tab.eval('window.__netReady === true').catch(() => false)) === true) {
+        tab.visibility = await tab.eval('document.visibilityState');
+        return tab;
+      }
     }
     throw new Error(`${label}: test page did not load`);
   }
@@ -507,6 +544,13 @@ async function freshTabs(url, labels) {
 async function scenarioProbe(url) {
   section('brokers: connect time and publish -> echo round trip, from the browser');
   const [P] = await freshTabs(url, ['probe']);
+  await test('test tabs are visible (no background timer throttling)', async () => {
+    const [A, B] = await freshTabs(url, ['vis-a', 'vis-b']);
+    const v = [P.visibility, A.visibility, B.visibility];
+    await finishTabs([A, B]);
+    assert(v.every((x) => x === 'visible'), 'visibilityState ' + js(v));
+    return v.join(', ');
+  });
   await test('probe every broker', async () => {
     const r = await P.eval('netTest.probeBrokers({ tries: 3 })');
     metrics.brokers = r;

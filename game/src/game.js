@@ -9,6 +9,7 @@ import { Projectiles } from './weapons/ballistics.js';
 import { Arsenal } from './weapons/arsenal.js';
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
+import { Match } from './match/match.js';
 
 export class Game {
   constructor({ renderer, input, audio, hud }) {
@@ -42,6 +43,8 @@ export class Game {
   damagePlayer(amount, opts) { return this.status?.damage(amount, opts) ?? 0; }
   playerStatus(kind, time, value) { if (kind === 'slow') this.status?.applySlow(time, value); }
   get playerDead() { return !this.status || !this.status.alive; }
+  onZombieKilled(z, info) { this.match?.onKill(z, info); }
+  onPlayerDowned() { this.hud?.toast('你倒下了！', 2000); }
 
   async loadMap(map) {
     await this.world.load(map, { game: this });
@@ -53,6 +56,7 @@ export class Game {
     await this.vm.init();
     this.zombies = new ZombieManager(this);
     await this.zombies.init();
+    if (this.matchOptions) { this.match = new Match(this, this.matchOptions); this.match.start(); }
     this.fx = new FX(this, this.renderer.q);
     this.projectiles = new Projectiles(this);
     this.arsenal = new Arsenal(this);
@@ -89,7 +93,7 @@ export class Game {
     if (p) {
       p.yaw -= s.lookX / this.zoom;
       p.pitch = clamp(p.pitch + s.lookY / this.zoom, -1.5, 1.5);
-      p.update(dt, s, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1));
+      p.update(dt, s, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1) * (this.match?.speedMul ?? 1));
       if (p.landImpact > 2.5) this.landDip.impulse(-Math.min(p.landImpact, 14) * 0.09, 0, 0);
     }
     this.world.update(dt, t);
@@ -101,6 +105,11 @@ export class Game {
     }
     this.status?.update(dt);
     this.zombies?.update(dt);
+    this.match?.update(dt);
+    if (this.status?.downed && this.match && this.match.selfRevives > 0) {
+      this.hud?.setPrompt(`按 E 使用腎上腺素自救（剩 ${this.match.selfRevives}）`);
+      if (s.pressed.use) { this.match.selfRevives--; this.status.revive(40); this.hud?.setPrompt(''); }
+    }
     for (const sys of [...this.systems]) sys.update(dt, t);
     this.fx?.update(dt);
     this._updateCamera(dt);

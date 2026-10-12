@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
+window.__shotReady = false;
 const qs = new URLSearchParams(location.search);
 const num = (k, d) => (qs.has(k) ? +qs.get(k) : d);
 const view = qs.get('view') || 'side';
@@ -106,6 +107,7 @@ async function main() {
   for (const p of corners) { const d = p.clone().sub(c); w = Math.max(w, Math.abs(d.dot(right))); h = Math.max(h, Math.abs(d.y)); }
   h += 0.25; w += 0.3;
   if (w / h > aspect) h = w / aspect; else w = h * aspect;
+  window.__dbg = { box: box.min.toArray().concat(box.max.toArray()), w, h };
   const cam = new THREE.OrthographicCamera(-w, w, h, -h, 0.1, 100);
   cam.position.copy(c).addScaledVector(dir, 30);
   cam.up.set(0, 1, 0);

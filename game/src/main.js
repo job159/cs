@@ -27,6 +27,7 @@ if (params.get('w')) game.startWeapon = params.get('w');
 if (params.get('vmdebug')) game.debugView = params.get('vmdebug');
 if (params.get('hip')) game.hipOverride = params.get('hip').split(',').map(Number);
 game.hud = new HUD(game);
+if (params.get('match') !== '0') game.matchOptions = { difficulty: params.get('diff') || 'normal', players: 1 };
 const touchMode = params.get('touch') === '1' || (params.get('touch') !== '0' && matchMedia('(pointer: coarse)').matches);
 if (touchMode) { game.touch = new TouchControls(input, game); document.body.classList.add('touch'); }
 
