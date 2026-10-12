@@ -1,13 +1,15 @@
 // Live end-to-end test of game/src/net/ (session.js) against the REAL public MQTT brokers, with
-// real WebRTC: 1 host tab + 3 guest tabs + 1 spare tab in headless Edge, driven over the Chrome
-// DevTools Protocol (Node 24 global WebSocket; see tools/shot.mjs).
+// real WebRTC: 1 host tab + 3 guest tabs in ONE headless Edge process, driven over the Chrome
+// DevTools Protocol (Node 24 global WebSocket; see tools/shot.mjs, whose browser semaphore it shares).
+// List scans and joins that are meant to be rejected run from the host tab (own MQTT connections).
 //   node tools/net-test.mjs                  every scenario: probe, p2p, relay, mixed (incl. crashes)
 //   node tools/net-test.mjs --only relay     some scenarios (comma list: probe,p2p,relay,mixed)
 //   node tools/net-test.mjs --url http://127.0.0.1:5190/net-test.html   (default; if the dev server
 //                                            is not running, game/ is served on :5191 by this script)
+//   node tools/net-test.mjs --broker 0       put every room on BROKERS[0] (default: the host picks)
 //   node tools/net-test.mjs --headed --keep  visible browser, left running afterwards
 // Builds game/net-test.js first. Exit code 0 when everything passed.
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -22,8 +24,10 @@ const opt = (name, def) => {
   return i < 0 ? def : args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true;
 };
 const ONLY = String(opt('only', 'probe,p2p,relay,mixed')).split(',');
-const CDP_PORT = +opt('port', 9334);
+const CDP_PORT = +opt('port', 0) || 9900 + Math.floor(Math.random() * 90); // own port per run
 const VERSION = 'nt-' + Date.now().toString(36);
+const BROKER = opt('broker', null); // --broker N: every room on BROKERS[N] (default: the host picks)
+const pin = BROKER === null ? {} : { broker: +BROKER };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => performance.now();
 
@@ -70,38 +74,128 @@ async function getJson(u, init) {
   return r.json();
 }
 
+// One browser process for the whole run (at most 4 tabs at a time). Whatever happens (exception,
+// Ctrl+C, hard timeout) its whole process tree is killed and the profile removed: many agents share
+// this machine and orphaned headless browsers once exhausted its RAM.
+let child = null;
+let profile = null;
+function killBrowser() {
+  if (child && !opt('keep', false)) {
+    try {
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(child.pid)], { stdio: 'ignore' });
+    } catch {
+      // already gone
+    }
+    child = null;
+  }
+  if (profile && !opt('keep', false)) {
+    try {
+      fs.rmSync(profile, { recursive: true, force: true });
+    } catch {
+      // files still locked for a moment: the OS temp cleanup gets them
+    }
+    profile = null;
+  }
+}
+
+// Same system-wide semaphore as tools/shot.mjs: at most SHOT_MAX (3) headless browsers at once.
+// shot.mjs reclaims slots older than 4 min, so this longer run keeps touching its lock file.
+const MAX_BROWSERS = +(process.env.SHOT_MAX || 3);
+const lockDir = path.join(os.tmpdir(), 'cf-shot-locks');
+let lockFile = null;
+let lockTouch = 0;
+function releaseLock() {
+  clearInterval(lockTouch);
+  if (lockFile) {
+    try {
+      fs.unlinkSync(lockFile);
+    } catch {
+      // gone
+    }
+    lockFile = null;
+  }
+}
+
+async function acquireSlot() {
+  fs.mkdirSync(lockDir, { recursive: true });
+  const t0 = Date.now();
+  while (!lockFile) {
+    for (let k = 0; k < MAX_BROWSERS && !lockFile; k++) {
+      const f = path.join(lockDir, `slot${k}.lock`);
+      try {
+        if (Date.now() - fs.statSync(f).mtimeMs > 240000) fs.unlinkSync(f);
+      } catch {
+        // free
+      }
+      try {
+        fs.writeFileSync(f, String(process.pid), { flag: 'wx' });
+        lockFile = f;
+      } catch {
+        // taken
+      }
+    }
+    if (lockFile) break;
+    if (Date.now() - t0 > 600000) throw new Error('no free browser slot after 10 min');
+    if (Date.now() - t0 < 1000) console.log('waiting for a free browser slot (tools/shot.mjs semaphore)...');
+    await sleep(1000 + Math.random() * 1000);
+  }
+  lockTouch = setInterval(() => {
+    try {
+      const t = new Date();
+      fs.utimesSync(lockFile, t, t);
+    } catch {
+      // released
+    }
+  }, 30000);
+}
+
+process.on('exit', () => {
+  killBrowser();
+  releaseLock();
+});
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(sig, () => {
+    killBrowser();
+    releaseLock();
+    process.exit(130);
+  });
+}
+process.on('uncaughtException', (e) => {
+  console.error('net-test failed:', e);
+  process.exit(1); // the exit handler kills the browser
+});
+process.on('unhandledRejection', (e) => {
+  console.error('net-test failed:', e);
+  process.exit(1);
+});
+const hardTimeout = setTimeout(() => {
+  console.error('net-test: hard timeout (25 min)');
+  process.exit(2);
+}, 25 * 60000);
+hardTimeout.unref();
+
 async function launchBrowser() {
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'cf-net-test-'));
-  const child = spawn(exe, [
+  await acquireSlot();
+  profile = fs.mkdtempSync(path.join(os.tmpdir(), 'cf-net-test-'));
+  child = spawn(exe, [
     ...(opt('headed', false) ? [] : ['--headless=new']),
     `--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${profile}`,
-    '--no-first-run', '--no-default-browser-check', '--mute-audio',
+    '--no-first-run', '--no-default-browser-check', '--mute-audio', '--disable-gpu',
+    '--disable-extensions', '--disable-background-networking', '--disable-component-update',
     // Several tabs must keep running at full speed, like several phones would.
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
     '--disable-backgrounding-occluded-windows',
     '--disable-features=CalculateNativeWinOcclusion,IntensiveWakeUpThrottling',
     'about:blank',
-  ], { detached: true, stdio: 'ignore' });
-  child.unref();
+  ], { stdio: 'ignore' });
   for (let i = 0; i < 300; i++) { // up to 60 s on a loaded machine
     try {
-      return { version: await getJson(`http://127.0.0.1:${CDP_PORT}/json/version`), profile };
+      return await getJson(`http://127.0.0.1:${CDP_PORT}/json/version`);
     } catch {
       await sleep(200);
     }
   }
   throw new Error('browser did not start');
-}
-
-async function closeBrowser(version) {
-  try {
-    const b = new WebSocket(version.webSocketDebuggerUrl);
-    await new Promise((r, j) => { b.onopen = r; b.onerror = j; });
-    b.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
-    await sleep(500);
-  } catch {
-    // already gone
-  }
 }
 
 class Tab {
@@ -213,7 +307,21 @@ async function test(name, fn, ms = 60000) {
   const t = Math.round(now() - t0);
   results.push({ group, name, ok, skipped, ms: t, note });
   console.log(`  ${ok ? 'PASS' : skipped ? 'SKIP' : 'FAIL'}  ${name.padEnd(46)} ${String(t).padStart(6)} ms  ${note}`);
+  if (!ok && !skipped) await diagnose();
   return ok;
+}
+
+/** Tabs of the running scenario: on a failure, their network counters are printed. */
+let diagTabs = [];
+async function diagnose() {
+  for (const T of diagTabs) {
+    if (T.closed) continue;
+    const d = await Promise.race([
+      T.eval(`(() => { const r = netTest.room; if (!r) return 'no room'; const s = r.stats(); return JSON.stringify({ closed: r.closed, why: netTest.closedReason, mqtt: s.mqtt, peers: s.peers.map((p) => ({ n: p.name, j: p.joined, tr: p.transport, p2p: p.p2p, rtt: p.rtt, pend: p.pending, out: p.msgsOut, in: p.msgsIn, rs: p.resent, rin: p.relayIn })) }); })()`),
+      sleep(5000).then(() => 'no answer in 5 s'),
+    ]).catch((e) => e.message);
+    console.log(`        [${T.label}] ${d}`);
+  }
 }
 
 async function until(pred, ms, what) {
@@ -242,6 +350,16 @@ async function joinTab(G, code, opts) {
   return j;
 }
 
+/** A join that should be rejected, from a tab that keeps its own room (see netTest.tryJoin). */
+async function tryJoinTab(T, code, opts) {
+  let j = await T.eval(`netTest.tryJoin(${js(code)}, ${js(opts)})`);
+  if (!j.ok && (j.code === 'network' || j.code === 'timeout')) {
+    retries.push(`${T.label} tryJoin: ${j.code} after ${j.ms} ms`);
+    j = await T.eval(`netTest.tryJoin(${js(code)}, ${js(opts)})`);
+  }
+  return j;
+}
+
 async function hostTab(H, opts) {
   try {
     return await H.eval(`netTest.host(${js(opts)})`);
@@ -258,7 +376,7 @@ const fmtQ = (q) => (q && q.n ? `${q.min}/${q.med}/${q.p95}/${q.max}` : '-');
 
 async function hostAndJoin(H, guests, { hostOpts = {}, guestOpts = [] } = {}) {
   const roomName = 'net-test ' + Math.random().toString(36).slice(2, 6);
-  const h = await hostTab(H, { name: '房主', version: VERSION, roomName, meta: { map: 'testArena', difficulty: 'normal', state: 'lobby' }, ...hostOpts });
+  const h = await hostTab(H, { name: '房主', version: VERSION, roomName, meta: { map: 'testArena', difficulty: 'normal', state: 'lobby' }, ...pin, ...hostOpts });
   const joins = await Promise.all(guests.map((G, i) => joinTab(G, h.code, { name: '玩家' + (i + 1), version: VERSION, ...(guestOpts[i] || {}) })));
   return { ...h, roomName, joins };
 }
@@ -402,13 +520,15 @@ async function scenarioProbe(url) {
 
 async function scenarioP2P(url) {
   section('p2p: 1 host + 3 guests over WebRTC DataChannels');
-  const tabs = await freshTabs(url, ['host', 'g1', 'g2', 'g3', 'spare']);
-  const [H, G1, G2, G3, X] = tabs;
+  const tabs = await freshTabs(url, ['host', 'g1', 'g2', 'g3']);
+  diagTabs = tabs;
+  const [H, G1, G2, G3] = tabs;
+  const X = H; // list scans and joins that must be rejected run from the host tab (own connections)
   let live = []; // guests that are in the room right now
   let room;
   await test('host room', async () => {
     const roomName = 'net-test ' + Math.random().toString(36).slice(2, 6);
-    room = await hostTab(H, { name: '房主', version: VERSION, roomName, meta: { map: 'testArena', difficulty: 'normal', state: 'lobby' } });
+    room = await hostTab(H, { name: '房主', version: VERSION, roomName, meta: { map: 'testArena', difficulty: 'normal', state: 'lobby' }, ...pin });
     room.roomName = roomName;
     return `code ${room.code} on ${room.broker} in ${room.ms} ms`;
   });
@@ -439,19 +559,19 @@ async function scenarioP2P(url) {
   if (!live.length) return finishTabs(tabs);
   await test('5th player rejected: room full', async () => {
     if (live.length < 3) skip(`only ${live.length} guests joined`);
-    const j = await joinTab(X, room.code, { name: '第五人', version: VERSION });
+    const j = await tryJoinTab(X, room.code, { name: '第五人', version: VERSION });
     assert(!j.ok && j.code === 'full', js(j));
     return j.message;
   });
   await test('version mismatch rejected', async () => {
-    const j = await joinTab(X, room.code, { name: '舊版', version: 'old-version' });
+    const j = await tryJoinTab(X, room.code, { name: '舊版', version: 'old-version' });
     assert(!j.ok && j.code === 'version', js(j));
     return j.message;
   });
   await test('bad code / unknown room rejected', async () => {
-    const a = await X.eval(`netTest.join('12a45', ${js({ version: VERSION })})`);
+    const a = await X.eval(`netTest.tryJoin('12a45', ${js({ version: VERSION })})`);
     assert(!a.ok && a.code === 'bad-code', js(a));
-    const b = await X.eval(`netTest.join(${js(room.code[0])} + String(Math.floor(Math.random() * 10000)).padStart(4, '0'), ${js({ version: VERSION })})`);
+    const b = await X.eval(`netTest.tryJoin(${js(room.code[0])} + String(Math.floor(Math.random() * 10000)).padStart(4, '0'), ${js({ version: VERSION })})`);
     assert(!b.ok && b.code === 'not-found', js(b));
     return `${a.message} / ${b.message} (${b.ms} ms)`;
   });
@@ -522,8 +642,10 @@ async function scenarioP2P(url) {
 
 async function scenarioRelay(url) {
   section('relay: forceRelay host, everything through the MQTT broker');
-  const tabs = await freshTabs(url, ['host', 'g1', 'g2', 'g3', 'spare']);
-  const [H, G1, G2, G3, X] = tabs;
+  const tabs = await freshTabs(url, ['host', 'g1', 'g2', 'g3']);
+  diagTabs = tabs;
+  const [H, G1, G2, G3] = tabs;
+  const X = H;
   let live = [];
   let room;
   await test('host (forceRelay) + 3 guests join', async () => {
@@ -562,8 +684,9 @@ async function scenarioRelay(url) {
 
 async function scenarioMixed(url) {
   section('mixed transports + crashes (tab killed without goodbye)');
-  const tabs = await freshTabs(url, ['host', 'g1', 'g2', 'spare']);
-  const [H, G1, G2, X] = tabs;
+  const tabs = await freshTabs(url, ['host', 'g1', 'g2']);
+  diagTabs = tabs;
+  const [H, G1, G2] = tabs;
   let room;
   let ok1 = false;
   let ok2 = false;
@@ -610,7 +733,7 @@ async function scenarioMixed(url) {
     const reason = (await state(G3)).closedReason;
     const ms = Math.round(now() - t0);
     assert(reason === 'host-left', 'closed: ' + reason);
-    const l = await X.eval(`netTest.list(${js({ version: VERSION })})`);
+    const l = await G3.eval(`netTest.list(${js({ version: VERSION })})`);
     assert(!l.rooms.some((r) => r.code === room.code), 'still listed');
     return `guest (${j.transport}) closed '${reason}' after ${ms} ms; the will cleared the list entry`;
   }, 90000);
@@ -631,7 +754,7 @@ async function finishTabs(tabs) {
 
 await buildNetTest();
 const url = await pageUrl();
-const { version, profile } = await launchBrowser();
+const version = await launchBrowser();
 console.log(`${version.Browser} | page ${url} | version tag ${VERSION}`);
 const t0 = now();
 try {
@@ -646,14 +769,8 @@ try {
     }
   }
 } finally {
-  if (!opt('keep', false)) {
-    await closeBrowser(version);
-    try {
-      fs.rmSync(profile, { recursive: true, force: true });
-    } catch {
-      // the browser may still hold files
-    }
-  }
+  killBrowser();
+  releaseLock();
 }
 
 console.log('\n== summary');

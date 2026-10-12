@@ -813,7 +813,7 @@ export async function bakeLightmaps(input, options = {}) {
     },
   };
   K.init(shared);
-  const nThreads = Math.max(1, Math.min(o.threads || os.availableParallelism(), 64));
+  const nThreads = Math.max(1, Math.min(o.workers || o.threads || Math.min(6, os.availableParallelism() - 1), 64));
   const pool = nThreads > 1 && nTex > 4096 ? await makePool(nThreads, shared) : null;
   const run = async (kernel, label, arg = 0) => {
     const t = performance.now();
@@ -1184,6 +1184,23 @@ function rebuildGeometry(r, charts, TUV, W, H, uvName) {
   out.name = g.name;
   out.userData = { ...g.userData };
   return out;
+}
+
+/** Decodes an RGBM-sqrt atlas (+ optional sun mask) PNG back to floats: { width, height, E: rgb Float32Array, M }. */
+export function decodeRGBM(rgbmPng, sunPng, range) {
+  const p = PNG.sync.read(Buffer.isBuffer(rgbmPng) ? rgbmPng : fs.readFileSync(rgbmPng));
+  const n = p.width * p.height;
+  const E = new Float32Array(n * 3), M = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    const a = p.data[k * 4 + 3] / 255;
+    for (let c = 0; c < 3; c++) { const v = (p.data[k * 4 + c] / 255) * a; E[k * 3 + c] = range * v * v; }
+  }
+  if (sunPng) {
+    const s = PNG.sync.read(Buffer.isBuffer(sunPng) ? sunPng : fs.readFileSync(sunPng));
+    const ch = s.data.length / n;
+    for (let k = 0; k < n; k++) M[k] = s.data[k * ch] / 255;
+  }
+  return { width: p.width, height: p.height, E, M };
 }
 
 /** Average linear colour of a PNG (pngjs) or JPEG (needs the optional `jpeg-js` package) texture file. */

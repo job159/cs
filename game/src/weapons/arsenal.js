@@ -118,7 +118,7 @@ export class Arsenal {
         const rec = (r.recover ?? 12) * dt;
         this.recoilPitch = Math.max(0, this.recoilPitch - rec * (1 + this.recoilPitch * 0.08));
         this.recoilYaw *= Math.max(0, 1 - 6 * dt);
-        ws.shots = Math.max(0, ws.shots - dt * 8);
+        if (this.sinceShot > 0.35) ws.shots = 0; // spray pattern restarts after a pause (integer index)
       }
       ws.bloom = Math.max(0, ws.bloom - (ws.def.spread?.[6] ?? 8) * dt);
     }
@@ -152,7 +152,7 @@ export class Arsenal {
     this._updateSpin(dt, s, ws);
 
     // trigger logic
-    if (s.pressed.alt && def.alt === 'burst') { ws.burstMode = !ws.burstMode; this.game.audio?.play('ui_click'); this.game.hud?.toast?.(ws.burstMode ? '三連發' : '半自動'); }
+    if (s.pressed.special && def.alt === 'burst') { ws.burstMode = !ws.burstMode; this.game.audio?.play('ui_click'); this.game.hud?.toast?.(ws.burstMode ? '三連發' : '半自動'); }
     const wantsFire = def.mode === 'auto' ? s.held.fire : s.pressed.fire || (this.fireBuffer > 0);
     this.fireBuffer = Math.max(0, (this.fireBuffer || 0) - dt);
     if (s.pressed.fire && this.fireCd > 0) this.fireBuffer = 0.12; // buffer taps slightly early
@@ -255,7 +255,7 @@ export class Arsenal {
     // ---- feedback
     const rc = def.recoil || {};
     const first = ws.shots <= 1 ? (rc.first ?? 1) : 1;
-    const pat = rc.pattern ? rc.pattern[(ws.shots - 1) % rc.pattern.length] : (Math.random() - 0.5) * 2;
+    const pat = rc.pattern ? (rc.pattern[(ws.shots - 1) % rc.pattern.length] ?? 0) : (Math.random() - 0.5) * 2;
     const upK = (rc.up ?? 1) * first * (1 - this.vm.aim * 0.25) * (0.85 + Math.random() * 0.3);
     this.recoilPitch = Math.min(rc.upMax ?? 10, this.recoilPitch + upK);
     this.recoilYaw += (rc.side ?? 0.5) * (pat * 0.8 + (Math.random() - 0.5) * 0.6);

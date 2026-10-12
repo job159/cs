@@ -1,0 +1,92 @@
+{
+ "encoding": "rgbm-sqrt",
+ "decode": "E = range * (rgb * a)^2",
+ "range": 8,
+ "mode": "indirect+mask",
+ "uv": "uv1",
+ "flipY": false,
+ "atlases": [
+  {
+   "rgbm": "lm_0.png",
+   "sun": "lm_0_sun.png",
+   "width": 512,
+   "height": 512
+  }
+ ],
+ "sun": {
+  "dir": [
+   0.3801520912608426,
+   0.7202881729152807,
+   0.580232139292865
+  ],
+  "color": "#ffe6c8",
+  "intensity": 3.2,
+  "angle": 0.8
+ },
+ "lights": [
+  {
+   "pos": [
+    -1.6,
+    2.6,
+    -1.2
+   ],
+   "color": "#ffb36b",
+   "intensity": 6,
+   "range": 7,
+   "radius": 0.08
+  }
+ ],
+ "sky": {
+  "sunDir": null,
+  "sunIrradiance": [
+   0,
+   0,
+   0
+  ],
+  "clamp": 0
+ },
+ "stats": {
+  "texels": 183030,
+  "charts": 123,
+  "triangles": 1476,
+  "receivers": 20,
+  "atlases": 1,
+  "seconds": 70.3257208,
+  "timings": {
+   "collect": 1695,
+   "charts": 193,
+   "pack": 68,
+   "bvh": 162,
+   "raster": 887,
+   "passA": 26983,
+   "passB": 33493,
+   "post": 6789,
+   "apply": 56
+  },
+  "densityScale": 1,
+  "maxIrradiance": 36.25788116455078,
+  "clipped": 92
+ },
+ "meshes": {
+  "ground": 0,
+  "wall_s_left": 0,
+  "wall_s_right": 0,
+  "wall_s_sill": 0,
+  "wall_s_lintel": 0,
+  "wall_n": 0,
+  "wall_w": 0,
+  "wall_e_a": 0,
+  "wall_e_b": 0,
+  "wall_e_top": 0,
+  "roof": 0,
+  "room_floor": 0,
+  "table": 0,
+  "cabinet": 0,
+  "crate_a": 0,
+  "crate_b": 0,
+  "crate_c": 0,
+  "container": 0,
+  "pillar": 0,
+  "ball": 0
+ }
+}

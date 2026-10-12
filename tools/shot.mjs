@@ -40,8 +40,34 @@ process.on('exit', killBrowser);
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { killBrowser(); process.exit(1); });
 process.on('uncaughtException', (e) => { console.error('shot failed:', e.message); killBrowser(); process.exit(1); });
 process.on('unhandledRejection', (e) => { console.error('shot failed:', e?.message || e); killBrowser(); process.exit(1); });
-const hardTimeout = setTimeout(() => { console.error('shot: hard timeout'); killBrowser(); process.exit(2); }, +opt('timeout', 150000));
+const hardTimeout = setTimeout(() => { console.error('shot: hard timeout'); killBrowser(); releaseLock(); process.exit(2); }, +opt('timeout', 150000) + 600000);
 hardTimeout.unref?.();
+
+// System-wide semaphore: at most MAX_BROWSERS headless browsers at once (many agents share this
+// machine; unbounded browsers exhausted the RAM once). Stale locks (> 4 min) are reclaimed.
+const MAX_BROWSERS = +(process.env.SHOT_MAX || 3);
+const lockDir = path.join(os.tmpdir(), 'cf-shot-locks');
+fs.mkdirSync(lockDir, { recursive: true });
+let lockFile = null;
+function releaseLock() { if (lockFile) { try { fs.unlinkSync(lockFile); } catch { /* gone */ } lockFile = null; } }
+process.on('exit', releaseLock);
+if (!flag('keep')) {
+  const waitStart = Date.now();
+  while (!lockFile) {
+    for (let k = 0; k < MAX_BROWSERS && !lockFile; k++) {
+      const f = path.join(lockDir, `slot${k}.lock`);
+      try {
+        const st = fs.statSync(f);
+        if (Date.now() - st.mtimeMs > 240000) fs.unlinkSync(f);
+      } catch { /* free */ }
+      try { fs.writeFileSync(f, String(process.pid), { flag: 'wx' }); lockFile = f; } catch { /* taken */ }
+    }
+    if (!lockFile) {
+      if (Date.now() - waitStart > 600000) { console.error('shot: no free browser slot after 10 min'); process.exit(3); }
+      await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
+    }
+  }
+}
 
 if (!(await alive())) {
   const profile = path.join(os.tmpdir(), 'cf-shot-' + port);
@@ -49,6 +75,7 @@ if (!(await alive())) {
     '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
     '--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl',
     '--autoplay-policy=no-user-gesture-required', '--no-first-run', '--mute-audio',
+    '--disable-extensions', '--disable-background-networking', '--disable-component-update', '--renderer-process-limit=2',
     `--window-size=${W},${H}`, 'about:blank',
   ], { detached: false, stdio: 'ignore' });
   for (let i = 0; i < 150 && !(await alive()); i++) await new Promise((r) => setTimeout(r, 200));

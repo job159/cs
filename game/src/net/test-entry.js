@@ -76,6 +76,18 @@ const T = {
     }
   },
 
+  /** A join that is expected to be rejected: does not replace T.room (closed at once if it got in). */
+  async tryJoin(code, opts = {}) {
+    const t0 = now();
+    try {
+      const room = await session.joinRoom(code, opts);
+      await room.close();
+      return { ok: true, code: room.code, slot: room.slot, ms: Math.round(now() - t0) };
+    } catch (e) {
+      return { ok: false, code: e.code, message: e.message, ms: Math.round(now() - t0) };
+    }
+  },
+
   async list(opts = {}) {
     const t0 = now();
     const rooms = await session.listRooms(opts);

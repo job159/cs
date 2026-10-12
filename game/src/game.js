@@ -7,6 +7,8 @@ import { Viewmodel } from './player/viewmodel.js';
 import { FX } from './fx/fx.js';
 import { Projectiles } from './weapons/ballistics.js';
 import { Arsenal } from './weapons/arsenal.js';
+import { PlayerStatus } from './player/status.js';
+import { ZombieManager } from './zombies/manager.js';
 
 export class Game {
   constructor({ renderer, input, audio, hud }) {
@@ -37,15 +39,20 @@ export class Game {
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */
   hitStop(sec) { this.hitStopT = Math.max(this.hitStopT, sec); }
   noise() {}
-  damagePlayer() {}
+  damagePlayer(amount, opts) { return this.status?.damage(amount, opts) ?? 0; }
+  playerStatus(kind, time, value) { if (kind === 'slow') this.status?.applySlow(time, value); }
+  get playerDead() { return !this.status || !this.status.alive; }
 
   async loadMap(map) {
     await this.world.load(map, { game: this });
     this.player = new PlayerController(this.world);
     this.player.pos.copy(this.world.playerSpawns[0]);
     this.player.yaw = Math.PI;
+    this.status = new PlayerStatus(this);
     this.vm = new Viewmodel(this);
     await this.vm.init();
+    this.zombies = new ZombieManager(this);
+    await this.zombies.init();
     this.fx = new FX(this, this.renderer.q);
     this.projectiles = new Projectiles(this);
     this.arsenal = new Arsenal(this);
@@ -82,7 +89,7 @@ export class Game {
     if (p) {
       p.yaw -= s.lookX / this.zoom;
       p.pitch = clamp(p.pitch + s.lookY / this.zoom, -1.5, 1.5);
-      p.update(dt, s, this.moveSpeed ?? 5.0);
+      p.update(dt, s, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1));
       if (p.landImpact > 2.5) this.landDip.impulse(-Math.min(p.landImpact, 14) * 0.09, 0, 0);
     }
     this.world.update(dt, t);
@@ -92,9 +99,13 @@ export class Game {
       this.vm.update(dt, { lookX: s.lookX, lookY: s.lookY, speed: p.horizontalSpeed, onGround: p.onGround,
         landImpact: p.landImpact, crouch: p.crouch, moveX: s.move.x });
     }
+    this.status?.update(dt);
+    this.zombies?.update(dt);
     for (const sys of [...this.systems]) sys.update(dt, t);
     this.fx?.update(dt);
     this._updateCamera(dt);
+    this.hud?.update(dtReal);
+    this.touch?.update();
     this.input.endFrame();
   }
 
@@ -114,6 +125,17 @@ export class Game {
     const ar = this.arsenal;
     const rp = ar ? ar.recoilPitch * Math.PI / 180 : 0, ry = ar ? ar.recoilYaw * Math.PI / 180 : 0;
     cam.rotation.set(p.pitch * -1 + rp + punch.x + sx, p.yaw + ry + punch.y + sy, punch.z + sz);
+    if (!Number.isFinite(cam.rotation.x + cam.rotation.y + cam.rotation.z + cam.position.x + cam.position.y + cam.position.z)) {
+      // never let a bad spring/impulse blank the screen: reset the offending state
+      console.warn('camera NaN reset', JSON.stringify({ punch: this.punch.x, dip: this.landDip.x, shake: this.shake, rp: ar?.recoilPitch, ry: ar?.recoilYaw, yaw: p.yaw, pitch: p.pitch, pos: p.pos, vel: p.vel }));
+      this.punch.reset(); this.landDip.reset(); this.shake = 0;
+      if (ar) { ar.recoilPitch = 0; ar.recoilYaw = 0; }
+      if (!Number.isFinite(p.yaw)) p.yaw = 0;
+      if (!Number.isFinite(p.pitch)) p.pitch = 0;
+      if (!Number.isFinite(p.pos.x + p.pos.y + p.pos.z)) { p.pos.copy(this.world.safePoint()); p.vel.set(0, 0, 0); }
+      cam.position.set(p.pos.x, p.pos.y + p.eyeHeight, p.pos.z);
+      cam.rotation.set(-p.pitch, p.yaw, 0);
+    }
     // ADS zoom + sniper scope overlay
     const def = this.arsenal?.def;
     const aim = this.vm?.aim ?? 0;

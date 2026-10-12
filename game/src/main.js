@@ -4,6 +4,9 @@ import { Input } from './engine/input.js';
 import { Game } from './game.js';
 import { AudioEngine } from './engine/audio.js';
 import * as testArena from './world/maps/testArena.js';
+import { Vector3 } from 'three';
+import { HUD } from './ui/hud.js';
+import { TouchControls } from './ui/touch.js';
 
 window.__shotReady = false;
 const canvas = document.getElementById('gl');
@@ -23,6 +26,9 @@ const game = new Game({ renderer, input, audio });
 if (params.get('w')) game.startWeapon = params.get('w');
 if (params.get('vmdebug')) game.debugView = params.get('vmdebug');
 if (params.get('hip')) game.hipOverride = params.get('hip').split(',').map(Number);
+game.hud = new HUD(game);
+const touchMode = params.get('touch') === '1' || (params.get('touch') !== '0' && matchMedia('(pointer: coarse)').matches);
+if (touchMode) { game.touch = new TouchControls(input, game); document.body.classList.add('touch'); }
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -58,6 +64,14 @@ async function boot() {
     return;
   }
   await game.loadMap(testArena);
+  // dev: ?zombies=N&ztype=walker,runner spawns a test horde around the player
+  const nz = +(params.get('zombies') || 0);
+  const types = (params.get('ztype') || 'walker').split(',');
+  for (let i = 0; i < nz; i++) {
+    const a = (i / Math.max(1, nz)) * Math.PI * 2;
+    const r = 10 + (i % 3) * 4;
+    game.zombies.spawn(types[i % types.length], new Vector3(Math.sin(a) * r, 0, Math.cos(a) * r));
+  }
   bootEl.classList.add('gone');
   requestAnimationFrame((t) => { last = t; loop(t); });
   window.__shotReady = true;
