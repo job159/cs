@@ -22,6 +22,7 @@ export class PauseMenu extends Screen {
 
   enter() {
     const app = this.app, g = app.game, m = g?.match, mp = !!app.room;
+    this.el.classList.toggle('mp', mp); // lighter backdrop: the fight keeps going underneath
     this.$('.pz-title b').textContent = mp ? '選單' : '已暫停';
     this.$('.pz-title small').textContent = mp ? 'MENU' : 'PAUSED';
     this.$('.pz-note').textContent = mp ? '多人遊戲不會暫停，戰鬥仍在進行中。' : '';
@@ -37,6 +38,13 @@ export class PauseMenu extends Screen {
   }
 
   back() { this.app.resume(); return true; }
+
+  /** Multiplayer: we took damage while the menu is open (red edge flash). */
+  hurt() {
+    this.el.classList.remove('hurt');
+    void this.el.offsetWidth;
+    this.el.classList.add('hurt');
+  }
 
   onAct(act) {
     const app = this.app;

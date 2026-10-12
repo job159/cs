@@ -40,13 +40,17 @@ export class ResultsScreen extends Screen {
     const { stats, mp } = this.data;
     const s = stats || { kills: 0, headshots: 0, money: 0 };
     const hsr = s.kills ? Math.round((s.headshots / s.kills) * 100) : 0;
-    const tiles = [['擊殺', s.kills, 'KILLS'], ['爆頭', s.headshots, 'HEADSHOTS'], ['爆頭率', hsr + '%', 'HS RATE'], ['賺取金錢', '$' + Math.round(s.money), 'EARNED']];
-    let html = `<div class="rs-tiles">${tiles.map(([k, v, en]) => `<div><small>${en}</small><b>${v}</b><span>${k}</span></div>`).join('')}</div>`;
+    // multiplayer: the table already lists everyone's kills / headshots / money, so the tiles only add
+    // what it does not show (own headshot rate and downs)
+    const tiles = mp
+      ? [['爆頭率', hsr + '%'], ['倒地', s.deaths | 0]]
+      : [['擊殺', s.kills], ['爆頭', s.headshots], ['爆頭率', hsr + '%'], ['賺取金錢', '$' + Math.round(s.money)]];
+    let html = `<div class="rs-tiles">${tiles.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
     if (mp) {
       const rows = this.app.coop?.boardRows() || [];
       const mvp = pickMvp(rows);
       html += `<div class="rs-table"><div class="rt-h"><span>玩家</span><span>擊殺</span><span>爆頭</span><span>金錢</span></div>
-        ${rows.map((r) => `<div class="rt-r${r.self ? ' self' : ''}${r.id === mvp ? ' mvp' : ''}"><span class="rt-n">${r.id === mvp ? `<i class="rt-mvp">${ICON.star}MVP</i>` : ''}${esc(r.name)}${r.host ? '<em>房主</em>' : ''}</span><span>${r.k}</span><span>${r.h}</span><span>$${Math.round(r.m)}</span></div>`).join('')}</div>`;
+        ${rows.map((r) => `<div class="rt-r${r.self ? ' self' : ''}${r.id === mvp ? ' mvp' : ''}"><span class="rt-n">${r.id === mvp ? `<i class="rt-mvp">${ICON.star}MVP</i>` : ''}<span class="rt-nm">${esc(r.name)}</span>${r.host ? '<em>房主</em>' : ''}</span><span>${r.k}</span><span>${r.h}</span><span>$${Math.round(r.m)}</span></div>`).join('')}</div>`;
     }
     this.$('.rs-mid').innerHTML = html;
     this.el.classList.toggle('mp', !!mp);
@@ -59,6 +63,7 @@ export class ResultsScreen extends Screen {
     if (!mp || host) b.push(`<button class="fe-btn pri big" data-act="again">${ICON.play}<span>再來一局</span></button>`);
     if (mp) b.push(`<button class="fe-btn big" data-act="lobby"><span>返回大廳</span></button>`);
     b.push(`<button class="fe-btn big" data-act="menu"><span>主選單</span></button>`);
+    if (mp && !host) b.unshift('<span class="rs-wait"><i class="fe-spin"></i>等待房主開始下一局…</span>');
     this.$('.rs-btns').innerHTML = b.join('');
   }
 

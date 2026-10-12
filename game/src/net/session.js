@@ -51,7 +51,7 @@ const LIST_CONNECT_MS = 12000;
 const CODE_CHECK_MS = 1000; // host: wait after SUBACK for a retained info on a candidate code
 const PICK_WINDOW_MS = 2500; // host: after the first usable broker, slower ones may still win on rtt
 const INFO_WAIT_MS = 6000; // guest: wait for the room's retained info...
-const INFO_AFTER_SUBACK_MS = 2500; // ...but no longer than this past the SUBACK
+const INFO_AFTER_SUBACK_MS = 1500; // ...but no longer than this past the SUBACK (retained messages follow it at once)
 const WELCOME_MS = 8000;
 const STALE_WELCOME_MS = 3000; // info missing / stale (dead room, skewed clocks, slow broker): ask briefly anyway
 const HELLO_EVERY_MS = 1000;
@@ -79,7 +79,7 @@ const now = () => performance.now();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const ERROR_TEXT = {
-  'bad-code': '房間代碼不正確（應為 5 位數字）',
+  'bad-code': '房號不存在或輸入錯誤',
   'not-found': '找不到這個房間',
   full: '房間已滿',
   version: '遊戲版本不同，無法加入',
@@ -96,6 +96,10 @@ function roomError(code, extra, message) {
 
 function versionError(hostVersion, version) {
   return roomError('version', { hostVersion }, `遊戲版本不同（房主 ${hostVersion}，你 ${version}），請更新後再加入`);
+}
+
+function notFoundError(code) {
+  return roomError('not-found', undefined, `找不到房間 ${code}：請確認房號，或房間已關閉。`);
 }
 
 function fullError(max) {
@@ -1178,9 +1182,12 @@ export async function joinRoom(code, o = {}) {
   });
   try {
     say('尋找房間…');
-    const info = await readInfo(client, [room._tIn, room._tInfo], room._tInfo, INFO_WAIT_MS, INFO_AFTER_SUBACK_MS);
-    // No info: most likely a wrong code, but a slow broker can miss the retained message, so the
-    // host is still asked briefly before 'not-found'.
+    let subacked = false;
+    const info = await readInfo(client, [room._tIn, room._tInfo], room._tInfo, INFO_WAIT_MS, INFO_AFTER_SUBACK_MS, () => { subacked = true; });
+    // The room info is retained, so it follows the SUBACK at once: none means no such room (fail fast
+    // instead of saying 加入房間中… for seconds). Only when the broker never acknowledged the
+    // subscription, or the info looks stale (skewed clocks), is the host still asked briefly.
+    if (!info && subacked) throw notFoundError(clean);
     const fresh = !!info && isFresh(info);
     if (info) room.maxPlayers = info.m;
     if (fresh && info.v !== version) throw versionError(info.v, version);
@@ -1188,7 +1195,9 @@ export async function joinRoom(code, o = {}) {
     if (fresh && info.s === 'playing' && !info.late) throw roomError('playing');
     room._attach(client); // stays subscribed to the info: an emptied info means the host is gone
     say('加入房間中…');
-    await room._handshake(fresh ? WELCOME_MS : STALE_WELCOME_MS, fresh ? 'timeout' : 'not-found');
+    await room._handshake(fresh ? WELCOME_MS : STALE_WELCOME_MS, fresh ? 'timeout' : 'not-found').catch((e) => {
+      throw e?.code === 'not-found' ? notFoundError(clean) : e;
+    });
     if (room._expectRtc) say('建立 P2P 直連中…');
     await room._waitSettle(P2P_WAIT_MS);
     if (room.closed) throw roomError('closed');
@@ -1212,14 +1221,16 @@ export async function joinRoom(code, o = {}) {
 /**
  * Live view of the public room lists of every broker (one connection each, in parallel).
  * onChange(rooms) fires whenever an entry appears, changes or disappears. Entries older than 60 s
- * are left out. Call stop() when the lobby screen closes.
- * @returns {{ rooms: () => RoomInfo[], ready: Promise<void>, stop: () => void }}
+ * are left out. Call stop() when the lobby screen closes. `ready` resolves with the number of brokers
+ * that answered (0 = offline / every broker unreachable).
+ * @returns {{ rooms: () => RoomInfo[], ready: Promise<number>, answered: () => number, stop: () => void }}
  */
 export function watchRooms({ version, onChange } = {}) {
   const entries = new Map(); // code -> {info, broker, at}
   const clients = [];
   let stopped = false;
   let pruneTimer = 0;
+  let answered = 0; // brokers whose list was read (0 after ready = no connection to any broker)
   const changed = () => {
     if (!stopped && onChange) {
       try {
@@ -1236,7 +1247,7 @@ export function watchRooms({ version, onChange } = {}) {
       if (age >= INFO_FRESH_MS || !e.info.pub) continue;
       const i = e.info;
       const compatible = version === undefined || i.v === String(version);
-      const reason = !compatible ? `版本不同（${i.v}）` : i.p >= i.m ? '房間已滿' : i.s === 'playing' && !i.late ? '遊戲進行中' : '';
+      const reason = !compatible ? '版本不同' : i.p >= i.m ? '房間已滿' : i.s === 'playing' && !i.late ? '遊戲進行中' : '';
       out.push({
         code, name: i.n, host: i.h, players: i.p, maxPlayers: i.m, map: i.map, difficulty: i.d, state: i.s,
         version: i.v, timestamp: i.t, age: Math.max(0, Math.round(age / 1000)), broker: e.broker,
@@ -1272,17 +1283,20 @@ export function watchRooms({ version, onChange } = {}) {
     });
     await client.subscribe(LIST_TOPIC);
     await sleep(LIST_AFTER_SUBACK_MS); // retained entries follow the SUBACK
+    answered++;
   };
   const ready = Promise.race([
     Promise.allSettled(BROKERS.map((_, b) => scan(b))),
     sleep(LIST_TOTAL_MS),
-  ]).then(() => {});
+  ]).then(() => answered);
   pruneTimer = setInterval(() => {
     for (const [code, e] of entries) if (Date.now() - e.info.t >= INFO_FRESH_MS) entries.delete(code) && changed();
   }, 5000);
   return {
     rooms,
     ready,
+    /** Number of brokers whose room list could be read so far. */
+    answered: () => answered,
     stop() {
       if (stopped) return;
       stopped = true;

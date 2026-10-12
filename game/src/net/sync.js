@@ -3,7 +3,7 @@
 // host -> clients
 //   'sn' (unreliable, ~12/s P2P, ~7/s relay)  { t, z: [[id, x, y, z, yaw, st, hp, run]...] (cm / centi-rad / %),
 //                                               p: [[id, x, y, z, yaw, pitch, flags, hp, weapon]...], m: [state, round, timer, left, bossFrac, bossName] }
-//   'ev' (reliable, batched per tick)          [[kind, ...args], ...]  zs spawn, za anim, zd death, sv sever, fx, sh shot
+//   'ev' (reliable, batched per tick)          [[kind, ...args], ...]  zs spawn, za anim, zd death, zc clear all, sv sever, fx, sh shot
 //   'pd' (reliable, to one player)             { a: amount, f: [x, z], k: [x,y,z]?, o: flags }  damage taken
 //   'rw' (reliable, to one player)             { m: money, x: xp, n: victim name, h: headshot, w: weapon }
 // clients -> host
@@ -95,6 +95,7 @@ export class NetSync {
     }
   }
   fx(kind, data) { this.events.push(['fx', kind, data]); }
+  zombiesCleared() { this.events.push(['zc']); }
   sendPlayerPush(id, v) {
     if (!this.pushOut) this.pushOut = new Map();
     const e = this.pushOut.get(id) || [0, 0, 0];
@@ -228,6 +229,8 @@ export class NetSync {
     } else if (kind === 'zd') {
       const [, id, dx, dz, head, ex] = e;
       zm.netDeath(id, { dir: new THREE.Vector3(dx / 100, 0, dz / 100), headshot: !!head, explosive: !!ex, knock: 2 });
+    } else if (kind === 'zc') {
+      zm.clear();
     } else if (kind === 'sv') {
       const z = zm.byId.get(e[1]);
       if (z) z.sever(e[2], new THREE.Vector3(e[3] / 100, 0, e[4] / 100));

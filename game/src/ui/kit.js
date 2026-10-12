@@ -91,6 +91,7 @@ export class Dialogs {
     const d = {
       el: wrap,
       dismiss: o.dismiss,
+      backCancels: o.backCancels ?? (o.buttons || []).some((b) => b.value === false),
       done: new Promise((r) => { resolve = r; }),
       close: (value) => {
         const i = this.stack.indexOf(d);
@@ -115,7 +116,7 @@ export class Dialogs {
 
   confirm(title, text, { ok = '確定', cancel = '取消', danger = false } = {}) {
     return this.show({ title, body: `<p>${esc(text)}</p>`, dismiss: false,
-      buttons: [{ label: cancel, value: false }, { label: ok, cls: danger ? 'danger' : 'pri', value: true }] }).done.then((v) => !!v);
+      buttons: [{ label: cancel, value: false }, { label: ok, cls: danger ? 'danger' : 'pri', value: true }] }).done.then((v) => v === true);
   }
 
   /** Busy dialog with a live status line; cancel (optional) resolves done with 'cancel'. */
@@ -130,7 +131,7 @@ export class Dialogs {
   back() {
     const d = this.stack[this.stack.length - 1];
     if (!d) return false;
-    if (d.dismiss !== false) d.close(d.dismiss ?? null);
+    if (d.dismiss !== false || d.backCancels) d.close(d.dismiss === false ? false : d.dismiss ?? null);
     return true;
   }
 
@@ -163,20 +164,38 @@ const TIPS = [
 export class Loading {
   constructor() {
     this.el = document.getElementById('boot');
+    // match loading extras: dimmed map art, chapter line (第一章 · 困難), objective, tip, cancel button
+    if (!this.el.querySelector('.boot-art')) this.el.prepend(el('<div class="boot-art"></div>'));
+    if (!this.el.querySelector('.boot-k')) this.el.querySelector('.boot-logo').before(el('<div class="boot-k"></div>'));
+    if (!this.el.querySelector('.boot-obj')) this.el.querySelector('.boot-bar').before(el('<div class="boot-obj"></div>'));
     if (!this.el.querySelector('.boot-tip')) this.el.appendChild(el('<div class="boot-tip"></div>'));
+    if (!this.el.querySelector('.boot-cancel')) this.el.appendChild(el('<button class="boot-cancel fe-btn"></button>'));
+    this.art = this.el.querySelector('.boot-art');
+    this.kick = this.el.querySelector('.boot-k');
     this.logo = this.el.querySelector('.boot-logo');
     this.sub = this.el.querySelector('.boot-sub');
+    this.obj = this.el.querySelector('.boot-obj');
     this.bar = this.el.querySelector('.boot-bar i');
     this.msg = this.el.querySelector('.boot-msg');
     this.tip = this.el.querySelector('.boot-tip');
+    this.cancelBtn = this.el.querySelector('.boot-cancel');
+    this.cancelBtn.addEventListener('click', () => this.onCancel?.());
     this.visible = !this.el.classList.contains('gone');
   }
-  show({ title = '災厄前線', sub = 'CALAMITY FRONT', msg = '載入中…', tip = false } = {}) {
+  /**
+   * kicker: HTML line above the title (chapter + coloured difficulty); objective: mission line;
+   * art: HTML (map thumbnail) shown dimmed behind everything.
+   */
+  show({ title = '災厄前線', sub = 'CALAMITY FRONT', msg = '載入中…', tip = false, kicker = '', objective = '', art = '' } = {}) {
     this.logo.textContent = title;
     this.sub.textContent = sub;
     this.msg.textContent = msg;
+    this.kick.innerHTML = kicker;
+    this.obj.textContent = objective;
+    this.art.innerHTML = art;
     this.tip.textContent = tip ? '提示　' + TIPS[(Math.random() * TIPS.length) | 0] : '';
     this.el.classList.toggle('match', !!tip);
+    this.setCancel(null);
     this.progress(0);
     this.el.classList.remove('gone');
     this.visible = true;
@@ -185,7 +204,21 @@ export class Loading {
     this.bar.style.width = (Math.max(0, Math.min(1, p)) * 100).toFixed(1) + '%';
     if (msg) this.msg.textContent = msg;
   }
-  hide() { this.el.classList.add('gone'); this.visible = false; }
+  /** Shows a cancel button (label, onCancel) under the bar, or hides it (null). */
+  setCancel(label, fn) {
+    this.onCancel = label ? fn : null;
+    this.cancelBtn.textContent = label || '';
+    this.cancelBtn.classList.toggle('on', !!label);
+  }
+  hide() { this.el.classList.add('gone'); this.visible = false; this.setCancel(null); }
+}
+
+/** Replaces an element's HTML only when it changed (keeps buttons alive between periodic refreshes). */
+export function setHTML(node, html) {
+  if (node._html === html) return false;
+  node._html = html;
+  node.innerHTML = html;
+  return true;
 }
 
 /** Copies text to the clipboard (async API, then the execCommand fallback for older WebViews). */

@@ -26,7 +26,8 @@ const MOCK = `(() => {
 
 const STEPS = [
   ['menu', `__app.closeOverlays(); __app.dialogs.closeAll(); __app.show('menu')`, 900],
-  ['solo', `__app.show('solo')`, 700],
+  ['chapters', `document.querySelector('.mm-card .map-card').click()`, 500],
+  ['solo', `__app.dialogs.closeAll(); __app.show('solo')`, 700],
   ['mp', `__app.show('mp')`, 2500],
   ['create', `__app.screens.mp.createDialog()`, 500],
   ['keypad', `__app.dialogs.closeAll(); __app.screens.mp.keypad(); for (const k of '248') document.querySelector('.kp-pad [data-k="' + k + '"]').click()`, 500],
@@ -36,7 +37,7 @@ const STEPS = [
   ['settings_gfx', `__app.screens.settings.tab = 'gfx'; __app.screens.settings.render()`, 400],
   ['lobby', `__app.closeOverlays(); __app.room = ${MOCK}; __app.show('lobby')`, 700],
   ['lobby_guest', `__app.room.isHost = false; __app.room.selfId = 'g1'; __app.room.players = function () { return [{ id: 'h0', name: '老王', slot: 0, rtt: 41, transport: 'p2p', self: false }, { id: 'g1', name: '玩家554', slot: 1, rtt: 0, transport: 'self', self: true }]; }; __app.screens.lobby.render()`, 400],
-  ['loading', `__app.screens.lobby.leave(); __app.room = null; __app.show('loading'); __app.loading.show({ title: '失落之城', sub: 'LOST TOWN', msg: '準備武器與感染者…', tip: true }); __app.loading.progress(0.62)`, 500],
+  ['loading', `__app.screens.lobby.leave(); __app.room = null; __app.show('loading'); __app.loading.show({ title: '失落之城', sub: 'LOST TOWN', msg: '準備武器與感染者…', tip: true, kicker: '第一章<i></i><b style="color:#f2b544">困難</b>', objective: '死守中央路口，撐過 10 波屍潮並擊敗首領' }); __app.loading.progress(0.62)`, 500],
   ['results', `__app.loading.hide(); __app.showResults({ victory: true, stats: { kills: 57, headshots: 21, money: 8450 }, round: 10, map: __app.mapId, difficulty: 'hard', time: 754, mp: false })`, 600],
   ['results_mp', `__app.room = ${MOCK}; __app.coop = { boardRows: () => [
       { id: 'h0', name: '玩家554', slot: 0, k: 41, h: 12, m: 6100, self: true, host: true },

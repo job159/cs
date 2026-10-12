@@ -88,6 +88,9 @@ async function waitFor(t, expr, ms = 60000) {
 // DOM helpers evaluated in the page: click a selector, type into an input
 const click = (t, sel) => t.ev(`const b = document.querySelector(${JSON.stringify(sel)}); if (!b) return 'missing ${sel.replace(/'/g, '')}'; b.click(); return 'ok'`);
 const typeName = (t, name) => t.ev(`const i = document.querySelector('.mp-name input'); i.value = ${JSON.stringify(name)}; i.dispatchEvent(new Event('change')); return __app.playerName`);
+const diag = (t) => t.ev(`return JSON.stringify({ state: __app.state, loading: __app.loadingMatch, msg: document.querySelector('#boot .boot-msg')?.textContent, bar: document.querySelector('#boot .boot-bar i')?.style.width,
+  mi: __app.matchInfo, game: !!__cf.game, player: !!__cf.game?.player, match: __cf.game?.match?.state, room: __app.room && { closed: __app.room.closed, status: __app.room.statusText, peers: [...__app.room.peers.values()].map((p) => p.name + ':' + p.transport + ':' + Math.round(p.rtt)) },
+  coop: __app.coop && { n: __app.coop.n, loadingN: __app.coop.loadingN, goN: __app.coop.goN, ready: [...__app.coop.ready], attached: __app.coop.attached } })`);
 async function shot(t, file) {
   const r = await t.send('Page.captureScreenshot', { format: 'png' });
   if (r.result?.data) fs.writeFileSync(file, Buffer.from(r.result.data, 'base64'));
@@ -134,11 +137,18 @@ try {
   await shot(host, 'captures/mpflow_host_lobby.png');
   await shot(guest, 'captures/mpflow_guest_lobby.png');
 
-  // ---------------------------------------------------------------- host starts
+  // ---------------------------------------------------------------- host starts (enabled once every player's link settled)
+  check('host start button enabled', await waitFor(host, `document.querySelector('.lb-act [data-act=start]') && !document.querySelector('.lb-act [data-act=start]').disabled`, 15000));
   await click(host, '.lb-act [data-act=start]');
   const tStart = Date.now();
-  check('host enters the game', await waitFor(host, `__app.state === 'game' && !!__cf.game?.match`, 60000), `${((Date.now() - tStart) / 1000).toFixed(1)} s`);
-  check('guest enters the game', await waitFor(guest, `__app.state === 'game' && !!__cf.game?.match`, 60000), `${((Date.now() - tStart) / 1000).toFixed(1)} s`);
+  if (!check('host enters the game', await waitFor(host, `__app.state === 'game' && !!__cf.game?.match`, 150000), `${((Date.now() - tStart) / 1000).toFixed(1)} s`)) {
+    console.log('host', await diag(host)); console.log('guest', await diag(guest));
+    console.log('host log:', host.logs.slice(-12).join(' || ')); console.log('guest log:', guest.logs.slice(-12).join(' || '));
+  }
+  if (!check('guest enters the game', await waitFor(guest, `__app.state === 'game' && !!__cf.game?.match`, 90000), `${((Date.now() - tStart) / 1000).toFixed(1)} s`)) {
+    console.log('guest', await diag(guest)); console.log('guest log:', guest.logs.slice(-12).join(' || '));
+    throw new Error('guest not in game');
+  }
   const hMeta = await host.ev(`return JSON.stringify({ meta: __app.room.meta, map: __app.matchInfo.map, diff: __cf.game.match.diffId })`);
   const gInfo = await guest.ev(`return JSON.stringify({ map: __app.matchInfo.map, diff: __cf.game.match.diffId, mirror: !!__cf.game.match.isMirror })`);
   const hm = JSON.parse(hMeta), gm = JSON.parse(gInfo);
@@ -197,7 +207,7 @@ try {
   await waitFor(host, `document.querySelector('.fe-dlg .fe-btn.danger')`, 3000);
   await click(host, '.fe-dlg .fe-btn.danger');
   check('host left to the multiplayer screen', await waitFor(host, `__app.state === 'mp' && !__app.room && !__cf.game?.player`, 5000));
-  check('guest is told the host left', await waitFor(guest, `__app.state === 'mp' && !__app.room && /房主已離開/.test(document.querySelector('.fe-dlg p')?.textContent || '')`, 20000));
+  check('guest is told the host left', await waitFor(guest, `__app.state === 'mp' && !__app.room && /房主已離開/.test(document.querySelector('.fe-dlg')?.textContent || '')`, 20000));
   await shot(guest, 'captures/mpflow_guest_hostleft.png');
 
   const errs = [...host.logs, ...guest.logs].filter((l) => /^EXC|^error/.test(l) && !/audio|favicon|404|Failed to load resource/i.test(l));

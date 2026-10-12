@@ -19,7 +19,7 @@
 import { listRooms, watchRooms, hostRoom, joinRoom } from './net/session.js';
 
 const rooms = await listRooms({ version });      // 一次掃描所有 broker（約 2–13 秒）
-const w = watchRooms({ version, onChange });     // 大廳畫面用：房間陸續出現，w.stop() 結束
+const w = watchRooms({ version, onChange });     // 大廳畫面用：房間陸續出現，w.stop() 結束；await w.ready → 有回應的 broker 數（0 = 連不上配對伺服器）
 // RoomInfo: { code, name, host, players, maxPlayers, map, difficulty, state, version, age, joinable, reason }
 
 const room = await hostRoom({ name, version, meta: { map, difficulty, state: 'lobby' } });
@@ -39,6 +39,23 @@ room.setMeta({ state: 'playing' });  room.kick(id);  room.close();  room.stats()
 - `status` 事件是給 UI 的繁中文字（連線中…、P2P 直連成功、改用伺服器中繼…）。
 - 加入被拒的 `err.code`：`bad-code`、`not-found`、`full`、`version`（`err.hostVersion`）、`playing`、`kicked`、`closed`、`network`、`timeout`。
 - 每則訊息（`[seq,"type",data]` 的 JSON）上限 12 KB：可靠訊息超過會丟 `RangeError`，不可靠的直接丟棄並警告。`$` 開頭的 type 保留給內部。
+
+## 遊戲流程（前端）
+
+選單流程在 `game/src/main.js`（App 狀態機）與 `game/src/ui/`（menu / lobby / settings / pause / results / kit）；
+房間層之上的流程訊息在 `game/src/net/coop.js`，局內同步仍是 `net/sync.js`（`NetSync`，每局建立、`dispose()` 解除）。
+
+| 訊息 | 方向 | 內容 |
+|---|---|---|
+| `start` | 房主→全體 | `{map, difficulty, seed, n}`，在房主**開始載入前**送出；客人收到後載入同一張地圖 |
+| `ready` | 客人→房主 | `{n}`：地圖載入完成、NetSync 已掛上 |
+| `go` | 房主→全體 | `{n}`：全員 ready（或 30 秒逾時）後開打；客人等 `go` 才進入遊戲 |
+| `st` / `board` | 客人→房主 / 房主→全體 | 個人戰績 `{k,h,m}`（每 2 秒＋結算時）／全員戰績表（結算畫面、MVP） |
+| `lobby` | 房主→全體 | 房主回到大廳（meta `state` 改回 `lobby`） |
+
+客人載入期間把 coop 的 `message` 監聽拿掉，房間會把房主的快照／事件暫存在 inbox，NetSync 掛上後一次補收，不會漏掉殭屍生成。
+房主開始時 `setMeta({state:'playing'})`（遊戲中的房間不能加入），回大廳時改回 `lobby`。
+端對端 UI 測試：`node tools/mp-flow-test.mjs`（建立房間→小鍵盤輸入房號加入→開始→雙方進入遊戲→複製／暫停／結算／回大廳／第二局／房主離開）。
 
 ## 傳輸與可靠層
 
@@ -70,7 +87,7 @@ frame：`{"f": 發送者 id, "m": [item, ...]}`，item 用 `to`（某 id 或 `*`
 
 ## 加入流程
 
-1. 客人連到代碼指定的 broker，訂閱 `g` 與 `i`，讀 retained 資訊：版本不同、已滿、遊戲中（且房主沒開 `allowLateJoin`）就直接拒絕。讀不到資訊時仍會問房主 3 秒才回報 `not-found`。
+1. 客人連到代碼指定的 broker，訂閱 `g` 與 `i`，讀 retained 資訊：版本不同、已滿、遊戲中（且房主沒開 `allowLateJoin`）就直接拒絕。訂閱確認（SUBACK）後 1.5 秒內沒有 retained 資訊就直接回報 `not-found`（訊息含房號：「找不到房間 29871：請確認房號，或房間已關閉。」，整體約 3–4 秒）；只有 broker 沒確認訂閱、或資訊時間戳過舊（時鐘不準）時，才會再問房主 3 秒。
 2. 每秒送 `hello`，直到收到 `welcome`（含 slot、成員表、meta）或 `reject`（8 秒逾時）。
 3. 房主分配最小的空 slot，立刻開始 WebRTC offer；DataChannel 打通或 6 秒後發 `peer-join` 並廣播成員表。
 

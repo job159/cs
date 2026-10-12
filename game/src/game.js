@@ -168,8 +168,10 @@ export class Game {
     const p = this.player;
     this.aim?.apply(s, dt);
     if (p) {
-      p.yaw -= s.lookX / this.zoom;
-      p.pitch = clamp(p.pitch + s.lookY / this.zoom, -1.5, 1.5);
+      // look speed follows the zoom; settings 開鏡靈敏度 (adsSens) scales it further while aiming
+      const lookK = (1 + ((this.adsSens ?? 1) - 1) * Math.min(1, this.vm?.aim ?? 0)) / this.zoom;
+      p.yaw -= s.lookX * lookK;
+      p.pitch = clamp(p.pitch + s.lookY * lookK, -1.5, 1.5);
       p.update(dt, s, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1) * (this.match?.speedMul ?? 1));
       if (p.landImpact > 2.5) this.landDip.impulse(-Math.min(p.landImpact, 14) * 0.09, 0, 0);
       this._footsteps(p);

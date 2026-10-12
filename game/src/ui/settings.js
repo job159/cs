@@ -1,13 +1,16 @@
 // Player settings: persisted in localStorage ('cf.settings'), applied live to the renderer, input,
 // touch controls, HUD (crosshair / markers / numbers), audio buses and haptics; plus the settings
-// screen (tabs 操作 / 畫面 / 準星 / 音效), usable from the main menu and from the pause menu.
+// screen (tabs 操作 / 畫面 / 準星 / 音效), usable from the main menu and from the pause menu. Rows that do not
+// apply to the device are hidden (mouse sensitivity on phones; touch sensitivity, gyro, haptics, left-handed
+// layout and HUD button size / opacity on desktop).
 import { Screen, header, esc } from './kit.js';
 import { haptic } from '../weapons/arsenal.js';
 
 const KEY = 'cf.settings';
 
 export const DEFAULTS = {
-  touchSens: 1.0, mouseSens: 1.0, fov: 96, leftHanded: false, haptics: true,
+  touchSens: 1.0, mouseSens: 1.0, adsSens: 1.0, gyro: 'off', gyroSens: 1.0, fov: 96, leftHanded: false, haptics: true,
+  hudScale: 100, hudAlpha: 100,
   quality: 'auto', showFps: false,
   xhColor: '#4dff6a', xhSize: 9, xhGap: 4, xhThick: 2, xhDot: false, hitmarker: true, damageNumbers: false,
   master: 90, sfx: 100, music: 55,
@@ -70,11 +73,15 @@ export function applySettings(app) {
   audio.setVolume('sfx', s.sfx / 100);
   audio.setVolume('music', s.music / 100);
   haptic.enabled = !!s.haptics;
+  app.gyro?.setMode(s.gyro, s.gyroSens);
   document.body.classList.toggle('lefty', !!s.leftHanded);
+  document.body.style.setProperty('--tb-scale', String((s.hudScale || 100) / 100));
+  document.body.style.setProperty('--tb-alpha', String((s.hudAlpha || 100) / 100));
   app.fpsEl?.classList.toggle('on', !!s.showFps);
   const g = app.game;
   if (!g) return;
   g.hfov = s.fov;
+  g.adsSens = s.adsSens;
   g._updateFov?.();
   if (g.touch) g.touch.sens = s.touchSens;
   if (g.hud) {
@@ -99,14 +106,22 @@ function slider(key, zh, desc, min, max, step, fmt = (v) => v) {
   return { type: 'slider', key, zh, desc, min, max, step, fmt };
 }
 function toggle(key, zh, desc) { return { type: 'toggle', key, zh, desc }; }
+const touch = (r) => ({ ...r, dev: 'touch' });
+const mouse = (r) => ({ ...r, dev: 'mouse' });
+const pct = (v) => `${v}%`;
 
 const ROWS = {
   ctl: [
-    slider('touchSens', '觸控視角靈敏度', '滑動畫面轉動視角的速度', 0.3, 3, 0.05, (v) => v.toFixed(2)),
-    slider('mouseSens', '滑鼠靈敏度', '電腦版滑鼠視角速度', 0.2, 4, 0.05, (v) => v.toFixed(2)),
+    touch(slider('touchSens', '觸控視角靈敏度', '滑動畫面轉動視角的速度', 0.3, 3, 0.05, (v) => v.toFixed(2))),
+    mouse(slider('mouseSens', '滑鼠靈敏度', '滑鼠轉動視角的速度', 0.2, 4, 0.05, (v) => v.toFixed(2))),
+    slider('adsSens', '開鏡靈敏度', '開鏡瞄準時的視角速度倍率（已依放大倍率換算）', 0.3, 1.5, 0.05, (v) => `×${v.toFixed(2)}`),
+    touch({ type: 'seg', key: 'gyro', zh: '陀螺儀瞄準', desc: '轉動、傾斜手機來微調準星', opts: [['off', '關'], ['ads', '開鏡時'], ['always', '永遠']] }),
+    touch({ ...slider('gyroSens', '陀螺儀靈敏度', '', 0.3, 3, 0.05, (v) => v.toFixed(2)), when: (s) => s.gyro !== 'off' }),
     slider('fov', '視野範圍 FOV', '水平視角（度）', 80, 110, 1, (v) => `${v}°`),
-    toggle('leftHanded', '左手操作', '射擊鍵與移動搖桿左右對調（觸控）'),
-    toggle('haptics', '震動回饋', '射擊、受傷時手機震動'),
+    touch(toggle('leftHanded', '左手操作', '射擊鍵與移動搖桿左右對調')),
+    touch(toggle('haptics', '震動回饋', '射擊、受傷時手機震動')),
+    touch(slider('hudScale', '按鈕大小', '戰鬥畫面觸控按鈕的大小', 80, 130, 5, pct)),
+    touch(slider('hudAlpha', '按鈕不透明度', '降低可看清更多畫面', 30, 100, 5, pct)),
   ],
   gfx: [
     { type: 'seg', key: 'quality', zh: '畫面品質', desc: '自動依裝置效能選擇；陰影與特效數量於下一局完整生效', opts: QUALITY_OPTS },
@@ -141,6 +156,7 @@ export class SettingsScreen extends Screen {
       const t = e.target;
       if (t.type !== 'range') return;
       const row = ROWS[this.tab].find((r) => r.key === t.dataset.key);
+      if (!row) return;
       const v = +t.value;
       t.closest('.st-row').querySelector('.st-val').textContent = row.fmt(v);
       this._fill(t);
@@ -163,17 +179,35 @@ export class SettingsScreen extends Screen {
     const s = this.app.settings;
     if (act === 'tab') { this.tab = t.dataset.tab; this.render(); }
     else if (act === 'toggle') { s.set(t.dataset.key, !s.get(t.dataset.key)); this.render(); }
-    else if (act === 'seg') { s.set(t.dataset.key, t.dataset.v); this.render(); }
+    else if (act === 'seg') {
+      const { key, v } = t.dataset;
+      if (key === 'gyro' && v !== 'off') {
+        // iOS needs the motion permission from this tap; Android / desktop resolve at once
+        this.app.gyro.requestPermission().then((ok) => {
+          if (!ok || !this.app.gyro.supported) { this.app.toast('此裝置無法使用陀螺儀'); return; }
+          s.set(key, v); this.render();
+        });
+        return;
+      }
+      s.set(key, v); this.render();
+    }
     else if (act === 'color') { s.set('xhColor', t.dataset.v); this.render(); }
     else if (act === 'reset') {
       this.app.dialogs.confirm('恢復預設設定', '所有設定都會回到預設值。', { ok: '恢復預設' }).then((ok) => { if (ok) { s.reset(); this.render(); } });
     }
   }
 
+  /** Rows of the current tab that apply to this device / these settings. */
+  _rows() {
+    const s = this.app.settings.v;
+    const touchUI = this.app.touchMode, fine = !matchMedia('(pointer: coarse)').matches;
+    return ROWS[this.tab].filter((r) => (r.dev !== 'touch' || touchUI) && (r.dev !== 'mouse' || fine || !touchUI) && (!r.when || r.when(s)));
+  }
+
   render() {
     const s = this.app.settings.v;
     for (const b of this.$$('.st-tabs button')) b.classList.toggle('on', b.dataset.tab === this.tab);
-    const rows = ROWS[this.tab].map((r) => {
+    const rows = this._rows().map((r) => {
       const label = `<div class="st-l"><b>${esc(r.zh)}</b>${r.desc ? `<small>${esc(r.desc)}</small>` : ''}</div>`;
       let ctl = '';
       if (r.type === 'slider') {
@@ -187,7 +221,8 @@ export class SettingsScreen extends Screen {
       }
       return `<div class="st-row">${label}${ctl}</div>`;
     }).join('');
-    const extra = this.tab === 'xh' ? '<div class="st-row"><div class="st-l"><b>預覽</b><small>實際大小</small></div><div class="st-xhprev"><div class="xp-bg"></div><div class="xp-xh"></div></div></div>' : '';
+    // crosshair preview stays pinned at the top of the pane while its rows scroll underneath
+    const extra = this.tab === 'xh' ? '<div class="st-row st-sticky"><div class="st-l"><b>預覽</b><small>實際大小</small></div><div class="st-xhprev"><div class="xp-bg"></div><div class="xp-xh"></div></div></div>' : '';
     const qNote = this.tab === 'gfx' && this.app.qualityLock ? '<p class="st-note">網址參數 ?q= 已鎖定畫質。</p>' : '';
     const autoNote = this.tab === 'gfx' && s.quality === 'auto' ? `<p class="st-note">目前自動選擇：${QUALITY_OPTS.find((o) => o[0] === autoQuality())[1]}</p>` : '';
     this.pane.innerHTML = extra + rows + qNote + autoNote;
