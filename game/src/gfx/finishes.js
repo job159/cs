@@ -88,7 +88,7 @@ export function finishTextures() {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const i = y * N + x;
     const m = sample(w3, N, x + w1[i] * 2.4 * N * 0.3, y + w2[i] * 2.4 * N * 0.3);
-    const silver = 0.5 + 0.5 * Math.sin(9 * m * Math.PI * 0.7 + 3 * w1[i]);
+    const silver = Math.pow(0.5 + 0.5 * Math.sin(38 * m + 9 * w1[i]), 0.35);
     data[i * 4] = Math.max(0, Math.min(255, silver * 255));
     data[i * 4 + 1] = w2[i] * 255;
     data[i * 4 + 2] = w3[i] * 255;
@@ -139,6 +139,18 @@ uniform vec3 fBoxMin, fBoxMax;
 uniform sampler2D tMarble;
 uniform sampler2D tRamp;
 float fH(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+vec3 fS2L(vec3 c) { return pow(c, vec3(2.2)); }
+vec3 temperRamp(float h, float row) {
+  vec3 r0[8]; vec3 r1[8]; vec3 r2[8];
+  r0[0]=vec3(.604,.620,.643); r0[1]=vec3(.847,.773,.541); r0[2]=vec3(.788,.604,.310); r0[3]=vec3(.690,.478,.227); r0[4]=vec3(.549,.353,.180); r0[5]=vec3(.416,.239,.478); r0[6]=vec3(.290,.247,.549); r0[7]=vec3(.478,.557,.639);
+  r1[0]=vec3(.604,.620,.643); r1[1]=vec3(.847,.773,.541); r1[2]=vec3(.788,.604,.310); r1[3]=vec3(.549,.353,.180); r1[4]=vec3(.416,.239,.478); r1[5]=vec3(.169,.247,.549); r1[6]=vec3(.310,.525,.776); r1[7]=vec3(.478,.557,.639);
+  r2[0]=vec3(.604,.620,.643); r2[1]=vec3(.541,.627,.784); r2[2]=vec3(.310,.525,.776); r2[3]=vec3(.169,.247,.549); r2[4]=vec3(.118,.227,.604); r2[5]=vec3(.169,.310,.690); r2[6]=vec3(.310,.525,.776); r2[7]=vec3(.416,.494,.659);
+  float x = clamp(h, 0.0, 0.9999) * 7.0;
+  int i = int(floor(x)); float f = fract(x);
+  vec3 a, b;
+  if (row < 0.5) { a = r0[i]; b = r0[min(i + 1, 7)]; } else if (row < 1.5) { a = r1[i]; b = r1[min(i + 1, 7)]; } else { a = r2[i]; b = r2[min(i + 1, 7)]; }
+  return fS2L(mix(a, b, f));
+}
 vec4 fTri(sampler2D t, vec3 p, vec3 w) { return texture2D(t, p.zy) * w.x + texture2D(t, p.xz) * w.y + texture2D(t, p.xy) * w.z; }
 `;
 
@@ -146,21 +158,24 @@ export const FINISH_MAIN = /* glsl */`
 {
   vec3 fp = vObjPos;
   float cs = cos(fSeedRot), sn = sin(fSeedRot);
-  vec3 q = vec3(fp.x * cs - fp.z * sn, fp.y, fp.x * sn + fp.z * cs) + fSeedOff * 0.1;
+  vec3 boxS0 = fBoxMax - fBoxMin;
+  float gscale = 0.45 / max(0.12, max(boxS0.z, boxS0.y));
+  vec3 q = (vec3(fp.x * cs - fp.z * sn, fp.y, fp.x * sn + fp.z * cs) * gscale) + fSeedOff * 0.1;
   vec3 fw = triW(vObjNor);
   vec2 side = vec2(-fp.z, fp.y);                          // side-view plane (s, t)
   vec3 boxS = fBoxMax - fBoxMin;
   vec3 fcol = diffuseColor.rgb; float fr = -1.0; float fm = -1.0;
   if (fType < 1.5) {                                      // fade
     vec2 dir = vec2(cos(fFadeAng), sin(fFadeAng));
-    vec2 smin = vec2(-fBoxMax.z, fBoxMin.y), smax = vec2(-fBoxMin.z, fBoxMax.y);
-    float lo = min(dot(smin, dir), dot(smax, dir)), hi = max(dot(smin, dir), dot(smax, dir));
+    float d1 = dot(vec2(-fBoxMax.z, fBoxMin.y), dir), d2 = dot(vec2(-fBoxMin.z, fBoxMax.y), dir);
+    float d3 = dot(vec2(-fBoxMax.z, fBoxMax.y), dir), d4 = dot(vec2(-fBoxMin.z, fBoxMin.y), dir);
+    float lo = min(min(d1, d2), min(d3, d4)), hi = max(max(d1, d2), max(d3, d4));
     float g = clamp((dot(side, dir) - lo) / max(1e-4, hi - lo) + (grunge.r - 0.5) * 0.06, 0.0, 1.0);
-    fcol = mix(mix(fC0, fC1, smoothstep(0.0, 0.55, g)), fC2, smoothstep(0.45, 1.0, g));
+    fcol = mix(mix(fC0, fC1, smoothstep(0.12, 0.38, g)), fC2, smoothstep(0.58, 0.9, g));
     fr = fRough; fm = fMetal;
   } else if (fType < 3.5) {                               // doppler family / marble fade
-    vec4 mb = fTri(tMarble, q * 7.0, fw);
-    float silver = smoothstep(0.42, 0.62, mb.r);
+    vec4 mb = fTri(tMarble, q * 5.0, fw);
+    float silver = smoothstep(0.12, 0.55, mb.r);
     silver = mix(silver, 0.65 + 0.35 * silver, fGem);
     vec3 candy;
     if (fType < 2.5) {
@@ -172,15 +187,16 @@ export const FINISH_MAIN = /* glsl */`
       candy = mix(mix(fC0, fC1, smoothstep(0.0, 0.5, g)), fC2, smoothstep(0.5, 1.0, g));
     }
     if (fIrid > 0.5) { float nv = abs(normalize(vObjNor).x); candy = mix(candy, vec3(0.2, 0.6, 0.55), (1.0 - nv) * 0.45); }
-    fcol = mix(vec3(0.105, 0.1, 0.13), candy, silver);
+    fcol = mix(vec3(0.07, 0.065, 0.09), candy * (0.85 + 0.3 * mb.b), silver);
     fr = mix(0.3, fRough, silver); fm = mix(0.75, 1.0, silver);
   } else if (fType < 4.5) {                               // case hardened
     vec4 mb = fTri(tMarble, q * 2.6 + vec3(fSeedOff.y), fw);
     vec4 mb2 = fTri(tMarble, q * 9.0, fw);
     float h = clamp(mb.a * 1.3 - 0.15 + (mb2.b - 0.5) * 0.18 + (vBake.r - 0.5) * 0.25, 0.0, 1.0);
-    vec3 temper = texture2D(tRamp, vec2(0.0625 + h * 0.875, (fRow + 0.5) / 3.0)).rgb;
-    fcol = mix(fC0, temper, smoothstep(0.12, 0.28, h));
-    fr = fRough; fm = 1.0;
+    vec3 temper = temperRamp(h, fRow);
+    float tempered = smoothstep(0.3, 0.46, h);
+    fcol = mix(fS2L(vec3(0.70, 0.72, 0.75)), temper * 1.35, tempered);
+    fr = mix(0.22, fRough, tempered); fm = 1.0;
   } else if (fType < 5.5) {                               // crimson web
     vec2 c = vec2(-mix(fBoxMin.z, fBoxMax.z, 0.35 + 0.3 * fract(fSeedOff.x)), mix(fBoxMin.y, fBoxMax.y, 0.5));
     vec2 d = (side - c) * (6.0 / max(0.05, boxS.z));
