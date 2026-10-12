@@ -12,6 +12,7 @@ import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';
 import { AimAssist } from './player/aimassist.js';
 import { Throwables } from './weapons/throwables.js';
+import { WEAPONS, registerWeapon } from './weapons/defs.js';
 
 export class Game {
   constructor({ renderer, input, audio, hud }) {
@@ -37,6 +38,7 @@ export class Game {
     this.timeScale = 1;
     this.hitStopT = 0;
     this.targets = null;    // zombie manager (raycast/inRadius) once created
+    this.debug = { WEAPONS, registerWeapon };   // dev / QA hooks
   }
 
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */

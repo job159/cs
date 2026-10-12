@@ -1,29 +1,34 @@
 // Zombie / character QA viewer (dev):
 //   index.html?view=zombie&id=walker_a[&lod=1][&grid=1][&anim=walk_a&t=0.3][&cam=face|upper|feet][&yaw=35&pitch=5]
-//             [&pose=test | &pose=upperarm_l:0,0,-60;lowerarm_l:0,0,-90][&bg=#55595e][&wire=1][&seg=1][&bones=1]
+//             [&pose=upperarm_l:0,0,-60;lowerarm_l:0,0,-90][&wpose=test | &wpose=upperarm_l:0,0,80]
+//             [&noOffsets=1][&bg=#55595e][&wire=1][&seg=1][&bones=1][&play=1]
 // grid=1 renders a 2x2 sheet (front, front 3/4, side, back). anim/t poses a clip from assets/zombies/anims.glb
 // (retargeted on load if that file's rest frames differ, see zretarget.js). pose= adds local euler rotations
-// (degrees, XYZ, applied after the clip) for skinning QA; pose=test is a stress pose (bent elbows/knees,
-// raised arms, twisted forearms, turned head). seg=1 colours vertices by the _seg dismemberment attribute.
+// (degrees, XYZ, applied after the clip), wpose= rotations about WORLD axes (wpose=test: stress pose with
+// raised arms, bent elbows/knees, twisted torso) for skinning QA. extras.poseOffsets are applied like the game
+// would (after the clip). seg=1 colours vertices by the _seg dismemberment attribute, bones=1 draws the skeleton.
 // window.__shotReady flips true once rendered; window.__zv exposes the scene for --eval scripts.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { loadGLB } from '../engine/assets.js';
 import { retargetClips } from './zretarget.js';
 
-const TEST_POSE = {
-  upperarm_l: [0, 0, -55], lowerarm_l: [0, 70, -95], hand_l: [0, 0, -35],
-  upperarm_r: [-70, 0, 20], lowerarm_r: [0, -70, 95], hand_r: [30, 0, 0],
-  thigh_l: [-75, 0, 0], calf_l: [95, 0, 0], foot_l: [-20, 0, 0],
-  thigh_r: [25, 0, 10], calf_r: [40, 0, 0],
-  spine_02: [15, 0, 0], spine_03: [0, 20, 0], neck_01: [0, 25, 0], head: [-20, 0, 15],
+// Skinning stress pose, as WORLD-axis rotations (degrees about world X, Y, Z; applied parent-first):
+// left arm raised sideways above the shoulder with the elbow bent 100 deg forward and the forearm twisted,
+// right arm reaching forward-up with a bent elbow, left leg lifted forward with a deep knee bend,
+// torso twisted and the head turned.
+const TEST_WPOSE = {
+  spine_02: [0, 12, 0], spine_03: [8, 14, 0], neck_01: [0, 15, 0], head: [-10, 20, 0],
+  upperarm_l: [0, 0, 95], lowerarm_l: [0, -100, 0], hand_l: [60, 0, 0],
+  upperarm_r: [-100, 0, 0], lowerarm_r: [-70, 0, 0], hand_r: [0, 0, -40],
+  thigh_l: [-85, 0, 0], calf_l: [110, 0, 0], foot_l: [-20, 0, 0],
+  thigh_r: [20, 0, 0], calf_r: [45, 0, 0],
 };
 
 const SEG_COLORS = [0x9a9a9a, 0xff4040, 0x40a0ff, 0x2050c0, 0x40ff80, 0x20a040, 0xffc040, 0xc08020, 0xff60ff, 0xa030a0];
 
 function parsePose(s) {
   if (!s) return {};
-  if (s === 'test') return TEST_POSE;
   const out = {};
   for (const part of s.split(';')) {
     const [bone, v] = part.split(':');
@@ -124,6 +129,17 @@ export async function runZombieViewer(renderer, params) {
     };
     if (!params.get('noOffsets')) add(model.userData.poseOffsets);
     add(parsePose(params.get('pose')));
+    // world-axis rotations: new local = P^-1 * R * P * local (P = parent world rotation), parents first
+    const wp = params.get('wpose') === 'test' || params.get('pose') === 'test' ? TEST_WPOSE : parsePose(params.get('wpose'));
+    const P = new THREE.Quaternion(), R = new THREE.Quaternion();
+    for (const b of skeleton ? skeleton.bones : []) {
+      const deg = wp[b.name];
+      if (!deg) continue;
+      b.parent.updateWorldMatrix(true, false);
+      b.parent.getWorldQuaternion(P);
+      R.setFromEuler(e.set(deg[0] * Math.PI / 180, (deg[1] || 0) * Math.PI / 180, (deg[2] || 0) * Math.PI / 180));
+      b.quaternion.premultiply(P.clone().invert().multiply(R).multiply(P));
+    }
   };
   applyPose();
   model.updateMatrixWorld(true);

@@ -44,7 +44,7 @@ Object.assign(Kit.prototype, {
     const state = v.state || 'intact';
     const burnt = state === 'burnt';
     const color = burnt ? '#ffffff' : v.color || (type === 'taxi' ? '#d9a82a' : type === 'police' ? '#1c1d20' : type === 'bus' ? '#d8a020' : this.pick(PAINTS));
-    const paint = burnt ? 'car_burnt' : 'car_paint';
+    const paint = burnt ? 'car_burnt' : state === 'wrecked' ? 'car_paint_worn' : 'car_paint';
     const spec = SPECS[type] || SPECS.sedan;
     this.at({ x: v.at[0], y: v.y || 0, z: v.at[1], rot: v.rot || 0, rz: v.tilt || 0, rx: v.roll || 0 }, () => {
       const W = spec.w;

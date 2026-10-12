@@ -52,7 +52,7 @@ export async function build(lib) {
     size: 2048, normalSize: 1024, ormSize: 1024,
     fade: 0.5, grime: 0.85, weave: 1, yellow: 0.8,
     blood: { collar: 1, hands: 0.5, splatter: 0.55, edges: 0.5 },
-    tear: { amount: 0.42, scale: 5.5, fray: 0.8, where: tear },
+    tear: { amount: 0.42, scale: 5.5, fray: 0.8, where: tear, threadColor: [0.62, 0.6, 0.55] },
   });
   suit.material = lib.material('cloth', { ...cloth, alpha: cloth.alpha, doubleSided: true, pngBits: 6 });
   // body faces under intact cloth go away; under holes they stay visible

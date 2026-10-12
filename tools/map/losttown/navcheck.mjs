@@ -18,6 +18,17 @@ const inPoly = L.pointInPoly;
 const octagon = [[-15, -9], [-9, -15], [9, -15], [15, -9], [15, 9], [8, 16], [-8, 16], [-15, 9]];
 const open = [...L.STREETS.map((s) => s.row), octagon];
 const interiors = L.BUILDINGS.filter((b) => b.interior).map((b) => b.interior.poly);
+// doorways: enterable openings cut through the 0.3 m facade wall (0.7 m deep strip across the face line)
+const doorways = [];
+for (const b of L.BUILDINGS) for (const o of b.openings || []) {
+  if (o.state !== 'enterable') continue;
+  const xs = b.footprint.map((p) => p[0]), zs = b.footprint.map((p) => p[1]);
+  if (o.face === 'C') { const [a, c] = b.chamfer; const p0 = [a[0] + (c[0] - a[0]) * o.along[0], a[1] + (c[1] - a[1]) * o.along[0]], p1 = [a[0] + (c[0] - a[0]) * o.along[1], a[1] + (c[1] - a[1]) * o.along[1]];
+    const dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz), nx = -dz / l * 0.6, nz = dx / l * 0.6;
+    doorways.push([[p0[0] - nx, p0[1] - nz], [p1[0] - nx, p1[1] - nz], [p1[0] + nx, p1[1] + nz], [p0[0] + nx, p0[1] + nz]]); continue; }
+  const f = { N: Math.min(...zs), S: Math.max(...zs), W: Math.min(...xs), E: Math.max(...xs) }[o.face];
+  doorways.push(o.face === 'N' || o.face === 'S' ? L.rect(o.along[0], f - 0.6, o.along[1], f + 0.6) : L.rect(f - 0.6, o.along[0], f + 0.6, o.along[1]));
+}
 const fort = L.LANDMARKS.fort;
 const carriage = L.STREETS.filter((s) => L.CURBS[s.id]).map((s) => { const c = L.CURBS[s.id], [x0, z0] = s.row[0], [x1, z1] = s.row[2]; return c.x ? L.rect(c.x[0], z0, c.x[1], z1) : L.rect(x0, c.z[0], x1, c.z[1]); });
 carriage.push(L.rect(-5.5, -9, 5.5, 9), L.rect(-9, -5.5, 9, 5.5));
@@ -43,9 +54,9 @@ function sample(x, z) {
   // returns height or null (not walkable at this exact point)
   if (inPoly([x, z], fort.deck.poly)) { for (const o of obst) if (o.deck && inPoly([x, z], o.poly)) return null; return L.LEVEL.fortDeck; }
   for (const r of fort.ramps) if (inPoly([x, z], r.poly)) return rampHeight(r, x, z);
-  const inInterior = interiors.some((p) => inPoly([x, z], p));
+  const inInterior = interiors.some((p) => inPoly([x, z], p)) || doorways.some((p) => inPoly([x, z], p));
   if (!inInterior && !open.some((p) => inPoly([x, z], p))) return null;
-  for (const o of obst) if (!o.deck && inPoly([x, z], o.poly) && !(o.interior && inPoly([x, z], o.interior))) return null;
+  for (const o of obst) if (!o.deck && inPoly([x, z], o.poly) && !(o.interior && (inPoly([x, z], o.interior) || doorways.some((p) => inPoly([x, z], p))))) return null;
   if (inInterior) return L.LEVEL.curb;
   return carriage.some((p) => inPoly([x, z], p)) ? 0 : L.LEVEL.curb;
 }

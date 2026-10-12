@@ -521,7 +521,7 @@ export const LANDMARKS = {
     barricade: {
       x: [-71.1, -68.6],
       parts: [
-        { kind: 'container20', x: -69.57, z: 0.0, w: CL, d: CW, h: CH, rot: PI / 2, note: 'container end-on (doors facing the fort), olive-grey; long axis along x' },
+        { kind: 'container20', x: -69.57, z: 0.0, w: CL, d: CW, h: CH, rot: 0, note: 'container end-on (doors facing the fort), olive-grey; long axis along x (x -72.6..-66.54)' },
         { kind: 'crates', x: -69.85, z: -6.1, w: 2.5, d: 5.8, h: 2.6, note: 'crates 2 high from the north building line to the lane' },
         { kind: 'crates', x: -69.85, z: 5.1, w: 2.5, d: 7.8, h: 2.6 },
       ],
@@ -573,7 +573,7 @@ export const PROPS = [
   box('north', 'newspaper_box', 'N_NEWS_3', 8.5, -55.0, 0.5, 0.45, 1.1, { sw: true, color: 'red', note: 'red boxes seen on the reference minimap' }),
   box('north', 'phone_booth', 'N_PHONE', 8.4, -44.0, 0.9, 0.9, 2.3, { sw: true }),
   box('north', 'hydrant', 'N_HYD', -8.3, -52.0, 0.4, 0.4, 0.8, { sw: true }),
-  box('north', 'dumpster', 'N_DUMP_AL', 11.0, -51.5, 1.9, 1.2, 1.3, { note: 'in the NE alley mouth' }),
+  box('north', 'dumpster', 'N_DUMP_AL', 11.2, -52.4, 1.9, 1.2, 1.3, { note: 'against the south wall of the NE alley mouth (leaves 1.8 m)' }),
   box('north', 'chainlink_fence', 'N_FENCE_AL_1', 13.5, -52.45, 0.08, 1.1, 2.4, { note: 'alley fence, torn 1.2 m gap at z -51.9..-50.7 (zombie gap, player_clip BLK_N_AL)' }),
   box('north', 'chainlink_fence', 'N_FENCE_AL_2', 13.5, -50.35, 0.08, 0.7, 2.4),
   box('north', 'crates', 'N_CRATES_DELI', -7.5, -37.6, 1.3, 1.3, 1.3, { sw: true, surf: 'wood', note: 'produce crates outside the deli' }),
@@ -614,7 +614,7 @@ export const PROPS = [
   box('south', 'chainlink_fence', 'S_BARR_XW_2', -30.2, 55.0, 0.3, 6.0, 2.4),
   box('south', 'chainlink_fence', 'S_BARR_XE_1', 30.2, 51.0, 0.3, 6.0, 2.4, { note: 'east end fence + burnt car; zombie gap z 54.0..55.4 (BLK_SX_E)' }),
   box('south', 'chainlink_fence', 'S_BARR_XE_2', 30.2, 56.7, 0.3, 2.6, 2.4),
-  box('south', 'sedan_burnt', 'S_CAR_XE', 27.4, 54.4, 4.6, 1.8, 1.45, { rot: 0.2 }),
+  box('south', 'sedan_burnt', 'S_CAR_XE', 34.6, 51.2, 4.6, 1.8, 1.45, { rot: 0.3, note: 'inside the east pocket, seen through the fence' }),
 ];
 // Street lamps (cobra-head, 7.5 m) staggered along the arms; working ones are baked emissive, one flickers (L_LAMP_S).
 export const STREET_LAMPS = [

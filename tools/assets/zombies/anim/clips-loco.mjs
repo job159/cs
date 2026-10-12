@@ -4,7 +4,7 @@ import { mocapLoop, ualLoop } from './lib.mjs';
 import { zombify } from './zombify.mjs';
 import { applyOffsets, setOffsets, fingerCurl, loopNoise, proc, DEG } from './pose.mjs';
 import { retime, fixSigns, sample } from './clip.mjs';
-import { lockFeet, clampFeetAboveGround, groundFeet, twoBoneIK, LEG, kneePole, footPoints } from './ik.mjs';
+import { lockFeet, clampFeetAboveGround, groundFeet, twoBoneIK, LEG, kneePole, footPoints, strideWarp } from './ik.mjs';
 
 /** Phase (radians) at frame f where 0 = left thigh furthest forward. */
 function legPhase(skel, clip) {
@@ -105,6 +105,10 @@ export function buildLoco(skel) {
   // ---------------------------------------------------------------- run (UAL1 jog legs + zombie upper body)
   {
     const c = ualLoop(skel, 1, 'Jog_Fwd_Loop', { name: 'run' });
+    // UAL's jog strides 2.6 m per step (5.6 m/s): shorten to a choppier ~3.8 m/s zombie run
+    strideWarp(skel, c, 0.68);
+    lockFeet(skel, c, { speed: c.meta.speed });
+    clampFeetAboveGround(skel, c);
     zombieRunUpper(skel, c, { reach: 55, reachR: 0.8, swing: 22, spread: 8, elbow: 25, lean: 16 });
     zombify(skel, c, { slump: 0, neck: 0, headTilt: 6, dropL: 0, hangL: 0, claw: 32, twitch: 0.6, sway: 0, seed: 13 });
     c.meta.notes = 'Quaternius UAL1 Jog_Fwd_Loop legs; procedural reaching/clawing arms, forward lean';
@@ -114,6 +118,9 @@ export function buildLoco(skel) {
   // ---------------------------------------------------------------- sprint (UAL1 sprint legs + wild arms)
   {
     const c = ualLoop(skel, 1, 'Sprint_Loop', { name: 'sprint' });
+    strideWarp(skel, c, 0.66);
+    lockFeet(skel, c, { speed: c.meta.speed });
+    clampFeetAboveGround(skel, c);
     zombieRunUpper(skel, c, { reach: 40, reachR: 1.25, swing: 40, spread: 14, elbow: 30, lean: 24 });
     zombify(skel, c, { slump: 0, neck: 0, headTilt: 4, dropL: 0, hangL: 0, claw: 35, twitch: 0.4, sway: 0, seed: 15 });
     c.meta.notes = 'Quaternius UAL1 Sprint_Loop legs; flailing arms, strong forward lean (infected-runner)';

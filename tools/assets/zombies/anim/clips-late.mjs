@@ -114,19 +114,25 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
 
   // ------------------------------------------------------------------ death_front (keyframed collapse onto the face)
   {
-    const b = () => clonePose(idle0);
+    // legs reset to rest (straight) so the leg keys are absolute; IK reproduces the idle stance while planted
+    const fk0 = skel.fk(idle0);
+    const b = () => {
+      const p = clonePose(idle0);
+      for (const s of ['l', 'r']) for (const n of ['thigh', 'calf', 'foot', 'ball']) p.q[skel.i(`${n}_${s}`)].copy(skel.restLocalQ[skel.i(`${n}_${s}`)]);
+      return p;
+    };
     const c = proc(skel, {
-      name: 'death_front', dur: 1.9, base: b, plant: { l: true, r: true },
+      name: 'death_front', dur: 1.9, base: b, plant: { l: fk0.wp[skel.i('foot_l')], r: fk0.wp[skel.i('foot_r')] },
       keys: [
         { t: 0 },
         { t: 0.12, head: [12, 0, 14], neck_01: [6, 0, 0], spine_02: [4, 0, 0], root: [0, -0.03, 0.01], upperarm: [-6, 0, 4] },
         { t: 0.42, root: [0, -0.3, 0.1], pelvis: [14, 0, 0], spine_01: [6, 0, 0], spine_02: [10, 0, 0], spine_03: [8, 0, 0], neck_01: [10, 0, 0], head: [22, 0, 16], upperarm: [-4, 0, -12], lowerarm: [6, 0, 0], plantL: [1, 0, 0], plantR: [1, 0, 0] },
         { t: 0.6, root: [0, -0.38, 0.2], pelvis: [30, 0, 0], thigh: [-26, 0, 2], calf: [96, 0, 0], foot: [36, 0, 0], plantL: [0, 0, 0], plantR: [0, 0, 0], spine_02: [12, 0, 0], upperarm: [-14, 0, -10] },
         { t: 0.86, root: [0, -0.56, 0.45], pelvis: [68, 0, 0], thigh: [-14, 0, 4], calf: [70, 0, 0], foot: [40, 0, 0], spine_01: [0, 0, 0], spine_02: [2, 0, 0], spine_03: [0, 0, 0], neck_01: [-6, 10, 0], head: [-10, 30, 10], upperarm: [-40, 0, 8], lowerarm: [-10, 0, 0] },
-        { t: 1.0, root: [0, -0.7, 0.58], pelvis: [86, 0, 0], thigh: [-2, 0, 6], calf: [18, 0, 0], foot: [45, 0, 0], spine_01: [-8, 0, 0], spine_02: [-10, 0, 0], spine_03: [-8, 0, 0], neck_01: [-14, 25, 0], head: [-16, 45, 14], upperarm: [10, 0, -4], lowerarm: [-6, 0, 0] },
-        { t: 1.12, root: [0, -0.66, 0.6], pelvis: [83, 0, 0], spine_02: [-7, 0, 0], calf: [26, 0, 0] },
-        { t: 1.35, root: [0, -0.7, 0.6], pelvis: [86, 0, 0], spine_02: [-10, 0, 0], calf: [16, 0, 0], upperarm: [16, 0, -10] },
-        { t: 1.9, root: [0, -0.7, 0.6], pelvis: [86, 0, 0], calf: [14, 0, 0], upperarm: [18, 0, -12] },
+        { t: 1.0, root: [0, -0.7, 0.58], pelvis: [86, 0, 0], thigh: [1, 0, 6], calf: [6, 0, 0], foot: [50, 0, 0], spine_01: [-10, 0, 0], spine_02: [-12, 0, 0], spine_03: [-10, 0, 0], neck_01: [-26, 25, 0], head: [-24, 45, 14], upperarm: [50, 0, -4], lowerarm: [-6, 0, 0] },
+        { t: 1.12, root: [0, -0.66, 0.6], pelvis: [83, 0, 0], spine_02: [-9, 0, 0], calf: [16, 0, 0], upperarm: [44, 0, -2] },
+        { t: 1.35, root: [0, -0.7, 0.6], pelvis: [86, 0, 0], spine_02: [-12, 0, 0], calf: [6, 0, 0], upperarm: [54, 0, -8] },
+        { t: 1.9, root: [0, -0.7, 0.6], pelvis: [86, 0, 0], calf: [5, 0, 0], upperarm: [56, 0, -10] },
       ],
       post: (t, pose) => limp(skel, pose, 10 + 12 * Math.min(1, t)),
     });
@@ -145,7 +151,7 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
     applyOffsets(skel, p, {
       pelvis: [80, 0, 0],
       spine_01: [-10, 0, 0], spine_02: [-14, 0, 0], spine_03: [-14, 0, 0], neck_01: [-22, 0, 0], head: [-34, 0, 8],
-      thigh: [10, 0, 4], calf: [18, 0, 0], foot: [42, 0, 0],
+      thigh: [8, 0, 5], calf: [8, 0, 0], foot: [45, 0, 0],
       clavicle: [0, 0, 8],
     });
     return p;
@@ -184,7 +190,7 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
           neck_01: [Math.sin(a * 2 + 1) * 3, -Math.sin(a) * 4, 0],
           head: [Math.sin(a * 2 + 1.5) * 4 + loopNoise(t, P, 3, 2) * 3, -Math.sin(a) * 6 + loopNoise(t, P, 2, 5) * 6, loopNoise(t, P, 2, 7) * 4],
           thigh_l: [Math.sin(a) * 6, 0, 0], thigh_r: [-Math.sin(a) * 6, 0, 0],
-          calf_l: [Math.max(0, Math.sin(a)) * 18, 0, 0], calf_r: [Math.max(0, -Math.sin(a)) * 18, 0, 0],
+          calf_l: [Math.max(0, Math.sin(a)) * 7, 0, 0], calf_r: [Math.max(0, -Math.sin(a)) * 7, 0, 0],
           root: [Math.sin(a) * 0.015, Math.abs(Math.sin(a)) * 0.015, Math.sin(a * 2) * 0.02],
         });
         crawlArms(t, pose, P);

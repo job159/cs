@@ -10,7 +10,7 @@
 import './../assets/lib/node-env.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as THREE from 'three';
 import { PNG } from 'pngjs';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -368,4 +368,4 @@ async function main() {
   if (failed.length) process.exitCode = 1;
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main().catch((e) => { console.error(e); process.exit(1); });

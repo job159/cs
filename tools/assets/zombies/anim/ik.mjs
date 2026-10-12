@@ -224,3 +224,21 @@ export function clampFeetAboveGround(skel, clip, ground = 0.0) {
 }
 
 void _v;
+
+/**
+ * Stride warping: scales every foot's fore/aft distance from the pelvis by k (IK keeps the foot
+ * orientation), turning long strides into short choppy ones. The treadmill speed scales by k.
+ */
+export function strideWarp(skel, clip, k) {
+  const pel = skel.i('pelvis');
+  for (const p of clip.poses) {
+    for (const s of ['l', 'r']) {
+      const fk = skel.fk(p);
+      const P = fk.wp[pel], A = fk.wp[skel.i(`foot_${s}`)];
+      const t = A.clone(); t.z = P.z + (A.z - P.z) * k;
+      twoBoneIK(skel, p, LEG(skel, s), t, kneePole(fk, skel, s), null, fk);
+    }
+  }
+  clip.meta.speed = (clip.meta.speed || 0) * k;
+  return clip;
+}

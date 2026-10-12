@@ -102,7 +102,7 @@ export function paintSkin(human, o = {}) {
   const blood = o.blood || {};
   const covered = new Float32Array(human.pos.length / 3);
   for (const v of human.hidden || []) covered[v] = 1;
-  const coveredDarken = human.hidden?.size ? (o.coveredDarken ?? 0.45) : 0;
+  const coveredDarken = human.hidden?.size ? (o.coveredDarken ?? 0.7) : 0;
   for (let i = 0; i < S * S; i++) {
     if (!texelSurface(r, tris, human.pos, nrm, i, P, Nn)) continue;
     const di = i * 4;
@@ -110,7 +110,14 @@ export function paintSkin(human, o = {}) {
     let h = 0, ro = rough[i];
     if (coveredDarken) {
       const cv = texelAttr(r, tris, covered, i) * coveredDarken;
-      if (cv > 0) { over(c, COLORS.grime, cv * 0.45); const k = 1 - cv * 0.45; c[0] *= k; c[1] *= k; c[2] *= k; }
+      if (cv > 0) {
+        // skin under clothes (seen through tears): darker, grimy, scraped and bruised
+        over(c, COLORS.grime, cv * 0.4);
+        const k = 1 - cv * 0.4; c[0] *= k; c[1] *= k; c[2] *= k;
+        const sc = N3.fbm(P[0] * 30 + 3, P[1] * 30, P[2] * 30, 3);
+        over(c, COLORS.bloodDry, smoothstep(0.15, 0.5, sc) * cv * 0.6);
+        over(c, COLORS.bruise, smoothstep(0.0, 0.4, -sc) * cv * 0.4);
+      }
     }
     // pallor: desaturate towards a grey-green corpse tone, keep luminance structure
     if (o.pallor) {
@@ -377,6 +384,8 @@ export function paintCloth(part, o = {}) {
       }
       if (cut) { alpha = 0; anyCut = true; }
       else {
+        // surviving threads in the fray band show the pale undyed yarn (denim weft) when threadColor is set
+        if (f > -fw && tear.threadColor) over(c, tear.threadColor, (1 + f / fw) * 0.75);
         const edge = 1 - smoothstep(0, fw * 2.5, -f);
         mul(c, [0.62, 0.57, 0.52], edge * 0.55);
         over(c, COLORS.grime, edge * 0.25);

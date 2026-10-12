@@ -96,7 +96,8 @@ export const MATERIALS = {
   billboard: { set: 'metal_worn', surf: 'metal', tile: 3, color: '#b9b2a2', lm: 1 },
 
   // ---------------------------------------------------------------- vehicles (tinted per vehicle with vertex colour)
-  car_paint: { set: 'metal_worn', surf: 'metal', tile: 1.6, rough: 0.75, lm: 1, env: 1.2 },
+  car_paint: { set: null, surf: 'metal', rough: 0.38, metal: 0.35, lm: 1, env: 1.0 },
+  car_paint_worn: { set: 'metal_worn', surf: 'metal', tile: 2.4, rough: 0.8, lm: 1, env: 0.8 },
   car_burnt: { set: 'metal_rusty', surf: 'metal', tile: 1.4, color: '#6b625c', lm: 1 },
   car_chrome: { set: null, surf: 'metal', color: '#b8bcc0', rough: 0.25, metal: 1, lm: 1, env: 1.5 },
   car_plastic: { set: null, surf: 'metal', color: '#1e1f20', rough: 0.7, lm: 1 },

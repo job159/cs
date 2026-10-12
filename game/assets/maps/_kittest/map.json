@@ -3,7 +3,7 @@
  "name": "套件測試街角",
  "nameEn": "Kit Test Corner",
  "version": 1,
- "built": "2026-10-12T09:26:08.880Z",
+ "built": "2026-10-12T09:33:20.907Z",
  "bounds": [
   -34,
   -2,
@@ -315,7 +315,20 @@
   "json": "nav.json",
   "bin": "nav.bin"
  },
- "lightmap": null,
+ "lightmap": {
+  "encoding": "rgbm-sqrt",
+  "range": 8,
+  "mode": "indirect+mask",
+  "uv": "uv1",
+  "atlases": [
+   {
+    "rgbm": "lm_0.png",
+    "sun": "lm_0_sun.png",
+    "width": 1024,
+    "height": 1024
+   }
+  ]
+ },
  "materials": {
   "asphalt": {
    "color": "#ffffff",
@@ -1193,6 +1206,10 @@
   "zones": [
    "corner"
   ],
-  "lightmap": null
+  "lightmap": {
+   "texels": 289498,
+   "atlases": 1,
+   "seconds": 19
+  }
  }
 }

@@ -312,19 +312,19 @@ Object.assign(Kit.prototype, {
         if (side.pipes !== false && this.chance(0.5) && side.type === 'facade') this.downpipe(this.chance(0.5) ? 0.25 : L - 0.25, height);
       });
     }
-    // corner quoins / pilasters (small vertical trims) for brick buildings
-    if (o.quoins ?? mat.startsWith('brick')) {
+    // corner quoins: thin stone plates on both faces of every convex corner, alternating long / short
+    if (o.quoins) {
+      const qh = 0.26, gap = 0.04, dep = 0.035;
       for (let i = 0; i < n; i++) {
-        const p = poly[i];
-        const prev = poly[(i - 1 + n) % n], next = poly[(i + 1) % n];
-        const cross = (p[0] - prev[0]) * (next[1] - p[1]) - (p[1] - prev[1]) * (next[0] - p[0]);
-        if (cross > 0) continue; // only convex corners (CCW from above in x,-z -> cross < 0 in x,z)
-        const n1 = edgeNormal(prev, p), n2 = edgeNormal(p, next);
-        const d = [n1[0] + n2[0], n1[1] + n2[1]];
-        this.at({ x: p[0], z: p[1], rot: Math.atan2(-d[1], d[0]) + Math.PI / 4 }, () => {
-          for (let y = plinth ? plinth.h : 0; y < height - 0.6; y += 0.6) {
-            const big = Math.round(y / 0.6) % 2 === 0;
-            this.box({ x: 0, y, z: 0, w: big ? 0.5 : 0.36, h: 0.28, d: big ? 0.5 : 0.36, mat: trim, tint: o.trimTint, faces: { bottom: false } });
+        const a = poly[i], b = poly[(i + 1) % n];
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        this.at({ x: a[0], z: a[1], rot: Math.atan2(-(b[1] - a[1]), b[0] - a[0]) }, () => {
+          let k = 0;
+          for (let y = (plinth ? plinth.h : 0) + 0.05; y < height - qh - 0.2; y += qh + gap, k++) {
+            const len = k % 2 ? 0.28 : 0.46;
+            for (const [x0, x1] of [[-dep, len], [L - len, L + dep]]) {
+              this.box({ x: (x0 + x1) / 2, y, z: dep / 2, w: x1 - x0, h: qh, d: dep, mat: trim, tint: o.trimTint, faces: { nz: false } });
+            }
           }
         });
       }

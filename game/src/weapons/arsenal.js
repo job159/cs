@@ -6,6 +6,7 @@ import { fireBullet, splash } from './ballistics.js';
 import { drawClip, holsterClip, inspectClip, reloadClipFor, shellStart, shellInsert, shellEnd, pumpCycle, boltCycle, knifeSlash, knifeStab } from '../player/clips.js';
 import { gauss, clamp, DEG } from '../engine/util.js';
 import { hardSurface } from '../gfx/materials.js';
+import { SPECIALS, specialOf } from './specials.js';
 
 const _dir = new THREE.Vector3();
 const _right = new THREE.Vector3();
@@ -60,6 +61,9 @@ export class Arsenal {
     this.spinSound = null;
   }
 
+  /** Stat modifiers from the current weapon's signature mechanic. */
+  _mods(ws) { return specialOf(ws)?.modifiers?.(ws) || {}; }
+
   /** Weapon jam (boss shockwaves): no firing for `t` seconds. */
   jam(t) {
     this.jamT = Math.max(this.jamT || 0, t);
@@ -72,6 +76,8 @@ export class Arsenal {
     const def = WEAPONS[id];
     if (!def) return null;
     const ws = new WeaponState(def);
+    ws.game = this.game;
+    specialOf(ws)?.init(ws);
     const slot = slotOf(def);
     this.owned[slot] = ws;
     if (select) this.select(slot, true);
@@ -103,7 +109,7 @@ export class Arsenal {
     this.current = ws;
     this.state = 'loading';
     this.vm.aimTarget = 0;
-    await this.vm.setWeapon(ws.def.id, ws.def);
+    await this.vm.setWeapon(ws.def.model || ws.def.id, ws.def);
     if (this.current !== ws) return;
     const t = (ws.def.draw ?? DRAW_TIME[ws.def.cat] ?? 0.7);
     this.state = 'draw';
@@ -142,6 +148,9 @@ export class Arsenal {
     if (!ws || this.state === 'loading') return;
     const def = ws.def;
 
+    const sp = specialOf(ws);
+    sp?.update?.(ws, dt, this.game);
+    if (this.state === 'reload' && s.pressed.reload && sp?.onReloadInput) sp.onReloadInput(ws, this.game);
     if (this.state === 'draw' || this.state === 'reload' || this.state === 'cycle' || this.state === 'melee') {
       this.timer -= dt;
       if (this.state === 'reload' && def.reloadStyle === 'shell' || this.state === 'reload' && this.shellReload) {
@@ -153,7 +162,9 @@ export class Arsenal {
     }
 
     // ADS (sniper scopes + rifles). Desktop: hold; touch UI translates its toggle into held state.
-    this.vm.aimTarget = s.held.alt && def.cat !== 'melee' && def.cat !== 'heavy' ? 1 : (def.cat === 'heavy' && s.held.alt ? 1 : 0);
+    const altTaken = sp?.onAlt && (s.pressed.alt ? sp.onAlt(ws, this.game, true) : s.held.alt);
+    this.vm.aimTarget = !altTaken && s.held.alt && def.cat !== 'melee' ? 1 : 0;
+    if (s.pressed.special && sp?.onSpecial) sp.onSpecial(ws, this.game);
     if (s.pressed.reload) this.reload();
     if (s.pressed.inspect && this.state === 'idle') { this.vm.play(inspectClip(), { duration: 2.6 }); }
 
@@ -181,7 +192,7 @@ export class Arsenal {
       this.fireBuffer = 0;
       if (ws.burstMode && def.burst) { this.burstLeft = def.burst - 1; this._fire(ws); this.fireCd = 60 / (def.burstRpm || 1000); return; }
       this._fire(ws);
-      this.fireCd = 60 / def.rpm;
+      this.fireCd = 60 / (def.rpm * (this._mods(ws).rpmMul || 1));
       if (def.mode === 'pump' || def.mode === 'bolt') ws.needsCycle = true;
     }
     if (ws.needsCycle && this.fireCd <= 60 / def.rpm - 0.12 && ws.ammo > 0 && this.state === 'idle') this._cycle(ws);
@@ -235,7 +246,8 @@ export class Arsenal {
     const def = ws.def;
     const g = this.game;
     const cam = g.camera;
-    ws.ammo--;
+    const mods = this._mods(ws);
+    if (!mods.infinite) ws.ammo--;
     this.sinceShot = 0;
     ws.shots++;
     const spread = this.spreadDeg() * DEG;
@@ -244,7 +256,8 @@ export class Arsenal {
     _right.set(1, 0, 0).applyQuaternion(cam.quaternion);
     _up.set(0, 1, 0).applyQuaternion(cam.quaternion);
     const origin = _o.copy(cam.position);
-    const pellets = def.pellets || 1;
+    const pellets = (def.pellets || 1) * (mods.split || 1);
+    const fdef = mods.pierce || mods.dmgMul ? { ...def, pen: (def.pen ?? 1) + (mods.pierce || 0) } : def;
     let anyHit = false, kills = 0, head = false;
     const muzzleApparent = this.vm.socketApparent('muzzle', _p);
     for (let i = 0; i < pellets; i++) {
@@ -253,16 +266,17 @@ export class Arsenal {
       const a = Math.random() * Math.PI * 2;
       const d = new THREE.Vector3().copy(_dir).addScaledVector(_right, Math.cos(a) * Math.tan(r)).addScaledVector(_up, Math.sin(a) * Math.tan(r)).normalize();
       if (def.projectile) { this._launch(ws, origin, d); continue; }
-      const res = fireBullet(g, origin, d, def, {
-        shooter: g.localId, dmgMul: this.dmgMul,
-        onHit: (info, r2, target) => g.hud?.onHit?.(info, r2, target),
+      const res = fireBullet(g, origin, d, fdef, {
+        shooter: g.localId, dmgMul: this.dmgMul * (mods.dmgMul || 1),
+        onHit: (info, r2, target) => { g.hud?.onHit?.(info, r2, target); specialOf(ws)?.onHit?.(ws, info, r2, target); },
       });
       if (res.hits) anyHit = true;
       kills += res.kills;
       if (res.headshot) head = true;
       this._lastEnd = res.end;
-      if (def.tracer && (ws.shots % def.tracer === 0 || pellets > 1 && i < 2) && muzzleApparent) g.fx?.tracer(muzzleApparent, res.end);
+      if ((def.tracer || mods.tracer) && (mods.tracer || ws.shots % def.tracer === 0 || pellets > 1 && i < 2) && muzzleApparent) g.fx?.tracer(muzzleApparent, res.end, mods.tracer ? { color: mods.tracer } : undefined);
     }
+    specialOf(ws)?.onFire?.(ws, { game: g, origin, dir: _dir, end: this._lastEnd });
     // ---- feedback
     const rc = def.recoil || {};
     const first = ws.shots <= 1 ? (rc.first ?? 1) : 1;
@@ -279,7 +293,7 @@ export class Arsenal {
     const mz = this.vm.socketWorld('muzzle', _p);
     if (mz && def.flash) {
       const dirW = this.vm.socketDir('muzzle', new THREE.Vector3());
-      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, lightPos: muzzleApparent || mz });
+      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, lightPos: muzzleApparent || mz, color: mods.flash === 'energy' ? [2, 6, 9, 1] : mods.flash === 'magma' ? [9, 3, 0.6, 1] : null });
     }
     if (def.shell && def.mode !== 'pump' && def.mode !== 'bolt') this._ejectShell(def.shell);
     // audio: close layer (2D), tail, mechanics
@@ -378,6 +392,7 @@ export class Arsenal {
     }
     this.shellReload = false;
     const t = (empty ? def.reloadEmpty ?? def.reload : def.reload) * this.reloadMul;
+    this.reloadTotal = t;
     this.state = 'reload';
     this.timer = t;
     this._reloadApplied = false;

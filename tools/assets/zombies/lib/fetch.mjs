@@ -21,6 +21,9 @@ export const PACKS = {
   skins01: 'https://files.makehumancommunity.org/asset_packs/skins01/skins01_cc0.zip',
   skins02: 'https://files.makehumancommunity.org/asset_packs/skins02/skins02_cc0.zip',
 };
+/** Every source file a build touched: Set of 'pack:folder' / 'mpfb2:group' keys (see credits.mjs). */
+export const usage = new Set();
+
 const MIRRORS = [(u) => u, (u) => u.replace('://files.', '://files2.')];
 
 async function get(url, headers = {}, tries = 4) {
@@ -48,6 +51,8 @@ function writeAtomic(file, buf) {
 /** Local path of an MPFB2 data file (relative to src/mpfb/data/), downloading it on first use. */
 export async function mpfb2(rel) {
   const file = path.join(SRC, 'mpfb2', rel);
+  const parts = rel.split('/');
+  usage.add('mpfb2:' + (parts[0] === 'targets' ? parts.slice(0, 2).join('/').replace(/.json$/, '') : parts[0] === 'rigs' ? 'rigs/game_engine' : parts[0]));
   if (!fs.existsSync(file)) {
     const buf = await get(MPFB2_RAW + rel);
     writeAtomic(file, buf);
@@ -113,6 +118,7 @@ export async function zipEntry(pack, name) {
     e = c[0];
   }
   const file = path.join(SRC, pack, e.name);
+  if (!e.name.startsWith('packs/')) usage.add(pack + ':' + e.name.split('/').slice(0, 2).join('/'));
   if (fs.existsSync(file) && fs.statSync(file).size === e.size) return file;
   const url = PACKS[pack] || pack;
   // local header (30 bytes + name + extra) precedes the data; over-read 1 KB to cover the variable part

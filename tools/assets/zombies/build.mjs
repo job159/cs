@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import lib from './lib/index.mjs';
 import { exportCharacter } from './lib/export.mjs';
 import { resize } from './lib/image.mjs';
+import { updateCredits } from './lib/credits.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(here, '..', '..', '..', 'game', 'assets', 'zombies');
@@ -60,4 +61,5 @@ for (const type of types) {
     console.error(`FAILED ${type}:`, e.stack || e);
   }
 }
+if (!failed) console.log(`credits: ${await updateCredits()} source entries -> docs/CREDITS.md`);
 process.exit(failed ? 1 : 0);

@@ -2,6 +2,7 @@
 // ammo, money, round banner, kill feed, boss bar, XP bar, toasts and optional floating damage numbers.
 // DOM writes are batched: text only changes when the value changes.
 import { weaponIcon } from './icons.js';
+import { specialOf } from '../weapons/specials.js';
 
 const el = (cls, parent, html = '') => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; parent?.appendChild(d); return d; };
 
@@ -38,6 +39,10 @@ export class HUD {
     this.resEl = this.ammo.querySelector('span');
     this.wnameEl = this.ammo.querySelector('.wname');
     this.wiconEl = this.ammo.querySelector('.wicon');
+    this.meter = el('spmeter', this.ammo, '<span></span><div><i></i><u></u></div>');
+    this.meterLabel = this.meter.querySelector('span');
+    this.meterFill = this.meter.querySelector('i');
+    this.meterWin = this.meter.querySelector('u');
     // money, round, feed, boss, xp, toast, prompt, numbers
     this.money = el('money', root, '<span>$</span><b>0</b>');
     this.moneyEl = this.money.querySelector('b');
@@ -70,7 +75,7 @@ export class HUD {
 
   weaponChanged(ws) {
     this._set('wname', this.wnameEl, `${ws.def.zh} ${ws.def.en}`);
-    weaponIcon(this.game.renderer, ws.def.id).then((url) => { if (url && this.game.arsenal.current === ws) this.wiconEl.src = url; });
+    weaponIcon(this.game.renderer, ws.def.model || ws.def.id).then((url) => { if (url && this.game.arsenal.current === ws) this.wiconEl.src = url; });
   }
   ammoChanged() { /* picked up by update() */ }
 
@@ -166,9 +171,20 @@ export class HUD {
     if (ws) {
       const melee = ws.def.cat === 'melee';
       this.ammo.classList.toggle('melee', melee);
-      this._set('mag', this.magEl, melee ? '∞' : String(ws.ammo));
+      const inf = !melee && g.arsenal._mods?.(ws).infinite;
+      this._set('mag', this.magEl, melee || inf ? '∞' : String(ws.ammo));
       this._set('res', this.resEl, melee ? '' : '/ ' + ws.reserve);
       this.magEl.classList.toggle('low', !melee && ws.ammo <= Math.ceil(ws.def.mag * 0.25));
+      const m = specialOf(ws)?.meter?.(ws, g);
+      this.meter.style.display = m ? '' : 'none';
+      if (m) {
+        this._set('mlab', this.meterLabel, m.label);
+        this.meterFill.style.width = (Math.max(0, Math.min(1, m.value)) * 100).toFixed(1) + '%';
+        this.meterFill.style.background = m.color;
+        this.meter.classList.toggle('ready', !!m.ready);
+        if (m.window) { this.meterWin.style.display = ''; this.meterWin.style.left = (m.window[0] * 100) + '%'; this.meterWin.style.width = ((m.window[1] - m.window[0]) * 100) + '%'; }
+        else this.meterWin.style.display = 'none';
+      }
     }
     this._set('money', this.moneyEl, String(g.match?.money ?? 0));
     if (g.match) {

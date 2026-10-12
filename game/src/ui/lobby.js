@@ -236,7 +236,7 @@ export class LobbyScreen extends Screen {
     const diff = DIFF_INFO[meta.difficulty] || DIFF_INFO.normal;
     this.$('.lb-code b').textContent = room.code;
     this.$('.lb-status').textContent = room.statusText || '';
-    this.$('.lb-info').innerHTML = mapCard(info, { small: true }) + `<div class="lb-tags"><span>${room.isPublic === false ? ICON.lock + '私人房間' : ICON.globe + '公開房間'}</span><span>${esc(room.roomName || '')}</span></div>`;
+    this.$('.lb-info').innerHTML = mapCard(info, { small: true }) + `<div class="lb-tags">${room.isHost ? `<span>${room.isPublic === false ? ICON.lock + '私人房間' : ICON.globe + '公開房間'}</span>` : ''}<span>${esc(room.roomName || '')}</span></div>`;
     const players = room.players();
     const max = room.maxPlayers || 4;
     let html = '';
@@ -247,7 +247,7 @@ export class LobbyScreen extends Screen {
       const tr = p.self ? '' : p.transport === 'p2p' ? '<em class="p2p">P2P 直連</em>' : p.transport === 'relay' ? '<em class="relay">伺服器中繼</em>' : '<em>連線中</em>';
       const ping = p.self ? '' : `<span class="sl-ping ${p.rtt > 250 ? 'bad' : p.rtt > 120 ? 'mid' : ''}">${p.rtt ? Math.round(p.rtt) + ' ms' : '— ms'}</span>`;
       html += `<div class="slot${p.self ? ' self' : ''}"><span class="sl-n">${i + 1}</span>
-        <span class="sl-av">${isHostP ? ICON.crown : ICON.user}</span>
+        <span class="sl-av${isHostP ? ' host' : ''}">${isHostP ? ICON.crown : ICON.user}</span>
         <b class="sl-name">${esc(p.name)}</b>
         <span class="sl-tags">${isHostP ? '<em class="host">房主</em>' : ''}${p.self ? '<em class="you">你</em>' : ''}</span>
         <span class="sl-net">${ping}${tr}</span>

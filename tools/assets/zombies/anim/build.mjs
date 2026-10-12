@@ -3,6 +3,7 @@
 // Sources (see docs/ZOMBIE_ANIMS.md / docs/CREDITS.md): Quaternius UAL 1/2 (CC0), CMU mocap BVH
 // (cgspeed conversion), procedural keyframes. Run fetch.mjs first.
 import path from 'node:path';
+import * as THREE from 'three';
 import fs from 'node:fs';
 import { Skeleton, REPO } from './skeleton.mjs';
 import { GLBBuilder, addSkeleton, addClips } from './glb-write.mjs';
@@ -36,6 +37,13 @@ for (const name of CLIP_NAMES) {
 }
 const g = new GLBBuilder();
 const ids = addSkeleton(g, skel);
+// A skin (no mesh) marks the nodes as joints so loaders create real Bones (THREE.Bone / isBone),
+// which runtime retargeters look for. Inverse bind matrices = inverse rest world matrices.
+{
+  const ibm = new Float32Array(skel.names.length * 16);
+  skel.names.forEach((_, i) => ibm.set(new THREE.Matrix4().compose(skel.restWorldP[i], skel.restWorldQ[i], new THREE.Vector3(1, 1, 1)).invert().elements, i * 16));
+  g.json.skins = [{ name: 'game_engine', joints: ids, skeleton: ids[0], inverseBindMatrices: g.accessor(ibm, 'MAT4') }];
+}
 const keys = addClips(g, skel, ids, clips);
 const meta = {};
 for (const c of clips) {

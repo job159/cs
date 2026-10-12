@@ -187,7 +187,7 @@ export class SettingsScreen extends Screen {
       }
       return `<div class="st-row">${label}${ctl}</div>`;
     }).join('');
-    const extra = this.tab === 'xh' ? '<div class="st-xhprev"><div class="xp-bg"></div><div class="xp-xh"></div><small>預覽</small></div>' : '';
+    const extra = this.tab === 'xh' ? '<div class="st-row"><div class="st-l"><b>預覽</b><small>實際大小</small></div><div class="st-xhprev"><div class="xp-bg"></div><div class="xp-xh"></div></div></div>' : '';
     const qNote = this.tab === 'gfx' && this.app.qualityLock ? '<p class="st-note">網址參數 ?q= 已鎖定畫質。</p>' : '';
     const autoNote = this.tab === 'gfx' && s.quality === 'auto' ? `<p class="st-note">目前自動選擇：${QUALITY_OPTS.find((o) => o[0] === autoQuality())[1]}</p>` : '';
     this.pane.innerHTML = extra + rows + qNote + autoNote;

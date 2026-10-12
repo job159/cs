@@ -159,6 +159,7 @@ class Zombie {
       }
     }
     amount *= mgr.dmgTakenMul || 1;
+    if (this.purgeT > 0) amount *= this.purgeMul || 1.1;
     if (this.puppet) mgr.net?.sendHit(this, info, amount);
     this.hp -= amount;
     this.lastHitAt = mgr.time;
@@ -312,6 +313,7 @@ class Zombie {
       return this.deathT < 7;
     }
     if (this.hasteT > 0) { this.hasteT -= dt; if (this.hasteT <= 0) this.speedMul = 1; }
+    if (this.purgeT > 0) this.purgeT -= dt;
     // ---- target selection (nearest living player)
     const players = mgr.players();
     let best = null, bd = 1e9;

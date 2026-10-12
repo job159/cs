@@ -30,6 +30,7 @@ const rectIntersect = (a, b) => { const x0 = Math.max(a[0][0], b[0]), z0 = Math.
 
 add(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Hpx}" viewBox="0 0 ${W} ${Hpx}" font-family="Microsoft JhengHei, Noto Sans TC, Segoe UI, sans-serif">`);
 add(`<rect width="${W}" height="${Hpx}" fill="#161815"/>`);
+add(`<clipPath id="mapclip"><rect x="${M}" y="${M}" width="${(X1 - X0) * S}" height="${(Z1 - Z0) * S}"/></clipPath><g clip-path="url(#mapclip)">`);
 add('<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#b33" stroke-width="2" stroke-opacity="0.55"/></pattern>'
   + '<marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#ddd"/></marker></defs>');
 
@@ -149,7 +150,7 @@ circle(ar.final.center[0], ar.final.center[2], ar.final.radius, { stroke: '#c77d
 circle(ar.mid.center[0], ar.mid.center[2], 1.0, { fill: '#ff9a3c' });
 circle(ar.final.center[0], ar.final.center[2], 1.8, { fill: '#c77dff' });
 text(ar.mid.center[0] + 2.5, ar.mid.center[2] + 0.5, 'MID BOSS entry (butcher)', { size: 10, fill: '#ff9a3c', anchor: 'start', bold: true, stroke: true });
-text(ar.final.center[0] + 2.5, ar.final.center[2] + 0.5, 'FINAL BOSS landing (colossus)', { size: 10, fill: '#c77dff', anchor: 'start', bold: true, stroke: true });
+text(ar.final.center[0] - 2.5, ar.final.center[2] - 2.2, 'FINAL BOSS landing (colossus)', { size: 10, fill: '#c77dff', anchor: 'end', bold: true, stroke: true });
 // buy zone
 for (const b of L.BUY) circle(b[0], b[2], b[3], { stroke: '#4ff0ff', w: 1.6, dash: '5 4' });
 // supply
@@ -176,10 +177,11 @@ for (const l of L.LIGHTS) if (l.pos) { const c = l.realtime ? '#fff27a' : '#a89b
 for (const z of L.BUILD_ZONES) if (Array.isArray(z.polygon)) poly(z.polygon, 'none', { stroke: '#f5f5f5', sw: 2, dash: '12 6' });
 const ZL = { center: [-25, -27.6], north: [-25, -79], west: [-83, -41.4], east: [27, -41.4], south: [-37, 82.6] };
 for (const z of L.BUILD_ZONES) if (ZL[z.id]) text(ZL[z.id][0], ZL[z.id][1], `ZONE ${z.id.toUpperCase()}  ${z.name}`, { size: 12, bold: true, fill: '#ffffff', anchor: 'start', stroke: true });
-text(-88, 88, 'ZONE SKYLINE = everything outside the dashed zones (block interiors, outer ring, towers, sky)', { size: 11, fill: '#bbb', anchor: 'start', stroke: true });
+text(-62, 89.6, 'ZONE SKYLINE = everything outside the dashed zones (block interiors, outer ring, towers, sky)', { size: 11, fill: '#bbb', anchor: 'start', stroke: true });
 // street names
 for (const [x, z, t, rot] of [[-2.5, -40, '北大道 NORTH AVE', -90], [-34, -1.6, '西街 WEST ST', 0], [32, 1.4, '東街 EAST ST', 0], [-2.2, 30, '南大道 SOUTH AVE', -90], [-60.6, -5, '西橫街', -90], [59.6, -10, '東橫街', -90], [-18, 52.6, '南橫街 SOUTH CROSS', 0], [0, 64, '南巷', 0]]) text(x, z, t, { size: 11, fill: '#e9e3c8', rot, bold: true, stroke: true });
 
+add('</g>');
 // --- legend --------------------------------------------------------------------------------------------------------
 const lx = (X1 - X0) * S + 2 * M + 10; let ly = M + 8;
 const leg = (t, o = {}) => { add(`<text x="${lx}" y="${ly}" font-size="${o.size || 12}" fill="${o.fill || '#ddd'}" font-weight="${o.bold ? 700 : 400}">${esc(t)}</text>`); ly += o.gap || 17; };
