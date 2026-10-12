@@ -59,6 +59,8 @@ export class HUD {
     this.xpFill = this.xp.querySelector('i');
     this.toastEl = el('toast', root);
     this.prompt = el('prompt', root);
+    this.spec = el('prompt', root);   // spectating line while bled out, above the spectated teammate
+    this.spec.style.top = '22%';
     this.nums = el('dmgnums', root);
     this.cache = {};
     this.hitT = 0; this.hitKill = false; this.headT = 0;
@@ -86,7 +88,8 @@ export class HUD {
     this._toastT = setTimeout(() => this.toastEl.classList.remove('on'), ms);
   }
 
-  setPrompt(text) { this._set('prompt', this.prompt, text || ''); this.prompt.classList.toggle('on', !!text); }
+  /** Bottom-centre hint; `use` = it asks for the use key (touch shows its use button while one is up). */
+  setPrompt(text, use = true) { this._set('prompt', this.prompt, text || ''); this.prompt.classList.toggle('on', !!text); this.promptUse = !!text && use; }
 
   /** Called by weapons for every damaging hit. */
   onHit(info, res, target) {
@@ -131,11 +134,15 @@ export class HUD {
     const ar = g.arsenal;
     this.root.style.visibility = this.visible ? 'visible' : 'hidden';
     if (!this.visible) return;
+    // bled out: no crosshair, a spectating line instead
+    const dead = st?.alive === false;
+    this._set('spec', this.spec, dead ? (g.spectating ? `觀戰：${g.spectating}　開火切換` : '你已陣亡　等待回合結束') : '');
+    this.spec.classList.toggle('on', dead);
     // crosshair: gap follows the real spread cone
     const def = ar?.def;
     const scoped = g.renderer.post.scopeMask > 0;
     const aim = g.vm?.aim ?? 0;
-    const showXh = def && !scoped && def.cat !== 'melee' && aim < 0.6;
+    const showXh = !dead && def && !scoped && def.cat !== 'melee' && aim < 0.6;
     this.xh.style.opacity = showXh ? 1 : 0;
     if (showXh) {
       const H = window.innerHeight;

@@ -18,6 +18,11 @@ import { WEAPONS, registerWeapon } from './weapons/defs.js';
 import { SURF_NAMES } from './world/collision.js';
 
 const _down = new THREE.Vector3(), _feet = new THREE.Vector3(), _stepHit = {};
+const _specHead = new THREE.Vector3(), _specBack = new THREE.Vector3(), _specHit = {};
+// what the player's systems see while dead: no movement, firing, throwing, using (only reads, never written)
+const IDLE_INPUT = { move: { x: 0, y: 0 }, lookX: 0, lookY: 0, held: {}, pressed: {}, released: {} };
+// all a downed player can still do (last stand with the sidearm): no switching, jumping, throwing, buying, crates
+const LAST_STAND = ['fire', 'alt', 'reload', 'crouch', 'special', 'inspect'];
 const STEP_SURF = { concrete: 'concrete', tile: 'concrete', glass: 'concrete', metal: 'metal', grate: 'grate', wood: 'wood', dirt: 'dirt', sand: 'dirt', water: 'water', flesh: 'dirt' };
 
 export class Game {
@@ -95,6 +100,29 @@ export class Game {
     if (target && target.id !== undefined && target.id !== this.localId) { this.net?.sendPlayerPush(target.id, v); return; }
     this.player?.addImpulse(v.x, v.y, v.z);
   }
+  /**
+   * Gets a downed teammate up (`by`: the reviver's id): AI bots directly, us through our status, a remote
+   * player on its own client through NetSync's 'rv' event (host only: bots, the only callers for remotes, live there).
+   */
+  revivePlayer(entry, by = this.localId, hp = 50) {
+    if (entry.bot) entry.bot.revive();
+    else if (entry.local || entry.id === this.localId) { if (this.status?.downed) this.status.revive(hp); }
+    else if (this.net?.host) this.net.events.push(['rv', by, entry.id]);
+  }
+  /** Hold use next to a downed AI bot to revive it (remote players: NetSync._reviveUpdate). */
+  _botRevive(dt, s) {
+    const st = this.status, p = this.player;
+    let near = null, nd = 2;
+    if (p && st?.alive && !st.downed && this.bots) for (const b of this.bots.bots) {
+      const d = b.downed ? b.pos.distanceTo(p.pos) : Infinity;
+      if (d < nd) { nd = d; near = b; }
+    }
+    if (near !== this.reviveBot) { this.reviveBot = near; this.reviveHold = 0; }
+    if (!near) return;
+    this.reviveHold = s.held.use ? this.reviveHold + dt : 0;
+    if (this.reviveHold >= 2.5) { this.reviveHold = 0; near.revive(); return; }
+    this.hud?.setPrompt(this.reviveHold > 0 ? `救援 ${near.name}… ${Math.floor((this.reviveHold / 2.5) * 100)}%` : `按住 E 救援 ${near.name}`);
+  }
   playerStatus(kind, time, value) { if (kind === 'slow') this.status?.applySlow(time, value); }
   get playerDead() { return !this.status || !this.status.alive; }
   onZombieKilled(z, info) {
@@ -103,6 +131,28 @@ export class Game {
     if (bot) this.hud?.killFeed(bot.name, info.weapon || 'ump', z.def.zh, !!info.headshot);
   }
   onPlayerDowned() { this.hud?.toast('你倒下了！', 2000); }
+  /** Bled out: frame() locks every action and spectates until a revive sets status.alive again. */
+  onPlayerDied() {
+    this.specIdx = 0;
+    if (this.vm) this.vm.aimTarget = 0;
+    if (this.arsenal) { this.arsenal.burstLeft = 0; this.arsenal.fireBuffer = 0; }
+    this.hud?.setPrompt('');                 // (the shop closes itself: Match.canBuy() is false while dead)
+    this.hud?.toast('你陣亡了　回合結束後復活', 3000);
+  }
+  /** Went down: remember the weapon in hand and draw the sidearm (the knife without one). */
+  _lastStand() {
+    const ar = this.arsenal;
+    this._downSlot = ar?.pendingSlot ?? ar?.slot ?? 1;
+    const slot = ar?.owned[2] ? 2 : 3;
+    if (ar?.owned[slot]) ar.select(slot);
+  }
+  /** Downed input: the LAST_STAND actions, movement and look (crawling); everything else reads as released. */
+  _lastStandInput(s) {
+    const m = this._lsInput || (this._lsInput = { move: { x: 0, y: 0 }, lookX: 0, lookY: 0, held: {}, pressed: {}, released: {} });
+    m.move.x = s.move.x; m.move.y = s.move.y; m.lookX = s.lookX; m.lookY = s.lookY;
+    for (const a of LAST_STAND) { m.held[a] = s.held[a]; m.pressed[a] = s.pressed[a]; m.released[a] = s.released[a]; }
+    return m;
+  }
 
   async loadMap(map) {
     await this.loadWorld(map);
@@ -166,13 +216,19 @@ export class Game {
     const t = this.time;
     const s = this.input.poll();
     const p = this.player;
-    this.aim?.apply(s, dt);
+    // bled out: spectating until revived (round end / wipe retry); look orbits the camera, nothing else acts
+    const dead = !!this.status && !this.status.alive, down = !!this.status?.downed;
+    // downed: sidearm out for the last stand; back to the previous weapon once on our feet again
+    if (down && this._downSlot == null) this._lastStand();
+    else if (!down && !dead && this._downSlot != null) { this.arsenal?.select(this._downSlot); this._downSlot = null; }
+    const si = dead ? IDLE_INPUT : down ? this._lastStandInput(s) : s;
+    if (!dead) this.aim?.apply(s, dt);
     if (p) {
       // look speed follows the zoom; settings 開鏡靈敏度 (adsSens) scales it further while aiming
       const lookK = (1 + ((this.adsSens ?? 1) - 1) * Math.min(1, this.vm?.aim ?? 0)) / this.zoom;
       p.yaw -= s.lookX * lookK;
       p.pitch = clamp(p.pitch + s.lookY * lookK, -1.5, 1.5);
-      p.update(dt, s, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1) * (this.match?.speedMul ?? 1));
+      p.update(dt, si, (this.arsenal?.def?.speed ?? 5.0) * (this.status?.speedMul ?? 1) * (this.match?.speedMul ?? 1));
       if (p.landImpact > 2.5) this.landDip.impulse(-Math.min(p.landImpact, 14) * 0.09, 0, 0);
       this._footsteps(p);
     }
@@ -182,8 +238,9 @@ export class Game {
       this.audio.play(this.world.def?.ambience || 'amb_city_dead', { loop: true, bus: 'amb' });
     }
     this.world.update(dt, t);
-    if (this.arsenal) this.arsenal.update(dt, s);
+    if (this.arsenal) this.arsenal.update(dt, si);   // timers / recoil / spin-down keep running
     this.projectiles?.update(dt);
+    if (dead || down) s.pressed.grenade = false;     // Throwables reads the input itself (its fire zones keep burning)
     this.throwables?.update(dt);
     if (this.vm && p) {
       this.vm.update(dt, { lookX: s.lookX, lookY: s.lookY, speed: p.horizontalSpeed, onGround: p.onGround,
@@ -194,14 +251,20 @@ export class Game {
     this.match?.update(dt);
     this.net?.update(dt);
     this.bots?.update(dt);
-    if (this.status?.downed && this.match && this.match.selfRevives > 0) {
+    this._botRevive(dt, s);
+    // adrenaline self-revive is the solo fallback (design); with human teammates they revive each other
+    if (this.status?.downed && this.match && this.match.selfRevives > 0 && !this.net?.remotes.size) {
       this.hud?.setPrompt(`按 E 使用腎上腺素自救（剩 ${this.match.selfRevives}）`);
       if (s.pressed.use) { this.match.selfRevives--; this.status.revive(40); this.hud?.setPrompt(''); }
     }
+    // touch use button: shown while a use prompt is up (supply crate, revives, self-revive)
+    const canUse = !!this.hud?.promptUse;
+    if (this.touch && canUse !== this._canUse) { this._canUse = canUse; this.touch.el.classList.toggle('can-use', canUse); }
     for (const sys of [...this.systems]) sys.update(dt, t);
     this.fx?.update(dt);
     this._updateCamera(dt);
-    if (s.pressed.buy) this.shop?.toggle();
+    if (dead && s.pressed.fire) this.specIdx = (this.specIdx | 0) + 1; // next teammate to spectate
+    if (s.pressed.buy && !dead && !down) this.shop?.toggle();
     if (this.shop?.open && !this.match?.canBuy()) this.shop.close();
     this.perks?.update(dtReal);
     this.hud?.update(dtReal);
@@ -225,6 +288,7 @@ export class Game {
     const ar = this.arsenal;
     const rp = ar ? ar.recoilPitch * Math.PI / 180 : 0, ry = ar ? ar.recoilYaw * Math.PI / 180 : 0;
     cam.rotation.set(p.pitch * -1 + rp + punch.x + sx, p.yaw + ry + punch.y + sy, punch.z + sz);
+    if (this.status && !this.status.alive) this._spectate(cam);
     if (!Number.isFinite(cam.rotation.x + cam.rotation.y + cam.rotation.z + cam.position.x + cam.position.y + cam.position.z)) {
       // never let a bad spring/impulse blank the screen: reset the offending state
       console.warn('camera NaN reset', JSON.stringify({ punch: this.punch.x, dip: this.landDip.x, shake: this.shake, rp: ar?.recoilPitch, ry: ar?.recoilYaw, yaw: p.yaw, pitch: p.pitch, pos: p.pos, vel: p.vel }));
@@ -243,13 +307,27 @@ export class Game {
     this.zoom = 1 + (zt - 1) * aim;
     const scoped = def?.ads?.scope && aim > 0.85;
     this.renderer.post.scopeMask = scoped ? 1 : 0;
-    if (this.vm) this.vm.visible = !scoped;
+    if (this.vm) this.vm.visible = !scoped && !this.playerDead;
     this._updateFov();
     cam.updateMatrixWorld();
     if (this.audio) {
       cam.getWorldDirection(this._fwd || (this._fwd = new THREE.Vector3()));
       this.audio.setListener(cam.position, this._fwd, (this._up || (this._up = new THREE.Vector3())).set(0, 1, 0).applyQuaternion(cam.quaternion));
     }
+  }
+
+  /** Dead: third-person orbit around a living teammate / bot (look orbits, fire cycles), else a low death cam. */
+  _spectate(cam) {
+    const p = this.player;
+    const mates = this.playerList().filter((q) => !q.local && q.alive);
+    const m = mates.length ? mates[(this.specIdx | 0) % mates.length] : null;
+    this.spectating = m ? m.bot?.name || this.net?.remotes.get(m.id)?.name || '隊友' : '';
+    if (!m) { cam.position.y = p.pos.y + 0.4; return; }
+    const cp = Math.cos(p.pitch);
+    _specBack.set(Math.sin(p.yaw) * cp, Math.sin(p.pitch), Math.cos(p.yaw) * cp);
+    _specHead.set(m.pos.x, m.pos.y + 1.55, m.pos.z);
+    const hit = this.world.collision?.raycast(_specHead, _specBack, 3.2, _specHit);
+    cam.position.copy(_specHead).addScaledVector(_specBack, hit ? Math.max(0.2, hit.dist - 0.25) : 3);
   }
 
   render() {

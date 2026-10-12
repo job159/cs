@@ -6,6 +6,7 @@ import { BossBrain } from './base.js';
 import { rand } from '../../engine/util.js';
 
 const _v = new THREE.Vector3();
+let rockGeo = null, rockMat = null; // shared by every thrown rock (no GPU buffers per throw)
 
 export class ButcherBrain extends BossBrain {
   constructor(z, mgr) {
@@ -125,7 +126,7 @@ export class ButcherBrain extends BossBrain {
         const from = V(d.from), to = V(d.to);
         const t = d.t;
         const vel = to.clone().sub(from).multiplyScalar(1 / t); vel.y += 0.5 * 12 * t;
-        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55, 0), new THREE.MeshStandardMaterial({ color: 0x5b5752, roughness: 0.95 }));
+        const rock = new THREE.Mesh(rockGeo || (rockGeo = new THREE.DodecahedronGeometry(0.55, 0)), rockMat || (rockMat = new THREE.MeshStandardMaterial({ color: 0x5b5752, roughness: 0.95 })));
         rock.castShadow = true;
         g.audio?.play('swingHeavy', { pos: from, pitch: 0.5 });
         g.projectiles?.spawn({ pos: from, vel, gravity: 12, life: t + 0.5, mesh: rock, radius: 0.5, hitTargets: false, faceVelocity: false,

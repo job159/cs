@@ -118,7 +118,9 @@ export class BossBrain {
       if (d > r || Math.abs(p.pos.y - center.y) > (opts.height ?? 2.5)) continue;
       if (opts.jumpable && p.local && !this.g.player.onGround && this.g.player.pos.y > center.y + 0.35) continue;
       const k = opts.knock ? _v.set(p.pos.x - center.x, 0, p.pos.z - center.z).normalize().multiplyScalar(opts.knock).setY(opts.lift ?? 3).clone() : null;
-      this.g.damagePlayer(dmg * (this.mgr.dmgMul || 1) * (opts.falloff ? 1 - (d / r) * 0.5 : 1), { from: center, player: p, knock: k, explosive: opts.explosive });
+      // jumpY: a guest judges the jump itself when this hit reaches it (with the quake it sees), by the same rule;
+      // the host only has its delayed, interpolated position
+      this.g.damagePlayer(dmg * (this.mgr.dmgMul || 1) * (opts.falloff ? 1 - (d / r) * 0.5 : 1), { from: center, player: p, knock: k, explosive: opts.explosive, jumpY: opts.jumpable ? center.y : undefined });
       opts.onHit?.(p);
     }
   }
@@ -155,11 +157,15 @@ export class BossBrain {
   }
   onFx() {}
 
+  /** Adds around the boss, kept on ground the players can reach (pulled in toward the boss, else a spawner). */
   summon(type, n, radius = 6) {
-    const z = this.z;
+    const z = this.z, mgr = this.mgr;
     for (let i = 0; i < n; i++) {
       const a = rand(0, Math.PI * 2);
-      this.mgr.spawn(type, new THREE.Vector3(z.pos.x + Math.cos(a) * radius, z.pos.y, z.pos.z + Math.sin(a) * radius));
+      let p = null;
+      for (let r = radius; !p && r > -1; r -= 3) p = mgr.reachableNear?.(z.pos.x + Math.cos(a) * r, z.pos.z + Math.sin(a) * r, 2);
+      if (!p) { const sp = this.g.match?._pickSpawner?.(); p = sp && mgr.reachableNear?.(sp.x, sp.z, 6); }
+      mgr.spawn(type, p || new THREE.Vector3(z.pos.x + Math.cos(a) * radius, z.pos.y, z.pos.z + Math.sin(a) * radius));
     }
   }
 

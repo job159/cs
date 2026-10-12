@@ -6,7 +6,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { loadGLB } from '../engine/assets.js';
 import { ZOMBIES, DEFAULT_HITBOXES, PART_OF, SEVER } from './defs.js';
 import { buildMannequin } from './mannequin.js';
-import { NavGrid } from '../world/nav.js';
+import { NavGrid, NAV } from '../world/nav.js';
 import { pick, rand, clamp, angleDiff, damp } from '../engine/util.js';
 import { Telegraphs } from './telegraph.js';
 import { retargetClips } from './retarget.js';
@@ -23,6 +23,9 @@ const _q = new THREE.Quaternion();
 const _flow = new THREE.Vector3();
 const _hitN = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
+const AXES = ['x', 'y', 'z'];
+let spitGeo = null, spitMat = null; // shared by every spit projectile (a mesh per shot, never new GPU buffers)
+const NAV_STEP = 0.55;     // = world/nav.js STEP (max height step between cells the flow field links)
 
 let nextId = 1;
 
@@ -117,6 +120,7 @@ class Zombie {
     const a = this.actions[name];
     if (!a) return;
     if (this.action === a) return;
+    if (!this.puppet && this.alive) this.mgr.net?.zombieLoco?.(this, running); // puppets leave their one-shot too
     a.reset(); a.setLoop(THREE.LoopRepeat, Infinity); a.enabled = true; a.setEffectiveWeight(1);
     if (this.action) a.crossFadeFrom(this.action, 0.25, false);
     a.play();
@@ -144,6 +148,9 @@ class Zombie {
   damage(info) {
     if (!this.alive) return { killed: false, damage: 0 };
     const mgr = this.mgr, g = mgr.game;
+    // clients send the raw shot: the host applies brain / armour / purge multipliers once, with its own state
+    // (a puppet's brain never updates, so its invuln / stun / phase weak points are stale); `amount` below is prediction only
+    if (this.puppet && info.amount > 0) mgr.net?.sendHit(this, info, info.amount);
     let amount = info.amount * (this.brain ? this.brain.damageMul(info) : 1);
     if (amount <= 0) { g.fx?.impact(1, info.point || this.center(_v2), info.normal || _hitN.copy(info.dir || UP).negate(), info.dir || UP, { decal: false, big: 0.5 }); return { killed: false, damage: 0 }; }
     // directional armour (riot): bullets from the front are mostly stopped unless they hit the head
@@ -160,7 +167,6 @@ class Zombie {
     }
     amount *= mgr.dmgTakenMul || 1;
     if (this.purgeT > 0) amount *= this.purgeMul || 1.1;
-    if (this.puppet) mgr.net?.sendHit(this, info, amount);
     this.hp -= amount;
     this.lastHitAt = mgr.time;
     const dir = info.dir || _v.set(0, 0, 1);
@@ -259,16 +265,27 @@ class Zombie {
         this.yaw = s0.yaw + angleDiff(s0.yaw, s1.yaw) * Math.min(1, u);
       }
       const speed = Math.hypot(this.pos.x - px, this.pos.z - pz) / Math.max(dt, 1e-3);
+      // run flag from the newest row, on change only: the host's 'zl' events (applied on arrival, ahead of the
+      // interpolated stream) set it too, and an older row must not flip it back
+      const run = b[b.length - 1].run;
+      if (run !== undefined && !!run !== this.netRun) { this.netRun = !!run; this.running = this.netRun; if (this.alive && this.action === this.loco) this.setLoco(this.running); }
       if (this.alive && this.loco && this.action === this.loco) {
         const nominal = this.running ? this.def.nominal.run : this.def.nominal.walk;
         this.loco.timeScale = speed > 0.1 ? clamp(speed / nominal, 0.5, 1.8) : 0.35;
-        if (s1.run !== undefined && !!s1.run !== this.running) { this.running = !!s1.run; this.setLoco(this.running); }
       }
       // predicted death the host never confirmed: bring it back
       if (!this.alive && this.predictedDeath && s1.st !== 4 && mgr.time - this.predictedDeath > 1.4 && s1.t > rt - 0.2) {
         this.alive = true; this.predictedDeath = 0; this.state = 'chase'; this.hp = Math.max(1, s1.hp * this.maxHp); mgr.alive++;
         this.setLoco(this.running);
       }
+    }
+    // a finished one-shot (attack, stagger, special, boss move: clamped on its last frame) goes back to walking;
+    // the host's 'zl' usually comes first, this covers clips it never cancels and our own predicted staggers
+    const a = this.action;
+    if (this.alive && a && a.loop === THREE.LoopOnce && (a.paused || !a.enabled)) {
+      this.state = 'chase';
+      if (a === this.loco) this.action = null; // the clip fell back to the loco clip itself (missing animation)
+      this.setLoco(this.running);
     }
     this.kvel.multiplyScalar(Math.exp(-7 * dt));
     if (!this.alive) {
@@ -284,12 +301,15 @@ class Zombie {
     this.stateT += dt;
     const g = mgr.game;
     const d = this.def;
+    if (this.purgeT > 0) this.purgeT -= dt;
     if (this.puppet) {
       if (this.spurt) { this.spurt.t -= dt; if (this.spurt.t <= 0) this.spurt = null; }
       return this._puppetUpdate(dt, mgr);
     }
-    // ---- knockback integration (with nav clamping)
-    if (this.kvel.lengthSq() > 1e-4 || this.pos.y > (this.groundY ?? this.pos.y) + 0.01) {
+    // ---- knockback integration (with nav clamping); a flying boss brain owns its altitude
+    const air = this.alive && this.brain?.flying;
+    if (air) this.kvel.set(0, 0, 0);
+    else if (this.kvel.lengthSq() > 1e-4 || this.pos.y > (this.groundY ?? this.pos.y) + 0.01) {
       this._move(this.kvel.x * dt, this.kvel.z * dt, mgr);
       if (this.kvel.y || this.pos.y > (this.groundY ?? this.pos.y) + 0.01) {
         this.kvel.y -= 15 * dt;
@@ -313,11 +333,11 @@ class Zombie {
       return this.deathT < 7;
     }
     if (this.hasteT > 0) { this.hasteT -= dt; if (this.hasteT <= 0) this.speedMul = 1; }
-    if (this.purgeT > 0) this.purgeT -= dt;
-    // ---- target selection (nearest living player)
-    const players = mgr.players();
-    let best = null, bd = 1e9;
-    for (const p of players) { const dd = p.pos.distanceToSquared(this.pos); if (dd < bd) { bd = dd; best = p; } }
+    if (this.noDirectT > 0) this.noDirectT -= dt;
+    // ---- target selection (nearest standing player; a downed one ranks as if 3x farther, bosses ignore them)
+    const players = this.brain ? mgr.players() : mgr.targets();
+    let best = null, bd = 1e9, bw = 1e9;
+    for (const p of players) { const dd = p.pos.distanceToSquared(this.pos), w = p.downed ? dd * 9 : dd; if (w < bw) { bw = w; bd = dd; best = p; } }
     this.target = best;
     const tdist = Math.sqrt(bd);
     // ---- voice
@@ -334,7 +354,7 @@ class Zombie {
     }
     // ---- specials
     this.specialCd -= dt;
-    if (this.state === 'chase' && best && this.specialCd <= 0) this._special(best, tdist, mgr);
+    if (this.state === 'chase' && best && !best.downed && this.specialCd <= 0) this._special(best, tdist, mgr);
     // ---- states
     let speed = 0;
     if (this.state === 'stagger') {
@@ -355,10 +375,12 @@ class Zombie {
         this.playOnce(pick(d.anim.attack), { fade: 0.1, speed: (this.actions[d.anim.attack[0]]?.getClip().duration || 1) / d.atkTime });
         g.audio?.play((d.voice || 'zombie') + '_attack', { pos: this.pos, volume: 0.9 });
       } else if (best) {
-        // keep-away types hold a distance band
+        // keep-away types hold a distance band, but only while they can see the target (short memory: no
+        // flicker at corners); without sight they keep following the flow field instead of parking behind a wall
+        if (this.seenT > 0) this.seenT -= dt;
+        if (d.keepAway && tdist < d.keepAway[1] && mgr.losCheck(this, best)) this.seenT = 0.75;
         let goal = 1;
-        if (d.keepAway && tdist < d.keepAway[0]) goal = -1;
-        else if (d.keepAway && tdist < d.keepAway[1]) goal = 0;
+        if (d.keepAway && this.seenT > 0) goal = tdist < d.keepAway[0] ? -1 : tdist < d.keepAway[1] ? 0 : 1;
         speed = (this.running ? d.run : this.walkSpeed) * this.speedMul * (mgr.speedMul || 1);
         if (goal === 0) speed = 0;
         const dir = this._steer(best, tdist, mgr, goal < 0);
@@ -369,6 +391,7 @@ class Zombie {
           const align = Math.max(0.2, fx * dir.x + fz * dir.z);
           this._move(fx * speed * align * dt, fz * speed * align * dt, mgr);
           speed *= align;
+          if (goal > 0 && tdist > d.atkRange + 0.5) this._progress(speed * dt, mgr);
         } else this._face(best.pos, dt, 4);
       }
     }
@@ -394,9 +417,10 @@ class Zombie {
   _steer(target, tdist, mgr, away) {
     const nav = mgr.nav;
     if (away) return _flow.set(this.pos.x - target.pos.x, 0, this.pos.z - target.pos.z).normalize();
-    if (tdist < 7 && mgr.losCheck(this, target)) return _flow.set(target.pos.x - this.pos.x, 0, target.pos.z - this.pos.z).normalize();
+    // eye-level LOS alone passes over low cover (crates, barriers): the straight line must also be walkable
+    if (tdist < 7 && !(this.noDirectT > 0) && mgr.losCheck(this, target) && mgr.directPath(this, target)) return _flow.set(target.pos.x - this.pos.x, 0, target.pos.z - this.pos.z).normalize();
     if (nav) {
-      const f = nav.flowDir(this.pos.x, this.pos.z, _flow);
+      const f = mgr.flowDir(this.pos.x, this.pos.z, this.pos.y, _flow);
       if (f) return f;
     }
     return _flow.set(target.pos.x - this.pos.x, 0, target.pos.z - this.pos.z).normalize();
@@ -413,7 +437,17 @@ class Zombie {
     else { this.kvel.x *= -0.2; this.kvel.z *= -0.2; }
     const gy = nav.heightAt(this.pos.x, this.pos.z, this.pos.y);
     this.groundY = gy;
-    if (this.alive && this.kvel.y === 0) this.pos.y = damp(this.pos.y, gy, 18, 1 / 60);
+    if (this.alive && this.kvel.y === 0 && !this.brain?.flying) this.pos.y = damp(this.pos.y, gy, 18, 1 / 60);
+  }
+
+  /** Chasing but going nowhere (pinned on something the direct line misses, crowd jam): flow field for a while. */
+  _progress(step, mgr) {
+    const t = mgr.time;
+    if (t - (this.progAt ?? -9) > 1.2) { this.progAt = t; this.progX = this.pos.x; this.progZ = this.pos.z; this.progExp = 0; return; }
+    this.progExp += step;
+    if (t - this.progAt < 0.8) return;
+    if (this.progExp > 0.3 && Math.hypot(this.pos.x - this.progX, this.pos.z - this.progZ) < this.progExp * 0.25) this.noDirectT = 1.5;
+    this.progAt = t; this.progX = this.pos.x; this.progZ = this.pos.z; this.progExp = 0;
   }
 
   // ---------------------------------------------------------------- specials
@@ -506,13 +540,18 @@ class Zombie {
 
   /** Procedural flinch layered on top of the animation (call after mixer update). */
   applyFlinch(dt) {
-    const k = 120, c = 13;
-    for (const ax of ['x', 'y', 'z']) {
-      const a = -k * this.flinch[ax] - c * this.flinchV[ax];
-      this.flinchV[ax] += a * dt;
-      this.flinch[ax] += this.flinchV[ax] * dt;
+    const f = this.flinch, fv = this.flinchV;
+    const mag = Math.abs(f.x) + Math.abs(f.y) + Math.abs(f.z) + Math.abs(fv.x) + Math.abs(fv.y) + Math.abs(fv.z);
+    if (!(mag > 1e-4)) { f.set(0, 0, 0); fv.set(0, 0, 0); return; } // settled (or NaN): nothing left to amplify
+    // semi-implicit Euler with this spring is only stable below ~0.1 s steps: LOD'd zombies arrive with
+    // 4-8 frames at once, so substep at <= 1/60 s
+    const k = 120, c = 13, n = Math.min(16, Math.max(1, Math.ceil(dt * 60 - 1e-3))), h = dt / n;
+    for (let i = 0; i < n; i++) for (const ax of AXES) {
+      fv[ax] += (-k * f[ax] - c * fv[ax]) * h;
+      f[ax] += fv[ax] * h;
     }
-    if (Math.abs(this.flinch.x) + Math.abs(this.flinch.z) + Math.abs(this.flinch.y) < 1e-3) return;
+    f.clampScalar(-1.5, 1.5); fv.clampScalar(-30, 30);
+    if (Math.abs(f.x) + Math.abs(f.z) + Math.abs(f.y) < 1e-3) return;
     const sp = this.bones.spine_02 || this.bones.spine_01;
     const head = this.bones.head;
     if (sp) sp.quaternion.multiply(_q.setFromEuler(new THREE.Euler(this.flinch.x * 0.6, 0, this.flinch.z * 0.6)));
@@ -591,6 +630,11 @@ export class ZombieManager {
     const g = this.game;
     if (g.playerList) return g.playerList().filter((p) => p.alive);
     return g.player && !g.playerDead ? [{ pos: g.player.pos, id: g.localId, alive: true }] : [];
+  }
+  /** Melee targets: standing players plus downed ones (hits on those shorten their bleed-out). */
+  targets() {
+    const g = this.game;
+    return g.playerList ? g.playerList().filter((p) => p.alive || p.downed) : this.players();
   }
 
   spawn(type, pos, opts = {}) {
@@ -673,6 +717,93 @@ export class ZombieManager {
     });
   }
 
+  /**
+   * Steering direction (unit, xz) down the nav flow field; null if there is no downhill step.
+   * Only follows edges NavGrid.computeField itself links (walkable, height step <= STEP, no diagonal
+   * corner cutting): NavGrid.flowDir checks none of those and steers into ledges the field routes around.
+   * y = mover height, the reference when its own cell isn't walkable (knockback / spawn against a wall).
+   */
+  flowDir(x, z, y, out) {
+    const nav = this.nav, k = nav ? nav.index(x, z) : -1;
+    if (k < 0) return null;
+    const { w, h, dist, heights, flags } = nav;
+    const walk = nav.walkable(k), hk = walk ? heights[k] : y;
+    let best = walk ? dist[k] : 0x7fffffff, bk = -1;
+    const i = k % w, j = (k / w) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+      const nk = nj * w + ni;
+      if (dist[nk] >= best || !(flags[nk] & NAV.WALK)) continue;
+      if (hk != null && Math.abs(heights[nk] - hk) > NAV_STEP) continue;
+      if (di && dj && (!(flags[j * w + ni] & NAV.WALK) || !(flags[nj * w + i] & NAV.WALK))) continue;
+      best = dist[nk]; bk = nk;
+    }
+    if (bk < 0) return null;
+    nav.cellCenter(bk, out);
+    out.x -= x; out.z -= z; out.y = 0;
+    const l = Math.hypot(out.x, out.z);
+    return l < 1e-4 ? null : out.multiplyScalar(1 / l);
+  }
+
+  /**
+   * Host: the playable region = cells the flow field links to the player spawns (static, so a player hopping onto
+   * a crate — an island in the live field — never makes the arena itself look unreachable). null without nav.
+   */
+  _home() {
+    const nav = this.nav;
+    if (!nav) return null;
+    if (this.homeNav !== nav) {
+      this.homeNav = nav;
+      nav.computeField(this.game.world.playerSpawns || []);
+      const home = new Uint8Array(nav.dist.length);
+      let n = 0;
+      for (let k = 0; k < home.length; k++) if (nav.dist[k] < 0x7fffffff) { home[k] = 1; n++; }
+      this.home = n ? home : null;
+      this.fieldT = 0;           // dist now holds this field: the live one is rebuilt next update
+    }
+    return this.home;
+  }
+
+  /** Host: centre of the playable cell nearest to (x, z) within r metres (square rings), or null. */
+  reachableNear(x, z, r = 8, out = new THREE.Vector3()) {
+    const home = this._home(), nav = this.nav;
+    if (!home) return null;
+    const { w, h } = nav;
+    const i0 = Math.floor((x - nav.ox) / nav.cell), j0 = Math.floor((z - nav.oz) / nav.cell);
+    const R = Math.ceil(r / nav.cell);
+    for (let rad = 0; rad <= R; rad++) {
+      let bk = -1, bd = 1e9;
+      const test = (i, j) => {
+        if (i < 0 || j < 0 || i >= w || j >= h || !home[j * w + i]) return;
+        const d = (i - i0) * (i - i0) + (j - j0) * (j - j0);
+        if (d < bd) { bd = d; bk = j * w + i; }
+      };
+      for (let d = -rad; d <= rad; d++) { test(i0 + d, j0 - rad); if (rad) test(i0 + d, j0 + rad); }
+      for (let d = -rad + 1; d < rad; d++) { test(i0 - rad, j0 + d); test(i0 + rad, j0 + d); }
+      if (bk >= 0) return nav.cellCenter(bk, out);
+    }
+    return null;
+  }
+
+  /**
+   * Host failsafe: a zombie off the playable region (summoned / crash-landed past the arena wall, knocked onto a
+   * crate top) never reaches anyone and the round only ends at 0 left: after 4 s it is moved to a spawner (else the
+   * nearest playable cell). Flying / attacking bosses and leaps in flight pause the clock.
+   */
+  _unstick(z, dt) {
+    const home = this.home;
+    if (!home || !z.alive || z.puppet || z.brain?.flying || z.brain?.attack || z.state === 'special') return;
+    const k = this.nav.index(z.pos.x, z.pos.z);
+    if (k >= 0 && home[k]) { z.lostT = 0; return; }
+    if ((z.lostT = (z.lostT || 0) + dt) < 4) return;
+    z.lostT = 0;
+    const sp = this.game.match?._pickSpawner?.();
+    const p = (sp && this.reachableNear(sp.x, sp.z, 6)) || this.reachableNear(z.pos.x, z.pos.z, 60);
+    if (p) { z.pos.copy(p); z.groundY = p.y; z.kvel.set(0, 0, 0); }
+  }
+
   alertAround(pos, r) { for (const z of this.list) if (z.alive && !z.target && z.pos.distanceTo(pos) < r) z.voiceT = Math.min(z.voiceT, 0.3); }
 
   losCheck(z, target) {
@@ -683,6 +814,28 @@ export class ZombieManager {
     const col = this.game.world.collision;
     const v = col ? !col.blocked(_a.set(z.pos.x, z.pos.y + 1.4, z.pos.z), _b.set(target.pos.x, target.pos.y + 1.4, target.pos.z)) : true;
     this.losCache.set(key, { f: this.frame, v });
+    return v;
+  }
+
+  /**
+   * Is the straight xz segment to the target walkable on the nav grid (every cell walkable, height steps the
+   * flow field would take)? Cached per zombie like losCheck. The last ~0.75 m is skipped: a player hugging
+   * cover usually stands in an eroded, unwalkable cell.
+   */
+  directPath(z, target) {
+    const nav = this.nav;
+    if (!nav) return true;
+    if (z.dpF !== undefined && this.frame - z.dpF < 6) return z.dpV;
+    const dx = target.pos.x - z.pos.x, dz = target.pos.z - z.pos.z, D = Math.hypot(dx, dz), L = D - 0.75;
+    const step = nav.cell * 0.5;
+    let pk = nav.index(z.pos.x, z.pos.z), h = nav.walkable(pk) ? nav.heights[pk] : z.pos.y, v = true;
+    for (let s = step; s < L && v; s += step) {
+      const k = nav.index(z.pos.x + (dx / D) * s, z.pos.z + (dz / D) * s);
+      if (k === pk) continue;
+      if (!nav.walkable(k) || Math.abs(nav.heights[k] - h) > NAV_STEP) v = false;
+      else { h = nav.heights[k]; pk = k; }
+    }
+    z.dpF = this.frame; z.dpV = v;
     return v;
   }
 
@@ -728,13 +881,19 @@ export class ZombieManager {
   update(dt) {
     this.time += dt;
     this.frame++;
+    // the live count drives round end / spawn caps: recount it so it can never drift (stale kills, predicted deaths)
+    let n = 0;
+    for (const z of this.list) if (z.alive) n++;
+    this.alive = n;
     this.voiceBudget = Math.min(3, this.voiceBudget + dt * 0.8);
     // shared flow field toward the nearest players, refreshed a few times per second
     this.fieldT -= dt;
     if (this.authority && this.nav && this.fieldT <= 0) {
+      this._home();
       this.fieldT = 0.3;
-      const ps = this.players().map((p) => p.pos);
-      if (ps.length) this.nav.computeField(ps);
+      let ps = this.players();
+      if (!ps.length) ps = this.targets();   // everyone down: the horde still closes in
+      if (ps.length) this.nav.computeField(ps.map((p) => p.pos));
     }
     this._rebuildHash();
     this._updateHazards(dt);
@@ -749,6 +908,7 @@ export class ZombieManager {
       const z = this.list[i];
       const keep = z.update(dt, this);
       if (!keep) { this.root.remove(z.root); z.mixer.stopAllAction(); this.list.splice(i, 1); this.byId.delete(z.id); continue; }
+      if (this.authority) this._unstick(z, dt);
       // animation LOD: near & visible every frame, far / off-screen less often
       sphere.center.set(z.pos.x, z.pos.y + z.height * 0.5, z.pos.z); sphere.radius = z.height;
       const vis = frustum.intersectsSphere(sphere);
@@ -757,10 +917,11 @@ export class ZombieManager {
       const every = !vis ? 8 : dist < 15 ? 1 : dist < 35 ? 2 : 4;
       z.animAcc += dt;
       if ((this.frame + z.id) % every === 0 || !z.alive && z.deathT < 1.5) {
-        z.mixer.update(z.animAcc);
+        const step = z.animAcc; // real elapsed time since the last pose (not dt*every)
+        z.mixer.update(step);
         z.animAcc = 0;
         if (z.poseQ) for (const [b, q] of z.poseQ) b.quaternion.multiply(q);
-        z.applyFlinch(dt * every);
+        z.applyFlinch(step);
       }
       // mesh LOD + shadow casting by distance (bosses always full detail)
       const far = !z.def.boss && z.lod1?.length && dist > 22;
@@ -823,7 +984,8 @@ export class ZombieManager {
       const h = this.hazards[i];
       h.t -= dt;
       if (h.t <= 0) { this.hazards.splice(i, 1); continue; }
-      if (Math.random() < dt * 12) {
+      // wisps scale with the pool's area (a spitter puddle is r 1.6; boss pools are 2.2-2.6)
+      for (let n = dt * 12 * Math.max(1, h.r * h.r / 2.56); n > 0; n--) if (n >= 1 || Math.random() < n) {
         const a = Math.random() * 6.28, r = Math.random() * h.r;
         const acid = h.kind === 'acid';
         g.fx?.particles.spawn({ x: h.pos.x + Math.cos(a) * r, y: h.pos.y + 0.05, z: h.pos.z + Math.sin(a) * r, vx: 0, vy: 0.3 + Math.random() * 0.4, vz: 0, life: 1.2, size: 0.2, size1: 0.8, color: acid ? [0.35, 0.65, 0.08, 0.35] : [0.4, 0.5, 0.15, 0.3], color1: [0.3, 0.4, 0.1, 0], frame: 1, drag: 1 });
@@ -845,7 +1007,7 @@ export class ZombieManager {
     const dist = from.distanceTo(to);
     const t = dist / z.def.spit.speed;
     const vel = to.sub(from).multiplyScalar(1 / t); vel.y += 0.5 * 9.8 * t * 0.6;
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.4, 0.3) }));
+    const mesh = new THREE.Mesh(spitGeo || (spitGeo = new THREE.SphereGeometry(0.09, 8, 6)), spitMat || (spitMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.4, 0.3) })));
     g.audio?.play('spitter_spit', { pos: from });
     g.projectiles.spawn({
       pos: from, vel, gravity: 9.8 * 0.6, life: 4, mesh, radius: 0.1, hitTargets: false, faceVelocity: false,
@@ -900,10 +1062,17 @@ export class ZombieManager {
     this.game.onZombieKilled?.(z, info);
   }
 
+  /** Drops every zombie at once (wipe retry). Stale references (hits in flight, bot targets) see them dead. */
   clear() {
-    for (const z of this.list) this.root.remove(z.root);
+    for (const z of this.list) { z.alive = false; z.state = 'dead'; z.mixer.stopAllAction(); this.root.remove(z.root); }
     this.list.length = 0;
+    this.byId.clear();
+    this.hash.clear();
+    this.losCache.clear();
+    this.hazards.length = 0;
+    this.telegraphs.clear();
     this.alive = 0;
+    if (this.authority) this.net?.zombiesCleared?.(); // clients drop their puppets
   }
 }
 

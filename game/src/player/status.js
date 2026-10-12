@@ -30,7 +30,9 @@ export class PlayerStatus {
   /** opts: { from: Vector3, knock: Vector3, explosive, dot, acid, zombie } */
   damage(amount, opts = {}) {
     const g = this.game;
-    if (!this.alive || this.downed || this.invuln > 0 || amount <= 0) return 0;
+    if (!this.alive || this.invuln > 0 || amount <= 0) return 0;
+    // downed: hits eat into the bleed-out instead (zombies finish off a player nobody covers)
+    if (this.downed) { this.downT -= amount * 0.15; this.damageFx = Math.min(1, this.damageFx + 0.2); return 0; }
     let dmg = amount;
     // kevlar takes half of the hit and loses durability
     if (this.armor > 0 && !opts.dot) {
@@ -88,10 +90,11 @@ export class PlayerStatus {
       if (this.downT <= 0) { this.downed = false; this.alive = false; this.game.onPlayerDied?.(); }
     }
     r.damage = this.damageFx;
-    const low = this.downed ? 1 : clamp((35 - this.hp) / 35, 0, 1);
+    const low = !this.alive ? 0.3 : this.downed ? 1 : clamp((35 - this.hp) / 35, 0, 1); // dead: spectating, keep the view clear
     r.lowHealth = low;
     r.aberration = this.damageFx * 0.02;
   }
 
-  get speedMul() { return (this.downed ? 0.25 : 1) * this.slowMul; }
+  /** Bled out: no control at all until a revive (round end / wipe retry); Game spectates meanwhile. */
+  get speedMul() { return this.alive ? (this.downed ? 0.25 : 1) * this.slowMul : 0; }
 }

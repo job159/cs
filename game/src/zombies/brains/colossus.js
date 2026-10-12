@@ -9,6 +9,8 @@ import { rand } from '../../engine/util.js';
 
 const _v = new THREE.Vector3();
 const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+let sporeGeo = null, sporeMat = null; // shared by every mortar spore (no GPU buffers per shot)
+const grounded = function () { return this.phase !== 1; };   // phases A and C, never the air phase
 
 export class ColossusBrain extends BossBrain {
   constructor(z, mgr) {
@@ -18,20 +20,22 @@ export class ColossusBrain extends BossBrain {
     this.summonEvery = 32;
     this.weakBoxes = ['chest', 'head'];
     this.weakMul = 1.8;
-    const arena = mgr.game.world.def?.bossArenas?.final;
-    this.arena = arena ? V(arena.center) : z.pos.clone();
+    // flight orbit: the map's arena, else around the players' spawn area (the boss itself spawns out on a spawner)
+    const arena = mgr.game.world.def?.bossArenas?.final, ps = mgr.game.world.playerSpawns || [];
+    this.arena = arena ? V(arena.center) : ps.length ? ps.reduce((c, p) => c.add(p), new THREE.Vector3()).multiplyScalar(1 / ps.length) : z.pos.clone();
     this.arenaR = arena?.radius ?? 26;
+    this.fitArena = !arena;
     this.phases = [
       { at: 0.45, enter() { this.metamorphosis(); } },
       { at: 0.15, enter() { this.crash(); } },
     ];
     this.attacks = [
       // ---------------- phase A / C (ground)
-      { id: 'stomp', w: 3, cd: 6, max: 14, until: 1, dur: 2.6, recover: 0.6,
+      { id: 'stomp', w: 3, cd: 6, max: 14, when: grounded, dur: 2.6, recover: 0.6,
         start(a) { a.data.p = this.z.pos.clone(); this.z.playOnce('leap', { speed: 0.55 }); this.fx('teleCircle', { p: a.data.p.toArray(), r: 9, t: 1.2 }); },
         events: [[1.2, function (a) { this.hurtCircle(a.data.p, 9, 34, { knock: 10, lift: 5, jumpable: true }); this.fx('quake', { p: a.data.p.toArray(), r: 9 }); this.fx('teleCircle', { p: a.data.p.toArray(), r: 15, t: 0.8 }); }],
           [2.0, function (a) { this.hurtCircle(a.data.p, 15, 22, { knock: 6, lift: 4, jumpable: true }); this.fx('quake', { p: a.data.p.toArray(), r: 15 }); }]] },
-      { id: 'mortar', w: 3, cd: 9, min: 6, max: 60, until: 1, dur: 3.2, recover: 0.6,
+      { id: 'mortar', w: 3, cd: 9, min: 6, max: 60, when: grounded, dur: 3.2, recover: 0.6,
         start(a) {
           this.z.playOnce('scream', { speed: 0.7 });
           a.data.targets = this.players().map((p) => p.pos.clone());
@@ -40,13 +44,15 @@ export class ColossusBrain extends BossBrain {
           this.fx('sporeLaunch', { p: this.z.pos.toArray(), to: a.data.targets.map((t) => [t.x, this.ground(t), t.z]) });
         },
         events: [[2.4, function (a) {
+          const at = [];
           for (const t of a.data.targets) {
             const p = new THREE.Vector3(t.x, this.ground(t), t.z);
             this.hurtCircle(p, 3.2, 26, { knock: 5, explosive: true });
-            this.mgr.hazards.push({ pos: p, r: 2.6, t: 6, dps: 7, kind: 'poison' });
+            at.push(p.toArray());
           }
+          this.fx('pools', { at, r: 2.6, t: 6, dps: 7, k: 'poison' });
         }]] },
-      { id: 'pull', w: 2, cd: 14, min: 6, max: 22, until: 1, los: true, dur: 3.6, recover: 0.8,
+      { id: 'pull', w: 2, cd: 14, min: 6, max: 22, when: grounded, los: true, dur: 3.6, recover: 0.8,
         start(a) { this.z.playOnce('attack_a', { speed: 0.5 }); this.fx('tendril', { id: this.z.id, t: 2.6 }); this.g.hud?.toast('觸手拉扯！往外跑！', 1600); },
         update(dt, a) {
           if (a.t < 2.6) {
@@ -59,7 +65,7 @@ export class ColossusBrain extends BossBrain {
         },
         events: [[2.6, function () { this.fx('teleCone', { p: this.z.pos.toArray(), yaw: this.z.yaw, r: 9, h: 1.3, t: 0.6 }); }],
           [3.2, function () { this.hurtCone(this.z.pos, this.z.yaw, 9, 1.3, 36, { knock: 12, lift: 5 }); this.fx('quake', { p: this.z.pos.toArray(), r: 6 }); }]] },
-      { id: 'sweep', w: 3, cd: 3, max: 7.5, dur: 1.7, recover: 0.4,
+      { id: 'sweep', w: 3, cd: 3, max: 7.5, when: grounded, dur: 1.7, recover: 0.4,
         start(a, t) { this.face(t.pos, 1, 99); a.data.yaw = this.z.yaw; this.z.playOnce('attack_b', { speed: 0.6 }); this.fx('teleCone', { p: this.z.pos.toArray(), yaw: a.data.yaw, r: 8, h: 1.1, t: 0.9 }); },
         events: [[0.9, function (a) { this.hurtCone(this.z.pos, a.data.yaw, 8, 1.1, 30, { knock: 10 }); }]] },
       // ---------------- phase B (air)
@@ -75,11 +81,13 @@ export class ColossusBrain extends BossBrain {
         events: [[1.3, function (a) { this.fx('breath', { id: this.z.id, p: a.data.from.toArray(), yaw: a.data.yaw }); }],
           [1.5, function (a) {
             this.hurtLine(a.data.from, a.data.yaw, 34, 2.6, 30, { knock: 4 });
+            const at = [];
             for (let i = 4; i < 34; i += 6) {
               const p = a.data.from.clone().add(_v.set(Math.sin(a.data.yaw) * i, 0, Math.cos(a.data.yaw) * i));
               p.y = this.ground(p);
-              this.mgr.hazards.push({ pos: p, r: 2.2, t: 7, dps: 9, kind: 'acid' });
+              at.push(p.toArray());
             }
+            this.fx('pools', { at, r: 2.2, t: 7, dps: 9, k: 'acid' });
           }]] },
       { id: 'dive', w: 2, cd: 11, phase: 1, until: 2, dur: 9.0, recover: 0.5,
         start(a, t) { a.data.to = new THREE.Vector3(t.pos.x, this.ground(t.pos), t.pos.z); this.fx('teleCircle', { p: a.data.to.toArray(), r: 6.5, t: 1.6 }); this.fx('screech', { p: this.z.pos.toArray() }); },
@@ -115,19 +123,42 @@ export class ColossusBrain extends BossBrain {
 
   crash() {
     this.flying = false;
+    this.flyIn = 0;              // both thresholds crossed in one frame: never take off after the crash
     this.invuln = 2.5;
     this.speedMul = 1.5;
     this.attack = null;
+    // fall onto ground the players can reach (not a crate top / past the arena wall); attacks wait for the landing
+    const p = this.z.pos, q = this.mgr.reachableNear?.(p.x, p.z, 30) || this.mgr.reachableNear?.(this.arena.x, this.arena.z, 30);
+    if (q && Math.hypot(q.x - p.x, q.z - p.z) > 0.3) this.landAt = q;
+    this.globalCd = Math.max(this.globalCd, 1.6);
     this.fx('crash', { id: this.z.id, p: this.z.pos.toArray() });
     this.g.hud?.toast('雙翼撕裂！最終決戰！', 2600);
   }
 
   onSummon() { this.z.playOnce('scream', { speed: 0.8 }); this.fx('screech', { p: this.z.pos.toArray() }); this.summon(this.phase >= 1 ? 'runner' : 'crawler', 4 + this.phase * 2, 9); }
 
+  /** Default arena: shrink the orbit until its whole ring hangs over ground the players can reach. */
+  _fitArena() {
+    this.fitArena = false;
+    const m = this.mgr, c = this.arena;
+    if (!m.reachableNear?.(c.x, c.z, 4)) return;
+    for (let r = this.arenaR; r >= 8; r -= 2) {
+      let ok = true;
+      for (let i = 0; i < 16 && ok; i++) ok = !!m.reachableNear(c.x + Math.sin(i * Math.PI / 8) * r, c.z + Math.cos(i * Math.PI / 8) * r, 2);
+      this.arenaR = r;
+      if (ok) return;
+    }
+  }
+
   update(dt, target, tdist) {
+    if (this.landAt) {
+      const p = this.z.pos, q = this.landAt, k = Math.min(1, dt * 4);
+      p.x += (q.x - p.x) * k; p.z += (q.z - p.z) * k;
+      if (Math.hypot(q.x - p.x, q.z - p.z) < 0.1) { p.x = q.x; p.z = q.z; this.landAt = null; }
+    }
     if (this.flyIn > 0) {
       this.flyIn -= dt;
-      if (this.flyIn <= 0) { this.flying = true; this.orbitA = Math.atan2(this.z.pos.x - this.arena.x, this.z.pos.z - this.arena.z); this.fx('takeoff', { p: this.z.pos.toArray() }); }
+      if (this.flyIn <= 0) { if (this.fitArena) this._fitArena(); this.flying = true; this.orbitA = Math.atan2(this.z.pos.x - this.arena.x, this.z.pos.z - this.arena.z); this.fx('takeoff', { p: this.z.pos.toArray() }); }
       else { this.invuln = Math.max(this.invuln, 0.2); return 0; }
     }
     if (this._unfold) for (const w of this._unfold) w.scale.setScalar(Math.min(1, w.scale.x + dt * 0.8));
@@ -154,6 +185,8 @@ export class ColossusBrain extends BossBrain {
       case 'teleCone': tele?.cone(V(d.p), d.yaw, d.r, d.h, d.t); break;
       case 'teleLine': tele?.line(V(d.p), d.yaw, d.l, d.w, d.t, { color: 0x7dff2a }); break;
       case 'teleCircle': tele?.circle(V(d.p), d.r, d.t); break;
+      // ground hazards: pushed on every peer so clients see them (only the host's _updateHazards deals the dps)
+      case 'pools': for (const q of d.at) this.mgr.hazards.push({ pos: V(q), r: d.r, t: d.t, dps: d.dps, kind: d.k }); break;
       case 'screech': g.audio?.play('screamer_scream', { pos: V(d.p), volume: 1.4, pitch: 0.55 }); g.addShake(0.2); break;
       case 'quake': {
         const p = V(d.p);
@@ -173,7 +206,7 @@ export class ColossusBrain extends BossBrain {
           const to = V(t);
           const time = 2.2;
           const vel = to.clone().sub(from).multiplyScalar(1 / time); vel.y += 0.5 * 9.8 * time;
-          const m = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.2, 0.35) }));
+          const m = new THREE.Mesh(sporeGeo || (sporeGeo = new THREE.SphereGeometry(0.35, 10, 8)), sporeMat || (sporeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.2, 0.35) })));
           g.projectiles?.spawn({ pos: from.clone(), vel, gravity: 9.8, life: time + 0.4, mesh: m, radius: 0.3, hitTargets: false, faceVelocity: false,
             onUpdate: (p) => { if (Math.random() < 0.5) g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, life: 0.6, size: 0.3, size1: 0.8, color: [0.35, 0.6, 0.1, 0.5], color1: [0.3, 0.5, 0.1, 0], frame: 1 }); },
             onHit: (p, point) => { g.fx?.explosion(point, { radius: 3.2, scale: 0.6, color: [0.5, 0.95, 0.2] }); g.audio?.play('bloater_pop', { pos: point }); return true; } });

@@ -50,6 +50,7 @@ export class Match {
     if (this.state === 'warmup' || this.state === 'buy') {
       g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`);
       if (this.timer <= 0) this.beginRound(this.round + 1);
+      this._updateSupplies(dt);   // crates dropped at round end open during the buy time too (and the prompt refreshes)
       return;
     }
     if (this.state === 'round') {
@@ -58,7 +59,7 @@ export class Match {
       const R = ROUNDS[Math.max(0, this.round - 1)];
       g.hud?.setRound(R.title, `剩餘感染者 ${left}`);
       if (this.boss) g.hud?.setBoss(this.boss.name, Math.max(0, this.boss.hp / this.boss.maxHp));
-      if (left === 0 && (!this.boss || this.boss.hp <= 0)) this.endRound();
+      if (left <= 0 && (!this.boss || this.boss.hp <= 0)) this.endRound();
       this._checkDefeat();
     }
     this._updateSupplies(dt);
@@ -122,17 +123,27 @@ export class Match {
     if (this.retries > 0) {
       this.retries--;
       g.hud?.toast(`全員陣亡　重試本回合（剩餘 ${this.retries} 次）`, 3000);
-      g.zombies.clear();
+      g.zombies.clear();   // clients drop their puppets too
       this.boss = null;
-      g.status.alive = true; g.status.revive(g.status.maxHp);
-      g.player.pos.copy(g.world.playerSpawns[0]);
+      g.hud?.setBoss(null);
+      this._respawn();
       this.state = 'buy'; this.timer = 12; this.round -= 1;
+      for (const b of g.bots?.bots || []) b.rearm(this.round + 1); // revives fallen AI bots at our side
+      g.audio?.playMusic?.('calm');
     } else {
       this.state = 'defeat';
       g.hud?.setRound('任務失敗', '');
       g.audio?.play('defeat');
       g.onMatchEnd?.(false, this.stats);
     }
+  }
+
+  /** Wipe retry: back on our feet at full health on our own spawn point. */
+  _respawn() {
+    const g = this.game, sp = g.world.playerSpawns;
+    g.status.alive = true; g.status.revive(g.status.maxHp);
+    const p = sp[(g.spawnIndex | 0) % sp.length] || sp[0];
+    if (p) { g.player.pos.copy(p); g.player.vel.set(0, 0, 0); }
   }
 
   // ---------------------------------------------------------------- spawning
@@ -266,6 +277,8 @@ export class Match {
   }
 
   canBuy() {
+    const st = this.game.status;
+    if (st && (!st.alive || st.downed)) return false;   // downed / bled out: no shopping until revived (buy / buyArmor / buyAmmo / grenades)
     if (this.state === 'warmup' || this.state === 'buy') return true;
     const def = this.game.world.def || {};
     const p = this.game.player.pos;
@@ -292,13 +305,13 @@ export class Match {
   _updateSupplies(dt) {
     const g = this.game;
     let near = null;
+    const up = !g.status || g.status.alive && !g.status.downed; // downed / dead players can't open crates
     for (const s of this.supplies) {
       s.t += dt;
       s.mesh.material.emissiveIntensity = 0.4 + Math.sin(s.t * 4) * 0.3;
-      if (s.pos.distanceTo(g.player.pos) < 1.8) near = s;
+      if (up && s.pos.distanceTo(g.player.pos) < 1.8) near = s;
     }
     g.hud?.setPrompt(near ? '按 E 開啟補給箱' : '');
-    g.touch?.el.classList.toggle('can-use', !!near);
     if (near && g.input.state.pressed.use) {
       const ws = g.arsenal.current;
       for (const w of Object.values(g.arsenal.owned)) w.reserve = Math.max(w.reserve, w.def.reserve);
@@ -315,12 +328,13 @@ export class Match {
   snapshot() { return { state: this.state, round: this.round, timer: this.timer }; }
 
   // ---------------------------------------------------------------- network client mirror
-  /** Applies the host's match row [state, round, timer, left, bossFrac, bossName]. */
+  /** Applies the host's match row [state, round, timer, left, bossFrac, bossName, retries]. */
   mirror(m) {
-    const [state, round, timer, left, bossFrac, bossName] = m;
-    const prev = this.state;
+    const [state, round, timer, left, bossFrac, bossName, retries] = m;
+    const prev = this.state, prevRound = this.round;
     this.round = round; this.timer = timer; this.left = left;
     this.bossFrac = bossFrac; this.bossName = bossName;
+    if (retries !== undefined) this.retries = retries;
     if (state === prev) return;
     this.state = state;
     const g = this.game;
@@ -329,6 +343,13 @@ export class Match {
       g.hud?.toast(R?.intro || R?.title || '', 2400);
       g.audio?.play('round_start');
       g.audio?.playMusic?.(R?.boss ? 'boss' : round >= 7 ? 'combat_high' : 'combat_low');
+    } else if (state === 'buy' && prev === 'round' && round < prevRound) {
+      // wipe: the host steps the round back to retry it (a cleared round keeps its number): no bonus, full revive
+      this.stats.deaths++;
+      g.hud?.toast(`全員陣亡　重試本回合（剩餘 ${this.retries} 次）`, 3000);
+      g.zombies?.clear();
+      this._respawn();
+      g.audio?.playMusic?.('calm');
     } else if (state === 'buy' && prev === 'round') {
       const bonus = ECONOMY.roundBonus(round);
       this.addMoney(bonus);
@@ -338,7 +359,7 @@ export class Match {
       this._dropSupplies(1);
       g.audio?.playMusic?.('calm');
     } else if (state === 'victory') { g.audio?.play('victory'); g.onMatchEnd?.(true, this.stats); }
-    else if (state === 'defeat') { g.audio?.play('defeat'); g.onMatchEnd?.(false, this.stats); }
+    else if (state === 'defeat') { this.stats.deaths++; g.audio?.play('defeat'); g.onMatchEnd?.(false, this.stats); }
   }
 
   _mirrorUpdate() {
