@@ -12,7 +12,7 @@ re-encoded / simplified for phones. Attribution is not required; listed here for
 |---|---|---|---|---|
 | texture | `asphalt` | [asphalt_04](https://polyhaven.com/a/asphalt_04) | Poly Haven | CC0 |
 | texture | `asphalt_cracked` | [asphalt_02](https://polyhaven.com/a/asphalt_02) | Poly Haven | CC0 |
-| texture | `concrete_wall` | [concrete_wall_006](https://polyhaven.com/a/concrete_wall_006) | Poly Haven | CC0 |
+| texture | `concrete_wall` | [concrete_wall_008](https://polyhaven.com/a/concrete_wall_008) | Poly Haven | CC0 |
 | texture | `concrete_floor` | [concrete_floor_worn_001](https://polyhaven.com/a/concrete_floor_worn_001) | Poly Haven | CC0 |
 | texture | `brick_red` | [red_brick](https://polyhaven.com/a/red_brick) | Poly Haven | CC0 |
 | texture | `brick_painted` | [painted_worn_brick](https://polyhaven.com/a/painted_worn_brick) | Poly Haven | CC0 |
@@ -42,10 +42,11 @@ re-encoded / simplified for phones. Attribution is not required; listed here for
 | texture | `metal_container` | [container_side](https://polyhaven.com/a/container_side) | Poly Haven | CC0 |
 | texture | `metal_shutter` | [rusty_metal_shutter](https://polyhaven.com/a/rusty_metal_shutter) | Poly Haven | CC0 |
 | texture | `metal_worn` | [rusty_metal_02](https://polyhaven.com/a/rusty_metal_02) | Poly Haven | CC0 |
-| texture | `wood_siding` | [blue_painted_planks](https://polyhaven.com/a/blue_painted_planks) | Poly Haven | CC0 |
+| texture | `wood_siding` | [white_planks_clean](https://polyhaven.com/a/white_planks_clean) | Poly Haven | CC0 |
 | texture | `roof_tar` | [tarred_gravel](https://polyhaven.com/a/tarred_gravel) | Poly Haven | CC0 |
 | texture | `roof_shingles` | [roof_slates_02](https://polyhaven.com/a/roof_slates_02) | Poly Haven | CC0 |
 | texture | `rubble` | [concrete_debris](https://polyhaven.com/a/concrete_debris) | Poly Haven | CC0 |
+| texture | `concrete_dirty` | [concrete_wall_006](https://polyhaven.com/a/concrete_wall_006) | Poly Haven | CC0 |
 | HDRI | `kloppenheim_01_puresky` | [kloppenheim_01_puresky](https://polyhaven.com/a/kloppenheim_01_puresky) | Poly Haven | CC0 |
 | HDRI | `industrial_sunset_puresky` | [industrial_sunset_puresky](https://polyhaven.com/a/industrial_sunset_puresky) | Poly Haven | CC0 |
 | HDRI | `overcast_soil_puresky` | [overcast_soil_puresky](https://polyhaven.com/a/overcast_soil_puresky) | Poly Haven | CC0 |
@@ -82,7 +83,7 @@ Procedural zombie overlays (pallor, veins, wounds, blood, tears) are generated b
 | Asset | From | Source | Author | License |
 |---|---|---|---|---|
 | `3dobjs` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/3dobjs) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
-| `rigs/game_engine` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/rigs/game_engine) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `rigs/standard` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/rigs/standard) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/arms` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/arms) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/cheek` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/cheek) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/expression` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/expression) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
@@ -117,11 +118,11 @@ retargeter; no MPFB2 / MakeHuman code). Sources are downloaded by `tools/assets/
 |---|---|---|---|
 | [Universal Animation Library (Standard)](https://opengameart.org/node/174563) - `universal_animation_librarystandard.zip` | Quaternius | CC0 1.0 | `run`, `sprint`, `death_back`, `eat` |
 | [Universal Animation Library 2 (Standard)](https://opengameart.org/content/universal-animation-library-2) - `universal_animation_library_2standard.zip` | Quaternius | CC0 1.0 | `idle`, `idle_b`, `walk_a`, `attack_a`, `get_up`, `leap` |
-| [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) - BVH conversion by Bruce Hahne (cgspeed), mirror [una-dinosauria/cmu-mocap](https://github.com/una-dinosauria/cmu-mocap) | Carnegie Mellon University | CMU mocap terms (free to use, modify and redistribute, also commercially; the motion data itself may not be resold) | `walk_b`, `walk_c`, `walk_limp`, `knockdown`, `climb` |
+| [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) - BVH conversion by Bruce Hahne (cgspeed), mirror [una-dinosauria/cmu-mocap](https://github.com/una-dinosauria/cmu-mocap) | Carnegie Mellon University | CMU mocap terms (free to use, modify and redistribute, also commercially; the motion data itself may not be resold) | `walk_b`, `walk_c`, `walk_limp`, `knockdown` |
 | [MPFB2](https://github.com/makehumancommunity/mpfb2) `rig.game_engine.json`, `weights.game_engine.json`, `base.obj` (assets only) | MakeHuman community | CC0 1.0 | skeleton rest pose, preview mannequin (dev only) |
 
-CMU trials: 104_41 ZombieWalk, 120_22 Zombie, 91_24 HurtLegWalk, 90_18 RugPullFall, 14_33 climb ladder.
-Keyframed clips (`attack_b`, `attack_lunge`, `bite`, `hit_front`, `hit_back`, `hit_left`, `hit_right`, `stagger`, `death_front`, `crawl`, `crawl_attack`, `scream`, `spit`) and all retargeting / zombie post-processing are original work (MIT).
+CMU trials: 104_41 ZombieWalk, 120_22 Zombie, 91_24 HurtLegWalk, 90_18 RugPullFall.
+Keyframed clips (`attack_b`, `attack_lunge`, `bite`, `hit_front`, `hit_back`, `hit_left`, `hit_right`, `stagger`, `death_front`, `crawl`, `crawl_attack`, `scream`, `spit`, `climb`) and all retargeting / zombie post-processing are original work (MIT).
 
 > The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
 <!-- zombie-anims:end -->

@@ -174,7 +174,7 @@ export class Kit {
       b.uv.push2(UV[i * 2], UV[i * 2 + 1]);
       if (C) {
         const r = Math.min(1, Math.max(0, C[i * 3])), g = Math.min(1, Math.max(0, C[i * 3 + 1])), bl = Math.min(1, Math.max(0, C[i * 3 + 2]));
-        b.col.push4(Math.round(Math.pow(r, 1 / 2.2) * 255), Math.round(Math.pow(g, 1 / 2.2) * 255), Math.round(Math.pow(bl, 1 / 2.2) * 255), 255);
+        b.col.push4(Math.round(r * 255), Math.round(g * 255), Math.round(bl * 255), 255); // linear (three multiplies vertex colours as-is)
       } else b.col.push4(255, 255, 255, 255);
     }
     b.idx.reserve(I.length);
@@ -243,7 +243,8 @@ export class Kit {
       const ln = V.norm(V.cross(V.sub(pts[1], pts[0]), V.sub(pts[2], pts[0])));
       [bT, bB] = faceBasis(ln);
     }
-    const cr = Math.cos(o.uvRot || 0), sr = Math.sin(o.uvRot || 0);
+    const uvRot = (o.uvRot || 0) + (o.uvs ? 0 : M.uvRot || 0);
+    const cr = Math.cos(uvRot), sr = Math.sin(uvRot);
     const sc = o.uvScale || 1;
     const [du, dv] = o.uvOffset || [0, 0];
     flat.forEach((wp, i) => {

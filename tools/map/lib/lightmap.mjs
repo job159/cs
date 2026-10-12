@@ -859,9 +859,25 @@ export async function bakeLightmaps(input, options = {}) {
   const sc = sunColor.map((c) => c * sunIntensity);
   const frame = new Float64Array(6);
   const chartRect = (ai) => {
-    const A = atlases[ai], rect = new Int32Array(A.w * A.h).fill(-1);
+    const A = atlases[ai], rect = sab(A.w * A.h, Int32Array).fill(-1);
     for (const ch of atlasCharts[ai]) for (let y = ch.y; y < ch.y + ch.h; y++) rect.fill(ch.id, y * A.w + ch.x, y * A.w + ch.x + ch.w);
     return rect;
+  };
+
+  // edge-avoiding a-trous denoiser, rows split over the workers (buffers must be SharedArrayBuffer-backed)
+  const denoise = async (W, H, val, ch, vari, st, rect, nrm, iterations, sigma, skipFlat) => {
+    const n = W * H, SB = (bytes) => new SharedArrayBuffer(Math.max(4, bytes));
+    const job = { W, H, ch, sigma, skipFlat, st: st.buffer, rect: rect.buffer, nrm: nrm.buffer, lum: SB(n * 4), sd: SB(n * 4),
+      val: [val.buffer, SB(n * ch * 4), SB(iterations > 1 ? n * ch * 4 : 4)], vari: [vari.buffer, SB(n * 4), SB(iterations > 1 ? n * 4 : 4)] };
+    if (pool) await pool.post(job); else K.setPost(job);
+    for (let it = 0; it < iterations; it++) {
+      for (const kern of ['atrousPrep', 'atrousFilter']) {
+        if (pool) await pool.run(kern, H, it, () => {}); else K.kernels[kern](0, H, it);
+      }
+    }
+    const res = new Float32Array(job.val[(iterations - 1) % 2 === 0 ? 1 : 2]);
+    for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) for (let c = 0; c < ch; c++) val[k * ch + c] = res[k * ch + c];
+    if (pool) await pool.post(null); else K.setPost(null);
   };
 
   try {
@@ -908,9 +924,9 @@ export async function bakeLightmaps(input, options = {}) {
     for (let ai = 0; ai < atlases.length; ai++) {
       const A = atlases[ai], W = A.w, H = A.h, n = W * H;
       const rect = chartRect(ai);
-      const E = new Float32Array(n * 3), M = new Float32Array(n), V = new Float32Array(n), MV = new Float32Array(n);
-      const nrm = new Float32Array(n * 3);
-      const st = new Uint8Array(n);
+      const E = sab(n * 3, Float32Array), M = sab(n, Float32Array), V = sab(n, Float32Array), MV = sab(n, Float32Array);
+      const nrm = sab(n * 3, Float32Array);
+      const st = sab(n, Uint8Array);
       for (let i = A.t0; i < A.t1; i++) {
         const k = texPix[i];
         st[k] = VALID[i] ? 1 : 2;
@@ -927,8 +943,8 @@ export async function bakeLightmaps(input, options = {}) {
       fillPixels(W, H, st, rect, [E, M, V, MV, nrm], [3, 1, 1, 1, 3], 2, 128, key);
       for (let k = 0; k < n; k++) if (st[k] === 3) { const l = Math.hypot(nrm[k * 3], nrm[k * 3 + 1], nrm[k * 3 + 2]) || 1; nrm[k * 3] /= l; nrm[k * 3 + 1] /= l; nrm[k * 3 + 2] /= l; }
       if (o.denoise) {
-        atrous(W, H, E, 3, V, st, rect, nrm, o.denoiseIterations, o.denoiseSigma);
-        if (o.jitter && o.sunSamples > 1) atrous(W, H, M, 1, MV, st, rect, nrm, 2, 3);
+        await denoise(W, H, E, 3, V, st, rect, nrm, o.denoiseIterations, o.denoiseSigma, false);
+        if (o.jitter && o.sunSamples > 1) await denoise(W, H, M, 1, MV, st, rect, nrm, 2, 3, true);
       }
       if (full) {
         for (let k = 0; k < n; k++) {
@@ -1046,6 +1062,7 @@ async function makePool(n, shared) {
   });
   return {
     async atlases(list) { await Promise.all(workers.map((w) => call(w, { cmd: 'atlases', atlases: list }))); },
+    async post(job) { await Promise.all(workers.map((w) => call(w, { cmd: 'post', job }))); },
     async run(kernel, total, arg, progress) {
       const counter = new SharedArrayBuffer(8);
       const c = new Int32Array(counter);
@@ -1161,86 +1178,6 @@ function fillPixels(W, H, st, rect, bufs, chans, target, maxLayers, key) {
     }
     for (let f = 0; f < nf; f++) st[front[f]] = target;
   }
-}
-
-/**
- * Edge-avoiding a-trous wavelet filter (5x5 B3 kernel, step 1, 2, 4 ..) over chart texels.
- * Stops at chart borders, normal discontinuities and luminance differences larger than `sigmaL`
- * standard deviations of the (filtered) per-texel noise estimate.
- */
-const EXP_LUT = Float32Array.from({ length: 257 }, (_, i) => Math.exp(-(i + 0.5) / 32));
-function atrous(W, H, val, ch, vari, st, rect, nrm, iterations, sigmaL) {
-  const h = [1 / 16, 1 / 4, 3 / 8, 1 / 4, 1 / 16];
-  const n = W * H;
-  let cnt = 0;
-  for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) cnt++;
-  const act = new Int32Array(cnt), on = new Uint8Array(n);
-  cnt = 0;
-  for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) { act[cnt++] = k; on[k] = 1; }
-  const lumA = new Float32Array(n), sdA = new Float32Array(n);
-  let src = val, sv = vari;
-  let bufA = new Float32Array(n * ch), bufB = iterations > 1 ? new Float32Array(n * ch) : null;
-  let vA = new Float32Array(n), vB = iterations > 1 ? new Float32Array(n) : null;
-  const acc = new Float64Array(3);
-  for (let it = 0; it < iterations; it++) {
-    const step = 1 << it;
-    const dst = it % 2 === 0 ? bufA : bufB, dv = it % 2 === 0 ? vA : vB;
-    for (let a = 0; a < cnt; a++) { const k = act[a]; lumA[k] = ch === 3 ? lum(src[k * 3], src[k * 3 + 1], src[k * 3 + 2]) : src[k]; }
-    for (let a = 0; a < cnt; a++) {
-      const k = act[a], x = k % W, y = (k / W) | 0, r = rect[k];
-      let pv = 0, pw = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        const yy = y + dy;
-        if (yy < 0 || yy >= H) continue;
-        for (let dx = -1; dx <= 1; dx++) {
-          const xx = x + dx;
-          if (xx < 0 || xx >= W) continue;
-          const q = yy * W + xx;
-          if (!on[q] || rect[q] !== r) continue;
-          const w = (dx === 0 ? 2 : 1) * (dy === 0 ? 2 : 1);
-          pv += sv[q] * w; pw += w;
-        }
-      }
-      sdA[k] = Math.sqrt(Math.max(0, pv / pw));
-    }
-    for (let a = 0; a < cnt; a++) {
-      const k = act[a], x = k % W, y = (k / W) | 0, r = rect[k];
-      const lp = lumA[k], inv = 1 / (sigmaL * sdA[k] + 1e-5);
-      const nx = nrm[k * 3], ny = nrm[k * 3 + 1], nz = nrm[k * 3 + 2];
-      let ws = 0, wv = 0;
-      acc[0] = acc[1] = acc[2] = 0;
-      for (let j = -2; j <= 2; j++) {
-        const yy = y + j * step;
-        if (yy < 0 || yy >= H) continue;
-        const hj = h[j + 2];
-        for (let i = -2; i <= 2; i++) {
-          const xx = x + i * step;
-          if (xx < 0 || xx >= W) continue;
-          const q = yy * W + xx;
-          if (!on[q] || rect[q] !== r) continue;
-          let w = hj * h[i + 2];
-          if (q !== k) {
-            let dn = nx * nrm[q * 3] + ny * nrm[q * 3 + 1] + nz * nrm[q * 3 + 2];
-            if (dn < 0.99999) {
-              if (dn <= 0.5) continue;
-              dn *= dn; dn *= dn; dn *= dn; dn *= dn; dn *= dn; // ^32
-              w *= dn;
-            }
-            let dl = (lumA[q] - lp) * inv;
-            if (dl < 0) dl = -dl;
-            if (dl >= 8) continue;
-            w *= EXP_LUT[(dl * 32) | 0];
-          }
-          ws += w; wv += w * w * sv[q];
-          if (ch === 3) { acc[0] += src[q * 3] * w; acc[1] += src[q * 3 + 1] * w; acc[2] += src[q * 3 + 2] * w; } else acc[0] += src[q] * w;
-        }
-      }
-      if (ch === 3) { dst[k * 3] = acc[0] / ws; dst[k * 3 + 1] = acc[1] / ws; dst[k * 3 + 2] = acc[2] / ws; } else dst[k] = acc[0] / ws;
-      dv[k] = wv / (ws * ws);
-    }
-    src = dst; sv = dv;
-  }
-  if (src !== val) for (let a = 0; a < cnt; a++) { const k = act[a]; for (let c = 0; c < ch; c++) val[k * ch + c] = src[k * ch + c]; }
 }
 
 /**

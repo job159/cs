@@ -17,8 +17,8 @@ export const SOURCES = {
     'ual1.zip': 'https://opengameart.org/sites/default/files/universal_animation_librarystandard.zip',
     'ual2.zip': 'https://opengameart.org/sites/default/files/universal_animation_library_2standard.zip',
   },
-  // trials used by the build (see docs/ZOMBIE_ANIMS.md); 20_08 etc. kept for experiments
-  cmu: ['104_41', '120_22', '91_24', '90_18', '14_33', '104_03', '104_13', '20_08', '77_19', '140_01'],
+  // trials used by the build (see docs/ZOMBIE_ANIMS.md)
+  cmu: ['104_41', '120_22', '91_24', '90_18'],
 };
 
 async function get(url, file) {

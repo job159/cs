@@ -211,10 +211,10 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
       name: 'crawl_attack', dur: 1.3, base: (t) => clonePose(out.crawl.poses[0]),
       keys: [
         { t: 0 },
-        { t: 0.3, spine_01: [-8, 8, 0], spine_02: [-12, 10, -6], spine_03: [-10, 8, -6], neck_01: [-8, 0, 0], head: [-14, 0, 0], upperarm_r: [-50, 0, 30], lowerarm_r: [-60, 0, 0], root: [0, 0.08, -0.02] },
-        { t: 0.48, spine_01: [-4, -6, 0], spine_02: [-6, -10, 4], spine_03: [-4, -8, 4], head: [-20, -10, 0], upperarm_r: [-85, 0, -15], lowerarm_r: [-10, 0, 0], root: [0, 0.06, 0.06] },
+        { t: 0.3, spine_01: [-8, 8, 0], spine_02: [-12, 10, -6], spine_03: [-10, 8, -6], neck_01: [-2, 0, 0], head: [8, 0, 0], upperarm_r: [-50, 0, 30], lowerarm_r: [-60, 0, 0], root: [0, 0.08, -0.02] },
+        { t: 0.48, spine_01: [-4, -6, 0], spine_02: [-6, -10, 4], spine_03: [-4, -8, 4], head: [2, -10, 0], upperarm_r: [-85, 0, -15], lowerarm_r: [-10, 0, 0], root: [0, 0.06, 0.06] },
         { t: 0.6, upperarm_r: [-60, 0, -35], lowerarm_r: [-25, 0, 0] },
-        { t: 0.85, spine_01: [-4, 0, 0], spine_02: [-6, 0, 0], spine_03: [-4, 0, 0], head: [-6, 0, 0], upperarm_r: [-30, 0, -10], lowerarm_r: [-40, 0, 0], root: [0, 0.02, 0.02] },
+        { t: 0.85, spine_01: [-4, 0, 0], spine_02: [-6, 0, 0], spine_03: [-4, 0, 0], head: [4, 0, 0], upperarm_r: [-30, 0, -10], lowerarm_r: [-40, 0, 0], root: [0, 0.02, 0.02] },
         { t: 1.3, spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], neck_01: [0, 0, 0], head: [0, 0, 0], upperarm_r: [0, 0, 0], lowerarm_r: [0, 0, 0], root: [0, 0, 0] },
       ],
       layers: [(t, pose) => {
@@ -274,28 +274,62 @@ export function buildLate(skel, only, loco, { base, A, env, clawLayer, shakeLaye
     out.leap = c;
   }
 
-  // ------------------------------------------------------------------ climb (CMU 14_33 ladder climb, vertical in-place loop)
+  // ------------------------------------------------------------------ climb (procedural IK wall climb, vertical in-place loop)
   {
-    const c = fromCMU(skel, '14_33', { from: 2.4, to: 6.6, heading: 'hips', name: 'climb' });
-    // remove the vertical climb trend (the game moves the zombie up the wall) and horizontal drift
-    const n = c.poses.length;
-    let st = 0, sy = 0, stt = 0, sty = 0;
-    c.poses.forEach((p, f) => { st += f; sy += p.root.y; stt += f * f; sty += f * p.root.y; });
-    const slope = (n * sty - st * sy) / (n * stt - st * st);
-    c.poses.forEach((p, f) => { p.root.y -= slope * f; });
-    removeRootMotion(c);
-    c.meta.climbSpeed = slope * c.fps;
-    smoothClip(c, 1);
-    const best = findLoop(skel, c, { minLen: 30, maxLen: 70, lo: 12, hi: n - 1 });
-    const L = makeLoop(c, best.s, best.e, 8);
-    L.name = 'climb';
-    fixSigns(L);
-    zombify(skel, L, { slump: 0, neck: 2, headTilt: 10, dropL: 0, hangL: 0, claw: 30, twitch: 0.6, sway: 0.5, seed: 39 });
-    // put the pelvis near standing height so the game positions it like the other clips
-    const y0 = L.poses.reduce((a, p) => a + p.root.y, 0) / L.poses.length;
-    for (const p of L.poses) p.root.y += 0.9 - y0;
-    L.meta = { ...c.meta, speed: 0, climbSpeed: +(c.meta.climbSpeed).toFixed(3), source: 'CMU 14_33 climb ladder', notes: `in-place climbing loop (hands and feet on a ladder/wall in front, +Z). The game raises the zombie at climbSpeed m/s; feet are off the ground` };
-    out.climb = L;
+    const P = 1.4, V = 0.45, S = V * P; // cycle, climb speed, stroke per grip
+    const WALL_H = 0.4, WALL_F = 0.3; // wall distance in front of the pelvis for hands / toes
+    const climbBase = () => {
+      const p = skel.restPose();
+      p.root.set(0, 0.95, 0);
+      applyOffsets(skel, p, { spine_01: [4, 0, 0], spine_02: [6, 0, 0], spine_03: [4, 0, 0], neck_01: [-14, 0, 0], head: [-18, 0, 10], clavicle: [0, 0, 12] });
+      return p;
+    };
+    // limb height on the wall for phase ph (0..1): gripping (moving down with the wall) 70 %, reaching 30 %
+    const limb = (ph, top) => {
+      ph = ((ph % 1) + 1) % 1;
+      if (ph < 0.7) return { y: top - S * (ph / 0.7), off: 0 };
+      const u = (ph - 0.7) / 0.3;
+      return { y: top - S + S * smooth(u), off: Math.sin(u * Math.PI) };
+    };
+    const c = proc(skel, {
+      name: 'climb', dur: P, loop: true, base: climbBase,
+      layers: [(t, pose) => {
+        const ph = t / P;
+        const a = ph * Math.PI * 2;
+        // weight shifts towards the gripping hand, pelvis bobs with each pull
+        applyOffsets(skel, pose, {
+          pelvis: [0, Math.sin(a) * 6, Math.sin(a) * 4],
+          spine_02: [0, -Math.sin(a) * 6, -Math.sin(a) * 4],
+          head: [loopNoise(t, P, 2, 3) * 4, -Math.sin(a) * 8 + loopNoise(t, P, 3, 5) * 5, 0],
+          root: [Math.sin(a) * 0.03, Math.cos(a * 2) * 0.025, 0],
+        });
+        let fk = skel.fk(pose);
+        for (const s of ['l', 'r']) {
+          const sg = s === 'l' ? 1 : -1;
+          const h = limb(ph + (s === 'l' ? 0 : 0.5), 1.98);
+          const tgt = new THREE.Vector3(sg * 0.24, h.y, WALL_H - 0.16 * h.off);
+          const pole = new THREE.Vector3(sg * 0.8, -0.4, -0.45).normalize();
+          const dir = new THREE.Vector3(sg * 0.15, 0.85, 0.5).normalize();
+          const hq = new THREE.Quaternion().setFromUnitVectors(skel.restDir(skel.i(`hand_${s}`)), dir).multiply(skel.restWorldQ[skel.i(`hand_${s}`)]);
+          twoBoneIK(skel, pose, ARM(skel, s), tgt, pole, hq, fk);
+          fk = skel.fk(pose);
+          // diagonal gait: the left foot moves with the right hand
+          const f = limb(ph + (s === 'l' ? 0.5 : 0) + 0.08, 0.86);
+          const ft = new THREE.Vector3(sg * 0.17, f.y + 0.07 * f.off, WALL_F - 0.14 - 0.14 * f.off);
+          const kp = new THREE.Vector3(sg * 0.6, 0.1, 1).normalize();
+          const fq = new THREE.Quaternion().setFromEuler(new THREE.Euler((10 - 25 * f.off) * DEG, 0, 0)).multiply(skel.restWorldQ[skel.i(`foot_${s}`)]);
+          twoBoneIK(skel, pose, LEG(skel, s), ft, kp, fq, fk);
+          fk = skel.fk(pose);
+        }
+      }],
+      post: (t, pose) => fingerCurl(skel, pose, 'both', 50, { thumb: 25, spread: 8 }),
+    });
+    zombify(skel, c, { slump: 0, neck: 0, headTilt: 8, dropL: 0, hangL: 0, claw: 0, twitch: 0.6, sway: 0.4, seed: 39 });
+    c.meta.speed = 0;
+    c.meta.climbSpeed = V;
+    c.meta.source = 'procedural';
+    c.meta.notes = `in-place wall-climbing loop: hand-over-hand with a diagonal leg gait on a wall ~0.4 m in front (+Z); the game raises the zombie at climbSpeed m/s (planted hands/feet slide down at exactly that speed); feet are off the ground`;
+    out.climb = c;
   }
 
   // ------------------------------------------------------------------ eat (crouched feeding loop)

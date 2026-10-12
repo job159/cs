@@ -9,6 +9,9 @@ parentPort.on('message', (m) => {
     if (m.cmd === 'atlases') {
       K.setAtlases(m.atlases);
       parentPort.postMessage({ ok: true });
+    } else if (m.cmd === 'post') {
+      K.setPost(m.job);
+      parentPort.postMessage({ ok: true });
     } else if (m.cmd === 'run') {
       const counter = new Int32Array(m.counter);
       const fn = K.kernels[m.kernel];

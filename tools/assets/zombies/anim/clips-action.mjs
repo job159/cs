@@ -112,17 +112,17 @@ export function buildActions(skel, only, loco) {
   // ------------------------------------------------------------------ bite (grab + bite + tear)
   out.bite = A('bite', 1.8, [
     { t: 0 },
-    { t: 0.28, upperarm: [-68, 0, -26], lowerarm: [-40, 0, 0], spine_01: [-8, 0, 0], spine_02: [-12, 0, 0], spine_03: [-8, 0, 0], root: [0, -0.03, 0.06], head: [-14, 0, 0], footR: [0, 0.05, 0.08] },
+    { t: 0.28, upperarm_l: [-68, 0, -26], upperarm_r: [-50, 0, -62], lowerarm: [-40, 0, 0], spine_01: [-8, 0, 0], spine_02: [-12, 0, 0], spine_03: [-8, 0, 0], root: [0, -0.03, 0.06], head: [-14, 0, 0], footR: [0, 0.05, 0.08] },
     { t: 0.4, footR: [0, 0, 0.14] },
-    { t: 0.46, upperarm: [-52, 0, -30], lowerarm: [-100, 0, 0], spine_01: [-5, 0, 0], spine_02: [-8, 0, 0], spine_03: [-5, 0, 0], neck_01: [-12, 0, 0], head: [-24, 0, 0], root: [0, -0.05, 0.08] },
+    { t: 0.46, upperarm_l: [-52, 0, -30], upperarm_r: [-38, 0, -64], lowerarm: [-100, 0, 0], spine_01: [-5, 0, 0], spine_02: [-8, 0, 0], spine_03: [-5, 0, 0], neck_01: [-12, 0, 0], head: [-24, 0, 0], root: [0, -0.05, 0.08] },
     { t: 0.62, neck_01: [18, 0, 0], head: [20, 0, 8], spine_01: [0, 0, 0], spine_02: [2, 0, 0], spine_03: [2, 0, 0], root: [0, -0.07, 0.11] },
     { t: 0.8, neck_01: [16, 10, 0], head: [16, 24, 12] },
     { t: 0.95, neck_01: [16, -8, 0], head: [20, -20, 2] },
     { t: 1.1, neck_01: [12, 6, 0], head: [12, 18, 10] },
-    { t: 1.32, neck_01: [-8, 0, 0], head: [-14, 0, 6], spine_01: [-3, 0, 0], spine_02: [-4, 0, 0], spine_03: [-3, 0, 0], upperarm: [-45, 0, -24], lowerarm: [-70, 0, 0], root: [0, -0.04, 0.08] },
+    { t: 1.32, neck_01: [-8, 0, 0], head: [-14, 0, 6], spine_01: [-3, 0, 0], spine_02: [-4, 0, 0], spine_03: [-3, 0, 0], upperarm_l: [-45, 0, -24], upperarm_r: [-32, 0, -50], lowerarm: [-70, 0, 0], root: [0, -0.04, 0.08] },
     { t: 1.5, footR: [0, 0.05, 0.06] },
     { t: 1.62, footR: [0, 0, 0] },
-    { t: 1.8, neck_01: [0, 0, 0], head: [0, 0, 0], spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], upperarm: [0, 0, 0], lowerarm: [0, 0, 0], root: [0, 0, 0] },
+    { t: 1.8, neck_01: [0, 0, 0], head: [0, 0, 0], spine_01: [0, 0, 0], spine_02: [0, 0, 0], spine_03: [0, 0, 0], upperarm_l: [0, 0, 0], upperarm_r: [0, 0, 0], lowerarm: [0, 0, 0], root: [0, 0, 0] },
   ], { layers: [clawLayer(env([[0, 0], [0.25, 15], [0.38, 65], [1.35, 60], [1.7, 0]])), shakeLayer(['head', 'neck_01'], 5, 12, env([[0.6, 0], [0.7, 1], [1.2, 1], [1.3, 0]]), 4)] });
   out.bite.meta.events = { grab: 0.3, hit: 0.62 };
   out.bite.meta.notes = 'keyframed: grab with both hands, pull in, bite and tear (head shakes)';

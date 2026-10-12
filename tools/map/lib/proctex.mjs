@@ -610,6 +610,10 @@ export const SETS = {
   } },
 };
 
+// Tintable clean painted metal (vehicles, signs, truck boxes): same generator as the stand-in 'metal_painted'
+// (which is replaced by a Poly Haven photoscan) under its own id so both can coexist.
+SETS.paint_metal = SETS.metal_painted;
+
 // ---------------------------------------------------------------- output
 
 export const GENERATOR_VERSION = 3;

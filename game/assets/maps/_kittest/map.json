@@ -3,7 +3,7 @@
  "name": "套件測試街角",
  "nameEn": "Kit Test Corner",
  "version": 1,
- "built": "2026-10-12T09:36:08.627Z",
+ "built": "2026-10-12T09:45:02.601Z",
  "bounds": [
   -34,
   -2,
@@ -16,12 +16,12 @@
  "chunk": 40,
  "sun": {
   "dir": [
-   -0.55,
-   0.38,
-   -0.74
+   -0.52,
+   0.48,
+   -0.71
   ],
-  "color": "#ffc28c",
-  "intensity": 2.2,
+  "color": "#ffc896",
+  "intensity": 3.4,
   "shadow": {
    "mapSize": 2048,
    "extent": 40
@@ -34,8 +34,8 @@
    "2k": "../common/hdri/kloppenheim_01_puresky_2k.hdr"
   },
   "rotation": 0,
-  "intensity": 0.65,
-  "backgroundIntensity": 0.9,
+  "intensity": 0.5,
+  "backgroundIntensity": 0.75,
   "backgroundBlur": 0
  },
  "fog": {
@@ -473,14 +473,13 @@
   "frame_dark": {
    "color": "#2d2f31",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "rough": 0.85,
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "glass_dirty": {
    "color": "#3a3a33",
@@ -559,15 +558,14 @@
   "steel": {
    "color": "#8d9094",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
-   "rough": 0.8,
-   "metal": 1,
+   "rough": 0.75,
+   "metal": 0.8,
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "wood_planks": {
    "color": "#ffffff",
@@ -605,36 +603,33 @@
   "sign_green": {
    "color": "#2e6a3c",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "frame_white": {
    "color": "#d9d6cf",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "rough": 0.9,
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "sign_red": {
    "color": "#a32722",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "lamp_warm": {
    "color": "#fff3dc",
@@ -647,13 +642,12 @@
   "sign_blue": {
    "color": "#284f86",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "roof_tar": {
    "color": "#ffffff",
@@ -868,13 +862,12 @@
   "sign_white": {
    "color": "#e6e3dc",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "car_paint_worn": {
    "color": "#ffffff",
@@ -940,9 +933,14 @@
   },
   "car_paint": {
    "color": "#ffffff",
-   "rough": 0.38,
-   "metal": 0.35,
-   "env": 1,
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "rough": 0.55,
+   "metal": 0.4,
+   "env": 1.1,
    "surf": "metal",
    "lm": 1
   },
@@ -970,16 +968,15 @@
    "lm": 0,
    "cast": false
   },
-  "metal_worn": {
+  "paint_metal": {
    "color": "#ffffff",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "lamp_amber": {
    "color": "#ffb040",
@@ -1003,16 +1000,25 @@
   "sign_yellow": {
    "color": "#d6a822",
    "maps": {
-    "diff": "../common/metal_worn_diff.jpg",
-    "nor": "../common/metal_worn_nor.jpg",
-    "arm": "../common/metal_worn_arm.jpg"
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
    },
    "surf": "metal",
-   "lm": 1,
-   "res": "1k"
+   "lm": 1
   },
   "billboard": {
    "color": "#b9b2a2",
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "surf": "metal",
+   "lm": 1
+  },
+  "metal_worn": {
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/metal_worn_diff.jpg",
     "nor": "../common/metal_worn_nor.jpg",
@@ -1217,7 +1223,7 @@
   "lightmap": {
    "texels": 285778,
    "atlases": 1,
-   "seconds": 27
+   "seconds": 31
   }
  }
 }

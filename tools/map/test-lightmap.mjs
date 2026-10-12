@@ -133,11 +133,27 @@ export function buildTown(size = 200) {
       parts[k].push(geo);
     };
     add('walk', L, 0.15, L, x0 + L / 2, 0, z0 + L / 2);
-    // 2 x 2 buildings per block, each a hollow shell with window holes on the street sides
+    // 2 x 2 buildings per block: one enterable hollow shell with window holes and floors, three closed volumes
+    // with proud window frames and a roof parapet (like most CS / CSO town blocks)
     for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
       const w = 11 + rnd() * 3, d = 11 + rnd() * 3, floors = 1 + Math.floor(rnd() * 3), h = floors * 3.2;
       const cx = x0 + 2 + i * (L / 2) + w / 2, cz = z0 + 2 + j * (L / 2) + d / 2;
       const k = rnd() < 0.5 ? 'brick' : 'plaster', t = 0.3;
+      if ((i + j * 2 + bx + bz) % 4 !== 0) {
+        add(k, w, h, d, cx, 0.15, cz);
+        add('roof', w + 0.3, 0.6, d + 0.3, cx, 0.15 + h, cz);
+        for (let f = 0; f < floors; f++) {
+          const y = 0.15 + f * 3.2 + 0.9;
+          for (const [len, alongX, off] of [[w, true, d / 2], [w, true, -d / 2], [d, false, w / 2], [d, false, -w / 2]]) {
+            const nwin = Math.max(1, Math.floor(len / 3));
+            for (let q = 0; q < nwin; q++) {
+              const c = -len / 2 + (q + 0.5) * (len / nwin), o2 = off + Math.sign(off) * 0.04;
+              if (alongX) add('crate', 1.3, 1.6, 0.08, cx + c, y, cz + o2); else add('crate', 0.08, 1.6, 1.3, cx + o2, y, cz + c);
+            }
+          }
+        }
+        continue;
+      }
       // walls with window columns: piers + spandrels per floor
       const facade = (len, alongX, off) => {
         const nwin = Math.max(1, Math.floor(len / 3));

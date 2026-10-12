@@ -1,0 +1,149 @@
+# 殭屍角色轉檔管線 ZOMBIE PIPELINE
+
+MakeHuman / MPFB2 的 CC0 資產 → 寫實殭屍 `game/assets/zombies/<type>.glb`（+ `<type>_lod1.glb`）。
+全部是自己寫的 Node ES module（不使用 MakeHuman AGPL / MPFB2 GPL 程式碼），只讀它們的開放資料格式。
+動作庫 `anims.glb` 由另一條管線（`tools/assets/zombies/anim/`）產生，兩者只透過下面的「執行期合約」溝通。
+
+```
+node tools/assets/zombies/build.mjs walker_a        # 建一種（LOD0 + LOD1，約 1.5–3 分鐘，RAM < 600 MB）
+node tools/assets/zombies/build.mjs --all           # types/ 底下全部（檔名以 _ 開頭的略過）
+node tools/assets/zombies/build.mjs walker_a --nolod
+node tools/assets/zombies/inspect.mjs game/assets/zombies/walker_a.glb --extras   # 網格/材質/貼圖大小/extras
+```
+
+QA 檢視器（dev server `node scripts/dev.mjs` → http://127.0.0.1:5190）：
+
+| URL 參數（`index.html?view=zombie&id=walker_a…`） | 用途 |
+|---|---|
+| `grid=1` | 2×2：正面、3/4、側面、背面 |
+| `cam=face` / `upper` / `feet`，`yaw=`、`pitch=` | 特寫與角度 |
+| `lod=1` | 看 `_lod1.glb` |
+| `anim=walk_a&t=0.25`（`play=1` 連續播放） | 從 `anims.glb` 取 clip，經 `zretarget.js` 對齊後擺到該時間點 |
+| `wpose=test` | 蒙皮壓力測試姿勢（舉手、彎肘、抬腿深蹲、轉身）；`wpose=bone:x,y,z;…` 以**世界軸**旋轉（度） |
+| `pose=bone:x,y,z;…` | 以骨骼**區域軸**旋轉（Blender 慣例：Y 沿骨頭） |
+| `noOffsets=1` | 不套用 `extras.poseOffsets`（例如駝背） |
+| `seg=1`、`bones=1`、`wire=1` | 斷肢分段著色、骨架、線框 |
+
+截圖：`node tools/shot.mjs "http://127.0.0.1:5190/index.html?view=zombie&id=walker_a&grid=1" --w 1280 --h 1280 --out captures/z.png --wait 1500`
+
+---
+
+## 1. 執行期合約（遊戲端只依賴這些）
+
+- **骨架**：MPFB2 `game_engine` 53 骨（UE Mannequin 命名：`Root`, `pelvis`, `spine_01..03`, `neck_01`, `head`,
+  `clavicle_*`, `upperarm_*`, `lowerarm_*`, `hand_*`, 手指 `thumb/index/middle/ring/pinky_01..03_*`, `thigh_*`, `calf_*`,
+  `foot_*`, `ball_*`）。公尺、+Y 上、角色面向 +Z，原點在兩腳之間的地面。
+  - `Root`：原點、**單位旋轉**（與 `anims.glb` 相同）。其餘骨頭的 rest frame 依 Blender 慣例：區域 +Y 由 head 指向 tail，
+    X/Z 由 rig JSON 的 roll 決定；位置在**變形後**的 base mesh 上重新計算（每種體型骨長不同）。
+  - 動作 clip 直接套用即可（`anims.glb` 用同一慣例，只是預設體型）；要精確貼合（腳不穿地、骨長差異）就用
+    `game/src/tools/zretarget.js` 的 `retargetClips(clips, animsScene, characterScene)`——它依兩邊 rest pose 對每根骨頭做
+    共軛修正，並把 pelvis 位移按骨盆高度比例縮放。
+- **檔案**：`<type>.glb` 一個 skin、所有網格都綁同一副骨架；LOD0 ≤ 9k 三角形；`<type>_lod1.glb` ≤ 2.5k（同 UV 佈局，
+  可共用 LOD0 材質）。
+- **網格**（節點名＝部位）：`body`、衣物（例：`worksuit`、`shoes`）、`eyes`、`teeth`、`eyebrows`、`hair`…
+  屬性：`POSITION, NORMAL, TEXCOORD_0, JOINTS_0 (u8), WEIGHTS_0, _SEG`。
+- **材質名＝角色**：`skin`、`cloth`、`eye`、`teeth`、`hair`、`gear`、`gore`（同名可重複，`material.userData.role` 也有）。
+  貼圖嵌入：albedo（JPEG；有挖洞的布料/頭髮是 PNG + `alphaMode: MASK`）、normal（OpenGL/glTF 慣例）、
+  ORM（R=AO, G=roughness, B=metal）。布料 `doubleSided`。
+- **`_seg`**（three.js 屬性名 `_seg`，glTF `_SEG` unsigned byte，依 glTF 對齊規則 4-byte stride → 讀取請用
+  `geometry.getAttribute('_seg').getX(i)`）：該頂點主導骨頭所屬斷肢段
+  `0 軀幹/骨盆/脊椎/鎖骨, 1 頭+頸, 2 upperarm_l, 3 lowerarm_l+hand_l(+手指), 4 upperarm_r, 5 lowerarm_r+hand_r, 6 thigh_l, 7 calf_l+foot_l+ball_l, 8 thigh_r, 9 calf_r+foot_r+ball_r`。
+  （分段取「各段權重總和最大者」，不是單一最大骨頭。）
+- **root extras**（`gltf.scene.userData`，根節點 `userData` 也有同一份）：
+  ```js
+  { type: 'walker_a', height: 1.812,                    // 頭頂高度（公尺）
+    hitboxes: { head: ['head', 0.107], neck: ['neck_01', r], chest: ['spine_03', r], spine: ['spine_01', r], pelvis: [...],
+                upperarm_l, lowerarm_l, hand_l, upperarm_r, lowerarm_r, hand_r, thigh_l, calf_l, foot_l, thigh_r, calf_r, foot_r },
+    capsules: { head: { bone, radius, length }, ... }   // 同上，加上骨頭長度（膠囊 = 骨頭 head→tail 線段 + 半徑）
+    segments: ['torso','head',...],                     // _seg 編號對照
+    poseOffsets: { spine_02: [7,0,0], ... },            // 選用：每幀在 mixer 之後疊加的區域 euler（度，XYZ）
+    archetype, gender, tris, lod }
+  ```
+  半徑 = 該骨主導頂點到骨頭線段距離的 80 百分位（含衣服）。
+
+## 2. 新增一種殭屍：`tools/assets/zombies/types/<type>.mjs`
+
+匯出 `async function build(lib)`，回傳 `{ human, parts, budget?, partBudget?, extras?, lod1? }`。範本就是
+`types/walker_a.mjs`。最小骨架：
+
+```js
+export async function build(lib) {
+  const opts = lib.merge('bloated', {                        // 體型預設 + 覆寫
+    macro: { gender: 1, age: 0.7, race: { african: 1 } },    // MakeHuman 巨集（0..1）
+    modifiers: { 'stomach-pregnant-decr-incr': 0.3 },        // MPFB2 target.json 的 modifier 名（-1..1）
+    expression: { 'mouth-open': 0.4 },                       // 表情單元，直接烘進 rest mesh（下巴無骨頭）
+  });
+  const h = await lib.Human.create(opts);
+  const body = await h.proxyBody('male1591');                // 或 'female1605'、'proxy741'
+  const shirt = await h.fit('clothes/male_casualsuit02', { name: 'shirt', role: 'cloth' });
+  const eyes = await h.fit('eyes/low-poly', { name: 'eyes', role: 'eye', hide: false });
+  const teeth = await h.fit('teeth/teeth_base', { name: 'teeth', role: 'teeth', hide: false });
+
+  const skin = lib.paintSkin(h, { base: await lib.texture('system', 'skins/old_african_male/old_darkskinned_male_diffuse.png', 2048),
+    pallor: 0.4, veins: 0.6, socket: 0.8, blood: { mouth: 1 }, wounds: [{ bone: 'spine_03', t: 0.5, dir: [0, 0, 1], r: 0.05 }] });
+  body.material = lib.material('skin', skin);
+  const cloth = lib.paintCloth(shirt, { human: h, base: await lib.texture(shirt.asset.textures.diffuse, 2048),
+    normal: shirt.asset.textures.normal && await lib.texture(shirt.asset.textures.normal, 1024),
+    grime: 0.7, fade: 0.4, blood: { collar: 0.8, splatter: 0.4 }, tear: { amount: 0.4 } });
+  shirt.material = lib.material('cloth', { ...cloth, alpha: cloth.alpha, doubleSided: true, pngBits: 6 });
+  h.hideCovered(body, (p) => cloth.holeAt(p));               // 衣服蓋住的皮膚刪掉，破洞下的留著
+  eyes.material = lib.material('eye', lib.paintEyes(await lib.texture('system', 'eyes/materials/brown_eye.png', 512), { style: 'glow', color: [1, 0.5, 0.1] }));
+  teeth.material = lib.material('teeth', { albedo: lib.grungeTexture(await lib.texture(teeth.asset.textures.diffuse, 512), { blood: 0.5 }) });
+  return { human: h, parts: [body, shirt, eyes, teeth], partBudget: { shirt: 4000, teeth: 400 },
+           extras: { poseOffsets: opts.poseOffsets }, lod1: { budget: 2500, drop: ['teeth', 'eyes'] } };
+}
+```
+
+### 2.1 `lib` 一覽
+
+| 名稱 | 說明 |
+|---|---|
+| `Human.create({macro, modifiers, expression})` | 變形 hm08 base mesh（macro：gender/age/muscle/weight/height/proportions/race；modifier 名照 MPFB2 `targets/target.json`，`l-`/`r-` 前綴指定單側，沒前綴的左右成對 category 會兩側一起套；直接寫 `'stomach/stomach-pregnant-incr'` 也可）、建骨架、算權重 |
+| `h.proxyBody(name)` | 低模身體 proxy（`male1591` ≈3.1k 三角、`female1605`、`proxy741` ≈1.5k）。`h.basePart()` = 高模 base mesh（≈27k，只建議拿來畫貼圖） |
+| `h.fit(folder, {name, role, hide})` | 任何 `.mhclo`/`.proxy` 資產（system pack 內資料夾：`clothes/*`、`hair/*`、`eyebrows/*`、`eyelashes/*`、`eyes/*`、`teeth/*`、`tongue/*`）。`hide:true` 把它的 `delete_verts` 記入 `h.hidden` |
+| `h.hideCovered(body, keepFn)` | 刪除被衣服完全蓋住的身體面；`keepFn(p)` 回 true 的位置保留（破洞） |
+| `h.jointPos('joint-l-eye')`、`h.skeleton.byName` | 錨點 |
+| `merge(...presets)` / `PRESETS` | `average`、`gaunt`、`bloated`、`muscular`、`hunched`（駝背 = `poseOffsets`，不改 rest pose，動作仍共用） |
+| `texture(pack, path, size)` / `texture(localFile, size)` | 讀貼圖並縮放（縮好的版本快取在 `src/cache/`，4096² 原檔只解一次） |
+| `paintSkin(h, o)` | 皮膚：`pallor`+`tint`（屍色）、`mottle`、`veins`、`bruises`、`socket`（眼窩發黑）、`lips`、`grime`、`blood{mouth,hands,splatter}`、`wounds[{bone,t,dir,r,kind:'bite'|'gash',depth}]`、`coveredDarken`（衣服下的皮膚變暗＋擦傷）、`bump`（灰階高度，例 sohh 殭屍皮膚）、`extra(P,N,c,state)` 自訂 → `{albedo, normal, orm}` |
+| `paintCloth(part, o)` | 布料：`fade`、`yellow`（白布泛黃）、`weave`、`grime`、`blood{collar,hands,splatter,edges}`、`tear{amount,scale,stretch,fray,where(P,N),threadColor}` → `{albedo, normal, orm, alpha, holeAt(p), removedFaces}`；完全撕掉的面直接刪除 |
+| `paintEyes(img, {style:'milky'|'dead'|'glow'|'bloodshot', color})` | 混濁／死灰／發光（附 `emissiveMap`，material 要給 `emissive:[1,1,1]`） |
+| `grungeTexture(img, o)`、`thinHair(part, img, {amount})` | UV 空間髒污/血跡/染色；頭髮禿塊（alpha 挖洞） |
+| `material(role, {albedo, normal, orm, alpha, doubleSided, emissive, emissiveMap, roughness, pngBits})` | GLB 材質描述；`pngBits:6` 讓大張 RGBA PNG 小 40% |
+
+所有程序化遮罩都在**3D rest 表面**上取樣（每個 texel 經 UV raster 找到所在三角形與重心座標），所以跨 UV 接縫連續，
+而且皮膚與衣服在同一個位置得到同一個值（`holeAt` 才能讓破洞下的皮膚剛好被保留）。
+
+### 2.2 預算與 LOD
+
+- `budget`（預設 9000）＝LOD0 總三角形；`partBudget` 先把指定部位用 meshoptimizer `simplifyWithAttributes`
+  （保留法線/UV 接縫）減到目標，剩下超出的再按比例壓（`extras.noSimplify` 的部位不動）。
+- LOD1：`lod1.drop` 的部位拿掉（預設 teeth、eyebrows），`lod1.partBudget`、總 `budget` 2500，貼圖縮 `texScale`（0.5）。
+- walker_a 參考：LOD0 8.8k（body 2.6k、worksuit 4.0k、shoes 0.65k、hair 0.75k、teeth 0.5k、eyes/brows 0.36k），4.8 MB；
+  LOD1 2.4k，1.4 MB。檔案大小大頭是挖洞布料的 2048² PNG（≈2.3 MB）。
+
+## 3. 內部流程（`tools/assets/zombies/lib/`）
+
+| 模組 | 內容 |
+|---|---|
+| `fetch.mjs` | 下載快取到 `src/`（git-ignore）。MPFB2 檔案走 raw GitHub；asset pack zip 讀 central directory 後用 HTTP Range 只抽需要的檔案（不下載 268 MB 整包）。記錄 `usage` 供 CREDITS |
+| `obj.mjs` | OBJ（保留原始頂點編號 + 每角 UV 編號 + group） |
+| `targets.mjs` | `.target.gz` 稀疏 delta；macro 權重 = 各變數分段線性權重的乘積（規則見 MPFB2 `macro.json`） |
+| `proxy.mjs` | `.proxy`/`.mhclo`：`pos = Σ wᵢ·V[refᵢ] + offset·scale`（scale 由 x/y/z_scale 參考頂點距離比得出）、`delete_verts` |
+| `rig.mjs` | 骨架：CUBE（joint 方塊重心）/MEAN 策略算關節，Blender `vec_roll_to_mat3` 數學求骨頭座標系，轉 glTF 軸；權重表；`boneSegment()` |
+| `mesh.mjs` | `Part`：權重/分段透過重心綁定從 base mesh 插值（取前 4 骨、正規化）；切 UV 接縫產生 GPU buffer |
+| `raster.mjs` | UV 空間光柵化（含 6–8 texel gutter），texel → 3D 位置/法線 |
+| `zombify.mjs`、`noise.mjs` | 上面那些 painter；Perlin/fBm/ridged/Worley |
+| `image.mjs` | pngjs + jpeg-js（純 JS）、面積縮放、高度圖→法線圖（Sobel，OpenGL 慣例） |
+| `export.mjs`、`glb.mjs` | 預算/減面、hitbox、自寫 GLB writer（JOINTS u8、_SEG stride 4、JPEG/PNG 內嵌） |
+| `credits.mjs` | 把 `usage` 合併進 `tools/assets/zombies/credits.json`，重寫 `docs/CREDITS.md` 的 zombie 區塊 |
+
+座標：MakeHuman 檔案是 decimeter、Y 上、面向 +Z；×0.1 並以 `joint-ground` 方塊重心為原點 → glTF。
+
+## 4. 已知限制 / 注意
+
+- 體型差異大的 type（bloated、muscular）直接套 `anims.glb` 會有輕微穿模/滑步；用 `retargetClips` 可校正骨長與骨盆高度，
+  但 IK 腳貼地要遊戲端做。
+- 嘴巴靠 expression target 烘進 rest mesh（game_engine 沒有下巴骨）；張太大會看到 proxy 頭內部，建議 `mouth-open` ≤ 0.6。
+- 挖洞布料是 alpha MASK（手機上比 blend 便宜，可以投影）；破洞邊緣的纖維細節在 2048 才看得出來。
+- sohh 殭屍皮膚原本是女性皮膚改的，男性角色臉部稍顯陰柔；換 `skins/*_male/*.png` 當 `base` 再加大 `pallor`/`mottle` 也能做出殭屍膚色。

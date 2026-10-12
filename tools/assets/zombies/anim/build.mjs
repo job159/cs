@@ -13,6 +13,7 @@ import { buildActions } from './clips-action.mjs';
 import { footMetrics, popMetrics } from './metrics.mjs';
 import { plotFeet } from './plot.mjs';
 import { writeCredits } from './credits.mjs';
+import { writeDocTable } from './doctable.mjs';
 
 export const CLIP_NAMES = ['idle', 'idle_b', 'walk_a', 'walk_b', 'walk_c', 'walk_limp', 'run', 'sprint',
   'attack_a', 'attack_b', 'attack_lunge', 'bite', 'hit_front', 'hit_back', 'hit_left', 'hit_right', 'stagger',
@@ -79,6 +80,6 @@ if (args.includes('--plot')) {
   const loco = clips.filter((c) => c.loop && c.meta.speed > 0.05);
   plotFeet(skel, loco, path.join(REPO, 'captures', 'anim', 'feet.png'), { W: 1600, scaleX: 300, scaleY: 400, rowH: 150 });
 }
-if (!only) writeCredits(clips);
+if (!only) { writeCredits(clips); writeDocTable(clips, meta); }
 fs.mkdirSync(path.join(REPO, 'captures', 'anim'), { recursive: true });
 fs.writeFileSync(path.join(REPO, 'captures', 'anim', 'build-report.json'), JSON.stringify(meta, null, 1));

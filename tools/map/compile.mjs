@@ -22,7 +22,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import * as THREE from 'three';
 import { createKit, readPropsManifest } from './lib/kit.mjs';
-import { readManifest, ROOT } from './lib/texlib.mjs';
+import { readManifest, ensureSets, ROOT } from './lib/texlib.mjs';
+import { MATERIALS } from './lib/materials.mjs';
 import { writeGLB } from './lib/glb.mjs';
 import { bakeNav } from './lib/navbake.mjs';
 
@@ -47,6 +48,8 @@ const DEFAULT_ENV = {
 
 async function main() {
   if (!fs.existsSync(SRC)) throw new Error(`no map sources at ${SRC}`);
+  // procedural stand-ins for any texture set the palette needs that was not fetched (tools/map/fetch.mjs)
+  ensureSets([...new Set(Object.values(MATERIALS).map((m) => m.set).filter(Boolean))], { log });
   const layoutFile = path.join(SRC, 'layout.mjs');
   const layout = fs.existsSync(layoutFile) ? await import(pathToFileURL(layoutFile).href) : {};
   const META = layout.META || {};

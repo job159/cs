@@ -285,3 +285,15 @@ export function fingerCurl(skel, pose, side, amount, { thumb = amount * 0.5, spr
   }
   return pose;
 }
+
+/** Inverse of applyOffsets for one bone: the [x, y, z] degree offset that turns rest into pose (left-side convention for _r bones). */
+export function poseOffset(skel, pose, name) {
+  const i = skel.i(name);
+  const p = skel.parent[i];
+  const Wp = p < 0 ? new THREE.Quaternion() : skel.restWorldQ[p];
+  const A = pose.q[i].clone().multiply(skel.restLocalQ[i].clone().invert());
+  const D = Wp.clone().multiply(A).multiply(Wp.clone().invert());
+  const e = new THREE.Euler().setFromQuaternion(D, 'ZXY');
+  const v = [e.x / DEG, e.y / DEG, e.z / DEG].map((x) => Math.round(x));
+  return name.endsWith('_r') ? [v[0], -v[1], -v[2]] : v;
+}

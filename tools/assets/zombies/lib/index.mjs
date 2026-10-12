@@ -23,7 +23,7 @@ export function material(role, o = {}) {
     color: o.color,
     roughness: o.roughness ?? (o.orm ? 1 : 0.7),
     metalness: o.metalness ?? (o.orm ? 1 : 0),
-    emissive: o.emissive, emissiveMap: o.emissiveMap || null,
+    emissive: o.emissive || (o.emissiveMap ? [1, 1, 1] : undefined), emissiveMap: o.emissiveMap || null,
     alphaMode: o.alpha ? 'MASK' : (o.alphaMode || 'OPAQUE'), alphaCutoff: o.alphaCutoff ?? 0.5,
     doubleSided: !!o.doubleSided,
     normalScale: o.normalScale,

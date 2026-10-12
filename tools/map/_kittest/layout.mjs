@@ -5,8 +5,8 @@ export const META = {
   bounds: [-34, -2, -34, 34, 30, 34], killY: -10, chunk: 40, lightmapResolution: 8,
 };
 export const ENV = {
-  sun: { dir: [-0.55, 0.38, -0.74], color: '#ffc28c', intensity: 2.2, angle: 1.0, shadow: { mapSize: 2048, extent: 40 } },
-  sky: { hdri: 'kloppenheim_01_puresky', rotationDeg: 0, envIntensity: 0.65, backgroundIntensity: 0.9 },
+  sun: { dir: [-0.52, 0.48, -0.71], color: '#ffc896', intensity: 3.4, angle: 1.0, shadow: { mapSize: 2048, extent: 40 } },
+  sky: { hdri: 'kloppenheim_01_puresky', rotationDeg: 0, envIntensity: 0.5, backgroundIntensity: 0.75 },
   fog: { color: '#8c8883', density: 0.009 },
   exposure: 1.0,
 };

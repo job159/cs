@@ -5,6 +5,12 @@
   "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
   "license": "CC0-1.0"
  },
+ "mpfb2:rigs/standard": {
+  "asset": "rigs/standard",
+  "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/rigs/standard",
+  "author": "MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier)",
+  "license": "CC0-1.0"
+ },
  "mpfb2:targets/arms": {
   "asset": "targets/arms",
   "source": "https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/arms",

@@ -30,7 +30,8 @@ export async function runViewer(renderer, params) {
 
   const path = kind === 'weapon' ? `weapons/${id}.glb` : `${kind}/${id}.glb`;
   const model = await instanceGLB(path);
-  applyHardSurface(model, { wear: +(params.get('wear') || 1) });
+  const fin = params.get('finish');
+  applyHardSurface(model, { wear: +(params.get('wear') || 1), finish: fin ? { id: fin, seed: +(params.get('seed') || 0), wear: +(params.get('fwear') || 0.3) } : undefined, melee: id === 'knife' });
   // centre on bounds
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());

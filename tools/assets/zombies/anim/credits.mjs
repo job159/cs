@@ -22,7 +22,7 @@ retargeter; no MPFB2 / MakeHuman code). Sources are downloaded by \`tools/assets
 | [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu) - BVH conversion by Bruce Hahne (cgspeed), mirror [una-dinosauria/cmu-mocap](https://github.com/una-dinosauria/cmu-mocap) | Carnegie Mellon University | CMU mocap terms (free to use, modify and redistribute, also commercially; the motion data itself may not be resold) | ${by(/CMU/)} |
 | [MPFB2](https://github.com/makehumancommunity/mpfb2) \`rig.game_engine.json\`, \`weights.game_engine.json\`, \`base.obj\` (assets only) | MakeHuman community | CC0 1.0 | skeleton rest pose, preview mannequin (dev only) |
 
-CMU trials: 104_41 ZombieWalk, 120_22 Zombie, 91_24 HurtLegWalk, 90_18 RugPullFall, 14_33 climb ladder.
+CMU trials: 104_41 ZombieWalk, 120_22 Zombie, 91_24 HurtLegWalk, 90_18 RugPullFall.
 Keyframed clips (${by(/^procedural$/)}) and all retargeting / zombie post-processing are original work (MIT).
 
 > The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.

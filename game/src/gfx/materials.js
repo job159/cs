@@ -7,6 +7,7 @@
 //     gun never clips into walls while still being lit/shadowed by the real scene.
 import * as THREE from 'three';
 import { detailTextures } from './detail.js';
+import { finishTextures, finishUniforms, FINISH_PARS, FINISH_MAIN, PAINTABLE, PAINTABLE_MELEE } from './finishes.js';
 
 const C = (hex) => new THREE.Color(hex);
 
@@ -108,6 +109,19 @@ vec3 triNormal(sampler2D t, vec3 p, vec3 n, vec3 w) {
 `;
 
 function patch(shader, def, opts) {
+  const fin = opts.finishU;
+  if (fin) {
+    const ft = finishTextures();
+    shader.defines = shader.defines || {};
+    shader.defines.FINISH = '';
+    Object.assign(shader.uniforms, {
+      fType: { value: fin.type }, fC0: { value: fin.c0 }, fC1: { value: fin.c1 }, fC2: { value: fin.c2 }, fC3: { value: fin.c3 },
+      fRough: { value: fin.rough }, fMetal: { value: fin.metal }, fSeedRot: { value: fin.seedRot }, fFadeAng: { value: fin.fadeAng },
+      fGem: { value: fin.gem }, fIrid: { value: fin.irid }, fRow: { value: fin.row }, fSeedOff: { value: fin.seedOff },
+      fBoxMin: { value: opts.box?.min || new THREE.Vector3(-0.05, -0.15, -0.5) }, fBoxMax: { value: opts.box?.max || new THREE.Vector3(0.05, 0.15, 0.5) },
+      tMarble: { value: ft.marble }, tRamp: { value: ft.ramp },
+    });
+  }
   const tex = detailTextures();
   const wear = def.wear || {};
   const wood = def.wood;
@@ -117,8 +131,8 @@ function patch(shader, def, opts) {
     tWood: { value: tex.wood },
     dScale: { value: def.dScale ?? 40 },
     dStr: { value: def.dStr ?? 0.0 },
-    wearColor: { value: C(wear.color || def.color) },
-    wearMetal: { value: wear.metal ?? def.metal },
+    wearColor: { value: fin ? C('#d6d8db') : C(wear.color || def.color) },
+    wearMetal: { value: fin ? 1 : wear.metal ?? def.metal },
     wearRough: { value: wear.rough ?? def.rough },
     wearAmount: { value: (wear.amount ?? 0.6) * (opts.wear ?? 1) },
     cavityAmt: { value: def.cavity ?? 0.6 },
@@ -145,7 +159,7 @@ function patch(shader, def, opts) {
       gl_Position.z = gl_Position.z * 0.08 - 0.92 * gl_Position.w;`);
   }
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', '#include <common>\n' + FRAG_PARS)
+    .replace('#include <common>', '#include <common>\n' + FRAG_PARS + (fin ? FINISH_PARS : ''))
     .replace('#include <map_fragment>', /* glsl */`#include <map_fragment>
       vec3 tw = triW(vObjNor);
       vec3 tp = vObjPos * dScale;
@@ -164,6 +178,8 @@ function patch(shader, def, opts) {
         diffuseColor.rgb = wc;
       }
       diffuseColor.rgb *= 0.92 + 0.16 * partR;           // tiny per-part tint variation
+      float finR = -1.0, finM = -1.0;
+      ${fin ? FINISH_MAIN : ''}
       float edge = vBake.g;
       float chip = grunge.a;
       float wearMask = smoothstep(0.5, 0.72, edge * wearAmount * 1.2 + (chip - 0.5) * 0.65 + grunge.g * 0.12 * wearAmount);
@@ -173,9 +189,11 @@ function patch(shader, def, opts) {
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55 + dirt * 0.45, clamp(cav * (0.5 + grunge.b), 0.0, 0.85));
       `)
     .replace('#include <roughnessmap_fragment>', /* glsl */`#include <roughnessmap_fragment>
+      if (finR >= 0.0) roughnessFactor = finR;
       roughnessFactor = mix(roughnessFactor, wearRough, wearMask);
       roughnessFactor = clamp(roughnessFactor + (grunge.r - 0.5) * 0.18 + cav * 0.25, 0.04, 1.0);`)
     .replace('#include <metalnessmap_fragment>', /* glsl */`#include <metalnessmap_fragment>
+      if (finM >= 0.0) metalnessFactor = finM;
       metalnessFactor = mix(metalnessFactor, wearMetal, wearMask);`)
     .replace('#include <normal_fragment_maps>', /* glsl */`#include <normal_fragment_maps>
       if (dStr > 0.0) {
@@ -202,7 +220,11 @@ const cache = new Map();
  * Unknown keys fall back to steel.
  */
 export function hardSurface(key, opts = {}) {
-  const ck = key + (opts.viewmodel ? ':vm' : '') + ':' + (opts.wear ?? 1) + ':' + (opts.tint || '');
+  // finishes (skins) only apply to paintable parts
+  const paint = opts.finish && (opts.melee ? PAINTABLE_MELEE : PAINTABLE).has(key);
+  if (paint && !opts.finishU) opts = { ...opts, finishU: finishUniforms(opts.finish.id, opts.finish.seed), wear: opts.finish.wear ?? 0.4 };
+  if (!paint && opts.finishU) opts = { ...opts, finishU: null };
+  const ck = key + (opts.viewmodel ? ':vm' : '') + ':' + (opts.wear ?? 1) + ':' + (opts.tint || '') + (paint ? ':' + opts.finish.id + ':' + (opts.finish.seed || 0) + ':' + (opts.boxKey || '') : '');
   if (cache.has(ck)) return cache.get(ck);
   const def = MATS[key] || MATS.steel;
   const m = new THREE.MeshStandardMaterial({
@@ -214,7 +236,7 @@ export function hardSurface(key, opts = {}) {
   });
   if (def.emissive) { m.emissive = C(def.emissive); m.emissiveIntensity = def.glow; }
   m.onBeforeCompile = (shader) => { patch(shader, def, opts); m.userData.shader = shader; };
-  m.customProgramCacheKey = () => (opts.viewmodel ? 'hsvm' : 'hs');
+  m.customProgramCacheKey = () => (opts.viewmodel ? 'hsvm' : 'hs') + (paint ? 'F' : '');
   m.userData.preset = key;
   cache.set(ck, m);
   return m;
@@ -222,6 +244,13 @@ export function hardSurface(key, opts = {}) {
 
 /** Replaces the materials of a loaded asset (meshes named "<part>:<preset>") with hard-surface presets. */
 export function applyHardSurface(root, opts = {}) {
+  if (opts.finish && !opts.box) {
+    root.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+    const box = new THREE.Box3();
+    root.traverse((o) => { if (o.isMesh) { o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld))); } });
+    opts = { ...opts, box, boxKey: box.min.toArray().concat(box.max.toArray()).map((v) => v.toFixed(2)).join(',') };
+  }
   root.traverse((o) => {
     if (!o.isMesh) return;
     const key = o.userData.mat || o.material?.name || 'steel';
