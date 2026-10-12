@@ -85,8 +85,31 @@ frame：`{"f": 發送者 id, "m": [item, ...]}`，item 用 `to`（某 id 或 `*`
 
 ```
 node tools/build-net-test.mjs     # 打包 game/net-test.js；開 http://127.0.0.1:5190/net-test.html 多分頁手動測
-node tools/net-test.mjs           # 自動：probe / p2p / relay / mixed 四個情境（約 8–10 分鐘）
-node tools/net-test.mjs --only relay
+node tools/net-test.mjs           # 自動：probe / p2p / relay / mixed 四個情境（約 4 分鐘）
+node tools/net-test.mjs --only relay --broker 0   # 只跑某些情境；把房間固定在 BROKERS[0]
 ```
 
-自動測試在一個 headless Edge 裡開最多 4 個分頁（1 房主＋3 客人），和 `tools/shot.mjs` 共用同一個瀏覽器數量上限（`cf-shot-locks`），結束（含失敗、Ctrl+C）一定 `taskkill /T` 整個瀏覽器行程樹。涵蓋：公開列表、3 人同時加入、滿房／版本不同／錯碼／找不到、可靠訊息順序（300 則 × 3 條串流 × 3 人）、60 Hz 不可靠串流、RTT、`setMeta`、P2P 中途斷線→中繼→恢復 P2P（訊息不丟不亂序）、客人離開、踢人、房主關房、強制中繼與發送頻率上限、混合傳輸、分頁直接被關（客人／房主當機）。
+自動測試在一個 headless Edge 行程裡開最多 4 個分頁（1 房主＋3 客人，各自一個視窗），和 `tools/shot.mjs` 共用同一個瀏覽器數量上限（`cf-shot-locks`），結束（含失敗、Ctrl+C）一定 `taskkill /T` 整個瀏覽器行程樹。涵蓋：公開列表、3 人同時加入、滿房／版本不同／錯碼／找不到、可靠訊息順序（300 則 × 3 條串流 × 3 人）、60 Hz 不可靠串流、RTT、`setMeta`、P2P 中途斷線→中繼→恢復 P2P（訊息不丟不亂序）、客人離開、踢人、房主關房、強制中繼與發送頻率上限、混合傳輸、分頁直接被關（客人／房主當機）。
+
+## 實測（2026-10-12，台灣，同一台機器上的 headless Edge 分頁，真 broker）
+
+| 項目 | 結果 |
+|---|---|
+| broker：瀏覽器 publish→自己收到的往返 | EMQX 170–300 ms、HiveMQ 260–300 ms、Mosquitto 290–310 ms；連線時間 1–4 秒（HiveMQ 的 IPv6 位址會拒絕 8884 埠，偶爾拖到 8–9 秒） |
+| P2P（DataChannel）RTT | link ping 2–3 ms、應用層 echo 中位數約 2 ms（同機 loopback；實際網路上約等於兩支手機間的網路延遲） |
+| 中繼（MQTT relay）RTT | link ping 約 590 ms、echo 中位數 590–650 ms（HiveMQ）；Node 直接跑 EMQX 約 480–530 ms。約等於「客戶端↔broker 往返」×2 |
+| 加入時間 | 3–7 秒（broker 連線＋讀 retained＋hello/welcome＋P2P 打通）；DataChannel 在 welcome 後 0.7–2 秒打通 |
+| 關房／離開／踢人通知 | 0.3 秒左右（P2P）／0.3–1.5 秒（中繼） |
+| 當機偵測（分頁直接被關） | P2P 客人 3.7–5.7 秒、中繼客人約 10 秒、房主 3–7.5 秒（客人收到 `host-left`，列表同時被遺囑清掉） |
+| 中繼發送頻率 | 每條連線最多 8 publish/秒（房主＋3 客人皆實測 8） |
+
+`node tools/net-test.mjs` 全部 30 項通過（probe、p2p、relay、mixed；連續兩輪）。注意：同一視窗裡的背景分頁計時器會被節流，中繼延遲會被放大好幾倍，所以測試把每個分頁開在自己的視窗。
+
+## 已知限制
+
+- 沒有 TURN：雙方都在對稱型 NAT（常見於行動網路 CGNAT）時只能走中繼，RTT 約 0.5–1 秒，且主機→客人的不可靠快照實際上限約 8 次/秒（同 type 合併）。遊戲端應以插值／預測吸收。
+- 公用 broker 不保證可用：今天實測 EMQX 曾一段時間拒絕連線（server unavailable），Mosquitto 的 WSS 時好時壞。建房會挑可用且最快的；但房間綁在一個 broker 上，該 broker 中途掛掉時，中繼客人會斷線（P2P 客人照玩，房主持續重連）。
+- 公用 broker 上任何人都能讀寫我們的主題：中繼資料只有到 broker 的 TLS，內容會檢查格式但沒有驗證身分；DataChannel 本身是 DTLS 端對端加密（但信令經過公用 broker）。
+- 沒有房主轉移：房主離開，房間就結束。
+- App 切到背景時 WebView 會暫停 JS，超過 10 秒就會被判定離線。
+- `listRooms` 一次掃描在某個 broker 很慢時最久要 13 秒；大廳畫面請用 `watchRooms`。房間列表的 60 秒新鮮度依賴雙方時鐘大致正確。

@@ -40,7 +40,12 @@ export class Game {
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */
   hitStop(sec) { this.hitStopT = Math.max(this.hitStopT, sec); }
   noise() {}
-  damagePlayer(amount, opts) { return this.status?.damage(amount, opts) ?? 0; }
+  /** Damage a player: the local one directly, remote ones through the network (host only). */
+  damagePlayer(amount, opts = {}) {
+    const target = opts.player;
+    if (target && target.id !== undefined && target.id !== this.localId) { this.net?.sendPlayerDamage(target.id, amount, opts); return amount; }
+    return this.status?.damage(amount, opts) ?? 0;
+  }
   playerStatus(kind, time, value) { if (kind === 'slow') this.status?.applySlow(time, value); }
   get playerDead() { return !this.status || !this.status.alive; }
   onZombieKilled(z, info) { this.match?.onKill(z, info); }
@@ -106,6 +111,7 @@ export class Game {
     this.status?.update(dt);
     this.zombies?.update(dt);
     this.match?.update(dt);
+    this.net?.update(dt);
     if (this.status?.downed && this.match && this.match.selfRevives > 0) {
       this.hud?.setPrompt(`按 E 使用腎上腺素自救（剩 ${this.match.selfRevives}）`);
       if (s.pressed.use) { this.match.selfRevives--; this.status.revive(40); this.hud?.setPrompt(''); }

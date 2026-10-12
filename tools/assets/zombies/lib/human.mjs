@@ -70,6 +70,7 @@ export class Human {
     const dm = new Float32Array(h.baseObj.positions);
     for (const [t, w] of macroTargets(o.macro || {})) applyTarget(dm, await loadTarget(t), w);
     for (const [name, v] of Object.entries(o.modifiers || {})) {
+      if (!v) continue;
       for (const [t, w] of await resolveModifier(name, v)) applyTarget(dm, await loadTarget(t), w);
     }
     for (const [unit, w] of Object.entries(o.expression || {})) applyTarget(dm, await loadTarget(expressionTarget(unit, o.expressionRace)), w);

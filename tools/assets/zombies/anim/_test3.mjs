@@ -1,0 +1,21 @@
+import path from 'node:path';
+import { Skeleton, REPO } from './skeleton.mjs';
+import { mocapLoop, ualLoop } from './lib.mjs';
+import { GLBBuilder, addSkeleton, addClips } from './glb-write.mjs';
+const skel = new Skeleton();
+const clips = [];
+let t = Date.now();
+clips.push(ualLoop(skel, 2, 'Zombie_Walk_Fwd_Loop', { name: 'walk_a' }));
+clips.push(mocapLoop(skel, '104_41', { from: 3, to: 11, name: 'walk_b' }));
+clips.push(mocapLoop(skel, '120_22', { from: 5.3, to: 9.2, name: 'walk_c' }));
+clips.push(mocapLoop(skel, '20_08', { from: 0.05, to: 1.75, minLen: 0.8, maxLen: 1.5, name: 'march' }));
+clips.push(mocapLoop(skel, '104_03', { from: 3, to: 12, name: 'frank' }));
+console.log('ms', Date.now() - t);
+for (const c of clips) console.log(c.name, ((c.poses.length - 1) / 30).toFixed(2), 's speed', c.meta.speed.toFixed(2), c.meta.loopFrom, c.meta.loopTo, JSON.stringify(c.meta.contacts));
+const g = new GLBBuilder(); const ids = addSkeleton(g, skel); addClips(g, skel, ids, clips);
+g.json.scenes[0].extras = { clips: Object.fromEntries(clips.map((c) => [c.name, { loop: c.loop, speed: c.meta.speed || 0 }])) };
+g.write(path.join(REPO, 'game', 'dev', 'test_walk.glb'));
+import { footMetrics, popMetrics } from './metrics.mjs';
+for (const c of clips) { const m = footMetrics(skel, c), p = popMetrics(skel, c); console.log(c.name.padEnd(8), 'slide mean', m.slideMean.toFixed(3), 'max', m.slideMax.toFixed(3), 'n', m.contactFrames, 'minY', m.minFootY.toFixed(3), 'pop', p.maxStepDeg.toFixed(1), p.maxStepAt, 'seam', p.seamVelDiffDeg.toFixed(1)); }
+import { plotFeet } from './plot.mjs';
+plotFeet(skel, clips, path.join(REPO, 'captures', 'anim', 'feet_walk.png'), { W: 1600, scaleX: 300, scaleY: 400, rowH: 150 });

@@ -79,6 +79,17 @@ export function buildTestScene() {
   root.add(box('table', 1.2, 0.75, 0.7, 1.2, 0.02, 0.6, M.crate));
   root.add(box('cabinet', 0.8, 1.8, 0.45, -2.2, 0.02, -2.5 + 0.225, M.paint));
 
+  // shed with THIN walls (0.15 m) standing directly on the ground plane, door on the shaded north side:
+  // the interior floor is the same ground triangle that runs under the walls (worst case for leaks)
+  const st = 0.15, sh = 2.5;
+  root.add(box('shed_s', 3 + 2 * st, sh, st, 9.5, 0, -3 + st / 2, M.wall));
+  root.add(box('shed_w', st, sh, 3, 8 - st / 2, 0, -4.5, M.wall));
+  root.add(box('shed_e', st, sh, 3, 11 + st / 2, 0, -4.5, M.wall));
+  root.add(box('shed_n_a', 1.05 + st, sh, st, 8 - st + (1.05 + st) / 2, 0, -6 - st / 2, M.wall));
+  root.add(box('shed_n_b', 1.05 + st, sh, st, 11 + st - (1.05 + st) / 2, 0, -6 - st / 2, M.wall));
+  root.add(box('shed_n_top', 0.9, 0.5, st, 9.5, 2.0, -6 - st / 2, M.wall));
+  root.add(box('shed_roof', 3 + 2 * st + 0.4, 0.12, 3 + 2 * st + 0.4, 9.5, sh, -4.5, M.roof));
+
   // crates outside in the sun (one rotated, one stacked), a container-like long box
   root.add(box('crate_a', 1, 1, 1, 5.5, 0, 5, M.crate));
   root.add(box('crate_b', 1, 1, 1, 7.2, 0, 4.2, M.crate, 0.55));
@@ -268,7 +279,7 @@ async function main() {
 
   const openGround = S(ground, [12, 0, -10], up);
   check('open ground fully sunlit', openGround.mask > 0.97, fmt(openGround));
-  const sunPatch = S(floor, [0, 0.02, 1.3], up);
+  const sunPatch = S(floor, [-0.83, 0.02, 1.35], up);
   check('window sun patch on the room floor', sunPatch.mask > 0.9, fmt(sunPatch));
   const darkFloor = S(floor, [-1.5, 0.02, -0.5], up);
   check('room floor out of the sun patch is in shadow', darkFloor.mask < 0.05, fmt(darkFloor));
@@ -280,6 +291,13 @@ async function main() {
   ]) {
     const a = S(floor, p, up), b = S(ground, outside, up);
     check(`no leak at the ${label}`, a.mask < 0.05 && a.L < Math.max(0.6 * b.L, 0.05) + 0.25 * darkFloor.L, `inside ${fmt(a)} / outside ${fmt(b)}`);
+  }
+  for (const [label, p, outside] of [
+    ['thin shed wall facing the sun (ground runs under the wall)', [9.5, 0, -3.03], [9.5, 0, -2.6]],
+    ['thin shed wall, side', [10.97, 0, -4.2], [11.4, 0, -4.2]],
+  ]) {
+    const a = S(ground, p, up), b = S(ground, outside, up);
+    check(`no leak at the ${label}`, a.mask < 0.05 && a.L < 0.35 * b.L, `inside ${fmt(a)} / outside ${fmt(b)}`);
   }
   const southOut = S(ground, [-2, 0, 2.95], up);
   check('ground hugging the sunlit south wall stays lit (no dark halo)', southOut.mask > 0.8, fmt(southOut));

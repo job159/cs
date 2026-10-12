@@ -8,6 +8,10 @@ import { applyHardSurface, materialUniforms } from '../gfx/materials.js';
 
 export async function runViewer(renderer, params) {
   const kind = params.get('view');
+  if (kind === 'lightmap') { // baked lightmap QA (tools/map/test-lightmap.mjs, docs/MAP_KIT.md)
+    const { runLightmapViewer } = await import('./lmviewer.js');
+    return runLightmapViewer(renderer, params);
+  }
   const id = params.get('id') || 'akm';
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(params.get('bg') || '#5d6166');

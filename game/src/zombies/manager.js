@@ -53,6 +53,8 @@ class Zombie {
     this.animAcc = 0;
     this.visible = true;
     this.voiceT = rand(2, 9);
+    this.puppet = false;
+    this.netBuf = [];
     this.target = null;
     this.deathT = 0;
     // bones
@@ -87,7 +89,8 @@ class Zombie {
     return null;
   }
 
-  playOnce(name, { fade = 0.12, speed = 1 } = {}) {
+  playOnce(name, { fade = 0.12, speed = 1, net = true } = {}) {
+    if (net && !this.puppet && this.alive) this.mgr.net?.zombieAnim(this, name, speed);
     const a = this.actions[this.actions[name] ? name : this._clip(name)];
     if (!a) return null;
     a.reset();
@@ -148,6 +151,7 @@ class Zombie {
       }
     }
     amount *= mgr.dmgTakenMul || 1;
+    if (this.puppet) mgr.net?.sendHit(this, info, amount);
     this.hp -= amount;
     this.lastHitAt = mgr.time;
     const dir = info.dir || _v.set(0, 0, 1);
@@ -177,7 +181,7 @@ class Zombie {
       }
     }
     let killed = false;
-    if (this.hp <= 0) { killed = true; this.die(info); }
+    if (this.hp <= 0) { killed = true; if (this.puppet) this.predictedDeath = mgr.time; this.die(info); }
     else if (mgr.time - (this.painAt || -9) > 0.6 && Math.random() < 0.5) { this.painAt = mgr.time; g.audio?.play((this.def.voice || 'zombie') + '_pain', { pos: this.pos }); }
     if (info.part === 'head') g.audio?.play('headshot', { pos: info.point || this.pos, volume: killed ? 1 : 0.7 });
     else g.audio?.play('impact_flesh', { pos: info.point || this.pos, volume: 0.8 });
@@ -190,6 +194,7 @@ class Zombie {
     const bone = this.bones[s.bone], stump = this.bones[s.stump];
     if (!bone || this.severed.has(s.bone)) return;
     this.severed.add(s.bone);
+    if (!this.puppet) this.mgr.net?.zombieSever(this, box, dir);
     bone.getWorldPosition(_a);
     bone.scale.setScalar(0.0001);
     const g = this.mgr.game;
@@ -216,20 +221,64 @@ class Zombie {
     const dir = info.dir || _v.set(0, 0, 1);
     const lz = Math.sin(this.yaw) * dir.x + Math.cos(this.yaw) * dir.z; // + = shot from behind (pushes forward)
     const clip = lz > 0 ? 'death_front' : 'death_back';
-    this.playOnce(this.actions[clip] ? clip : 'death_back', { fade: 0.1, speed: 1 + Math.random() * 0.2 });
+    this.playOnce(this.actions[clip] ? clip : 'death_back', { fade: 0.1, speed: 1 + Math.random() * 0.2, net: false });
     const push = info.explosive ? 7 : Math.min(5, (info.knock || 1) * 1.4);
     this.kvel.x += dir.x * push; this.kvel.z += dir.z * push;
     if (info.explosive) { this.kvel.y = 3 + Math.random() * 2; }
     mgr.game.audio?.play((this.def.voice || 'zombie') + '_death', { pos: this.pos });
     mgr.game.audio?.play('body_fall', { pos: this.pos, delay: 0.7, volume: 0.8 });
+    if (this.puppet) return;
     if (this.def.explode) mgr.explode(this);
     mgr.onKilled(this, info);
+  }
+
+  /** Client side: follow the host's snapshots (interpolated with a small delay). */
+  _puppetUpdate(dt, mgr) {
+    const b = this.netBuf;
+    const rt = mgr.renderTime;
+    if (b.length) {
+      let i = b.length - 1;
+      while (i > 0 && b[i - 1].t > rt) i--;
+      const s1 = b[i], s0 = b[Math.max(0, i - 1)];
+      const span = s1.t - s0.t;
+      const u = span > 1e-4 ? Math.min(1.2, Math.max(0, (rt - s0.t) / span)) : 1;
+      const px = this.pos.x, pz = this.pos.z;
+      if (this.alive || !this.predictedDeath) {
+        this.pos.x = s0.x + (s1.x - s0.x) * u + this.kvel.x * 0.02;
+        this.pos.z = s0.z + (s1.z - s0.z) * u + this.kvel.z * 0.02;
+        this.pos.y = s0.y + (s1.y - s0.y) * u;
+        this.yaw = s0.yaw + angleDiff(s0.yaw, s1.yaw) * Math.min(1, u);
+      }
+      const speed = Math.hypot(this.pos.x - px, this.pos.z - pz) / Math.max(dt, 1e-3);
+      if (this.alive && this.loco && this.action === this.loco) {
+        const nominal = this.running ? this.def.nominal.run : this.def.nominal.walk;
+        this.loco.timeScale = speed > 0.1 ? clamp(speed / nominal, 0.5, 1.8) : 0.35;
+        if (s1.run !== undefined && !!s1.run !== this.running) { this.running = !!s1.run; this.setLoco(this.running); }
+      }
+      // predicted death the host never confirmed: bring it back
+      if (!this.alive && this.predictedDeath && s1.st !== 4 && mgr.time - this.predictedDeath > 1.4 && s1.t > rt - 0.2) {
+        this.alive = true; this.predictedDeath = 0; this.state = 'chase'; this.hp = Math.max(1, s1.hp * this.maxHp); mgr.alive++;
+        this.setLoco(this.running);
+      }
+    }
+    this.kvel.multiplyScalar(Math.exp(-7 * dt));
+    if (!this.alive) {
+      this.deathT += dt;
+      if (this.deathT > 5) this.pos.y -= dt * 0.35;
+      return this.deathT < 7;
+    }
+    this.root.rotation.y = this.yaw;
+    return true;
   }
 
   update(dt, mgr) {
     this.stateT += dt;
     const g = mgr.game;
     const d = this.def;
+    if (this.puppet) {
+      if (this.spurt) { this.spurt.t -= dt; if (this.spurt.t <= 0) this.spurt = null; }
+      return this._puppetUpdate(dt, mgr);
+    }
     // ---- knockback integration (with nav clamping)
     if (this.kvel.lengthSq() > 1e-4 || this.pos.y > (this.groundY ?? this.pos.y) + 0.01) {
       this._move(this.kvel.x * dt, this.kvel.z * dt, mgr);
@@ -274,7 +323,7 @@ class Zombie {
     } else if (this.state === 'attack') {
       if (!this.atkHitDone && this.stateT >= d.atkTime * d.atkHit) {
         this.atkHitDone = true;
-        if (best && tdist < d.atkRange + 0.45) g.damagePlayer?.(d.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this });
+        if (best && tdist < d.atkRange + 0.45) g.damagePlayer?.(d.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this, player: best });
       }
       this._face(best ? best.pos : null, dt, 6);
       if (this.stateT >= d.atkTime) { this.state = 'chase'; this.setLoco(this.running); this.atkCd = 0.25 + Math.random() * 0.4; }
@@ -394,7 +443,7 @@ class Zombie {
         const moved = Math.hypot(this.pos.x - bx, this.pos.z - bz);
         if (target && tdist < 1.6 && !this.chargeHit) {
           this.chargeHit = true;
-          g.damagePlayer?.(d.charge.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this, knock: this.chargeDir.clone().multiplyScalar(d.charge.knock).setY(3) });
+          g.damagePlayer?.(d.charge.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this, player: target, knock: this.chargeDir.clone().multiplyScalar(d.charge.knock).setY(3) });
           g.addShake(0.6);
         }
         if (moved < sp * dt * 0.3 || this.stateT > 2.6 || this.chargeHit) {
@@ -408,7 +457,7 @@ class Zombie {
     if (this.special === 'leap') {
       if (this.stateT < 0.65) {
         this._move(this.leapDir.x * d.leap.speed * dt, this.leapDir.z * d.leap.speed * dt, mgr);
-        if (target && tdist < 1.4 && !this.leapHit) { this.leapHit = true; g.damagePlayer?.(d.leap.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this }); }
+        if (target && tdist < 1.4 && !this.leapHit) { this.leapHit = true; g.damagePlayer?.(d.leap.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this, player: target }); }
         return d.leap.speed;
       }
       this.leapHit = false;
@@ -475,6 +524,10 @@ export class ZombieManager {
     this.voiceBudget = 3;
     this.losCache = new Map();
     this.hazards = [];         // acid pools / poison clouds: { pos, r, t, dps, kind }
+    this.authority = true;     // false on network clients: zombies are puppets of the host
+    this.net = null;           // NetSync (multiplayer) or null
+    this.byId = new Map();
+    this.renderTime = 0;       // client interpolation clock (host time minus a delay)
     game.targets = this;
   }
 
@@ -526,10 +579,32 @@ export class ZombieManager {
     if (opts.hpMul) { z.maxHp *= opts.hpMul; z.hp = z.maxHp; }
     if (opts.elite) this._makeElite(z, opts.elite);
     if (this.nav) { const k = this.nav.nearestWalkable(pos.x, pos.z, 10); if (k >= 0) { this.nav.cellCenter(k, _v); z.pos.set(_v.x, _v.y, _v.z); z.groundY = _v.y; } }
+    if (opts.id) z.id = opts.id;
+    if (opts.puppet) { z.puppet = true; if (opts.running !== undefined) { z.running = opts.running; z.setLoco(z.running); } }
+    if (opts.model === undefined) z.modelId = mid; else z.modelId = opts.model;
     this.root.add(scene);
     this.list.push(z);
+    this.byId.set(z.id, z);
     this.alive++;
+    if (!z.puppet) this.net?.zombieSpawned(z, opts);
     return z;
+  }
+
+  /** Client: apply one host snapshot row { id, x, y, z, yaw, st, hp, run } at host time t. */
+  pushSnapshot(row, t) {
+    const z = this.byId.get(row.id);
+    if (!z) return;
+    z.netBuf.push({ t, x: row.x, y: row.y, z: row.z, yaw: row.yaw, st: row.st, hp: row.hp, run: row.run });
+    if (z.netBuf.length > 20) z.netBuf.shift();
+    if (z.alive && !z.predictedDeath) z.hp = row.hp * z.maxHp;
+  }
+
+  /** Client: the host says this zombie died. */
+  netDeath(id, info) {
+    const z = this.byId.get(id);
+    if (!z) return;
+    if (z.alive) z.die(info);
+    z.predictedDeath = 0;
   }
 
   _makeElite(z) {
@@ -600,7 +675,7 @@ export class ZombieManager {
     this.voiceBudget = Math.min(3, this.voiceBudget + dt * 0.8);
     // shared flow field toward the nearest players, refreshed a few times per second
     this.fieldT -= dt;
-    if (this.nav && this.fieldT <= 0) {
+    if (this.authority && this.nav && this.fieldT <= 0) {
       this.fieldT = 0.3;
       const ps = this.players().map((p) => p.pos);
       if (ps.length) this.nav.computeField(ps);
@@ -616,7 +691,7 @@ export class ZombieManager {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const z = this.list[i];
       const keep = z.update(dt, this);
-      if (!keep) { this.root.remove(z.root); z.mixer.stopAllAction(); this.list.splice(i, 1); continue; }
+      if (!keep) { this.root.remove(z.root); z.mixer.stopAllAction(); this.list.splice(i, 1); this.byId.delete(z.id); continue; }
       // animation LOD: near & visible every frame, far / off-screen less often
       sphere.center.set(z.pos.x, z.pos.y + z.height * 0.5, z.pos.z); sphere.radius = z.height;
       const vis = frustum.intersectsSphere(sphere);
@@ -688,7 +763,7 @@ export class ZombieManager {
         g.fx?.particles.spawn({ x: h.pos.x + Math.cos(a) * r, y: h.pos.y + 0.05, z: h.pos.z + Math.sin(a) * r, vx: 0, vy: 0.3 + Math.random() * 0.4, vz: 0, life: 1.2, size: 0.2, size1: 0.8, color: acid ? [0.35, 0.65, 0.08, 0.35] : [0.4, 0.5, 0.15, 0.3], color1: [0.3, 0.4, 0.1, 0], frame: 1, drag: 1 });
       }
       for (const p of this.players()) {
-        if (Math.hypot(p.pos.x - h.pos.x, p.pos.z - h.pos.z) < h.r && Math.abs(p.pos.y - h.pos.y) < 1.5) g.damagePlayer?.(h.dps * dt, { from: h.pos, dot: true, acid: true });
+        if (this.authority && h.dps > 0 && Math.hypot(p.pos.x - h.pos.x, p.pos.z - h.pos.z) < h.r && Math.abs(p.pos.y - h.pos.y) < 1.5) g.damagePlayer?.(h.dps * dt, { from: h.pos, dot: true, acid: true, player: p });
       }
     }
   }
@@ -698,6 +773,7 @@ export class ZombieManager {
   // ---------------------------------------------------------------- special attacks
   spit(z, target) {
     const g = this.game;
+    if (this.authority) this.net?.fx('spit', { id: z.id, to: target.pos.toArray() });
     const from = z.center(new THREE.Vector3()); from.y += 0.35;
     const to = target.pos.clone(); to.y += 1.0;
     const dist = from.distanceTo(to);
@@ -712,7 +788,7 @@ export class ZombieManager {
         g.fx?.blood(point, normal, p.vel.clone().normalize(), 1.5, { acid: true });
         g.audio?.play('acid_splash', { pos: point });
         for (const pl of this.players()) {
-          if (pl.pos.distanceTo(point) < 1.6 + 0.4) g.damagePlayer?.(z.def.spit.dmg * (this.dmgMul || 1), { from: point, acid: true });
+          if (this.authority && pl.pos.distanceTo(point) < 1.6 + 0.4) g.damagePlayer?.(z.def.spit.dmg * (this.dmgMul || 1), { from: point, acid: true, player: pl });
         }
         this.hazards.push({ pos: point.clone(), r: 1.6, t: z.def.spit.pool, dps: z.def.spit.dmg * 0.35, kind: 'acid' });
         return true;
@@ -722,12 +798,13 @@ export class ZombieManager {
 
   scream(z) {
     const g = this.game;
+    if (this.authority) this.net?.fx('scream', { id: z.id });
     const sd = z.def.scream, hd = z.def.heal;
     g.fx?.particles.spawn({ additive: true, x: z.pos.x, y: z.pos.y + 1.6, z: z.pos.z, life: 0.5, size: 0.5, size1: sd.radius * 1.6, color: [1.2, 0.6, 2.0, 1], color1: [0.4, 0.2, 0.8, 0], frame: 11 });
-    for (const p of this.players()) {
-      const d = p.pos.distanceTo(z.pos);
-      if (d < sd.radius) g.playerStatus?.('slow', sd.slowTime * (1 - d / sd.radius * 0.5), sd.slow);
-    }
+    // every client slows its own player (the host does the same for itself)
+    const d = g.player ? g.player.pos.distanceTo(z.pos) : 1e9;
+    if (d < sd.radius) g.playerStatus?.('slow', sd.slowTime * (1 - d / sd.radius * 0.5), sd.slow);
+    if (!this.authority) return;
     for (const o of this.list) {
       if (!o.alive || o === z) continue;
       if (o.pos.distanceTo(z.pos) < hd.radius) { o.hp = Math.min(o.maxHp, o.hp + hd.perSec * 3); o.speedMul = hd.haste; o.hasteT = 5; }
@@ -736,6 +813,7 @@ export class ZombieManager {
 
   explode(z) {
     const g = this.game, e = z.def.explode;
+    if (this.authority) this.net?.fx('explode', { id: z.id });
     const p = z.center(new THREE.Vector3());
     g.fx?.explosion(p, { radius: e.radius, scale: 0.9, color: [0.55, 0.9, 0.25] });
     g.fx?.blood(p, UP, UP, 4, { acid: true });
@@ -743,15 +821,16 @@ export class ZombieManager {
     g.audio?.play('bloater_pop', { pos: p, volume: 1.2 });
     for (const pl of this.players()) {
       const d = pl.pos.distanceTo(p);
-      if (d < e.radius) g.damagePlayer?.(e.dmg * (1 - d / e.radius) * (this.dmgMul || 1), { from: p, explosive: true });
+      if (this.authority && d < e.radius) g.damagePlayer?.(e.dmg * (1 - d / e.radius) * (this.dmgMul || 1), { from: p, explosive: true, player: pl });
     }
-    for (const o of this.list) if (o.alive && o !== z && o.pos.distanceTo(p) < e.radius) o.damage({ amount: e.dmg * 2, part: 'body', dir: o.pos.clone().sub(p).normalize(), knock: 6, stagger: 1, explosive: true });
+    if (this.authority) for (const o of this.list) if (o.alive && o !== z && o.pos.distanceTo(p) < e.radius) o.damage({ amount: e.dmg * 2, part: 'body', dir: o.pos.clone().sub(p).normalize(), knock: 6, stagger: 1, explosive: true });
     this.hazards.push({ pos: p.clone().setY(z.pos.y), r: e.radius * 0.7, t: e.poison, dps: 6, kind: 'poison' });
     z.root.visible = false;
     z.deathT = 6.9;
   }
 
   onKilled(z, info) {
+    this.net?.zombieKilled(z, info);
     this.game.onZombieKilled?.(z, info);
   }
 

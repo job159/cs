@@ -46,6 +46,7 @@ export class Match {
   update(dt) {
     const g = this.game;
     this.timer -= dt;
+    if (this.isMirror) { this._mirrorUpdate(); this._updateSupplies(dt); return; }
     if (this.state === 'warmup' || this.state === 'buy') {
       g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`);
       if (this.timer <= 0) this.beginRound(this.round + 1);
@@ -312,4 +313,50 @@ export class Match {
   }
 
   snapshot() { return { state: this.state, round: this.round, timer: this.timer }; }
+
+  // ---------------------------------------------------------------- network client mirror
+  /** Applies the host's match row [state, round, timer, left, bossFrac, bossName]. */
+  mirror(m) {
+    const [state, round, timer, left, bossFrac, bossName] = m;
+    const prev = this.state;
+    this.round = round; this.timer = timer; this.left = left;
+    this.bossFrac = bossFrac; this.bossName = bossName;
+    if (state === prev) return;
+    this.state = state;
+    const g = this.game;
+    if (state === 'round') {
+      const R = ROUNDS[round - 1];
+      g.hud?.toast(R?.intro || R?.title || '', 2400);
+      g.audio?.play('round_start');
+      g.audio?.playMusic?.(R?.boss ? 'boss' : round >= 7 ? 'combat_high' : 'combat_low');
+    } else if (state === 'buy' && prev === 'round') {
+      const bonus = ECONOMY.roundBonus(round);
+      this.addMoney(bonus);
+      g.audio?.play('round_win');
+      g.hud?.toast(`回合完成　+$${bonus}`, 2400);
+      if (g.status) { if (g.status.downed || !g.status.alive) { g.status.alive = true; g.status.revive(50); } g.status.heal(30); }
+      this._dropSupplies(1);
+      g.audio?.playMusic?.('calm');
+    } else if (state === 'victory') { g.audio?.play('victory'); g.onMatchEnd?.(true, this.stats); }
+    else if (state === 'defeat') { g.audio?.play('defeat'); g.onMatchEnd?.(false, this.stats); }
+  }
+
+  _mirrorUpdate() {
+    const g = this.game;
+    const R = ROUNDS[Math.max(0, this.round - 1)];
+    if (this.state === 'warmup' || this.state === 'buy') g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`);
+    else if (this.state === 'round') g.hud?.setRound(R?.title || '', `剩餘感染者 ${this.left ?? 0}`);
+    else if (this.state === 'victory') g.hud?.setRound('任務完成', '');
+    else if (this.state === 'defeat') g.hud?.setRound('任務失敗', '');
+    g.hud?.setBoss(this.bossFrac >= 0 && this.state === 'round' ? this.bossName : null, Math.max(0, this.bossFrac));
+  }
+
+  /** Host credited us with a kill. */
+  applyReward(r) {
+    this.stats.kills++;
+    if (r.h) this.stats.headshots++;
+    this.addMoney(r.m);
+    this.addXp(r.x);
+    this.game.hud?.killFeed('你', r.w, r.n, !!r.h);
+  }
 }

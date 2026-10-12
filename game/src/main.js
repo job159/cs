@@ -77,6 +77,19 @@ async function boot() {
     const r = 10 + (i % 3) * 4;
     game.zombies.spawn(types[i % types.length], new Vector3(Math.sin(a) * r, 0, Math.cos(a) * r));
   }
+  // dev multiplayer: ?host=1 creates a room, ?join=<code> joins one (the lobby UI replaces this)
+  if (params.get('host') || params.get('join')) {
+    const { hostRoom, joinRoom } = await import('./net/session.js');
+    const { NetSync } = await import('./net/sync.js');
+    const name = params.get('name') || ('玩家' + Math.floor(Math.random() * 90 + 10));
+    const room = params.get('host')
+      ? await hostRoom({ name, version: __VERSION__, meta: { map: 'test', difficulty: 'normal', state: 'playing' }, allowLateJoin: true })
+      : await joinRoom(params.get('join'), { name, version: __VERSION__, forceRelay: params.get('relay') === '1' });
+    new NetSync(game, room);
+    window.__room = room;
+    game.hud.toast(room.isHost ? `房號 ${room.code}` : `已加入房間 ${room.code}`, 6000);
+    console.log('room', room.code, room.isHost ? 'host' : 'guest');
+  }
   bootEl.classList.add('gone');
   requestAnimationFrame((t) => { last = t; loop(t); });
   window.__shotReady = true;

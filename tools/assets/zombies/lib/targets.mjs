@@ -97,7 +97,16 @@ export async function resolveModifier(name, value) {
       const side = name.startsWith('l-') ? 'left' : name.startsWith('r-') ? 'right' : 'unsided';
       const bare = side === 'unsided' ? name : name.slice(2);
       if (c.name !== bare) continue;
-      const key = (value < 0 ? 'negative-' : 'positive-') + side;
+      const sign = value < 0 ? 'negative-' : 'positive-';
+      if (side === 'unsided' && c.has_left_and_right) {
+        // un-prefixed name of a sided category: apply both sides symmetrically
+        return ['left', 'right'].map((s) => {
+          const t = c.opposites?.[sign + s];
+          if (!t) throw new Error(`modifier ${name}: no ${sign + s} target`);
+          return [`${group}/${t}`, Math.abs(value)];
+        });
+      }
+      const key = sign + side;
       const t = c.opposites?.[key];
       if (!t) throw new Error(`modifier ${name}: no ${key} target`);
       return [[`${group}/${t}`, Math.abs(value)]];

@@ -49,6 +49,42 @@ function viewBasis() {
   }
 }
 
+// Foot / hand point trails over the whole clip with the treadmill speed added back (+Z): a planted
+// foot shows as a tight cluster of dots, sliding shows as a smear along the ground.
+function addTrails(model, clip, info, origin, scene, box) {
+  const obj = skClone(model.scene);
+  const mixer = new THREE.AnimationMixer(obj);
+  mixer.clipAction(clip).play();
+  const bones = {};
+  obj.traverse((o) => { if (o.isBone || o.type === 'Bone' || o.name) bones[o.name] = o; });
+  obj.updateMatrixWorld(true);
+  const heelOff = {};
+  for (const s of ['l', 'r']) {
+    const foot = bones[`foot_${s}`];
+    const a = new THREE.Vector3().setFromMatrixPosition(foot.matrixWorld);
+    const heelW = new THREE.Vector3(a.x, 0, a.z - 0.045);
+    heelOff[s] = foot.worldToLocal(heelW.clone());
+  }
+  const dots = { l: [], r: [] };
+  const steps = Math.round(clip.duration * 60);
+  for (let k = 0; k <= steps; k++) {
+    const t = (k / steps) * clip.duration;
+    mixer.setTime(Math.min(t, clip.duration - 1e-4));
+    obj.updateMatrixWorld(true);
+    for (const s of ['l', 'r']) {
+      const heel = bones[`foot_${s}`].localToWorld(heelOff[s].clone());
+      const toe = new THREE.Vector3().setFromMatrixPosition(bones[`ball_${s}`].matrixWorld);
+      for (const p of [heel, toe]) { p.z += (info.speed || 0) * t; p.add(origin); dots[s].push(p); }
+    }
+  }
+  for (const s of ['l', 'r']) {
+    const g = new THREE.BufferGeometry().setFromPoints(dots[s]);
+    const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: s === 'l' ? 0x5aa0ff : 0xff9a4a, size: 4, sizeAttenuation: false }));
+    scene.add(pts);
+    for (const p of dots[s]) box.expandByPoint(p);
+  }
+}
+
 async function main() {
   const [model, anims] = await Promise.all([load(qs.get('model') || 'dev/mannequin.glb'), load(qs.get('anims') || 'assets/zombies/anims.glb')]);
   const meta = anims.scene.userData?.clips || anims.parser?.json?.extras?.clips || {};
@@ -56,12 +92,14 @@ async function main() {
   const { dir, right } = viewBasis();
   const spacing = num('spacing', mode === 'onion' ? 0 : view === 'front' || view === 'back' ? 0.95 : 1.25);
   const rowH = num('h', 2.3);
+  const across = qs.has('across');
   const labels = [];
   const box = new THREE.Box3();
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 });
   names.forEach((name, row) => {
+    const origin = across ? right.clone().multiplyScalar(row * (N * spacing + num('gap', 0.9))) : new THREE.Vector3(0, -row * rowH, 0);
     const clip = anims.animations.find((a) => a.name === name);
-    if (!clip) { labels.push({ text: `missing clip ${name}`, p: new THREE.Vector3(0, -row * rowH, 0) }); return; }
+    if (!clip) { labels.push({ text: `missing clip ${name}`, p: origin.clone() }); return; }
     const info = meta[name] || {};
     const t0 = num('t0', 0), t1 = Math.min(num('t1', clip.duration), clip.duration);
     const loop = info.loop;
@@ -72,29 +110,31 @@ async function main() {
       const mixer = new THREE.AnimationMixer(obj);
       mixer.clipAction(clip).play();
       mixer.setTime(Math.min(t, clip.duration - 1e-4));
-      const off = right.clone().multiplyScalar(i * spacing);
+      const off = right.clone().multiplyScalar(i * spacing).add(origin);
       if (mode === 'onion') off.z += (info.speed || 0) * t;
-      off.y -= row * rowH;
       obj.position.copy(off);
       scene.add(obj);
       obj.updateMatrixWorld(true);
       box.expandByObject(obj);
-      labels.push({ text: `${t.toFixed(2)}`, p: off.clone().add(new THREE.Vector3(0, -0.12, 0)) });
+      if (N > 1) labels.push({ text: `${t.toFixed(2)}`, p: off.clone().add(new THREE.Vector3(0, -0.12, 0)) });
     }
-    // ground strip for the row (raised slightly so rows do not overlap)
+    if (mode === 'trail') addTrails(model, clip, info, origin, scene, box);
+    // ground strip + 0.25 m grid to judge sliding / penetration
     const len = Math.max(2, (N - 1) * spacing + 2);
-    const center = right.clone().multiplyScalar(((N - 1) * spacing) / 2);
+    const center = right.clone().multiplyScalar(((N - 1) * spacing) / 2).add(origin);
     const g = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0x3a4048, roughness: 1 }));
     g.rotation.x = -Math.PI / 2;
-    g.scale.set(Math.abs(right.x) > 0.5 ? len : 2.4 + (mode === 'onion' ? 4 : 0), Math.abs(right.z) > 0.5 ? len : 2.4 + (mode === 'onion' ? 4 : 0), 1);
-    g.position.copy(center).add(new THREE.Vector3(0, -row * rowH - 0.002, mode === 'onion' ? 1.5 : 0));
+    const deep = 2.4 + (mode === 'onion' ? 4 : 0);
+    g.scale.set(Math.abs(right.x) > 0.5 ? len : deep, Math.abs(right.z) > 0.5 ? len : deep, 1);
+    g.position.copy(center).add(new THREE.Vector3(0, -0.002, mode === 'onion' ? 1.5 : 0));
     g.receiveShadow = true;
     scene.add(g);
     // grid lines (0.25 m) to judge sliding / penetration
     const grid = new THREE.GridHelper(Math.max(len, 8), Math.max(len, 8) * 4, 0x59616b, 0x4a5058);
     grid.position.copy(g.position).add(new THREE.Vector3(0, 0.001, 0));
     scene.add(grid);
-    labels.push({ text: `${name}  ${clip.duration.toFixed(2)}s${loop ? ' loop' : ''}${info.speed ? `  v=${info.speed.toFixed(2)}m/s` : ''}`, p: center.clone().add(new THREE.Vector3(0, -row * rowH + 2.05, 0)), big: true, left: true, start: right.clone().multiplyScalar(-0.5).add(new THREE.Vector3(0, -row * rowH + 2.05, 0)) });
+    const title = `${name}  ${clip.duration.toFixed(2)}s${loop ? ' loop' : ''}${info.speed ? `  v=${info.speed.toFixed(2)}m/s` : ''}`;
+    labels.push({ text: title, big: true, left: true, start: right.clone().multiplyScalar(-0.5).add(origin).add(new THREE.Vector3(0, 2.05, 0)) });
   });
   // fit an orthographic camera to the content
   const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
@@ -106,6 +146,7 @@ async function main() {
   let w = 0, h = 0;
   for (const p of corners) { const d = p.clone().sub(c); w = Math.max(w, Math.abs(d.dot(right))); h = Math.max(h, Math.abs(d.y)); }
   h += 0.25; w += 0.3;
+  if (qs.has('center')) { c.fromArray(qs.get('center').split(',').map(Number)); h = num('zoom', 0.5); w = 0; }
   if (w / h > aspect) h = w / aspect; else w = h * aspect;
   window.__dbg = { box: box.min.toArray().concat(box.max.toArray()), w, h };
   const cam = new THREE.OrthographicCamera(-w, w, h, -h, 0.1, 100);

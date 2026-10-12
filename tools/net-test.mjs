@@ -813,8 +813,18 @@ try {
     }
   }
 } finally {
+  const dir = profile;
   killBrowser();
   releaseLock();
+  // The profile stays locked for a moment after the kill: retry before giving up on it.
+  for (let i = 0; dir && i < 20 && fs.existsSync(dir); i++) {
+    await sleep(500);
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // still locked
+    }
+  }
 }
 
 console.log('\n== summary');

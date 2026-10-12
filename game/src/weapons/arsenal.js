@@ -250,6 +250,7 @@ export class Arsenal {
       if (res.hits) anyHit = true;
       kills += res.kills;
       if (res.headshot) head = true;
+      this._lastEnd = res.end;
       if (def.tracer && (ws.shots % def.tracer === 0 || pellets > 1 && i < 2) && muzzleApparent) g.fx?.tracer(muzzleApparent, res.end);
     }
     // ---- feedback
@@ -283,7 +284,7 @@ export class Arsenal {
     haptic(def.cat === 'sniper' || def.cat === 'heavy' ? 45 : def.cat === 'shotgun' ? 35 : def.cat === 'pistol' ? 14 : 10);
     g.addShake(def.cat === 'shotgun' ? 0.22 : def.cat === 'sniper' || def.cat === 'heavy' ? 0.3 : def.cat === 'mg' ? 0.07 : 0.05);
     g.noise?.(g.camera.position, 30);
-    g.net?.onLocalFire?.(def.id, origin, _dir);
+    g.net?.onLocalFire?.(def.id, origin, _dir, this._lastEnd);
     if (ws.ammo === 0 && ws.reserve > 0 && def.mode !== 'pump' && def.mode !== 'bolt') setTimeout(() => { if (this.current === ws && this.state === 'idle' && ws.ammo === 0) this.reload(); }, 220);
   }
 
