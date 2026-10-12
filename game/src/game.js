@@ -13,6 +13,7 @@ import { Match } from './match/match.js';
 import { AimAssist } from './player/aimassist.js';
 import { Throwables } from './weapons/throwables.js';
 import { BotSquad } from './player/bots.js';
+import { RemotePlayer } from './player/remote.js';
 import { WEAPONS, registerWeapon } from './weapons/defs.js';
 
 export class Game {
@@ -39,7 +40,12 @@ export class Game {
     this.timeScale = 1;
     this.hitStopT = 0;
     this.targets = null;    // zombie manager (raycast/inRadius) once created
-    this.debug = { WEAPONS, registerWeapon };   // dev / QA hooks
+    // dev / QA hooks (headless tests drive these through window.__cf.game.debug)
+    this.debug = {
+      WEAPONS, registerWeapon,
+      spawnRemote: (opts = {}) => new RemotePlayer(this, { id: opts.id ?? 900 + Math.floor(Math.random() * 99), name: opts.name || '測試隊友', slot: opts.slot ?? 1 }),
+      addBots: (n = 3) => { this.bots = new BotSquad(this, Math.min(3, n)); return this.bots; },
+    };
   }
 
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */
@@ -91,7 +97,7 @@ export class Game {
     this.player = new PlayerController(this.world);
     const spawns = this.world.playerSpawns;
     this.player.pos.copy(spawns[(this.spawnIndex | 0) % spawns.length] || spawns[0]);
-    this.player.yaw = Math.PI;
+    this.player.yaw = this.world.def?.playerSpawnYaws?.[(this.spawnIndex | 0) % spawns.length] ?? Math.PI; // map packages carry a yaw per spawn
     this.status = new PlayerStatus(this);
     this.aim = new AimAssist(this);
     this.vm = new Viewmodel(this);

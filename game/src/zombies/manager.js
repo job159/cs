@@ -573,7 +573,11 @@ export class ZombieManager {
     try {
       const g = await loadGLB(`zombies/${id}.glb`);
       const ex = g.scene.userData || {};
-      entry = { scene: g.scene, hitboxes: ex.hitboxes, height: ex.height, scale: 1, clips: g.animations };
+      entry = { scene: g.scene, hitboxes: ex.hitboxes, height: ex.height, scale: 1, clips: g.animations, poseOffsets: ex.poseOffsets || null };
+      if (entry.poseOffsets) {
+        // per-frame additive local rotations (hunched spines etc.), degrees XYZ
+        entry.poseQ = Object.entries(entry.poseOffsets).map(([bone, e]) => [bone, new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0] * Math.PI / 180, e[1] * Math.PI / 180, e[2] * Math.PI / 180))]);
+      }
       try { entry.lod1 = (await loadGLB(`zombies/${id}_lod1.glb`)).scene; } catch { entry.lod1 = null; }
     } catch {
       const m = buildMannequin();
@@ -627,6 +631,7 @@ export class ZombieManager {
     if (this.nav) { const k = this.nav.nearestWalkable(pos.x, pos.z, 10); if (k >= 0) { this.nav.cellCenter(k, _v); z.pos.set(_v.x, _v.y, _v.z); z.groundY = _v.y; } }
     if (opts.id) z.id = opts.id;
     z.lod0 = lod0; z.lod1 = lod1;
+    z.poseQ = entry.poseQ ? entry.poseQ.map(([b, q]) => [z.bones[b], q]).filter(([b]) => b) : null;
     // bosses rendered with a stand-in model (or the mannequin) get scaled up to their real size
     const fs = entry.fallback || (def.boss && mid !== def.models[0]) ? (def.fallbackScale || 1) : 1;
     if (fs !== 1) { z.root.scale.setScalar(fs); for (const h of z.hitboxes) h.r *= fs; }
@@ -754,6 +759,7 @@ export class ZombieManager {
       if ((this.frame + z.id) % every === 0 || !z.alive && z.deathT < 1.5) {
         z.mixer.update(z.animAcc);
         z.animAcc = 0;
+        if (z.poseQ) for (const [b, q] of z.poseQ) b.quaternion.multiply(q);
         z.applyFlinch(dt * every);
       }
       // mesh LOD + shadow casting by distance (bosses always full detail)
