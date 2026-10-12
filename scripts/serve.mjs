@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// LAN distribution server for 霓虹防線 NEON BASTION.
+// LAN distribution server for 災厄前線 CALAMITY FRONT.
 //
 //   /                 mobile download page (Traditional Chinese)
-//   /NeonBastion.apk  the signed APK from dist/ (supports resumable downloads)
+//   /CalamityFront.apk  the signed APK from dist/ (supports resumable downloads)
 //   /play/            the web build from dist/www/ for playing in a browser
 //   /qr               page for the PC screen: big QR code to scan with the phone
 //
@@ -46,7 +46,7 @@ if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
   console.error(`Invalid port: ${args.port ?? process.env.PORT}`);
   process.exit(2);
 }
-const APK_FILE = path.resolve(args.apk ?? path.join(ROOT, 'dist', 'NeonBastion.apk'));
+const APK_FILE = path.resolve(args.apk ?? path.join(ROOT, 'dist', 'CalamityFront.apk'));
 const WWW_DIR = path.resolve(args.www ?? path.join(ROOT, 'dist', 'www'));
 
 const MIME = {
@@ -200,16 +200,16 @@ function sendFile(req, res, file, st, type, headers = {}) {
 async function downloadPage() {
   const info = await buildInfo();
   const button = info.apk
-    ? `<a class="download" href="/NeonBastion.apk" download="NeonBastion.apk">${DOWNLOAD_ICON}<span>下載 APK<small>NeonBastion.apk · ${esc(info.apk.size)}</small></span></a>`
+    ? `<a class="download" href="/CalamityFront.apk" download="CalamityFront.apk">${DOWNLOAD_ICON}<span>下載 APK<small>CalamityFront.apk · ${esc(info.apk.size)}</small></span></a>`
     : `<span class="download off">APK 尚未建置</span>
 <p class="warn">請先在電腦上執行 <code>npm run build</code>，完成後重新整理此頁。</p>`;
   const meta = [`v${esc(info.version)}`, ...(info.apk ? [esc(info.apk.size), `建置於 ${esc(info.apk.built)}`] : [])]
     .map((m) => `<span class="chip">${m}</span>`).join('');
-  return page('霓虹防線 NEON BASTION · 下載', DOWNLOAD_CSS, `<main>
+  return page('災厄前線 CALAMITY FRONT · 下載', DOWNLOAD_CSS, `<main>
 <header class="hero">
 ${emblemSvg({ className: 'emblem' })}
-<h1>霓虹防線</h1>
-<p class="sub">NEON BASTION</p>
+<h1>災厄前線</h1>
+<p class="sub">CALAMITY FRONT</p>
 </header>
 <div class="meta">${meta}</div>
 ${button}
@@ -258,10 +258,10 @@ async function qrPage() {
   const status = info.apk
     ? `APK v${esc(info.version)} · ${esc(info.apk.size)} · 建置於 ${esc(info.apk.built)}`
     : '⚠ 尚未建置 APK：請先執行 <code>npm run build</code>';
-  return page('霓虹防線 · 掃描下載', QR_CSS, `<main>
+  return page('災厄前線 · 掃描下載', QR_CSS, `<main>
 <div class="qr">${await qrSvg(url)}</div>
 <div>
-<div class="brand">${emblemSvg()}<div><h1>霓虹防線</h1><p class="sub">NEON BASTION</p></div></div>
+<div class="brand">${emblemSvg()}<div><h1>災厄前線</h1><p class="sub">CALAMITY FRONT</p></div></div>
 <p class="lead">用手機相機掃描 QR Code，或在手機瀏覽器輸入：</p>
 <div class="url">${esc(url)}</div>
 <p class="status">${status}</p>
@@ -283,9 +283,9 @@ ${alts.length ? `<section class="others"><h2>掃不到？試試其他網路介�
 
 async function serveApk(req, res) {
   const st = await statOrNull(APK_FILE);
-  if (!st?.isFile()) return sendText(req, res, 404, 'NeonBastion.apk 尚未建置。請先在電腦上執行 npm run build。\n');
+  if (!st?.isFile()) return sendText(req, res, 404, 'CalamityFront.apk 尚未建置。請先在電腦上執行 npm run build。\n');
   sendFile(req, res, APK_FILE, st, 'application/vnd.android.package-archive', {
-    'Content-Disposition': 'attachment; filename="NeonBastion.apk"',
+    'Content-Disposition': 'attachment; filename="CalamityFront.apk"',
   });
 }
 
@@ -325,7 +325,7 @@ async function route(req, res) {
   }
   const rawPath = req.url.split(/[?#]/)[0];
   if (rawPath === '/' || rawPath === '/index.html') return sendHtml(req, res, await downloadPage());
-  if (rawPath === '/NeonBastion.apk') return serveApk(req, res);
+  if (rawPath === '/CalamityFront.apk') return serveApk(req, res);
   if (rawPath === '/qr') return sendHtml(req, res, await qrPage());
   if (rawPath === '/play') return redirect(res, '/play/');
   if (rawPath.startsWith('/play/')) return servePlay(req, res, rawPath);
@@ -365,7 +365,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   const url = urlFor(primary.address);
   const rel = (p) => (p.startsWith(ROOT + path.sep) ? path.relative(ROOT, p) : p);
   console.log('');
-  console.log('  霓虹防線 NEON BASTION · LAN server');
+  console.log('  災厄前線 CALAMITY FRONT · LAN server');
   console.log(`  APK   ${rel(APK_FILE)}  ${info.apk ? `v${info.version}, ${info.apk.size}, 建置於 ${info.apk.built}` : '(missing: run npm run build)'}`);
   console.log(`  Play  ${rel(WWW_DIR)}  ${info.play ? '(ok)' : '(missing: run npm run build:web)'}`);
   console.log('');

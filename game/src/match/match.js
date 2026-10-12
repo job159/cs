@@ -55,8 +55,8 @@ export class Match {
     if (this.state === 'round') {
       this._spawnDirector(dt);
       const left = this.queue.length + (g.zombies?.alive || 0);
-      const R = ROUNDS[this.round - 1];
-      g.hud?.setRound(R.title, this.boss ? `剩餘感染者 ${left}` : `剩餘感染者 ${left}`);
+      const R = ROUNDS[Math.max(0, this.round - 1)];
+      g.hud?.setRound(R.title, `剩餘感染者 ${left}`);
       if (this.boss) g.hud?.setBoss(this.boss.name, Math.max(0, this.boss.hp / this.boss.maxHp));
       if (left === 0 && (!this.boss || this.boss.hp <= 0)) this.endRound();
       this._checkDefeat();

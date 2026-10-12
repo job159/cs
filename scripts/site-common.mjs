@@ -109,7 +109,7 @@ export const DOWNLOAD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="curre
 // Install instructions shown on both download pages.
 export const INSTALL_STEPS = `<ol>
 <li>點上方按鈕下載。瀏覽器若提示「<b>不安全的下載</b>」或「檔案可能有害」，請選「<b>保留</b>」（或「仍要下載」）。</li>
-<li>下載完成後，點通知或到「下載」資料夾<b>開啟 NeonBastion.apk</b>。</li>
+<li>下載完成後，點通知或到「下載」資料夾<b>開啟 CalamityFront.apk</b>。</li>
 <li>系統若詢問，允許此來源（你的瀏覽器）<b>安裝未知應用程式</b>，然後返回繼續安裝。</li>
 <li>若 <b>Play 安全防護</b>跳出詢問，選「更多詳細資料」→「<b>仍要安裝</b>」。</li>
 <li>日後更新：直接下載新版覆蓋安裝，遊戲進度會保留。</li>

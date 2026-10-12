@@ -9,6 +9,7 @@ import { buildMannequin } from './mannequin.js';
 import { NavGrid } from '../world/nav.js';
 import { pick, rand, clamp, angleDiff, damp } from '../engine/util.js';
 import { Telegraphs } from './telegraph.js';
+import { retargetClips } from './retarget.js';
 import { ButcherBrain } from './brains/butcher.js';
 import { ColossusBrain } from './brains/colossus.js';
 
@@ -178,7 +179,7 @@ class Zombie {
     }
     // blood
     const amt = info.part === 'head' ? 1.6 : info.explosive ? 2.2 : 1;
-    if (!info.armored) g.fx?.blood(info.point || this.center(_v2), info.normal || _hitN.copy(dir).negate(), dir, amt * (info.pellets > 1 ? 0.5 : 1), { acid: this.type === 'spitter' });
+    if (!info.armored && !info.burn) g.fx?.blood(info.point || this.center(_v2), info.normal || _hitN.copy(dir).negate(), dir, amt * (info.pellets > 1 ? 0.5 : 1), { acid: this.type === 'spitter' });
     // gore: limb damage accumulates; big hits sever
     if (info.box && SEVER[info.box] && !this.severed.has(SEVER[info.box].bone)) {
       this.limbDamage[info.box] = (this.limbDamage[info.box] || 0) + amount;
@@ -552,6 +553,7 @@ export class ZombieManager {
     // animation library (real) or mannequin clips (fallback)
     try {
       const a = await loadGLB('zombies/anims.glb');
+      this.animSrc = a;
       this.clips = a.animations;
     } catch { this.clips = []; }
     const need = new Set();
@@ -591,7 +593,11 @@ export class ZombieManager {
     const entry = this.models.get(mid) || this.models.values().next().value;
     if (!entry) return null;
     const scene = cloneSkinned(entry.scene);
-    const clips = this.clips.length && !entry.fallback ? this.clips : entry.clips;
+    // library clips are retargeted once per model (rest poses / armature orientation may differ)
+    if (!entry.fallback && this.animSrc && !entry.retargeted) {
+      try { entry.retargeted = retargetClips(this.animSrc.animations, this.animSrc.scene, entry.scene); } catch (e) { console.warn('retarget failed', e); entry.retargeted = this.clips; }
+    }
+    const clips = !entry.fallback && entry.retargeted ? entry.retargeted : entry.clips;
     const z = new Zombie(this, type, def, { scene, hitboxes: entry.hitboxes, height: entry.height, scale: entry.scale }, clips, pos);
     if (opts.hpMul) { z.maxHp *= opts.hpMul; z.hp = z.maxHp; }
     if (opts.elite) this._makeElite(z, opts.elite);

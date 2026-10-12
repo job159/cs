@@ -85,7 +85,12 @@ export async function buildSkeleton(baseObj, pos) {
   const byName = {};
   for (const name of names) {
     const r = rig[name];
-    const head = joint(r.head), tail = joint(r.tail);
+    let head = joint(r.head), tail = joint(r.tail);
+    if (!r.parent) {
+      // Root: on the ground at the origin with an identity frame (+Y up), the convention anims.glb uses too
+      head = new THREE.Vector3(0, 0, 0);
+      tail = new THREE.Vector3(0, 0.1, 0);
+    }
     const dirG = tail.clone().sub(head);
     if (dirG.lengthSq() < 1e-12) dirG.set(0, 0, -1);
     dirG.normalize();
@@ -93,7 +98,7 @@ export async function buildSkeleton(baseObj, pos) {
     const Rb = vecRollToMat3([dirB.x, dirB.y, dirB.z], r.roll || 0);
     const Wg = A.clone().multiply(Rb);
     const m4 = new THREE.Matrix4().setFromMatrix3(Wg);
-    const world = new THREE.Quaternion().setFromRotationMatrix(m4).normalize();
+    const world = r.parent ? new THREE.Quaternion().setFromRotationMatrix(m4).normalize() : new THREE.Quaternion();
     const bone = { name, parent: r.parent ? byName[r.parent].index : -1, head, tail, world, index: bones.length };
     bones.push(bone);
     byName[name] = bone;

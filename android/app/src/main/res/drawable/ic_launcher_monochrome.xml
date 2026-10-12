@@ -1,39 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Themed-icon layer (Android 13+): same emblem as a single-color silhouette; only alpha matters. -->
+<!-- Themed-icon layer (Android 13+): reticle + claw slashes as a single-colour silhouette. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <group
-        android:pivotX="54"
-        android:pivotY="54"
-        android:scaleX="1.08"
-        android:scaleY="1.08">
-
-        <path
-            android:pathData="M54,28L76.52,41L76.52,67L54,80L31.48,67L31.48,41Z"
-            android:strokeWidth="3"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeLineJoin="round" />
-        <path
-            android:pathData="M57.38,36.45L67.51,42.3M70.89,48.15L70.89,59.85M67.51,65.7L57.38,71.55M50.62,71.55L40.49,65.7M37.11,59.85L37.11,48.15M40.49,42.3L50.62,36.45"
-            android:strokeWidth="1.2"
-            android:strokeAlpha="0.6"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeLineCap="round" />
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M51.8,28a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0M74.32,41a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0M74.32,67a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0M51.8,80a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0M29.28,67a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0M29.28,41a2.2,2.2 0,1 0,4.4 0a2.2,2.2 0,1 0,-4.4 0" />
-
-        <!-- Crystal: lit half solid, shaded half translucent -->
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M54,40L46.5,51.5L54,68Z" />
-        <path
-            android:fillAlpha="0.6"
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M54,40L61.5,51.5L54,68Z" />
-    </group>
+    <path android:pathData="M54,54m-21,0a21,21 0,1 1,42 0a21,21 0,1 1,-42 0" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.6" android:fillColor="#00000000" />
+    <path android:pathData="M54,25L54,35M54,73L54,83M25,54L35,54M73,54L83,54" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.6" android:strokeLineCap="round" />
+    <path android:pathData="M66,27C61,41 52,58 37,77C36.4,77.8 37.3,78.6 38,78C55,61 65,44 69.5,28.5C70,27 67,25.8 66,27Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M74,32C69,46 60,62 46,80C45.4,80.8 46.3,81.5 47,81C63,64 72,48 77.5,33.5C78,32 75,30.8 74,32Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M58,25C53,38 45,53 31,70C30.4,70.8 31.3,71.5 32,71C47,56 56,41 61.5,26.5C62,25 59,23.8 58,25Z" android:fillColor="#FFFFFFFF" />
 </vector>

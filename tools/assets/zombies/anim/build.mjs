@@ -23,7 +23,8 @@ const out = path.resolve(REPO, opt('out', 'game/assets/zombies/anims.glb'));
 
 const skel = new Skeleton();
 const t0 = Date.now();
-const all = { ...buildLoco(skel, only), ...buildActions(skel, only) };
+const loco = buildLoco(skel, only);
+const all = { ...loco, ...buildActions(skel, only, loco) };
 const clips = [];
 for (const name of CLIP_NAMES) {
   if (only && !only.includes(name)) continue;

@@ -232,13 +232,37 @@ function previewPNG(file, A, range) {
   fs.writeFileSync(file, PNG.sync.write(png));
 }
 
+/** Writes a flat (non-RLE) Radiance RGBE sky: blue gradient, warm horizon, a bright sun disc at `sunDir`. */
+function writeSynthHDR(file, sunDir) {
+  const W = 512, H = 256;
+  const l = Math.hypot(...sunDir), sd = sunDir.map((v) => v / l);
+  const head = Buffer.from(`#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${H} +X ${W}\n`, 'ascii');
+  const px = Buffer.alloc(W * H * 4);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const u = (x + 0.5) / W, v = 1 - (y + 0.5) / H;
+    const phi = (u - 0.5) * 2 * Math.PI, lat = (v - 0.5) * Math.PI;
+    const d = [Math.cos(phi) * Math.cos(lat), Math.sin(lat), Math.sin(phi) * Math.cos(lat)];
+    const t = Math.pow(Math.max(0, d[1]), 0.5);
+    let c = d[1] >= 0 ? [1.1 - 0.6 * t, 1.05 - 0.4 * t, 0.95 + 0.05 * t] : [0.25, 0.22, 0.2];
+    const cs = d[0] * sd[0] + d[1] * sd[1] + d[2] * sd[2];
+    if (cs > Math.cos((1.2 * Math.PI) / 180)) c = [20000, 18000, 15000];       // sun disc
+    else if (cs > 0.9) c = c.map((q) => q * (1 + 4 * (cs - 0.9) / 0.1));     // glow
+    const m = Math.max(...c), o = (y * W + x) * 4;
+    if (m < 1e-32) continue;
+    const e = Math.ceil(Math.log2(m) + 1e-9), sc = 256 / Math.pow(2, e);
+    px[o] = Math.min(255, Math.floor(c[0] * sc)); px[o + 1] = Math.min(255, Math.floor(c[1] * sc)); px[o + 2] = Math.min(255, Math.floor(c[2] * sc)); px[o + 3] = e + 128;
+  }
+  fs.writeFileSync(file, Buffer.concat([head, px]));
+}
+
 async function main() {
   const town = flag('town');
   const outDir = path.resolve(ROOT, opt('out', town ? 'captures/lightmap/town' : 'game/assets/maps/_test/lm'));
   const capDir = path.join(ROOT, 'captures', 'lightmap');
   fs.mkdirSync(capDir, { recursive: true });
   const scene = town ? buildTown(+opt('town', 200) || 200) : buildTestScene();
-  const hdr = opt('hdr', null);
+  let hdr = opt('hdr', null);
+  if (flag('synth-hdr')) { hdr = path.join(capDir, 'synth_sky.hdr'); writeSynthHDR(hdr, SUN.dir); }
   const lights = town ? [] : [LAMP];
   const t0 = performance.now();
   const mem0 = process.memoryUsage().rss;

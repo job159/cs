@@ -1,4 +1,4 @@
-package com.neonbastion.game;
+package com.calamityfront.game;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -44,7 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Thin fullscreen WebView shell for Neon Bastion.
+ * Thin fullscreen WebView shell for 災厄前線 CALAMITY FRONT.
  *
  * <p>The web build ships inside the APK as assets/www/ and is served from a fixed virtual HTTPS
  * origin (https://appassets.androidplatform.net/), the same scheme androidx WebViewAssetLoader
@@ -62,7 +62,7 @@ import java.util.Map;
  */
 public final class MainActivity extends Activity {
 
-    private static final String TAG = "NeonBastion";
+    private static final String TAG = "CalamityFront";
 
     /** Virtual origin. Never change it: localStorage (save data) is keyed by origin. */
     private static final String APP_HOST = "appassets.androidplatform.net";

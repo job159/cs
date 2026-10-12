@@ -29,5 +29,22 @@ const cssMin = await esbuild.transform(css, { loader: 'css', minify: true, targe
 await fs.writeFile(path.join(out, 'style.css'), cssMin.code);
 await fs.copyFile(path.join(src, 'index.html'), path.join(out, 'index.html'));
 
+// game assets (models, audio, textures, map packages). Test / scratch files are skipped.
+const SKIP = /(^|[\/])(_test|test_|_kittest)|\.(md|log)$/i;
+let assetBytes = 0, assetFiles = 0;
+async function copyDir(from, to) {
+  let entries;
+  try { entries = await fs.readdir(from, { withFileTypes: true }); } catch { return; }
+  await fs.mkdir(to, { recursive: true });
+  for (const e of entries) {
+    const a = path.join(from, e.name), b = path.join(to, e.name);
+    if (SKIP.test(e.name)) continue;
+    if (e.isDirectory()) await copyDir(a, b);
+    else { await fs.copyFile(a, b); assetBytes += (await fs.stat(a)).size; assetFiles++; }
+  }
+}
+await copyDir(path.join(src, 'assets'), path.join(out, 'assets'));
+console.log(`assets -> ${assetFiles} files, ${(assetBytes / 1048576).toFixed(1)} MB`);
+
 const bytes = Object.values(result.metafile.outputs).reduce((s, o) => s + o.bytes, 0);
 console.log(`web build -> ${path.relative(root, out)}  (game.js ${(bytes / 1024).toFixed(0)} KB, v${pkg.version})`);

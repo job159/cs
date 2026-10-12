@@ -141,7 +141,7 @@ export function curves(keys, { loop = false, period = null, flat = false } = {})
       if (n.startsWith('#')) v = k[n.slice(1)];
       else v = exp.get(n);
       if (v) state.set(n, v.slice());
-      const cur = state.get(n) || (n === '#handL' || n === '#handR' ? null : [0, 0, 0]);
+      const cur = state.get(n) || (n === '#handL' || n === '#handR' ? null : n.startsWith('#plant') ? [1, 0, 0] : [0, 0, 0]);
       if (!chans.has(n)) chans.set(n, { times: [], vals: [] });
       chans.get(n).times.push(k.t);
       chans.get(n).vals.push(cur ? cur.slice() : null);
@@ -245,7 +245,13 @@ export function proc(skel, opts) {
       if (off) tgt.add(new THREE.Vector3(...off));
       const fo = ex._footOff?.[s];
       const endQ = fo ? offsetQ(fo).multiply(anchors[s + 'Q']) : anchors[s + 'Q'].clone();
-      twoBoneIK(skel, pose, LEG(skel, s), tgt, kneePole(fk, skel, s), endQ, fk);
+      const wv = ex[s === 'l' ? 'plantL' : 'plantR'];
+      const w = wv ? Math.max(0, Math.min(1, wv[0])) : 1;
+      if (w <= 0) continue;
+      const leg = LEG(skel, s);
+      const before = leg.map((i) => pose.q[i].clone());
+      twoBoneIK(skel, pose, leg, tgt, kneePole(fk, skel, s), endQ, fk);
+      if (w < 1) leg.forEach((i, k) => pose.q[i].copy(before[k].slerp(pose.q[i], w)));
     }
     for (const s of ['l', 'r']) {
       const h = ex[s === 'l' ? 'handL' : 'handR'];

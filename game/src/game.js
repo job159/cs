@@ -10,6 +10,8 @@ import { Arsenal } from './weapons/arsenal.js';
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';
+import { AimAssist } from './player/aimassist.js';
+import { Throwables } from './weapons/throwables.js';
 
 export class Game {
   constructor({ renderer, input, audio, hud }) {
@@ -57,18 +59,35 @@ export class Game {
   onPlayerDowned() { this.hud?.toast('你倒下了！', 2000); }
 
   async loadMap(map) {
+    await this.loadWorld(map);
+    await this.loadPlayer();
+  }
+
+  /** Level only (the menu backdrop renders a world-only game; loadPlayer() can follow later). */
+  async loadWorld(map) {
+    if (this.worldMap === map) return;
     await this.world.load(map, { game: this });
+    this.worldMap = map;
+  }
+
+  /** Player, viewmodel, zombies, match and weapons on top of a loaded world. progress(0..1) optional. */
+  async loadPlayer(progress) {
     this.player = new PlayerController(this.world);
-    this.player.pos.copy(this.world.playerSpawns[0]);
+    const spawns = this.world.playerSpawns;
+    this.player.pos.copy(spawns[(this.spawnIndex | 0) % spawns.length] || spawns[0]);
     this.player.yaw = Math.PI;
     this.status = new PlayerStatus(this);
+    this.aim = new AimAssist(this);
     this.vm = new Viewmodel(this);
     await this.vm.init();
+    progress?.(0.4);
     this.zombies = new ZombieManager(this);
     await this.zombies.init();
+    progress?.(0.8);
     if (this.matchOptions) { this.match = new Match(this, this.matchOptions); this.match.start(); }
     this.fx = new FX(this, this.renderer.q);
     this.projectiles = new Projectiles(this);
+    this.throwables = new Throwables(this);
     this.arsenal = new Arsenal(this);
     this.arsenal.give('knife', { select: false });
     this.arsenal.give('glock', { select: false });
@@ -100,6 +119,7 @@ export class Game {
     const t = this.time;
     const s = this.input.poll();
     const p = this.player;
+    this.aim?.apply(s, dt);
     if (p) {
       p.yaw -= s.lookX / this.zoom;
       p.pitch = clamp(p.pitch + s.lookY / this.zoom, -1.5, 1.5);
@@ -109,6 +129,7 @@ export class Game {
     this.world.update(dt, t);
     if (this.arsenal) this.arsenal.update(dt, s);
     this.projectiles?.update(dt);
+    this.throwables?.update(dt);
     if (this.vm && p) {
       this.vm.update(dt, { lookX: s.lookX, lookY: s.lookY, speed: p.horizontalSpeed, onGround: p.onGround,
         landImpact: p.landImpact, crouch: p.crouch, moveX: s.move.x });
@@ -190,5 +211,40 @@ export class Game {
       return;
     }
     this.renderer.render(this.scene, this.camera, this.time);
+  }
+
+  /**
+   * Tears the game down so the next match (or the menu backdrop) starts clean: network replication,
+   * DOM UI, sounds and every GPU resource of the scene (shared cached assets are simply re-uploaded
+   * by the next game that uses them).
+   */
+  dispose() {
+    this.disposed = true;
+    try { this.net?.dispose?.(); } catch (e) { console.warn(e); }
+    this.touch?.dispose?.();
+    this.shop?.el?.remove();
+    this.perks?.el?.remove();
+    const hudRoot = document.getElementById('hud');
+    if (hudRoot) hudRoot.innerHTML = '';
+    const a = this.audio;
+    if (a) { for (const v of [...a.voices]) v.stop?.(0.25); a.music = null; }
+    const seen = new Set();
+    const tex = (t) => { if (t && t.isTexture && !t.isRenderTargetTexture && !seen.has(t)) { seen.add(t); t.dispose(); } };
+    this.scene.traverse((o) => {
+      if (o.geometry && !seen.has(o.geometry)) { seen.add(o.geometry); o.geometry.dispose(); }
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of mats) {
+        if (seen.has(m)) continue;
+        seen.add(m);
+        for (const v of Object.values(m)) tex(v);
+        if (m.uniforms) for (const u of Object.values(m.uniforms)) tex(u?.value);
+        m.dispose();
+      }
+      if (o.isLight && o.shadow?.map) { o.shadow.map.dispose(); o.shadow.map = null; }
+    });
+    tex(this.scene.environment);
+    tex(this.scene.background);
+    this.scene.clear();
+    this.renderer.gl.renderLists?.dispose?.();
   }
 }

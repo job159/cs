@@ -17,7 +17,7 @@
     Static site to package (must contain index.html). Default: <repo>\dist\www
 
 .PARAMETER Out
-    Output APK path. Default: <repo>\dist\NeonBastion.apk
+    Output APK path. Default: <repo>\dist\CalamityFront.apk
 
 .PARAMETER Debug
     Mark the APK debuggable (aapt2 --debug-mode); enables chrome://inspect for the WebView.
@@ -35,10 +35,10 @@ param(
 Set-StrictMode -Version 3
 $ErrorActionPreference = 'Stop'
 
-$PackageName = 'com.neonbastion.game'
+$PackageName = 'com.calamityfront.game'
 $MinSdk = 26
 $TargetSdk = 35
-$KeyAlias = 'neonbastion'
+$KeyAlias = 'calamityfront'
 
 # Assets that are already compressed are stored as-is (same idea as aapt2's no-compress list).
 $StoredExtensions = @('.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.mp3', '.ogg', '.oga', '.opus',
@@ -180,7 +180,7 @@ function Initialize-Keystore([string]$Keytool) {
         Write-Host '    creating a new release key (android\keystore\release.jks)' -ForegroundColor Yellow
         New-Item -ItemType Directory -Force -Path $KeystoreDir | Out-Null
         $password = New-RandomPassword 32
-        $text = "# Neon Bastion signing key. Back up this folder and keep it private:`n" +
+        $text = "# Calamity Front signing key. Back up this folder and keep it private:`n" +
             "# every update must be signed with the same key or it will not install over the old version.`n" +
             "storeFile=release.jks`nstorePassword=$password`nkeyPassword=$password`nkeyAlias=$KeyAlias`n"
         [System.IO.File]::WriteAllText($propsFile, $text, (New-Object System.Text.UTF8Encoding($false)))
@@ -189,7 +189,7 @@ function Initialize-Keystore([string]$Keytool) {
             Invoke-Tool 'keytool' $Keytool @('-J-Duser.language=en', '-J-Duser.country=US', # no localized mojibake
                 '-genkeypair', '-keystore', $defaultStore, '-storetype', 'PKCS12',
                 '-alias', $KeyAlias, '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000',
-                '-dname', 'CN=Neon Bastion', '-storepass:env', 'NB_KS_PASS', '-keypass:env', 'NB_KS_PASS')
+                '-dname', 'CN=Calamity Front', '-storepass:env', 'NB_KS_PASS', '-keypass:env', 'NB_KS_PASS')
         } catch {
             Remove-Item -LiteralPath $propsFile -Force -ErrorAction SilentlyContinue
             throw
@@ -243,7 +243,7 @@ function Add-ApkEntries([string]$Apk, [string]$DexFile, [string]$WebRoot) {
 function Invoke-Build {
     $clock = [System.Diagnostics.Stopwatch]::StartNew()
     $webRoot = if ($WebDir) { Resolve-UserPath $WebDir } else { Join-Path $RepoRoot 'dist\www' }
-    $outFile = if ($Out) { Resolve-UserPath $Out } else { Join-Path $RepoRoot 'dist\NeonBastion.apk' }
+    $outFile = if ($Out) { Resolve-UserPath $Out } else { Join-Path $RepoRoot 'dist\CalamityFront.apk' }
     $indexHtml = Join-Path $webRoot 'index.html'
     if (-not (Test-Path -LiteralPath $indexHtml -PathType Leaf)) {
         throw "No index.html in $webRoot. Build the web app first (npm run build:web) or pass -WebDir <folder>."
@@ -268,7 +268,7 @@ function Invoke-Build {
     $env:PATH = "$jdk\bin;$bt;$env:PATH"
 
     Write-Host ''
-    Write-Host 'NEON BASTION  APK build' -ForegroundColor Magenta
+    Write-Host 'CALAMITY FRONT  APK build' -ForegroundColor Magenta
     Write-Host "  web dir     : $webRoot"
     Write-Host "  version     : $($version.Name) (versionCode $($version.Code))$(if ($Debug) { ', DEBUGGABLE' })"
     Write-Host "  JDK         : $jdk"

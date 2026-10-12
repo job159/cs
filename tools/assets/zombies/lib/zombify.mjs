@@ -310,6 +310,12 @@ export function paintCloth(part, o = {}) {
       c[0] *= dk; c[1] *= dk; c[2] *= dk;
     }
     // weave / thread detail in UV space (flat textures like the white shirt get fabric structure)
+    // yellowed / sweat-stained light fabric (only affects bright texels: the white shirt, not the denim)
+    if (o.yellow) {
+      const l = lumOf(c);
+      const k = smoothstep(0.35, 0.75, l) * o.yellow * (0.6 + 0.4 * N3.fbm(P[0] * 6 + 2, P[1] * 6, P[2] * 6, 3));
+      over(c, [l * 0.78, l * 0.66, l * 0.45], k * 0.8);
+    }
     if (o.weave) {
       const w = Math.sin(u * S * 0.9) * Math.sin(v * S * 0.9) * 0.5 + N3.noise(u * 900, v * 900, 0.5) * 0.5;
       const k = 1 + w * 0.06 * o.weave;
@@ -329,12 +335,17 @@ export function paintCloth(part, o = {}) {
     // blood
     let bl = 0;
     if (A && blood.collar) {
+      // a soaked "bib" running down from the chin: wide at the collar, narrowing and fading towards the belly,
+      // ragged outline from low-frequency noise, drip streaks along the lower edge
       const dx = P[0] - A.mouth[0], dy = A.mouth[1] - P[1];
-      const front = smoothstep(-0.1, 0.5, Nn[2]);
-      const s = N3.noise(P[0] * 70, P[1] * 5, P[2] * 70);
-      const run = dy > 0.08 && dy < 0.6 ? (1 - smoothstep(0.05, 0.16 + dy * 0.2, Math.abs(dx))) * (1 - dy / 0.6) : 0;
-      const blob = (1 - smoothstep(0.0, 0.14, Math.hypot(dx, (dy - 0.2) * 0.7))) * smoothstep(-0.4, 0.4, N3.fbm(P[0] * 25, P[1] * 25, P[2] * 25, 3));
-      bl = Math.max(bl, (run * smoothstep(0.0, 0.5, s + 0.3) + blob) * front * blood.collar);
+      const front = smoothstep(-0.2, 0.35, Nn[2]);
+      const len = 0.42 * blood.collar;
+      const width = 0.11 * (1 - smoothstep(0.05, len, dy)) + 0.035;
+      const edgeN = N3.fbm(P[0] * 9, P[1] * 9, P[2] * 9, 4) * 0.05;
+      const soak = dy > 0.06 ? (1 - smoothstep(width - 0.02, width + 0.02, Math.abs(dx) + edgeN)) * (1 - smoothstep(len * 0.6, len, dy + edgeN)) : 0;
+      const streak = N3.noise(P[0] * 90, P[1] * 4, P[2] * 90);
+      const drips = dy > 0.06 && dy < len * 1.5 ? smoothstep(0.35, 0.6, streak) * (1 - smoothstep(0.02, width + 0.03, Math.abs(dx))) * (1 - dy / (len * 1.5)) : 0;
+      bl = Math.max(bl, (soak * 0.95 + drips * 0.8) * front * Math.min(1, blood.collar));
     }
     if (A && blood.hands) {
       const dh = Math.min(dist(P, A.handL), dist(P, A.handR));
@@ -355,17 +366,20 @@ export function paintCloth(part, o = {}) {
     let alpha = base.data[di + 3] / 255;
     if (tear) {
       const f = tearField(P, Nn);
-      // frayed fringe: thin warp/weft threads (UV-aligned streaks) survive or drop out near the cut
-      const thread = Math.max(N3.noise(u * 1600, v * 70, 3.3), N3.noise(u * 70, v * 1600, 7.7));
-      const fray = (tear.fray ?? 0.6) * 0.12;
-      const ff = f + (thread * 2 - 0.3) * fray;
-      if (ff > 0) { alpha = 0; anyCut = true; }
+      // frayed fringe: inside a narrow band around each hole only thin warp/weft threads survive (more of
+      // them further from the hole); thread lines run along the UV axes, ~6 texels apart
+      const fw = (tear.fray ?? 0.6) * 0.07;
+      let cut = f > 0;
+      if (!cut && f > -fw) {
+        const t = -f / fw;
+        const tu = Math.abs(N3.noise(u * S / 6, v * 6, 1.3)), tv = Math.abs(N3.noise(u * 6, v * S / 6, 2.1));
+        cut = Math.min(tu, tv) > 0.12 + 0.6 * t * t;
+      }
+      if (cut) { alpha = 0; anyCut = true; }
       else {
-        const edge = 1 - smoothstep(0, 0.05 + fray, -ff);
-        const scorch = 1 - smoothstep(0, 0.015 + fray * 0.3, -ff);
-        over(c, COLORS.grime, edge * 0.75);
-        mul(c, [0.55, 0.5, 0.45], edge * 0.7);
-        mul(c, [0.35, 0.3, 0.27], scorch * 0.8);
+        const edge = 1 - smoothstep(0, fw * 2.5, -f);
+        mul(c, [0.62, 0.57, 0.52], edge * 0.55);
+        over(c, COLORS.grime, edge * 0.25);
         bl = Math.max(bl, edge * (blood.edges ?? 0.4) * smoothstep(0, 0.5, N3.noise(P[0] * 40, P[1] * 40, P[2] * 40) + 0.3));
       }
     }
@@ -434,11 +448,12 @@ export function paintEyes(img, o = {}) {
     // bloodshot sclera: red capillaries + yellowing
     const vein = N3.ridged(u * 40, v * 40, 1.7, 3);
     over(c, lin([175, 160, 118]), sclera * 0.45 * (o.yellow ?? 1));
-    c[0] *= 1 - sclera * 0.25; c[1] *= 1 - sclera * 0.25; c[2] *= 1 - sclera * 0.25;
+    const dk = 1 - sclera * 0.4 - iris * 0.2;
+    c[0] *= dk; c[1] *= dk; c[2] *= dk;
     over(c, lin([150, 20, 20]), sclera * smoothstep(0.5, 0.8, vein) * (o.bloodshot ?? 0.7));
     if (o.style === 'milky' || o.style === 'dead') {
       const haze = o.style === 'milky' ? lin([205, 212, 214]) : lin([120, 118, 112]);
-      over(c, haze, iris * (o.style === 'milky' ? (o.haze ?? 0.62) : 0.5) + pupil * 0.35);
+      over(c, haze, iris * (o.style === 'milky' ? (o.haze ?? 0.5) : 0.5) + pupil * 0.3);
       if (o.style === 'milky') over(c, lin([150, 160, 170]), pupil * 0.25);
     }
     if (glow) {
@@ -487,7 +502,8 @@ export function thinHair(part, img, o = {}) {
   for (let i = 0; i < S * S; i++) {
     if (!texelSurface(r, tris, part.pos, nrm, i, P, Nn)) continue;
     const n = N3.fbm(P[0] * (o.scale ?? 18), P[1] * (o.scale ?? 18), P[2] * (o.scale ?? 18), 4);
-    const hole = smoothstep((o.amount ?? 0.4) - 0.65, (o.amount ?? 0.4) - 0.45, n);
+    const t = 1 - 2 * (o.amount ?? 0.3); // amount 0 = intact, 0.5 = half the scalp, 1 = bald
+    const hole = smoothstep(t - 0.05, t + 0.05, n);
     out.data[i * 4 + 3] = Math.round(out.data[i * 4 + 3] * (1 - hole));
   }
   return out;

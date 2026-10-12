@@ -21,7 +21,7 @@ export const PRESETS = {
     modifiers: { 'torso-vshape-decr-incr': 0.5, 'torso-muscle-pectoral-decr-incr': 0.5, 'neck-scale-horiz-decr-incr': 0.3 },
   },
   hunched: {
-    poseOffsets: { spine_01: [10, 0, 0], spine_02: [12, 0, 0], spine_03: [10, 0, 0], neck_01: [-14, 0, 0], head: [-10, 0, 0], clavicle_l: [0, 0, -6], clavicle_r: [0, 0, 6] },
+    poseOffsets: { spine_01: [6, 0, 0], spine_02: [7, 0, 0], spine_03: [6, 0, 0], neck_01: [-9, 0, 0], head: [-6, 0, 0], clavicle_l: [0, 0, -4], clavicle_r: [0, 0, 4] },
   },
 };
 

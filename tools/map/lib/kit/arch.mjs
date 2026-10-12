@@ -274,7 +274,15 @@ Object.assign(Kit.prototype, {
         if (op.type === 'door' || op.walk) info.doors.push(wp);
         else if (op.type === 'window') info.windows.push([wp[0], op.y + op.h / 2, wp[1]]);
       }
-      this.wall({ a, b, y0: 0, h: height, t, mat, tint: o.tint, grime, openings, bands, room: side.room ?? Math.min(1.1, 0.3 * minExtent(poly)), interior: false, collide: false });
+      const room = side.room ?? Math.min(1.1, 0.3 * minExtent(poly));
+      if (enter) {
+        // enterable ground floor: real wall with inner face + door gaps in the collision; solid upper part
+        const gOps = openings.filter((op) => (op.y ?? 0) < groundH - 0.01), uOps = openings.filter((op) => (op.y ?? 0) >= groundH - 0.01);
+        this.wall({ a, b, y0: 0, h: groundH, t, mat, tint: o.tint, grime, openings: gOps, inner: o.interiorWall || 'interior_wall', interior: true, collide: true });
+        if (floors > 1) this.wall({ a, b, y0: groundH, h: height - groundH, t, mat, tint: o.tint, grime: null, openings: uOps.map((op) => ({ ...op, y: op.y - groundH })), bands: bands.map((v) => v - groundH), room, interior: false, collide: false });
+      } else {
+        this.wall({ a, b, y0: 0, h: height, t, mat, tint: o.tint, grime, openings, bands, room, interior: false, collide: false });
+      }
       // horizontal trims on this facade
       this.at({ x: a[0], y: 0, z: a[1], rot: Math.atan2(-(b[1] - a[1]), b[0] - a[0]) }, () => {
         const ext = 0.04; // trims run slightly past the corners to hide the mitre
@@ -328,7 +336,7 @@ Object.assign(Kit.prototype, {
     // collision
     if (o.collide !== false) {
       const surf = this.material(mat).surf;
-      this.colPrism(poly, 0, height, surf);
+      this.colPrism(poly, enter ? groundH : 0, height, surf);
       if (roof.type === 'flat' && roof.parapet > 0) {
         for (let i = 0; i < n; i++) {
           const a = poly[i], b = poly[(i + 1) % n];

@@ -162,6 +162,7 @@ export class Kit {
   emit(matName, P, N, UV, C, I) {
     const nv = P.length / 3;
     if (!nv || !I.length) return;
+    this.material(matName); // registers (and validates) the material
     let cx = 0, cz = 0;
     for (let i = 0; i < nv; i++) { cx += P[i * 3]; cz += P[i * 3 + 2]; }
     const b = this._bucket(matName, cx / nv, cz / nv);

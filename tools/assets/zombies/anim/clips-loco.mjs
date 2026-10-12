@@ -63,7 +63,7 @@ export function buildLoco(skel) {
     c = retime(c, 61);
     c.loop = true;
     c.meta.speed = 0;
-    zombify(skel, c, { slump: 3, headTilt: 10, twitch: 0.8, claw: 22, seed: 3 });
+    zombify(skel, c, { slump: -9, neck: 2, headNod: -4, headTilt: 10, twitch: 0.8, claw: 22, seed: 3 });
     lockFeet(skel, c, { speed: 0 });
     c.meta.notes = 'Quaternius UAL2 Zombie_Idle_Loop slowed x1.5, zombified (head tilt, dropped shoulder, claw hands)';
     out.idle = c;

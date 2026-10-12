@@ -38,9 +38,21 @@ export class NetSync {
     game.playerList = () => this.playerList();
     if (!this.host && game.match) game.match.isMirror = true;
     for (const p of room.players ? room.players() : []) if (p.id !== room.selfId) this._addRemote(p);
-    room.on('peer-join', (p) => this._addRemote(p));
-    room.on('peer-leave', (p) => this._removeRemote(p.id ?? p));
-    room.on('message', (m) => this._onMessage(m));
+    this._h = { join: (p) => this._addRemote(p), leave: (p) => this._removeRemote(p.id ?? p), msg: (m) => this._onMessage(m) };
+    room.on('peer-join', this._h.join);
+    room.on('peer-leave', this._h.leave);
+    room.on('message', this._h.msg);
+  }
+
+  /** Detaches from the room (the room itself stays open: back to the lobby / next match). */
+  dispose() {
+    const room = this.room;
+    room.off('peer-join', this._h.join);
+    room.off('peer-leave', this._h.leave);
+    room.off('message', this._h.msg);
+    for (const r of this.remotes.values()) r.dispose();
+    this.remotes.clear();
+    if (this.game.net === this) this.game.net = null;
   }
 
   _addRemote(p) {

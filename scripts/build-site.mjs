@@ -5,7 +5,7 @@
 //
 // Run `node scripts/build-web.mjs` first. The repository (owner/name) comes from $GITHUB_REPOSITORY
 // (set by GitHub Actions) or the "repository" field of package.json. Nothing here needs updating per
-// release: the page links to /releases/latest/download/NeonBastion.apk and reads the version from the API.
+// release: the page links to /releases/latest/download/CalamityFront.apk and reads the version from the API.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -26,7 +26,7 @@ if (!owner || !repo) {
   process.exit(1);
 }
 const SITE_URL = `https://${owner.toLowerCase()}.github.io/${repo}/`;
-const APK_URL = `https://github.com/${owner}/${repo}/releases/latest/download/NeonBastion.apk`;
+const APK_URL = `https://github.com/${owner}/${repo}/releases/latest/download/CalamityFront.apk`;
 const REPO_URL = `https://github.com/${owner}/${repo}`;
 const API_URL = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
 
@@ -68,21 +68,21 @@ const SCRIPT = `
     if (apk) {
       const mb = apk.size / 1048576;
       set('size', mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(apk.size / 1024) + ' KB');
-      set('dlsize', 'NeonBastion.apk · ' + document.getElementById('size').textContent);
+      set('dlsize', 'CalamityFront.apk · ' + document.getElementById('size').textContent);
     }
     if (rel.published_at) set('date', '發佈於 ' + new Date(rel.published_at).toLocaleDateString('zh-TW'));
   } catch (e) { /* keep the static defaults */ }
 })();
 `;
 
-const html = page('霓虹防線 NEON BASTION · 下載', SITE_CSS, `<main>
+const html = page('災厄前線 CALAMITY FRONT · 下載', SITE_CSS, `<main>
 <header class="hero">
 ${emblemSvg({ className: 'emblem' })}
-<h1>霓虹防線</h1>
-<p class="sub">NEON BASTION</p>
+<h1>災厄前線</h1>
+<p class="sub">CALAMITY FRONT</p>
 </header>
 <div class="meta"><span class="chip" id="ver">最新版</span><span class="chip" id="size">Android APK</span><span class="chip" id="date">免費 · 開源</span></div>
-<a class="download" id="dl" href="${esc(APK_URL)}">${DOWNLOAD_ICON}<span>下載 APK<small id="dlsize">NeonBastion.apk</small></span></a>
+<a class="download" id="dl" href="${esc(APK_URL)}">${DOWNLOAD_ICON}<span>下載 APK<small id="dlsize">CalamityFront.apk</small></span></a>
 <section class="panel">
 <h2>安裝步驟</h2>
 ${INSTALL_STEPS}

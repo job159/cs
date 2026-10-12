@@ -341,6 +341,9 @@ export function passDirect(i0, i1) {
           px = tri[t9] + tri[t9 + 3] * u + tri[t9 + 6] * v;
           py = tri[t9 + 1] + tri[t9 + 4] * u + tri[t9 + 7] * v;
           pz = tri[t9 + 2] + tri[t9 + 5] * u + tri[t9 + 8] * v;
+          // quick reject: a point inside geometry sees a back face straight up its normal
+          const qh = intersect(px + gx * eps, py + gy * eps, pz + gz * eps, nx, ny, nz, far);
+          if (qh >= 0 && HIT[3] < 0 && MATS[TMAT[qh] * 8 + 7] === 0) continue;
           const nb = hemiProbe(px + gx * eps, py + gy * eps, pz + gz * eps, S1, probeStep, r1, r2, false);
           const ns = Math.ceil(S1 / probeStep);
           if (nb / ns > thr * 0.5) continue;

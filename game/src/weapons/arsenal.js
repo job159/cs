@@ -18,6 +18,7 @@ const _e = new THREE.Euler();
 const DRAW_TIME = { pistol: 0.45, smg: 0.6, rifle: 0.75, shotgun: 0.75, mg: 1.1, sniper: 0.9, heavy: 1.2, melee: 0.4, grenade: 0.4 };
 
 export function haptic(ms) {
+  if (haptic.enabled === false) return; // settings: 震動回饋 off
   try { window.NativeBridge?.vibrate?.(ms); } catch { /* not on Android */ }
   if (!window.NativeBridge && navigator.vibrate && matchMedia('(pointer: coarse)').matches) navigator.vibrate(ms);
 }

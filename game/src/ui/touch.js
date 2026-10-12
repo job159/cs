@@ -46,9 +46,10 @@ export class TouchControls {
     this.adsOn = false;
     this.crouchOn = false;
     el.addEventListener('pointerdown', (e) => this._down(e), { passive: false });
-    window.addEventListener('pointermove', (e) => this._move(e), { passive: false });
-    window.addEventListener('pointerup', (e) => this._up(e));
-    window.addEventListener('pointercancel', (e) => this._up(e));
+    this._wh = { move: (e) => this._move(e), up: (e) => this._up(e) };
+    window.addEventListener('pointermove', this._wh.move, { passive: false });
+    window.addEventListener('pointerup', this._wh.up);
+    window.addEventListener('pointercancel', this._wh.up);
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     this.slotCache = '';
   }
@@ -119,5 +120,24 @@ export class TouchControls {
     this.slotsEl.innerHTML = slots.filter((s) => s <= 3).map((s) => `<button class="slot${s === ar.slot ? ' on' : ''}" data-slot="${s}"><span>${s}</span>${ar.owned[s].def.zh}</button>`).join('');
   }
 
-  setVisible(v) { this.el.style.display = v ? '' : 'none'; }
+  setVisible(v) {
+    this.el.style.display = v ? '' : 'none';
+    if (!v) this.releaseAll();
+  }
+
+  /** Lets go of every held control (pause menu, buy menu, results). */
+  releaseAll() {
+    for (const p of this.ptr.values()) p.btn?.classList.remove('on');
+    this.ptr.clear();
+    this.base.style.display = 'none';
+    this.input.setStick(0, 0);
+    if (this.adsOn) { this.adsOn = false; this.el.querySelector('.t-ads')?.classList.remove('on'); }
+  }
+
+  dispose() {
+    window.removeEventListener('pointermove', this._wh.move);
+    window.removeEventListener('pointerup', this._wh.up);
+    window.removeEventListener('pointercancel', this._wh.up);
+    this.el.remove();
+  }
 }

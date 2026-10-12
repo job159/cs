@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Neon Bastion WebView shell.
-  The package name (com.neonbastion.game) is injected by scripts/build-apk.ps1, the same way the
+  CALAMITY FRONT WebView shell.
+  The package name (com.calamityfront.game) is injected by scripts/build-apk.ps1, the same way the
   Android Gradle Plugin injects `namespace`; minSdk/targetSdk/version are passed to aapt2 there too.
 
   The game is served from APK assets through a virtual https origin that MainActivity intercepts
@@ -22,7 +22,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="false"
-        android:theme="@style/Theme.NeonBastion">
+        android:theme="@style/Theme.CalamityFront">
 
         <activity
             android:name=".MainActivity"

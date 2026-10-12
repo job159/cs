@@ -45,6 +45,7 @@ export class Shop {
       if (!m) return;
       if (id === 'armor' || id === 'helmet') m.buyArmor(id);
       else if (id === 'ammo') m.buyAmmo();
+      else if (id.startsWith('t_')) game.throwables?.buy(id.slice(2));
       else m.buy(id);
       this.render();
     });
@@ -76,6 +77,8 @@ export class Shop {
         ['armor', '防彈衣 Kevlar', '吸收 50% 傷害，耐久 100', 650, st.armor >= 100],
         ['helmet', '戰術頭盔 Helmet', '降低受擊晃動與畫面震動', 350, st.helmet],
         ['ammo', '彈藥補充', `補充目前武器兩個彈匣（${ws ? ws.def.zh : ''}）`, ammoPrice, false],
+        ['t_frag', '破片手雷', `範圍爆炸　持有 ${g.throwables?.count.frag ?? 0} / 3`, 300, (g.throwables?.count.frag ?? 0) >= 3],
+        ['t_fire', '燃燒彈', `落地起火 7 秒　持有 ${g.throwables?.count.fire ?? 0} / 2`, 450, (g.throwables?.count.fire ?? 0) >= 2],
       ].map(([id, name, desc, price, owned]) => `<div class="card gear${owned ? ' owned' : ''}"><div class="cn">${name}</div><div class="cd">${desc}</div>
         <button data-buy="${id}" ${owned || (m?.money ?? 0) < price ? 'disabled' : ''}>${owned ? '已擁有' : '$' + price}</button></div>`).join('');
       return;
