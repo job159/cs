@@ -110,15 +110,20 @@ export async function runZombieViewer(renderer, params) {
       }
     }
   }
+  // extras.poseOffsets (e.g. the 'hunched' preset) are additive local rotations the game applies after the
+  // animation mixer each frame; pose= adds debug rotations on top. noOffsets=1 shows the raw clip.
   const applyPose = () => {
-    const pose = parsePose(params.get('pose'));
     const e = new THREE.Euler(), q = new THREE.Quaternion();
-    for (const [bone, deg] of Object.entries(pose)) {
-      const b = model.getObjectByName(bone);
-      if (!b) continue;
-      e.set(deg[0] * Math.PI / 180, (deg[1] || 0) * Math.PI / 180, (deg[2] || 0) * Math.PI / 180);
-      b.quaternion.multiply(q.setFromEuler(e));
-    }
+    const add = (pose) => {
+      for (const [bone, deg] of Object.entries(pose || {})) {
+        const b = model.getObjectByName(bone);
+        if (!b) continue;
+        e.set(deg[0] * Math.PI / 180, (deg[1] || 0) * Math.PI / 180, (deg[2] || 0) * Math.PI / 180);
+        b.quaternion.multiply(q.setFromEuler(e));
+      }
+    };
+    if (!params.get('noOffsets')) add(model.userData.poseOffsets);
+    add(parsePose(params.get('pose')));
   };
   applyPose();
   model.updateMatrixWorld(true);
@@ -173,6 +178,7 @@ export async function runZombieViewer(renderer, params) {
   };
   document.body.appendChild(out);
   document.getElementById('boot')?.remove();
+  for (const el of document.querySelectorAll('#hud,#ui')) el.style.display = 'none';
   draw();
   window.__zv = { scene, model, cam, draw, info, mixer, applyPose };
   window.__shotReady = true;

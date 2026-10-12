@@ -49,4 +49,22 @@ re-encoded / simplified for phones. Attribution is not required; listed here for
 | HDRI | `kloppenheim_01_puresky` | [kloppenheim_01_puresky](https://polyhaven.com/a/kloppenheim_01_puresky) | Poly Haven | CC0 |
 | HDRI | `industrial_sunset_puresky` | [industrial_sunset_puresky](https://polyhaven.com/a/industrial_sunset_puresky) | Poly Haven | CC0 |
 | HDRI | `overcast_soil_puresky` | [overcast_soil_puresky](https://polyhaven.com/a/overcast_soil_puresky) | Poly Haven | CC0 |
+| model | `Barrel_01` | [Barrel_01](https://polyhaven.com/a/Barrel_01) | Poly Haven | CC0 |
+| model | `barrel_03` | [barrel_03](https://polyhaven.com/a/barrel_03) | Poly Haven | CC0 |
+| model | `wooden_crate_02` | [wooden_crate_02](https://polyhaven.com/a/wooden_crate_02) | Poly Haven | CC0 |
+| model | `cardboard_box_01` | [cardboard_box_01](https://polyhaven.com/a/cardboard_box_01) | Poly Haven | CC0 |
+| model | `plastic_crate_02` | [plastic_crate_02](https://polyhaven.com/a/plastic_crate_02) | Poly Haven | CC0 |
+| model | `old_tyre` | [old_tyre](https://polyhaven.com/a/old_tyre) | Poly Haven | CC0 |
+| model | `metal_trash_can` | [metal_trash_can](https://polyhaven.com/a/metal_trash_can) | Poly Haven | CC0 |
+| model | `trashbag` | [trashbag](https://polyhaven.com/a/trashbag) | Poly Haven | CC0 |
+| model | `fire_hydrant` | [fire_hydrant](https://polyhaven.com/a/fire_hydrant) | Poly Haven | CC0 |
+| model | `street_lamp_01` | [street_lamp_01](https://polyhaven.com/a/street_lamp_01) | Poly Haven | CC0 |
+| model | `concrete_road_barrier_02` | [concrete_road_barrier_02](https://polyhaven.com/a/concrete_road_barrier_02) | Poly Haven | CC0 |
+| model | `exterior_aircon_unit` | [exterior_aircon_unit](https://polyhaven.com/a/exterior_aircon_unit) | Poly Haven | CC0 |
+| model | `utility_box_02` | [utility_box_02](https://polyhaven.com/a/utility_box_02) | Poly Haven | CC0 |
+| model | `painted_wooden_bench` | [painted_wooden_bench](https://polyhaven.com/a/painted_wooden_bench) | Poly Haven | CC0 |
+| model | `water_manhole_cover` | [water_manhole_cover](https://polyhaven.com/a/water_manhole_cover) | Poly Haven | CC0 |
+| model | `covered_car` | [covered_car](https://polyhaven.com/a/covered_car) | Poly Haven | CC0 |
+| model | `security_light` | [security_light](https://polyhaven.com/a/security_light) | Poly Haven | CC0 |
+| model | `propane_tank` | [propane_tank](https://polyhaven.com/a/propane_tank) | Poly Haven | CC0 |
 <!-- map-assets:end -->

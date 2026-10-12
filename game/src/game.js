@@ -46,6 +46,11 @@ export class Game {
     if (target && target.id !== undefined && target.id !== this.localId) { this.net?.sendPlayerDamage(target.id, amount, opts); return amount; }
     return this.status?.damage(amount, opts) ?? 0;
   }
+  /** Push a player (boss pulls / knock-ups): local directly, remote through the network. */
+  pushPlayer(target, v) {
+    if (target && target.id !== undefined && target.id !== this.localId) { this.net?.sendPlayerPush(target.id, v); return; }
+    this.player?.addImpulse(v.x, v.y, v.z);
+  }
   playerStatus(kind, time, value) { if (kind === 'slow') this.status?.applySlow(time, value); }
   get playerDead() { return !this.status || !this.status.alive; }
   onZombieKilled(z, info) { this.match?.onKill(z, info); }

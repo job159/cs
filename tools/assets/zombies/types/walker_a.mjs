@@ -54,13 +54,13 @@ export async function build(lib) {
     blood: { collar: 1, hands: 0.5, splatter: 0.55, edges: 0.5 },
     tear: { amount: 0.42, scale: 5.5, fray: 0.8, where: tear },
   });
-  suit.material = lib.material('cloth', { ...cloth, alpha: cloth.alpha, doubleSided: true });
+  suit.material = lib.material('cloth', { ...cloth, alpha: cloth.alpha, doubleSided: true, pngBits: 6 });
   // body faces under intact cloth go away; under holes they stay visible
   h.hideCovered(body, (p) => cloth.holeAt(p, 0.1));
 
   const shoeTex = await lib.texture(shoes.asset.textures.diffuse, 1024);
   shoes.material = lib.material('cloth', {
-    albedo: lib.grungeTexture(shoeTex, { seed: 3, darken: 0.35, dirt: 0.7, blood: 0.2, tint: [0.75, 0.7, 0.62] }),
+    albedo: lib.grungeTexture(shoeTex, { seed: 3, darken: 0.5, dirt: 0.8, blood: 0.25, tint: [0.5, 0.46, 0.42] }),
     normal: shoes.asset.textures.normal ? await lib.texture(shoes.asset.textures.normal, 512) : null,
     roughness: 0.75,
   });
@@ -70,8 +70,8 @@ export async function build(lib) {
   eyes.material = lib.material('eye', { ...lib.paintEyes(eyeTex, { style: 'milky', bloodshot: 0.9 }), roughness: 0.15 });
   const teethTex = await lib.texture(teeth.asset.textures.diffuse, 512);
   teeth.material = lib.material('teeth', { albedo: lib.grungeTexture(teethTex, { seed: 9, tint: [0.85, 0.7, 0.45], darken: 0.25, dirt: 0.5, blood: 0.45, freq: 14 }), roughness: 0.45 });
-  const hairTex = await lib.texture(hair.asset.textures.diffuse, 1024);
-  const hairImg = lib.thinHair(hair, lib.grungeTexture(hairTex, { seed: 4, darken: 0.2, dirt: 0.5, blood: 0.15, tint: [0.8, 0.78, 0.72] }), { amount: 0.45, seed: 2 });
+  const hairTex = await lib.texture(hair.asset.textures.diffuse, 512);
+  const hairImg = lib.thinHair(hair, lib.grungeTexture(hairTex, { seed: 4, darken: 0.25, dirt: 0.5, blood: 0.15, tint: [0.8, 0.78, 0.72] }), { amount: 0.18, scale: 26, seed: 2 });
   hair.material = lib.material('hair', { albedo: hairImg, alpha: true, roughness: 0.8, doubleSided: true });
   const browTex = await lib.texture(brows.asset.textures.diffuse, 256);
   brows.material = lib.material('hair', { albedo: lib.grungeTexture(browTex, { darken: 0.3 }), alpha: true, roughness: 0.8 });

@@ -280,6 +280,35 @@ function jitterSetup() {
 
 const tmp3 = new Float64Array(3);
 
+// Hemisphere probe from the current texel frame (closest hits, so back faces are detected).
+// Returns the number of back-face hits; hemiSky (rgb sum of escaped sky radiance) and hemiEsc (escaped rays).
+const hemiSky = new Float64Array(3);
+let hemiEsc = 0;
+function hemiProbe(ox, oy, oz, S, step, r1, r2, wantSky) {
+  const hx = HAMX, hy = HAMY, far = P.far;
+  const f = onb(nx, ny, nz);
+  const tx = f[0], ty = f[1], tz = f[2], bx = f[3], by = f[4], bz = f[5];
+  let back = 0;
+  hemiSky[0] = hemiSky[1] = hemiSky[2] = 0; hemiEsc = 0;
+  for (let k = 0; k < S; k += step) {
+    let u1 = hx[k] + r1; if (u1 >= 1) u1 -= 1;
+    let u2 = hy[k] + r2; if (u2 >= 1) u2 -= 1;
+    const r = Math.sqrt(u1), phi = 2 * PI * u2;
+    const lx = r * Math.cos(phi), ly = r * Math.sin(phi), lz = Math.sqrt(1 - u1);
+    const dx = tx * lx + bx * ly + nx * lz, dy = ty * lx + by * ly + ny * lz, dz = tz * lx + bz * ly + nz * lz;
+    if (dx * gx + dy * gy + dz * gz <= 1e-4) continue;
+    const h = intersect(ox, oy, oz, dx, dy, dz, far);
+    if (h < 0) {
+      hemiEsc++;
+      if (wantSky) { skyLookup(dx, dy, dz, tmp3, 0); hemiSky[0] += tmp3[0]; hemiSky[1] += tmp3[1]; hemiSky[2] += tmp3[2]; }
+    } else if (HIT[3] < 0 && MATS[TMAT[h] * 8 + 7] === 0) back++;
+  }
+  return back;
+}
+
+// Candidate sample positions inside the texel footprint (pixel offsets) for texels whose centre is inside geometry.
+const CAND = [0.45, 0, -0.45, 0, 0, 0.45, 0, -0.45, 0.4, 0.4, -0.4, 0.4, 0.4, -0.4, -0.4, -0.4, 0.25, 0, -0.25, 0, 0, 0.25, 0, -0.25];
+
 // ---------------------------------------------------------------- pass A: sun, lights, sky estimate, validity
 export function passDirect(i0, i1) {
   const S1 = P.skySamples1, eps = P.eps, far = P.far;
@@ -287,34 +316,48 @@ export function passDirect(i0, i1) {
   const sunCos = P.sunCos, SS = P.sunSamples, jitter = P.jitter;
   const LS = P.lightSamples;
   const L = sunL, sT = sunT, sB = sunB;
-  const hx = HAMX, hy = HAMY;
+  const thr = P.invalidThreshold;
+  const probeStep = Math.max(1, Math.floor(S1 / 12));
   const tri = TRI;
   for (let i = i0; i < i1; i++) {
     seed(i, 1);
     texelGeom(i);
-    const ox = px + gx * eps, oy = py + gy * eps, oz = pz + gz * eps;
-    // --- sky (closest hit so back faces can be detected)
-    const f = onb(nx, ny, nz);
-    const tx = f[0], ty = f[1], tz = f[2], bx = f[3], by = f[4], bz = f[5];
+    let ox = px + gx * eps, oy = py + gy * eps, oz = pz + gz * eps;
     const r1 = rnd(), r2 = rnd();
-    let sr = 0, sg = 0, sb = 0, back = 0;
-    for (let k = 0; k < S1; k++) {
-      let u1 = hx[k] + r1; if (u1 >= 1) u1 -= 1;
-      let u2 = hy[k] + r2; if (u2 >= 1) u2 -= 1;
-      const r = Math.sqrt(u1), phi = 2 * PI * u2;
-      const lx = r * Math.cos(phi), ly = r * Math.sin(phi), lz = Math.sqrt(1 - u1);
-      const dx = tx * lx + bx * ly + nx * lz, dy = ty * lx + by * ly + ny * lz, dz = tz * lx + bz * ly + nz * lz;
-      if (dx * gx + dy * gy + dz * gz <= 1e-4) continue;
-      const h = intersect(ox, oy, oz, dx, dy, dz, far);
-      if (h < 0) {
-        skyLookup(dx, dy, dz, tmp3, 0);
-        sr += tmp3[0]; sg += tmp3[1]; sb += tmp3[2];
-      } else if (HIT[3] < 0 && MATS[TMAT[h] * 8 + 7] === 0) back++;
+    // --- sky estimate + inside-geometry test
+    let back = hemiProbe(ox, oy, oz, S1, 1, r1, r2, true);
+    if (back / S1 > thr && P.adjust) {
+      // the texel centre is under / inside other geometry: look for a visible point in its footprint. Among the
+      // visible candidates take the one that sees the least sky (a texel straddling a wall represents the room
+      // side, never the sunlit outside), ties -> closest to the centre.
+      jitterSetup();
+      if (jOk) {
+        const t9 = curTri * 9, bu0 = curBu, bv0 = curBv;
+        let bestS = Infinity, bu = 0, bv = 0;
+        for (let c = 0; c < CAND.length; c += 2) {
+          let u = bu0 + jA * CAND[c] + jB * CAND[c + 1], v = bv0 + jC * CAND[c] + jD * CAND[c + 1];
+          if (u < 0) u = 0; if (v < 0) v = 0;
+          const s = u + v; if (s > 1) { u /= s; v /= s; }
+          px = tri[t9] + tri[t9 + 3] * u + tri[t9 + 6] * v;
+          py = tri[t9 + 1] + tri[t9 + 4] * u + tri[t9 + 7] * v;
+          pz = tri[t9 + 2] + tri[t9 + 5] * u + tri[t9 + 8] * v;
+          const nb = hemiProbe(px + gx * eps, py + gy * eps, pz + gz * eps, S1, probeStep, r1, r2, false);
+          const ns = Math.ceil(S1 / probeStep);
+          if (nb / ns > thr * 0.5) continue;
+          const score = hemiEsc / ns + 0.02 * (CAND[c] * CAND[c] + CAND[c + 1] * CAND[c + 1]);
+          if (score < bestS) { bestS = score; bu = u; bv = v; }
+        }
+        if (bestS < Infinity) {
+          TEX_BARY[i * 2] = bu; TEX_BARY[i * 2 + 1] = bv;
+          texelGeom(i);
+          ox = px + gx * eps; oy = py + gy * eps; oz = pz + gz * eps;
+          back = hemiProbe(ox, oy, oz, S1, 1, r1, r2, true);
+        } else texelGeom(i);
+      }
     }
     const ks = PI / S1;
-    O_SKY1[i * 3] = sr * ks; O_SKY1[i * 3 + 1] = sg * ks; O_SKY1[i * 3 + 2] = sb * ks;
-    const backFrac = back / S1;
-    O_BACK[i] = Math.round(backFrac * 255);
+    O_SKY1[i * 3] = hemiSky[0] * ks; O_SKY1[i * 3 + 1] = hemiSky[1] * ks; O_SKY1[i * 3 + 2] = hemiSky[2] * ks;
+    O_BACK[i] = Math.round((back / S1) * 255);
 
     // --- sun: jittered over the texel footprint (clamped to the triangle) and the sun disc
     let vis = 0;

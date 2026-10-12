@@ -1,0 +1,10 @@
+import { Skeleton } from './skeleton.mjs';
+import { fromUAL } from './lib.mjs';
+import { footPoints } from './ik.mjs';
+import { removeRootMotion } from './clip.mjs';
+const skel = new Skeleton();
+const c = fromUAL(skel, 1, process.argv[2] || 'Jog_Fwd_Loop');
+removeRootMotion(c);
+console.log('rootSpeed', c.meta.speed, 'frames', c.poses.length);
+c.poses.forEach((p, f) => { const fk = skel.fk(p); const L = footPoints(skel, fk, 'l'), R = footPoints(skel, fk, 'r');
+ console.log(f, 'root', p.root.toArray().map(v => v.toFixed(2)).join(','), 'L heel', L.heel.y.toFixed(3), L.heel.z.toFixed(2), 'toe', L.toe.y.toFixed(3), L.toe.z.toFixed(2), '| R heel', R.heel.y.toFixed(3), R.heel.z.toFixed(2), 'toe', R.toe.y.toFixed(3), R.toe.z.toFixed(2)); });

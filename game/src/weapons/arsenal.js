@@ -59,6 +59,14 @@ export class Arsenal {
     this.spinSound = null;
   }
 
+  /** Weapon jam (boss shockwaves): no firing for `t` seconds. */
+  jam(t) {
+    this.jamT = Math.max(this.jamT || 0, t);
+    this.game.hud?.toast('武器卡彈！', 1000);
+    this.game.audio?.play('dryfire');
+    this.vm.kick({ back: 0.05, up: 10, side: 4, roll: 12 });
+  }
+
   give(id, { select = true } = {}) {
     const def = WEAPONS[id];
     if (!def) return null;
@@ -160,6 +168,7 @@ export class Arsenal {
       if (this.fireCd <= 0) { this._fire(ws); this.burstLeft--; this.fireCd = 60 / (def.burstRpm || 1000); if (this.burstLeft === 0) this.fireCd = 60 / def.rpm; }
       return;
     }
+    if (this.jamT > 0) { this.jamT -= dt; return; }
     if (wantsFire && this.fireCd <= 0) {
       if (ws.needsCycle) return;
       if (ws.ammo <= 0) {

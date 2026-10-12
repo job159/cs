@@ -178,15 +178,15 @@ export class Match {
 
   _spawnBoss(kind) {
     const g = this.game;
-    // bosses get their own controllers (game/src/bosses); until then a giant elite brute stands in
-    if (g.bosses?.spawn) { this.boss = g.bosses.spawn(kind, this); return; }
-    const sp = this._pickSpawner() || new THREE.Vector3(0, 0, 25);
-    const z = g.zombies.spawn('brute', sp, { hpMul: kind === 'colossus' ? 22 : 12, elite: true });
+    const arenas = g.world.def?.bossArenas || {};
+    const ar = kind === 'colossus' ? arenas.final : arenas.mid;
+    const sp = ar ? new THREE.Vector3(...ar.center) : (this._pickSpawner() || new THREE.Vector3(0, 0, 25));
+    const z = g.zombies.spawn(kind, sp, {});
     if (!z) return;
-    z.root.scale.setScalar(kind === 'colossus' ? 1.9 : 1.5);
-    z.radius *= 1.6; z.height *= 1.6;
-    this.boss = { name: kind === 'colossus' ? '深淵巨像' : '屠宰者', get hp() { return z.hp; }, get maxHp() { return z.maxHp; }, zombie: z };
+    const name = ZOMBIES[kind]?.zh || '首領';
+    this.boss = { name, get hp() { return z.hp; }, get maxHp() { return z.maxHp; }, zombie: z };
     g.audio?.play('boss_warning');
+    g.hud?.toast('⚠ ' + name + ' 出現了', 3000);
   }
 
   // ---------------------------------------------------------------- economy / XP

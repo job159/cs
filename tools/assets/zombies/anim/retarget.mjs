@@ -58,10 +58,12 @@ export function retarget(src, map, skel, opts = {}) {
   else if (opts.heading === 'travel') {
     const a = src.worldP[0][hipsK], b = src.worldP[src.frames - 1][hipsK];
     yaw = -Math.atan2(b.x - a.x, b.z - a.z);
-  } else if (opts.heading === 'hips') {
-    // average facing of the hips: source forward axis (+Z at rest) rotated by hips world delta
+  } else if (opts.heading === 'hips' || opts.heading === 'hips0') {
+    // average facing of the hips (whole take, or the first 10 frames for 'hips0'): source forward
+    // axis (+Z at rest) rotated by the hips world delta
     let sx = 0, sz = 0;
-    for (let f = 0; f < src.frames; f++) {
+    const nF = opts.heading === 'hips0' ? Math.min(10, src.frames) : src.frames;
+    for (let f = 0; f < nF; f++) {
       const d = src.worldQ[f][hipsK].clone().multiply(src.restWorldQ[hipsK].clone().invert());
       const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(d);
       sx += fw.x; sz += fw.z;

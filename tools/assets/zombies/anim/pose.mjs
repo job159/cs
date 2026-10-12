@@ -28,7 +28,7 @@ export function expand(offsets) {
     out.set(name, cur ? [cur[0] + v[0], cur[1] + v[1], cur[2] + v[2]] : [...v]);
   };
   for (const [k, v] of Object.entries(offsets || {})) {
-    if (!Array.isArray(v) || k === 'root' || /^ik|^foot[LR]$|^hand[LR]$/.test(k)) continue;
+    if (!Array.isArray(v) || k === 'root' || /^(foot|hand|plant)[LR]$/.test(k)) continue;
     if (SIDED.has(k)) { add(`${k}_l`, v); add(`${k}_r`, [v[0], -v[1], -v[2]]); }
     else if (k.endsWith('_r')) add(k, [v[0], -v[1], -v[2]]);
     else add(k, v);
@@ -57,6 +57,19 @@ export function applyOffsets(skel, pose, offsets, weight = 1) {
   const r = offsets instanceof Map ? null : offsets?.root;
   if (r) pose.root.add(new THREE.Vector3(r[0], r[1], r[2]).multiplyScalar(weight));
   return pose;
+}
+
+/** Like applyOffsets but the listed bones are first reset to their rest local rotation (absolute). */
+export function setOffsets(skel, pose, offsets) {
+  const m = offsets instanceof Map ? offsets : expand(offsets);
+  for (const name of m.keys()) pose.q[skel.i(name)].copy(skel.restLocalQ[skel.i(name)]);
+  return applyOffsets(skel, pose, m);
+}
+
+/** Blends the listed bones of pose `a` towards pose `b` (in place on a). */
+export function blendBones(skel, a, b, names, w) {
+  for (const n of names) { const i = skel.i(n); a.q[i].slerp(b.q[i], w); }
+  return a;
 }
 
 /** Rotation in WORLD axes applied to a bone's current world rotation (keeps children following). */
@@ -119,7 +132,7 @@ export function curves(keys, { loop = false, period = null, flat = false } = {})
   for (const k of ks) {
     const exp = expand(k);
     for (const n of exp.keys()) allNames.add(n);
-    for (const extra of ['root', 'footL', 'footR', 'handL', 'handR', 'ikL', 'ikR']) if (k[extra]) allNames.add('#' + extra);
+    for (const extra of ['root', 'footL', 'footR', 'handL', 'handR', 'plantL', 'plantR']) if (k[extra]) allNames.add('#' + extra);
   }
   for (const k of ks) {
     const exp = expand(k);

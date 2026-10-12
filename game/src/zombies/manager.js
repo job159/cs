@@ -8,6 +8,11 @@ import { ZOMBIES, DEFAULT_HITBOXES, PART_OF, SEVER } from './defs.js';
 import { buildMannequin } from './mannequin.js';
 import { NavGrid } from '../world/nav.js';
 import { pick, rand, clamp, angleDiff, damp } from '../engine/util.js';
+import { Telegraphs } from './telegraph.js';
+import { ButcherBrain } from './brains/butcher.js';
+import { ColossusBrain } from './brains/colossus.js';
+
+const BRAINS = { butcher: ButcherBrain, colossus: ColossusBrain };
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -55,6 +60,7 @@ class Zombie {
     this.voiceT = rand(2, 9);
     this.puppet = false;
     this.netBuf = [];
+    if (def.brain && BRAINS[def.brain]) this.brain = new BRAINS[def.brain](this, mgr);
     this.target = null;
     this.deathT = 0;
     // bones
@@ -137,7 +143,8 @@ class Zombie {
   damage(info) {
     if (!this.alive) return { killed: false, damage: 0 };
     const mgr = this.mgr, g = mgr.game;
-    let amount = info.amount;
+    let amount = info.amount * (this.brain ? this.brain.damageMul(info) : 1);
+    if (amount <= 0) { g.fx?.impact(1, info.point || this.center(_v2), info.normal || _hitN.copy(info.dir || UP).negate(), info.dir || UP, { decal: false, big: 0.5 }); return { killed: false, damage: 0 }; }
     // directional armour (riot): bullets from the front are mostly stopped unless they hit the head
     const fa = this.def.frontArmor;
     if (fa && !info.explosive && info.dir) {
@@ -313,6 +320,15 @@ class Zombie {
     // ---- voice
     this.voiceT -= dt;
     if (this.voiceT <= 0) { this.voiceT = rand(4, 10); if (tdist < 30 && mgr.voiceBudget-- > 0) g.audio?.play((d.voice || 'zombie') + (tdist < 8 ? '_attack' : '_idle'), { pos: this.pos, volume: 0.9 }); }
+    // ---- boss brains replace the default behaviour entirely
+    if (this.brain) {
+      const sp = this.brain.update(dt, best, tdist);
+      if (this.loco && this.action === this.loco) this.loco.timeScale = sp > 0.05 ? clamp(sp / (this.running ? d.nominal.run : d.nominal.walk) / (this.root.scale.x || 1), 0.4, 1.6) : 0.4;
+      if (!this.brain.flying && this.state !== 'dead') this.groundY = mgr.nav ? mgr.nav.heightAt(this.pos.x, this.pos.z, this.pos.y) : this.pos.y;
+      if (!this.brain.flying && this.pos.y > this.groundY + 0.05 && !this.kvel.y) this.pos.y = damp(this.pos.y, this.groundY, 6, dt);
+      this.root.rotation.y = this.yaw;
+      return true;
+    }
     // ---- specials
     this.specialCd -= dt;
     if (this.state === 'chase' && best && this.specialCd <= 0) this._special(best, tdist, mgr);
@@ -524,6 +540,7 @@ export class ZombieManager {
     this.voiceBudget = 3;
     this.losCache = new Map();
     this.hazards = [];         // acid pools / poison clouds: { pos, r, t, dps, kind }
+    this.telegraphs = new Telegraphs(game.scene);
     this.authority = true;     // false on network clients: zombies are puppets of the host
     this.net = null;           // NetSync (multiplayer) or null
     this.byId = new Map();
@@ -580,6 +597,10 @@ export class ZombieManager {
     if (opts.elite) this._makeElite(z, opts.elite);
     if (this.nav) { const k = this.nav.nearestWalkable(pos.x, pos.z, 10); if (k >= 0) { this.nav.cellCenter(k, _v); z.pos.set(_v.x, _v.y, _v.z); z.groundY = _v.y; } }
     if (opts.id) z.id = opts.id;
+    // bosses rendered with a stand-in model (or the mannequin) get scaled up to their real size
+    const fs = entry.fallback || (def.boss && mid !== def.models[0]) ? (def.fallbackScale || 1) : 1;
+    if (fs !== 1) { z.root.scale.setScalar(fs); for (const h of z.hitboxes) h.r *= fs; }
+    if (def.boss) { z.height = def.height; z.radius = def.radius; }
     if (opts.puppet) { z.puppet = true; if (opts.running !== undefined) { z.running = opts.running; z.setLoco(z.running); } }
     if (opts.model === undefined) z.modelId = mid; else z.modelId = opts.model;
     this.root.add(scene);
@@ -682,6 +703,7 @@ export class ZombieManager {
     }
     this._rebuildHash();
     this._updateHazards(dt);
+    this.telegraphs.update(dt);
     const cam = this.game.camera;
     const frustum = this.frustum || (this.frustum = new THREE.Frustum());
     const pm = this._pm || (this._pm = new THREE.Matrix4());

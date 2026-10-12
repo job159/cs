@@ -54,6 +54,20 @@ export const ZOMBIES = {
   },
 };
 
+// ---- bosses (Zombie subclasses with a brain; see game/src/zombies/brains/)
+ZOMBIES.butcher = {
+  zh: '屠宰者', boss: true, brain: 'butcher', models: ['boss_butcher', 'brute'], fallbackScale: 1.85, hp: 9000,
+  walk: [2.4, 2.6], run: 3.6, runChance: 0, dmg: 30, atkRange: 3, atkTime: 1.4, atkHit: 0.5, knockRes: 1, staggerRes: 1,
+  radius: 1.0, height: 4.0, anim: { walk: ['walk_a'], run: 'run', attack: ['attack_b'], idle: ['idle'] }, nominal: { walk: 1.1, run: 3.6 },
+  money: 3000, xp: 400, voice: 'brute',
+};
+ZOMBIES.colossus = {
+  zh: '災厄巨像', boss: true, brain: 'colossus', models: ['boss_colossus', 'brute'], fallbackScale: 3.2, hp: 26000,
+  walk: [1.6, 1.9], run: 3.0, runChance: 0, dmg: 34, atkRange: 5, atkTime: 1.7, atkHit: 0.5, knockRes: 1, staggerRes: 1,
+  radius: 1.8, height: 7.0, anim: { walk: ['walk_a'], run: 'run', attack: ['attack_b'], idle: ['idle'] }, nominal: { walk: 1.0, run: 3.6 },
+  money: 8000, xp: 1200, voice: 'brute',
+};
+
 /** Default hitboxes for the game_engine skeleton if a model doesn't provide its own extras. */
 export const DEFAULT_HITBOXES = {
   head: ['head', 0.13, null],

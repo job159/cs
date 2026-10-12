@@ -60,6 +60,7 @@ export const LIGHTMAP_DEFAULTS = {
   far: 5000,
   jitter: true,           // sun samples spread over the texel footprint (anti-aliased shadow edges)
   invalidThreshold: 0.2,  // fraction of back-face hits that marks a texel as inside geometry
+  adjustSamples: true,    // texel centre inside geometry: move the sample to a visible point of its footprint
   uvAttribute: 'uv1',
   skyIntensity: 1, skyRotation: 0, skyClamp: 'auto',
   lights: [], occluders: [],
@@ -822,6 +823,7 @@ export async function bakeLightmaps(input, options = {}) {
     params: {
       sunDir, sunColor: sunColor.map((c) => c * sunIntensity), sunCos: Math.cos(sunAngle), sunSamples: o.sunSamples,
       skySamples1: S1, skySamples2: S2, eps: o.eps, far: o.far, jitter: !!o.jitter, lightSamples: o.lightSamples, nLights: lights.length,
+      invalidThreshold: o.invalidThreshold, adjust: o.adjustSamples !== false,
     },
   };
   K.init(shared);
@@ -1162,6 +1164,7 @@ function fillPixels(W, H, st, rect, bufs, chans, target, maxLayers, key) {
  * Stops at chart borders, normal discontinuities and luminance differences larger than `sigmaL`
  * standard deviations of the (filtered) per-texel noise estimate.
  */
+const EXP_LUT = Float32Array.from({ length: 257 }, (_, i) => Math.exp(-(i + 0.5) / 32));
 function atrous(W, H, val, ch, vari, st, rect, nrm, iterations, sigmaL) {
   const h = [1 / 16, 1 / 4, 3 / 8, 1 / 4, 1 / 16];
   const n = W * H;
@@ -1214,10 +1217,15 @@ function atrous(W, H, val, ch, vari, st, rect, nrm, iterations, sigmaL) {
           let w = hj * h[i + 2];
           if (q !== k) {
             let dn = nx * nrm[q * 3] + ny * nrm[q * 3 + 1] + nz * nrm[q * 3 + 2];
-            if (dn <= 0) continue;
-            dn *= dn; dn *= dn; dn *= dn; dn *= dn; dn *= dn; // ^32
-            const dl = lumA[q] - lp;
-            w *= dn * Math.exp(-(dl < 0 ? -dl : dl) * inv);
+            if (dn < 0.99999) {
+              if (dn <= 0.5) continue;
+              dn *= dn; dn *= dn; dn *= dn; dn *= dn; dn *= dn; // ^32
+              w *= dn;
+            }
+            let dl = (lumA[q] - lp) * inv;
+            if (dl < 0) dl = -dl;
+            if (dl >= 8) continue;
+            w *= EXP_LUT[(dl * 32) | 0];
           }
           ws += w; wv += w * w * sv[q];
           if (ch === 3) { acc[0] += src[q * 3] * w; acc[1] += src[q * 3 + 1] * w; acc[2] += src[q * 3 + 2] * w; } else acc[0] += src[q] * w;

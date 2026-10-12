@@ -27,7 +27,7 @@ export function material(role, o = {}) {
     alphaMode: o.alpha ? 'MASK' : (o.alphaMode || 'OPAQUE'), alphaCutoff: o.alphaCutoff ?? 0.5,
     doubleSided: !!o.doubleSided,
     normalScale: o.normalScale,
-    quality: o.quality,
+    quality: o.quality, pngBits: o.pngBits,
     extras: o.extras,
   };
 }

@@ -188,16 +188,19 @@ export function lockFeet(skel, clip, { speed = clip.meta.speed || 0, hThresh = 0
   return clip;
 }
 
-/** Estimates the treadmill speed of an in-place clip from stance-foot velocity (m/s along -Z). */
+/** Estimates the treadmill speed of an in-place clip: median backward speed of the lowest foot
+ * point (heel or toe) while it is on the ground (m/s along -Z). */
 export function estimateSpeed(skel, clip) {
   const fks = clip.poses.map((p) => skel.fk(p));
   const vs = [];
   for (const s of ['l', 'r']) {
-    const fi = skel.i(`foot_${s}`);
-    const ys = fks.map((fk) => fk.wp[fi].y);
-    const minY = Math.min(...ys);
-    for (let f = 1; f < fks.length; f++) {
-      if (ys[f] < minY + 0.03 && ys[f - 1] < minY + 0.03) vs.push(-(fks[f].wp[fi].z - fks[f - 1].wp[fi].z) * clip.fps);
+    const pts = fks.map((fk) => footPoints(skel, fk, s));
+    const low = pts.map((p) => (p.heel.y < p.toe.y ? 'heel' : 'toe'));
+    const minY = Math.min(...pts.map((p) => Math.min(p.heel.y, p.toe.y)));
+    for (let f = 1; f < pts.length; f++) {
+      const k = low[f];
+      if (low[f - 1] !== k) continue;
+      if (pts[f][k].y < minY + 0.02 && pts[f - 1][k].y < minY + 0.02) vs.push(-(pts[f][k].z - pts[f - 1][k].z) * clip.fps);
     }
   }
   vs.sort((a, b) => a - b);

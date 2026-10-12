@@ -46,7 +46,8 @@ export function ualLoop(skel, lib, anim, { name = anim, lock = true, timeScale =
   c.loop = true;
   removeRootMotion(c, { center: true });
   const rootSpeed = c.meta.speed;
-  c.meta.speed = estimateSpeed(skel, c) + rootSpeed;
+  c.meta.speed = estimateSpeed(skel, c); // after trend removal the stance feet move back at the full speed
+  c.meta.rootSpeed = rootSpeed;
   if (timeScale !== 1) { c.fps = c.fps; c.meta.speed *= timeScale; }
   fixSigns(c);
   groundFeet(skel, c);

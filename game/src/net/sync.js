@@ -83,6 +83,12 @@ export class NetSync {
     }
   }
   fx(kind, data) { this.events.push(['fx', kind, data]); }
+  sendPlayerPush(id, v) {
+    if (!this.pushOut) this.pushOut = new Map();
+    const e = this.pushOut.get(id) || [0, 0, 0];
+    e[0] += v.x; e[1] += v.y; e[2] += v.z;
+    this.pushOut.set(id, e);
+  }
   sendPlayerDamage(id, amount, opts) {
     const e = this.dmgOut.get(id) || { a: 0, f: null, k: null, o: 0 };
     e.a += amount;
@@ -135,6 +141,7 @@ export class NetSync {
     if (this.events.length) { room.broadcast('ev', this.events.splice(0, 200)); }
     for (const [id, e] of this.dmgOut) room.send('pd', { a: +e.a.toFixed(1), f: e.f, k: e.k, o: e.o }, { to: id });
     this.dmgOut.clear();
+    if (this.pushOut) { for (const [id, v] of this.pushOut) room.send('pp', v.map((x) => +x.toFixed(2)), { to: id, reliable: false }); this.pushOut.clear(); }
   }
 
   _localRow() {
@@ -188,6 +195,8 @@ export class NetSync {
     } else if (type === 'pd') {
       const from = data.f ? new THREE.Vector3(data.f[0] / 100, g.player.pos.y, data.f[1] / 100) : null;
       g.status?.damage(data.a, { from, knock: data.k ? new THREE.Vector3(data.k[0] / 100, data.k[1] / 100, data.k[2] / 100) : null, dot: !!(data.o & 1), acid: !!(data.o & 2), explosive: !!(data.o & 4) });
+    } else if (type === 'pp') {
+      g.player.addImpulse(data[0], data[1], data[2]);
     } else if (type === 'rw') {
       g.match?.applyReward(data);
     }
@@ -214,6 +223,7 @@ export class NetSync {
       const [, fx, d] = e;
       const z = zm.byId.get(d.id);
       if (!z) return;
+      if (fx === 'boss') { z.brain?.onFx(d.k, d.d); return; }
       if (fx === 'explode') zm.explode(z);
       else if (fx === 'scream') zm.scream(z);
       else if (fx === 'spit') zm.spit(z, { pos: new THREE.Vector3(...d.to) });

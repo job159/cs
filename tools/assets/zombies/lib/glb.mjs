@@ -55,11 +55,11 @@ export function writeGLB(file, o) {
     return json.accessors.length - 1;
   };
   const imageCache = new Map();
-  const texture = (img, fmt = 'jpg', quality = 88) => {
+  const texture = (img, fmt = 'jpg', quality = 88, pngBits = 8) => {
     if (!img) return undefined;
     const key = img;
     if (imageCache.has(key)) return imageCache.get(key);
-    const data = fmt === 'png' ? encodePNG(img) : encodeJPEG(img, quality);
+    const data = fmt === 'png' ? encodePNG(pngBits < 8 ? quantize(img, pngBits) : img) : encodeJPEG(img, quality);
     json.images.push({ bufferView: pushView(data), mimeType: fmt === 'png' ? 'image/png' : 'image/jpeg' });
     json.textures.push({ sampler: 0, source: json.images.length - 1 });
     const idx = json.textures.length - 1;
@@ -71,7 +71,7 @@ export function writeGLB(file, o) {
     if (materialCache.has(m)) return materialCache.get(m);
     const pbr = { metallicFactor: m.metalness ?? 0, roughnessFactor: m.roughness ?? 1 };
     if (m.color) pbr.baseColorFactor = m.color;
-    const bc = texture(m.baseColor, m.colorFormat || (m.alphaMode && m.alphaMode !== 'OPAQUE' ? 'png' : 'jpg'), m.quality ?? 88);
+    const bc = texture(m.baseColor, m.colorFormat || (m.alphaMode && m.alphaMode !== 'OPAQUE' ? 'png' : 'jpg'), m.quality ?? 88, m.pngBits ?? 8);
     if (bc !== undefined) pbr.baseColorTexture = { index: bc };
     const orm = texture(m.orm, 'jpg', 90);
     if (orm !== undefined) pbr.metallicRoughnessTexture = { index: orm };
@@ -146,4 +146,16 @@ export function writeGLB(file, o) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, Buffer.concat([header, jh, jsonBuf, bh, bin, binPad]));
   return { bytes: total, images: json.images?.length || 0 };
+}
+
+/** Reduces colour precision (and blanks fully transparent texels) so big RGBA PNGs deflate much better. */
+function quantize(img, bits) {
+  const step = 1 << (8 - bits);
+  const d = new Uint8Array(img.data);
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 128) { d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = 0; continue; }
+    d[i + 3] = 255;
+    for (let c = 0; c < 3; c++) d[i + c] = Math.min(255, Math.round(d[i + c] / step) * step);
+  }
+  return { width: img.width, height: img.height, data: d };
 }

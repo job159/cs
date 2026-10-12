@@ -5,7 +5,7 @@
 //   paintEyes(img, opts)            -> { albedo, emissiveMap? }   (milky / bloodshot / glowing)
 //   grungeTexture(img, opts)        -> img (teeth, hair, shoes: UV-space dirt / blood / tint, no 3D lookup)
 //   thinHair(part, img, opts)       -> img with mangy alpha holes
-import { rasterUV, texelSurface } from './raster.mjs';
+import { rasterUV, texelSurface, texelAttr } from './raster.mjs';
 import { makeNoise, rng, smoothstep, clamp01, mix } from './noise.mjs';
 import { createImage, cloneImage, resize, normalFromHeight, luminance, blurField, sample } from './image.mjs';
 
@@ -21,7 +21,7 @@ const lumOf = (c) => c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
 const lin = (rgb) => rgb.map((v) => srgb2lin(v / 255));
 
 export const COLORS = {
-  bloodFresh: lin([92, 6, 6]), bloodDry: lin([52, 14, 10]), bloodBlack: lin([28, 8, 6]),
+  bloodFresh: lin([96, 4, 6]), bloodDry: lin([58, 7, 8]), bloodBlack: lin([28, 8, 6]),
   flesh: lin([120, 28, 30]), fleshDeep: lin([58, 10, 12]), fat: lin([196, 160, 120]),
   bruise: lin([70, 40, 72]), bruiseYellow: lin([150, 140, 70]), vein: lin([55, 60, 92]),
   grime: lin([70, 58, 44]), mud: lin([52, 44, 34]), socket: lin([48, 30, 40]), lips: lin([88, 70, 84]),
@@ -100,11 +100,18 @@ export function paintSkin(human, o = {}) {
   const tint = o.tint || lin([168, 178, 160]);
   const P = [0, 0, 0], Nn = [0, 0, 0], c = [0, 0, 0];
   const blood = o.blood || {};
+  const covered = new Float32Array(human.pos.length / 3);
+  for (const v of human.hidden || []) covered[v] = 1;
+  const coveredDarken = human.hidden?.size ? (o.coveredDarken ?? 0.45) : 0;
   for (let i = 0; i < S * S; i++) {
     if (!texelSurface(r, tris, human.pos, nrm, i, P, Nn)) continue;
     const di = i * 4;
     c[0] = LUT[base.data[di]]; c[1] = LUT[base.data[di + 1]]; c[2] = LUT[base.data[di + 2]];
     let h = 0, ro = rough[i];
+    if (coveredDarken) {
+      const cv = texelAttr(r, tris, covered, i) * coveredDarken;
+      if (cv > 0) { over(c, COLORS.grime, cv * 0.45); const k = 1 - cv * 0.45; c[0] *= k; c[1] *= k; c[2] *= k; }
+    }
     // pallor: desaturate towards a grey-green corpse tone, keep luminance structure
     if (o.pallor) {
       const l = lumOf(c) / (lumOf(tint) || 1);
@@ -279,7 +286,10 @@ export function paintCloth(part, o = {}) {
   const tearField = (P, Nn) => {
     if (!tear) return -1;
     const sc = tear.scale ?? 6;
-    let f = N3.fbm(P[0] * sc, P[1] * sc, P[2] * sc, 4) * 0.5 + 0.5; // 0..1
+    // vertically stretched noise -> rips rather than round holes; a warp adds ragged, uneven outlines
+    const st = tear.stretch ?? 0.45;
+    const wx = N3.noise(P[0] * sc * 3, P[1] * sc * 3, P[2] * sc * 3 + 5) * 0.05;
+    let f = N3.fbm((P[0] + wx) * sc, P[1] * sc * st, (P[2] - wx) * sc, 5) * 0.5 + 0.5; // 0..1
     f += (tear.where ? tear.where(P, Nn) : 0);
     return f - (1 - (tear.amount ?? 0.3) * 0.62);
   };
@@ -345,14 +355,17 @@ export function paintCloth(part, o = {}) {
     let alpha = base.data[di + 3] / 255;
     if (tear) {
       const f = tearField(P, Nn);
-      const thread = (N3.noise(u * 1400, v * 90, 3.3) + N3.noise(u * 90, v * 1400, 7.7)) * 0.5;
-      const fray = (tear.fray ?? 0.6) * 0.07;
-      const ff = f + thread * fray;
+      // frayed fringe: thin warp/weft threads (UV-aligned streaks) survive or drop out near the cut
+      const thread = Math.max(N3.noise(u * 1600, v * 70, 3.3), N3.noise(u * 70, v * 1600, 7.7));
+      const fray = (tear.fray ?? 0.6) * 0.12;
+      const ff = f + (thread * 2 - 0.3) * fray;
       if (ff > 0) { alpha = 0; anyCut = true; }
       else {
-        const edge = 1 - smoothstep(0, 0.06 + fray, -ff);
-        over(c, COLORS.grime, edge * 0.7);
-        mul(c, [0.6, 0.55, 0.5], edge * 0.6);
+        const edge = 1 - smoothstep(0, 0.05 + fray, -ff);
+        const scorch = 1 - smoothstep(0, 0.015 + fray * 0.3, -ff);
+        over(c, COLORS.grime, edge * 0.75);
+        mul(c, [0.55, 0.5, 0.45], edge * 0.7);
+        mul(c, [0.35, 0.3, 0.27], scorch * 0.8);
         bl = Math.max(bl, edge * (blood.edges ?? 0.4) * smoothstep(0, 0.5, N3.noise(P[0] * 40, P[1] * 40, P[2] * 40) + 0.3));
       }
     }
@@ -420,11 +433,13 @@ export function paintEyes(img, o = {}) {
     const u = x / W, v = y / H;
     // bloodshot sclera: red capillaries + yellowing
     const vein = N3.ridged(u * 40, v * 40, 1.7, 3);
-    over(c, lin([200, 178, 120]), sclera * 0.35 * (o.yellow ?? 1));
+    over(c, lin([175, 160, 118]), sclera * 0.45 * (o.yellow ?? 1));
+    c[0] *= 1 - sclera * 0.25; c[1] *= 1 - sclera * 0.25; c[2] *= 1 - sclera * 0.25;
     over(c, lin([150, 20, 20]), sclera * smoothstep(0.5, 0.8, vein) * (o.bloodshot ?? 0.7));
     if (o.style === 'milky' || o.style === 'dead') {
       const haze = o.style === 'milky' ? lin([205, 212, 214]) : lin([120, 118, 112]);
-      over(c, haze, Math.max(iris, pupil) * (o.style === 'milky' ? 0.82 : 0.6));
+      over(c, haze, iris * (o.style === 'milky' ? (o.haze ?? 0.62) : 0.5) + pupil * 0.35);
+      if (o.style === 'milky') over(c, lin([150, 160, 170]), pupil * 0.25);
     }
     if (glow) {
       const col = o.color || [1, 0.55, 0.1];

@@ -1,0 +1,1216 @@
+{
+ "Barrel_01": {
+  "id": "Barrel_01",
+  "file": "props/Barrel_01.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/Barrel_01",
+  "srcTris": 2682,
+  "tris": 1599,
+  "maxTris": 1600,
+  "bbox": [
+   [
+    -0.2815,
+    -0.0066,
+    -0.2815
+   ],
+   [
+    0.2815,
+    0.8734,
+    0.2815
+   ]
+  ],
+  "size": [
+   0.563,
+   0.88,
+   0.563
+  ],
+  "surf": "metal",
+  "collide": "cyl",
+  "materials": [
+   {
+    "name": "Barrel_01",
+    "maps": {
+     "diff": "props/Barrel_01_0_diff.jpg",
+     "nor": "props/Barrel_01_0_nor.jpg",
+     "arm": "props/Barrel_01_0_arm.jpg"
+    },
+    "avg": [
+     0.2004,
+     0.0299,
+     0.0229
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "red oil drum"
+ },
+ "barrel_03": {
+  "id": "barrel_03",
+  "file": "props/barrel_03.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/barrel_03",
+  "srcTris": 1473,
+  "tris": 1199,
+  "maxTris": 1200,
+  "bbox": [
+   [
+    -0.317,
+    0,
+    -0.3193
+   ],
+   [
+    0.317,
+    0.9305,
+    0.3193
+   ]
+  ],
+  "size": [
+   0.634,
+   0.93,
+   0.639
+  ],
+  "surf": "metal",
+  "collide": "cyl",
+  "materials": [
+   {
+    "name": "barrel_03",
+    "maps": {
+     "diff": "props/barrel_03_0_diff.jpg",
+     "nor": "props/barrel_03_0_nor.jpg",
+     "arm": "props/barrel_03_0_arm.jpg"
+    },
+    "avg": [
+     0.0665,
+     0.1,
+     0.1543
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "blue fuel drum"
+ },
+ "wooden_crate_02": {
+  "id": "wooden_crate_02",
+  "file": "props/wooden_crate_02.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/wooden_crate_02",
+  "srcTris": 5176,
+  "tris": 1499,
+  "maxTris": 1500,
+  "bbox": [
+   [
+    -0.2646,
+    -0.0098,
+    -0.5803
+   ],
+   [
+    0.2646,
+    0.4541,
+    0.5766
+   ]
+  ],
+  "size": [
+   0.529,
+   0.464,
+   1.157
+  ],
+  "surf": "wood",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "wooden_crate_02",
+    "maps": {
+     "diff": "props/wooden_crate_02_0_diff.jpg",
+     "nor": "props/wooden_crate_02_0_nor.jpg",
+     "arm": "props/wooden_crate_02_0_arm.jpg"
+    },
+    "avg": [
+     0.1438,
+     0.0628,
+     0.027
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "wooden crate"
+ },
+ "cardboard_box_01": {
+  "id": "cardboard_box_01",
+  "file": "props/cardboard_box_01.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/cardboard_box_01",
+  "srcTris": 16952,
+  "tris": 1500,
+  "maxTris": 1500,
+  "bbox": [
+   [
+    -0.1909,
+    -0.0068,
+    -0.2251
+   ],
+   [
+    0.1942,
+    0.335,
+    0.2908
+   ]
+  ],
+  "size": [
+   0.385,
+   0.342,
+   0.516
+  ],
+  "surf": "wood",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "cardboard_box_01",
+    "maps": {
+     "diff": "props/cardboard_box_01_0_diff.jpg",
+     "nor": "props/cardboard_box_01_0_nor.jpg",
+     "arm": "props/cardboard_box_01_0_arm.jpg"
+    },
+    "avg": [
+     0.3485,
+     0.2632,
+     0.1367
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 0
+   }
+  ],
+  "note": "cardboard box"
+ },
+ "plastic_crate_02": {
+  "id": "plastic_crate_02",
+  "file": "props/plastic_crate_02.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/plastic_crate_02",
+  "srcTris": 5840,
+  "tris": 1698,
+  "maxTris": 1500,
+  "bbox": [
+   [
+    -0.2528,
+    0,
+    -0.2028
+   ],
+   [
+    0.2528,
+    0.2541,
+    0.2028
+   ]
+  ],
+  "size": [
+   0.506,
+   0.254,
+   0.406
+  ],
+  "surf": "wood",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "plastic_crate_02",
+    "maps": {
+     "diff": "props/plastic_crate_02_0_diff.jpg",
+     "nor": "props/plastic_crate_02_0_nor.jpg",
+     "arm": "props/plastic_crate_02_0_arm.jpg"
+    },
+    "avg": [
+     0.2637,
+     0.2432,
+     0.2427
+    ],
+    "alpha": false,
+    "doubleSided": false,
+    "color": [
+     1,
+     0.40816283226013184,
+     0
+    ],
+    "rough": 1,
+    "metal": 0
+   }
+  ],
+  "note": "plastic crate"
+ },
+ "old_tyre": {
+  "id": "old_tyre",
+  "file": "props/old_tyre.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/old_tyre",
+  "srcTris": 2880,
+  "tris": 1600,
+  "maxTris": 1600,
+  "bbox": [
+   [
+    -0.3,
+    -0.3,
+    -0.0828
+   ],
+   [
+    0.3,
+    0.3,
+    0.0822
+   ]
+  ],
+  "size": [
+   0.6,
+   0.6,
+   0.165
+  ],
+  "surf": "dirt",
+  "collide": "cyl",
+  "materials": [
+   {
+    "name": "old_tyre",
+    "maps": {
+     "diff": "props/old_tyre_0_diff.jpg",
+     "nor": "props/old_tyre_0_nor.jpg",
+     "arm": "props/old_tyre_0_arm.jpg"
+    },
+    "avg": [
+     0.0142,
+     0.0119,
+     0.0104
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 0
+   }
+  ],
+  "note": "old tyre"
+ },
+ "metal_trash_can": {
+  "id": "metal_trash_can",
+  "file": "props/metal_trash_can.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/metal_trash_can",
+  "srcTris": 13960,
+  "tris": 2997,
+  "maxTris": 3000,
+  "bbox": [
+   [
+    -0.9527,
+    0.0001,
+    -0.2771
+   ],
+   [
+    0.8244,
+    0.9062,
+    0.2781
+   ]
+  ],
+  "size": [
+   1.777,
+   0.906,
+   0.555
+  ],
+  "surf": "metal",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "metal_trash_can",
+    "maps": {
+     "diff": "props/metal_trash_can_0_diff.jpg",
+     "nor": "props/metal_trash_can_0_nor.jpg",
+     "arm": "props/metal_trash_can_0_arm.jpg"
+    },
+    "avg": [
+     0.1509,
+     0.1351,
+     0.1166
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "metal_trash_can_rust",
+    "maps": {
+     "diff": "props/metal_trash_can_1_diff.jpg",
+     "nor": "props/metal_trash_can_1_nor.jpg",
+     "arm": "props/metal_trash_can_1_arm.jpg"
+    },
+    "avg": [
+     0.0988,
+     0.0725,
+     0.0538
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "metal_trash_can_rust",
+    "maps": {
+     "diff": "props/metal_trash_can_2_diff.jpg",
+     "nor": "props/metal_trash_can_2_nor.jpg",
+     "arm": "props/metal_trash_can_2_arm.jpg"
+    },
+    "avg": [
+     0.0988,
+     0.0725,
+     0.0538
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "dumpster"
+ },
+ "trashbag": {
+  "id": "trashbag",
+  "file": "props/trashbag.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/trashbag",
+  "srcTris": 4482,
+  "tris": 1200,
+  "maxTris": 1200,
+  "bbox": [
+   [
+    -0.2605,
+    -0.0014,
+    -0.2398
+   ],
+   [
+    0.2631,
+    0.5716,
+    0.2231
+   ]
+  ],
+  "size": [
+   0.524,
+   0.573,
+   0.463
+  ],
+  "surf": "dirt",
+  "collide": "none",
+  "materials": [
+   {
+    "name": "trashbag",
+    "maps": {
+     "diff": "props/trashbag_0_diff.jpg",
+     "nor": "props/trashbag_0_nor.jpg",
+     "arm": "props/trashbag_0_arm.jpg"
+    },
+    "avg": [
+     0.0048,
+     0.0044,
+     0.0043
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 0
+   }
+  ],
+  "note": "trash bag"
+ },
+ "fire_hydrant": {
+  "id": "fire_hydrant",
+  "file": "props/fire_hydrant.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/fire_hydrant",
+  "srcTris": 86316,
+  "tris": 4930,
+  "maxTris": 2500,
+  "bbox": [
+   [
+    -0.44,
+    0,
+    -0.1265
+   ],
+   [
+    0.4328,
+    0.7992,
+    0.191
+   ]
+  ],
+  "size": [
+   0.873,
+   0.799,
+   0.318
+  ],
+  "surf": "metal",
+  "collide": "cyl",
+  "materials": [
+   {
+    "name": "fire_hydrant",
+    "maps": {
+     "diff": "props/fire_hydrant_0_diff.jpg",
+     "nor": "props/fire_hydrant_0_nor.jpg",
+     "arm": "props/fire_hydrant_0_arm.jpg"
+    },
+    "avg": [
+     0.2667,
+     0.0675,
+     0.045
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "fire_hydrant_aged",
+    "maps": {
+     "diff": "props/fire_hydrant_1_diff.jpg",
+     "nor": "props/fire_hydrant_1_nor.jpg",
+     "arm": "props/fire_hydrant_1_arm.jpg"
+    },
+    "avg": [
+     0.2775,
+     0.1184,
+     0.074
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "fire hydrant"
+ },
+ "street_lamp_01": {
+  "id": "street_lamp_01",
+  "file": "props/street_lamp_01.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/street_lamp_01",
+  "srcTris": 30610,
+  "tris": 3759,
+  "maxTris": 3500,
+  "bbox": [
+   [
+    -0.3516,
+    0,
+    -0.1932
+   ],
+   [
+    0.3492,
+    3.8699,
+    0.1932
+   ]
+  ],
+  "size": [
+   0.701,
+   3.87,
+   0.386
+  ],
+  "surf": "metal",
+  "collide": "pole",
+  "materials": [
+   {
+    "name": "street_lamp_01",
+    "maps": {
+     "diff": "props/street_lamp_01_0_diff.jpg",
+     "nor": "props/street_lamp_01_0_nor.jpg",
+     "arm": "props/street_lamp_01_0_arm.jpg"
+    },
+    "avg": [
+     0.052,
+     0.0509,
+     0.0496
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "street_lamp_01_glass",
+    "maps": {
+     "diff": "props/street_lamp_01_1_diff.jpg",
+     "nor": "props/street_lamp_01_1_nor.jpg",
+     "arm": "props/street_lamp_01_1_arm.jpg"
+    },
+    "avg": [
+     0.052,
+     0.0509,
+     0.0496
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "street_lamp_01_bulb",
+    "maps": {
+     "diff": "props/street_lamp_01_2_diff.jpg",
+     "nor": "props/street_lamp_01_2_nor.jpg",
+     "arm": "props/street_lamp_01_2_arm.jpg"
+    },
+    "avg": [
+     0.052,
+     0.0509,
+     0.0496
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "street lamp"
+ },
+ "concrete_road_barrier_02": {
+  "id": "concrete_road_barrier_02",
+  "file": "props/concrete_road_barrier_02.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/concrete_road_barrier_02",
+  "srcTris": 23822,
+  "tris": 1498,
+  "maxTris": 1500,
+  "bbox": [
+   [
+    -0.7762,
+    -0.0005,
+    -0.2531
+   ],
+   [
+    0.7876,
+    1.1048,
+    0.1837
+   ]
+  ],
+  "size": [
+   1.564,
+   1.105,
+   0.437
+  ],
+  "surf": "concrete",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "concrete_road_barrier_02",
+    "maps": {
+     "diff": "props/concrete_road_barrier_02_0_diff.jpg",
+     "nor": "props/concrete_road_barrier_02_0_nor.jpg",
+     "arm": "props/concrete_road_barrier_02_0_arm.jpg"
+    },
+    "avg": [
+     0.4181,
+     0.3248,
+     0.2314
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 0
+   }
+  ],
+  "note": "jersey barrier"
+ },
+ "exterior_aircon_unit": {
+  "id": "exterior_aircon_unit",
+  "file": "props/exterior_aircon_unit.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/exterior_aircon_unit",
+  "srcTris": 18986,
+  "tris": 4213,
+  "maxTris": 2500,
+  "bbox": [
+   [
+    -0.8914,
+    -0.3201,
+    -0.216
+   ],
+   [
+    0.9051,
+    0.6078,
+    0.1582
+   ]
+  ],
+  "size": [
+   1.797,
+   0.928,
+   0.374
+  ],
+  "surf": "metal",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "exterior_aircon_unit_01",
+    "maps": {
+     "diff": "props/exterior_aircon_unit_0_diff.jpg",
+     "nor": "props/exterior_aircon_unit_0_nor.jpg",
+     "arm": "props/exterior_aircon_unit_0_arm.jpg"
+    },
+    "avg": [
+     0.1287,
+     0.1196,
+     0.1073
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "exterior_aircon_unit_02",
+    "maps": {
+     "diff": "props/exterior_aircon_unit_1_diff.jpg",
+     "nor": "props/exterior_aircon_unit_1_nor.jpg",
+     "arm": "props/exterior_aircon_unit_1_arm.jpg"
+    },
+    "avg": [
+     0.7209,
+     0.7209,
+     0.7209
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "exterior_aircon_unit_rusted_01",
+    "maps": {
+     "diff": "props/exterior_aircon_unit_2_diff.jpg",
+     "nor": "props/exterior_aircon_unit_2_nor.jpg",
+     "arm": "props/exterior_aircon_unit_2_arm.jpg"
+    },
+    "avg": [
+     0.1239,
+     0.1043,
+     0.0895
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "exterior_aircon_unit_rusted_02",
+    "maps": {
+     "diff": "props/exterior_aircon_unit_3_diff.jpg",
+     "nor": "props/exterior_aircon_unit_3_nor.jpg",
+     "arm": "props/exterior_aircon_unit_3_arm.jpg"
+    },
+    "avg": [
+     0.7382,
+     0.7382,
+     0.7382
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "wall AC unit"
+ },
+ "utility_box_02": {
+  "id": "utility_box_02",
+  "file": "props/utility_box_02.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/utility_box_02",
+  "srcTris": 6268,
+  "tris": 1999,
+  "maxTris": 2000,
+  "bbox": [
+   [
+    -0.46,
+    0,
+    -0.21
+   ],
+   [
+    0.46,
+    1.1203,
+    0.222
+   ]
+  ],
+  "size": [
+   0.92,
+   1.12,
+   0.432
+  ],
+  "surf": "metal",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "utility_box_02",
+    "maps": {
+     "diff": "props/utility_box_02_0_diff.jpg",
+     "nor": "props/utility_box_02_0_nor.jpg",
+     "arm": "props/utility_box_02_0_arm.jpg"
+    },
+    "avg": [
+     0.1658,
+     0.176,
+     0.1134
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "electrical utility box"
+ },
+ "painted_wooden_bench": {
+  "id": "painted_wooden_bench",
+  "file": "props/painted_wooden_bench.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/painted_wooden_bench",
+  "srcTris": 630,
+  "tris": 630,
+  "maxTris": 700,
+  "bbox": [
+   [
+    -0.5761,
+    -0.0005,
+    -0.2537
+   ],
+   [
+    0.5889,
+    0.8888,
+    0.2428
+   ]
+  ],
+  "size": [
+   1.165,
+   0.889,
+   0.497
+  ],
+  "surf": "wood",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "painted_wooden_bench",
+    "maps": {
+     "diff": "props/painted_wooden_bench_0_diff.jpg",
+     "nor": "props/painted_wooden_bench_0_nor.jpg",
+     "arm": "props/painted_wooden_bench_0_arm.jpg"
+    },
+    "avg": [
+     0.1074,
+     0.0414,
+     0.0258
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 0
+   }
+  ],
+  "note": "bench"
+ },
+ "water_manhole_cover": {
+  "id": "water_manhole_cover",
+  "file": "props/water_manhole_cover.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/water_manhole_cover",
+  "srcTris": 6301,
+  "tris": 1209,
+  "maxTris": 600,
+  "bbox": [
+   [
+    -0.3454,
+    -0.0288,
+    -0.3454
+   ],
+   [
+    0.3454,
+    0.0389,
+    0.3454
+   ]
+  ],
+  "size": [
+   0.691,
+   0.068,
+   0.691
+  ],
+  "surf": "metal",
+  "collide": "none",
+  "materials": [
+   {
+    "name": "water_manhole_cover",
+    "maps": {
+     "diff": "props/water_manhole_cover_0_diff.jpg",
+     "nor": "props/water_manhole_cover_0_nor.jpg",
+     "arm": "props/water_manhole_cover_0_arm.jpg"
+    },
+    "avg": [
+     0.1118,
+     0.0755,
+     0.0609
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "manhole cover"
+ },
+ "covered_car": {
+  "id": "covered_car",
+  "file": "props/covered_car.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/covered_car",
+  "srcTris": 12592,
+  "tris": 4998,
+  "maxTris": 5000,
+  "bbox": [
+   [
+    -0.8406,
+    0.0022,
+    -2.1663
+   ],
+   [
+    0.9417,
+    1.3996,
+    2.2139
+   ]
+  ],
+  "size": [
+   1.782,
+   1.397,
+   4.38
+  ],
+  "surf": "metal",
+  "collide": "box",
+  "materials": [
+   {
+    "name": "covered_car",
+    "maps": {
+     "diff": "props/covered_car_0_diff.jpg",
+     "nor": "props/covered_car_0_nor.jpg",
+     "arm": "props/covered_car_0_arm.jpg"
+    },
+    "avg": [
+     0.0467,
+     0.0412,
+     0.0364
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "covered_car",
+    "maps": {
+     "diff": "props/covered_car_1_diff.jpg",
+     "nor": "props/covered_car_1_nor.jpg",
+     "arm": "props/covered_car_1_arm.jpg"
+    },
+    "avg": [
+     0.0467,
+     0.0412,
+     0.0364
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "car under a tarp"
+ },
+ "security_light": {
+  "id": "security_light",
+  "file": "props/security_light.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/security_light",
+  "srcTris": 4668,
+  "tris": 1594,
+  "maxTris": 1500,
+  "bbox": [
+   [
+    -0.162,
+    -0.3593,
+    -0.0286
+   ],
+   [
+    0.1612,
+    0.1716,
+    0.386
+   ]
+  ],
+  "size": [
+   0.323,
+   0.531,
+   0.415
+  ],
+  "surf": "metal",
+  "collide": "none",
+  "materials": [
+   {
+    "name": "security_light",
+    "maps": {
+     "diff": "props/security_light_0_diff.jpg",
+     "nor": "props/security_light_0_nor.jpg",
+     "arm": "props/security_light_0_arm.jpg"
+    },
+    "avg": [
+     0.1286,
+     0.1329,
+     0.1144
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "security_light_bulb",
+    "maps": {
+     "diff": "props/security_light_1_diff.jpg",
+     "nor": "props/security_light_1_nor.jpg",
+     "arm": "props/security_light_1_arm.jpg"
+    },
+    "avg": [
+     0.1286,
+     0.1329,
+     0.1144
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   },
+   {
+    "name": "security_light_glass",
+    "maps": {
+     "diff": "props/security_light_2_diff.jpg",
+     "nor": "props/security_light_2_nor.jpg",
+     "arm": "props/security_light_2_arm.jpg"
+    },
+    "avg": [
+     0.1286,
+     0.1329,
+     0.1144
+    ],
+    "alpha": false,
+    "doubleSided": true,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "wall flood light"
+ },
+ "propane_tank": {
+  "id": "propane_tank",
+  "file": "props/propane_tank.glb",
+  "source": "polyhaven",
+  "license": "CC0",
+  "url": "https://polyhaven.com/a/propane_tank",
+  "srcTris": 5238,
+  "tris": 1500,
+  "maxTris": 1500,
+  "bbox": [
+   [
+    -0.1672,
+    0,
+    -0.1672
+   ],
+   [
+    0.1672,
+    0.5537,
+    0.1672
+   ]
+  ],
+  "size": [
+   0.334,
+   0.554,
+   0.334
+  ],
+  "surf": "metal",
+  "collide": "cyl",
+  "materials": [
+   {
+    "name": "propane_tank",
+    "maps": {
+     "diff": "props/propane_tank_0_diff.jpg",
+     "nor": "props/propane_tank_0_nor.jpg",
+     "arm": "props/propane_tank_0_arm.jpg"
+    },
+    "avg": [
+     0.2302,
+     0.0589,
+     0.0545
+    ],
+    "alpha": false,
+    "doubleSided": false,
+    "color": [
+     1,
+     1,
+     1
+    ],
+    "rough": 1,
+    "metal": 1
+   }
+  ],
+  "note": "propane tank"
+ }
+}
