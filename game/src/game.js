@@ -15,7 +15,7 @@ import { AimAssist } from './player/aimassist.js';
 import { Throwables } from './weapons/throwables.js';
 import { BotSquad } from './player/bots.js';
 import { RemotePlayer } from './player/remote.js';
-import { WEAPONS, registerWeapon } from './weapons/defs.js';
+import { WEAPONS, registerWeapon, isListed } from './weapons/defs.js';
 import { SURF_NAMES } from './world/collision.js';
 
 const _down = new THREE.Vector3(), _feet = new THREE.Vector3(), _stepHit = {};
@@ -58,10 +58,11 @@ export class Game {
     };
   }
 
-  /** Player footsteps by ground surface (one per stride, quiet when crouching) and landing thuds. */
+  /** Player footsteps by ground surface (one per stride, quiet when crouching), the jump push-off and landing thuds. */
   _footsteps(p) {
     const au = this.audio;
     if (!au) return;
+    if (p.jumped) { p.jumped = false; au.play('jump', { volume: 0.7 }); }
     if (p.landImpact > 3) {
       au.play(p.landImpact > 9 ? 'land_heavy' : 'land', { volume: Math.min(1, p.landImpact / 8) });
       p.stepAccum = 0;
@@ -76,6 +77,34 @@ export class Game {
     const hit = this.world.collision?.raycast(_feet, _down, 1.2, _stepHit);
     const surf = STEP_SURF[SURF_NAMES[hit?.surf ?? 0]] || 'concrete';
     au.play('footstep_' + surf, { volume: (p.crouch ? 0.3 : 0.55) * Math.min(1, spd / 5) });
+  }
+
+  /**
+   * Map ambience: the bed (map.json `ambience`: a sound name or [[name, volume], ...] layers; default the dead-city
+   * bed: air tone, hollow wind, far sirens / dogs / gunfire, debris) plus a positional crackle loop at every burning
+   * prop of the map's fx (fx.smoke entries with `fire`: Lost Town's burning sedan and barrel), sized by the fire.
+   */
+  _ambience() {
+    const a = this.audio, def = this.world.def || {};
+    const bed = def.ambience || 'amb_city_dead';
+    for (const l of Array.isArray(bed) ? bed : [bed]) {
+      const [name, volume = 1] = Array.isArray(l) ? l : [l];
+      a.play(name, { loop: true, bus: 'amb', volume });
+    }
+    for (const s of def.fx?.smoke || []) {
+      if (!(s.fire > 0) || !s.pos || s.pos[1] > 30) continue;   // skyline fires are part of the bed
+      const w = s.fireWidth ?? 0.5;
+      a.play('fire_spot', { pos: { x: s.pos[0], y: s.pos[1] + 0.5, z: s.pos[2] }, loop: true, volume: clamp(s.fire / 10, 0.5, 1.3), range: [1.5 + w * 1.5, 12 + w * 18] });
+    }
+  }
+
+  /** Low health: a heartbeat while under 30 % and recently hit (or downed), fading out on recovery / death. */
+  _lowHealthAudio() {
+    const st = this.status, a = this.audio;
+    if (!st || !a?.ctx) return;
+    const low = st.alive && (st.downed || (st.hp < st.maxHp * (this._heart ? 0.36 : 0.3) && this.time - st.lastHitAt < 8));
+    if (low && !this._heart) this._heart = a.play('heartbeat', { loop: true, volume: 0.8, fadeIn: 0.6 });
+    else if (!low && this._heart) { this._heart.stop(1.2); this._heart = null; }
   }
 
   /** Freezes the simulation for a few frames on heavy hits (melee, big kills). */
@@ -134,6 +163,7 @@ export class Game {
   onPlayerDowned() { this.hud?.toast('你倒下了！', 2000); }
   /** Bled out: frame() locks every action and spectates until a revive sets status.alive again. */
   onPlayerDied() {
+    this.audio?.play('player_death');
     this.specIdx = 0;
     if (this.vm) this.vm.aimTarget = 0;
     if (this.arsenal) { this.arsenal.burstLeft = 0; this.arsenal.fireBuffer = 0; }
@@ -187,7 +217,8 @@ export class Game {
     this.projectiles = new Projectiles(this);
     this.throwables = new Throwables(this);
     this.arsenal = new Arsenal(this);
-    this.arsenal.give('knife', { select: false });
+    // the knife has no model in this build (defs.js WIP): slot 3 would equip an invisible gun that never finishes loading
+    if (isListed(WEAPONS.knife)) this.arsenal.give('knife', { select: false });
     this.arsenal.give('glock', { select: false });
     const w = this.arsenal.give(this.startWeapon || 'akm', { select: false });
     if (this.hipOverride && w) w.def = { ...w.def, vm: { hip: this.hipOverride } };
@@ -236,8 +267,9 @@ export class Game {
     // ambience bed for the map (needs the audio context, which only exists after the first user gesture)
     if (!this._ambStarted && this.audio?.ready && this.audio.ctx) {
       this._ambStarted = true;
-      this.audio.play(this.world.def?.ambience || 'amb_city_dead', { loop: true, bus: 'amb' });
+      this._ambience();
     }
+    this._lowHealthAudio();
     this.world.update(dt, t);
     if (this.arsenal) this.arsenal.update(dt, si);   // timers / recoil / spin-down keep running
     this.projectiles?.update(dt);
@@ -362,8 +394,10 @@ export class Game {
     this.perks?.el?.remove();
     const hudRoot = document.getElementById('hud');
     if (hudRoot) hudRoot.innerHTML = '';
+    // every sound of this game stops; the music carries on into the menus (the menu theme, unless the results
+    // stinger already queued it)
     const a = this.audio;
-    if (a) { for (const v of [...a.voices]) v.stop?.(0.25); a.music = null; }
+    if (a) { for (const v of [...a.voices]) if (v !== a.music) v.stop?.(0.25); a.playMusic?.('menu_theme'); }
     const seen = new Set();
     const tex = (t) => { if (t && t.isTexture && !t.isRenderTargetTexture && !seen.has(t)) { seen.add(t); t.dispose(); } };
     this.scene.traverse((o) => {

@@ -1,7 +1,19 @@
 // Buy menu (CS-style categories, touch friendly): weapon cards with silhouettes, price, stat bars and
-// owned state; equipment (kevlar, helmet, ammo). Opens with B / the BUY button while buying is allowed.
-import { WEAPONS, CATS } from '../weapons/defs.js';
+// owned state; equipment (kevlar, helmet, ammo). Opens with B / the BUY button while buying is allowed. Only the
+// weapons this build offers (defs.js listed()); a category with none of them has no tab.
+import { CATS, listed, tierOf, skillText } from '../weapons/defs.js';
 import { weaponIcon } from './icons.js';
+import { TIERS, tierIcon, injectCSS } from './crosshairs.js';
+
+// premium series cards: tier frame (crosshairs.js TIERS colours), series badge and the signature skill
+injectCSS('shop-prem-css', `
+.card.prem { border-color: var(--tc); background: linear-gradient(180deg, var(--tb), rgba(255,255,255,.03) 62%); }
+.card .ctier { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--th); letter-spacing: .12em; }
+.card .ctier svg { flex: none; }
+.card .csk { font-size: 12px; color: #c9d3d8; line-height: 1.35; }
+.card .csk b { color: var(--th); margin-right: 4px; }
+.card .csk small { display: block; color: #8d979c; font-size: 11px; }`);
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 
 const TABS = [
   { id: 'pistol', zh: '手槍' }, { id: 'smg', zh: '衝鋒槍' }, { id: 'rifle', zh: '步槍' }, { id: 'shotgun', zh: '霰彈槍' },
@@ -34,7 +46,7 @@ export class Shop {
     this.moneyEl = el.querySelector('.shop-money');
     this.tabsEl = el.querySelector('.shop-tabs');
     this.tab = 'rifle';
-    this.tabsEl.innerHTML = TABS.map((t) => `<button data-tab="${t.id}">${t.zh}</button>`).join('');
+    this.tabsEl.innerHTML = TABS.filter((t) => t.id === 'gear' || listed(t.id).length).map((t) => `<button data-tab="${t.id}">${t.zh}</button>`).join('');
     this.tabsEl.addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) { this.tab = b.dataset.tab; this.render(); game.audio?.play('ui_click'); } });
     el.querySelector('.shop-close').addEventListener('click', () => this.close());
     this.grid.addEventListener('click', (e) => {
@@ -80,16 +92,20 @@ export class Shop {
         ['t_frag', '破片手雷', `範圍爆炸　持有 ${g.throwables?.count.frag ?? 0} / 3`, 300, (g.throwables?.count.frag ?? 0) >= 3],
         ['t_fire', '燃燒彈', `落地起火 7 秒　持有 ${g.throwables?.count.fire ?? 0} / 2`, 450, (g.throwables?.count.fire ?? 0) >= 2],
       ].map(([id, name, desc, price, owned]) => `<div class="card gear${owned ? ' owned' : ''}"><div class="cn">${name}</div><div class="cd">${desc}</div>
-        <button data-buy="${id}" ${owned || (m?.money ?? 0) < price ? 'disabled' : ''}>${owned ? '已擁有' : '$' + price}</button></div>`).join('');
+        <button data-buy="${id}" ${owned || (m?.money ?? 0) < price ? 'disabled' : ''}>${owned ? (id.startsWith('t_') ? '已滿' : '已擁有') : '$' + price}</button></div>`).join('');
       return;
     }
     const owned = new Set(Object.values(g.arsenal.owned).map((w) => w.def.id));
-    const list = Object.values(WEAPONS).filter((w) => w.cat === this.tab).sort((a, b) => a.price - b.price);
-    this.grid.innerHTML = list.map((w) => `<div class="card${owned.has(w.id) ? ' owned' : ''}" data-id="${w.id}">
+    const list = listed(this.tab);
+    this.grid.innerHTML = list.map((w) => {
+      const tier = tierOf(w), T = TIERS[tier], sk = skillText(w), prem = tier !== 'standard' && T;
+      return `<div class="card${owned.has(w.id) ? ' owned' : ''}${prem ? ' prem' : ''}" data-id="${w.id}"${prem ? ` style="--tc:${rgba(T.edge, 0.6)};--tb:${rgba(T.edge, 0.13)};--th:${T.hi}"` : ''}>
       <img alt=""><div class="cn">${w.zh} <small>${w.en}</small></div>
+      ${prem ? `<div class="ctier">${tierIcon(tier, 13)}${T.zh}系列</div>` : ''}${sk ? `<div class="csk"><b>${sk.key} ${sk.zh}</b>${sk.desc}${sk.src ? `<small>充能：${sk.src}</small>` : ''}</div>` : ''}
       <div class="cs">${stats(w).map(([k, v]) => `<div><span>${k}</span><i style="width:${(v * 100).toFixed(0)}%"></i></div>`).join('')}</div>
       <div class="cm">${w.mag ? `${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}` : '—'}　${CATS[w.cat]?.zh || ''}</div>
-      <button data-buy="${w.id}" ${owned.has(w.id) || (m?.money ?? 0) < w.price ? 'disabled' : ''}>${owned.has(w.id) ? '已擁有' : '$' + w.price}</button></div>`).join('');
+      <button data-buy="${w.id}" ${owned.has(w.id) || (m?.money ?? 0) < w.price ? 'disabled' : ''}>${owned.has(w.id) ? '已擁有' : '$' + w.price}</button></div>`;
+    }).join('');
     for (const card of this.grid.querySelectorAll('[data-id]')) {
       weaponIcon(g.renderer, card.dataset.id).then((u) => { if (u) card.querySelector('img').src = u; });
     }

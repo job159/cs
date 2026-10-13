@@ -274,6 +274,8 @@ injectCSS('cf-kl', `
 @keyframes kmRays { to { transform: rotate(60deg); } }
 body.touch .kl .km { left: 37%; bottom: calc(54px + var(--safe-bottom, 0px)); width: min(96px, 17vh); height: min(96px, 17vh); margin-left: calc(min(96px, 17vh) / -2); }
 .kl .cmb { position: fixed; left: 31%; top: max(17%, 96px); display: flex; align-items: center; gap: 8px; opacity: 0; transform-origin: 0 50%; }
+/* phones: smaller and further up-left, clear of the crosshair (at 844x390 it sat ~50 px above it, over the heads) */
+body.touch .kl .cmb { left: 24%; top: max(15%, 58px); transform: scale(.8); }
 .kl .cmb.ring { opacity: 1; }
 .kl .cmb .cmb-t, .kl .cmb .pr { visibility: hidden; }
 .kl .cmb.show .cmb-t { visibility: visible; } .kl .cmb.show.prec .pr { visibility: visible; }
@@ -305,6 +307,7 @@ body.touch .kl .km { left: 37%; bottom: calc(54px + var(--safe-bottom, 0px)); wi
 .kl .gp { position: absolute; left: 23px; top: 23px; width: 6px; height: 9px; background: linear-gradient(135deg, #fff1b8, #e8b54a 60%, #b8743a); animation: gpFall 1.2s ease-in forwards; }
 @keyframes gpFall { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
 .kl .kbadge { position: fixed; left: 50%; top: calc(50% + 64px); width: 44px; height: 44px; margin: -22px 0 0 -22px; opacity: 0; }
+body.touch .kl .kbadge { top: calc(50% + 84px); width: 36px; height: 36px; margin: -18px 0 0 -18px; }
 .kl .kbadge.on { animation: kbIn 1.15s both; }
 @keyframes kbIn { 0% { transform: scale(1.4); opacity: 0; } 9% { transform: scale(1); opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
 .kl .kbadge svg { width: 100%; height: 100%; overflow: visible; }

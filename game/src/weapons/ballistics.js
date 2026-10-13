@@ -10,6 +10,9 @@ const _o = new THREE.Vector3();
 const _hit = {};
 
 export const PART_MULT = { head: 1, chest: 1, body: 1, limb: 0.75, weak: 2 };
+// a headshot on a boss counts this instead of the gun's ×4–5 (the boss brain adds its weak-point bonus on top):
+// with both stacked (×9 on the butcher's head) bosses melted in seconds before showing their attacks
+const BOSS_HEAD = 2.5;
 
 export function falloff(def, dist) {
   const [r0, r1, min] = def.range || [30, 80, 0.7];
@@ -34,7 +37,7 @@ export function fireBullet(game, origin, dir, def, opts = {}) {
     const list = game.targets.raycast(origin, dir, wallDist);
     for (const h of list) {
       const part = h.part || 'body';
-      const partMul = part === 'head' ? (def.head ?? 4) : (h.mult ?? PART_MULT[part] ?? 1);
+      const partMul = part === 'head' ? ((h.target.zombie || h.target).def?.boss ? BOSS_HEAD : def.head ?? 4) : (h.mult ?? PART_MULT[part] ?? 1);
       const amount = def.dmg * falloff(def, h.dist) * partMul * power * (opts.dmgMul ?? 1);
       const info = {
         amount, part, point: h.point, normal: h.normal, dir, dist: h.dist,

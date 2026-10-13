@@ -24,7 +24,7 @@ import { PERKS } from './match/rules.js';
 import { ZOMBIES } from './zombies/defs.js';
 import { MAPS, DEFAULT_MAP, mapInfo, hasMap, mapKicker } from './world/maps/index.js';
 import { Dialogs, Loading, toast, el, esc } from './ui/kit.js';
-import { Settings, SettingsScreen, applySettings } from './ui/settings.js';
+import { Settings, SettingsScreen, applySettings, noteGpu } from './ui/settings.js';
 import { MainMenu, SoloSetup, Armory, orbitBackdrop, DIFF_IDS, DIFF_INFO } from './ui/menu.js';
 import { mapThumb } from './ui/mapthumb.js';
 import { Gyro } from './engine/gyro.js';
@@ -52,6 +52,7 @@ class App {
     this.version = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'dev';
     this.canvas = document.getElementById('gl');
     this.renderer = new Renderer(this.canvas);
+    noteGpu(this.renderer.gl.getContext()); // 'auto' quality picks the phone tier from the GPU name
     this.qualityLock = !!params.get('q');
     if (this.qualityLock) this.renderer.setQuality(params.get('q'));
     this.input = new Input(this.canvas);
@@ -362,7 +363,7 @@ class App {
     document.body.classList.remove('bd-loading');
     this.paused = false;
     this.ending = false;
-    this.renderer.fixedScale = false;
+    this.renderer.unpinScale(); // the menu backdrop's cheap fixed scale must not carry into the match
     this.show('game');
     this.input.enabled = true;
     this.input.releaseAll();
@@ -491,8 +492,12 @@ class App {
       if (this.state === 'game' && !this.paused && !this.ending && !this.game?.shop?.open && !this.dialogs.open) this.pause();
     });
     window.__nativeBack = () => this.back();
-    window.__nativePause = () => { if (this.state === 'game' && !this.room) this.pause(); };
-    document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'game' && !this.room) this.pause(); });
+    window.__nativePause = () => { this.audio.setBackground(true); if (this.state === 'game' && !this.room) this.pause(); };
+    window.__nativeResume = () => this.audio.setBackground(document.hidden);
+    document.addEventListener('visibilitychange', () => {
+      this.audio.setBackground(document.hidden); // no sound behind the home screen (WebView keeps WebAudio running)
+      if (document.hidden && this.state === 'game' && !this.room) this.pause();
+    });
     const unlock = () => this.audio.unlock();
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
@@ -540,7 +545,7 @@ class App {
         this.bdT = (this.bdT || 0) + dt;
         if (this.bdT >= 1 / 30) {
           const r = this.renderer;
-          if (!r.fixedScale) { r.fixedScale = true; r.scale = Math.max(r.q.minScale, 0.75); r._applyScale(); }
+          if (!r.fixedScale) r.pinScale(0.75);
           orbitBackdrop(g, mapInfo(g.mapId), this.time);
           g.world.update(this.bdT, this.time);
           r.render(g.scene, g.camera, this.time);

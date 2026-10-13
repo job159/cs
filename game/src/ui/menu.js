@@ -4,8 +4,9 @@ import * as THREE from 'three';
 import { Screen, header, esc, ICON } from './kit.js';
 import { DIFFICULTY, ROUNDS } from '../match/rules.js';
 import { CHAPTERS, TRAINING, mapInfo, mapKicker, hasMap } from '../world/maps/index.js';
-import { WEAPONS, CATS } from '../weapons/defs.js';
+import { CATS, listed, tierOf, skillText } from '../weapons/defs.js';
 import { weaponIcon } from './icons.js';
+import { TIERS, tierIcon, injectCSS } from './crosshairs.js';
 import { mapThumb } from './mapthumb.js';
 
 /** UI text + colour per difficulty (multipliers come from match/rules.js). */
@@ -222,6 +223,22 @@ export class SoloSetup extends Screen {
 // ---------------------------------------------------------------- armory
 
 const ARMORY_TABS = ['rifle', 'smg', 'pistol', 'shotgun', 'mg', 'sniper', 'heavy', 'melee'];
+// premium series: card frame + series tag in the tier colours (crosshairs.js TIERS), the signature skill in the detail
+injectCSS('armory-prem-css', `
+.ar-card.prem { border-color: var(--tc); }
+.ar-card.prem.on { border-color: var(--th); background: linear-gradient(180deg, var(--tb), rgba(16,17,19,.82)); }
+.ar-card .ar-tier { position: absolute; top: .4rem; right: .45rem; display: flex; }
+.ar-card { position: relative; }
+.ad-tags span.tier { display: inline-flex; align-items: center; gap: .25rem; color: var(--th); background: var(--tb); }
+.ad-sk { margin: .45rem 0 .1rem; padding: .35rem .55rem; border-left: 2px solid var(--th); background: var(--tb); font-size: var(--fs-xs); color: #d6dde0; line-height: 1.4; }
+.ad-sk b { color: var(--th); margin-right: .35rem; letter-spacing: .06em; }
+.ad-sk small { display: block; color: var(--dim); }`);
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+/** style="--tc --tb --th" tier colours of a premium weapon ('' for standard issue). */
+function tierVars(w) {
+  const t = tierOf(w), T = t !== 'standard' && TIERS[t];
+  return T ? ` style="--tc:${rgba(T.edge, 0.55)};--tb:${rgba(T.edge, 0.14)};--th:${T.hi}"` : '';
+}
 const MODE_ZH = { auto: '全自動', semi: '半自動', burst: '點放', bolt: '栓動', pump: '泵動', melee: '近戰', single: '單發' };
 
 function weaponStats(w) {
@@ -264,22 +281,25 @@ export class Armory extends Screen {
     else if (act === 'pick') { this.sel = t.dataset.id; this.render(); }
   }
 
-  _list() { return Object.values(WEAPONS).filter((w) => w.cat === this.tab).sort((a, b) => a.price - b.price); }
+  /** Weapons this build offers (defs.js listed(): no unfinished premium, nothing without a model). */
+  _list() { return listed(this.tab); }
 
   render() {
-    const tabs = ARMORY_TABS.filter((c) => Object.values(WEAPONS).some((w) => w.cat === c));
+    const tabs = ARMORY_TABS.filter((c) => listed(c).length);
     this.$('.ar-tabs').innerHTML = tabs.map((c) => `<button data-act="tab" data-tab="${c}" class="${c === this.tab ? 'on' : ''}">${CATS[c]?.zh || c}</button>`).join('');
     const list = this._list();
-    this.$('.ar-grid').innerHTML = list.map((w) => `<button class="ar-card${w.id === this.sel ? ' on' : ''}" data-act="pick" data-id="${w.id}">
-      <span class="ar-img"><img alt=""><i class="ar-ph"></i></span><b>${esc(w.zh)}</b><small>${esc(w.en)}</small><span class="ar-price">${w.price ? '$' + w.price : '初始裝備'}</span></button>`).join('');
+    this.$('.ar-grid').innerHTML = list.map((w) => `<button class="ar-card${w.id === this.sel ? ' on' : ''}${tierVars(w) ? ' prem' : ''}" data-act="pick" data-id="${w.id}"${tierVars(w)}>
+      ${tierVars(w) ? `<span class="ar-tier">${tierIcon(tierOf(w), 14)}</span>` : ''}<span class="ar-img"><img alt=""><i class="ar-ph"></i></span><b>${esc(w.zh)}</b><small>${esc(w.en)}</small><span class="ar-price">${w.price ? '$' + w.price : '初始裝備'}</span></button>`).join('');
     for (const card of this.$$('.ar-card')) this._icon(card.querySelector('.ar-img'), card.dataset.id);
-    const w = WEAPONS[this.sel] || list[0];
+    const w = list.find((o) => o.id === this.sel) || list[0];
     const det = this.$('.ar-detail');
     if (!w) { det.innerHTML = ''; return; }
     // bars never drop below a sliver, so a weak stat still reads as a (short) bar rather than a missing one
+    const tier = tierOf(w), sk = skillText(w), tv = tierVars(w);
     det.innerHTML = `<div class="ad-img ar-img big"><img alt=""><i class="ar-ph"></i></div>
       <div class="ad-n"><b>${esc(w.zh)}</b><small>${esc(w.en)}</small></div>
-      <div class="ad-tags"><span>${CATS[w.cat]?.zh || ''}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${w.mag ? `<span>彈匣 ${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
+      <div class="ad-tags"${tv}>${tv ? `<span class="tier">${tierIcon(tier, 12)}${TIERS[tier].zh}系列</span>` : ''}<span>${CATS[w.cat]?.zh || ''}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${w.mag ? `<span>彈匣 ${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
+      ${sk ? `<div class="ad-sk"${tv}><b>${sk.key} ${esc(sk.zh)}</b>${esc(sk.desc)}${sk.src ? `<small>充能：${esc(sk.src)}　·　局內按 ${sk.key === '◎' ? '◎ / 右鍵' : '★ / Q'} 發動</small>` : ''}</div>` : ''}
       <div class="ad-cols">
         <div class="ad-stats">${w.cat === 'melee' ? '' : weaponStats(w).map(([k, v]) => `<div><span>${k}</span><i><u style="width:${(Math.max(0.06, v) * 100).toFixed(0)}%"></u></i></div>`).join('')}</div>
         <div class="ad-nums">${weaponNums(w).map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>

@@ -5,13 +5,15 @@
 // exactly like human teammates.
 import * as THREE from 'three';
 import { RemotePlayer } from './remote.js';
-import { WEAPONS } from '../weapons/defs.js';
+import { WEAPONS, isListed, listed } from '../weapons/defs.js';
 import { fireBullet } from '../weapons/ballistics.js';
 import { NAV } from '../world/nav.js';
 import { rand, angleDiff, clamp, gauss } from '../engine/util.js';
 
 const NAMES = ['阿傑', '小雪', '老陳', '鐵牛'];
-const LOADOUT = [['ump', 'mp5'], ['akm', 'm4', 'scar'], ['m249', 'aug'], ['mg42', 'awp', 'usas']]; // by round tier
+// by round tier (rounds 1-3, 4-5, 6+); only weapons this build offers (defs.js listed(): a bot with an unlisted gun
+// would show empty hands), standard issue only (premium specials run on the player's arsenal)
+const LOADOUT = [['ump', 'mp5'], ['akm', 'm4', 'vector'], ['m4', 'akm']];
 const RESCUE_TIME = 3;      // s a bot kneels next to a downed teammate to get them up
 const STEP = 0.55;          // = world/nav.js STEP (max height step between linked cells)
 const INF = 0x7fffffff;
@@ -19,7 +21,7 @@ const N8 = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1
 const _v = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _f = new THREE.Vector3();
-const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _e = new THREE.Vector3();
 
 let botId = 1000;
 
@@ -137,7 +139,8 @@ class Bot {
       let best = null, bd = 42;
       for (const z of g.zombies.list) {
         if (!z.alive) continue;
-        const d = z.pos.distanceTo(this.pos);
+        // ranged specials (acid spitters, screamers) first, like a player would: they hang back and wear the squad down
+        const d = z.pos.distanceTo(this.pos) - (z.def.spit || z.def.scream ? 10 : 0);
         if (d < bd && mgr.losFrom(this.pos, z)) { bd = d; best = z; }
       }
       if (best !== this.target) { this.target = best; this.reaction = rand(0.25, 0.55); }
@@ -152,6 +155,9 @@ class Bot {
       const d = t.pos.distanceTo(this.pos);
       if (d < (r ? 3 : 5)) { goal.copy(this.pos).add(_d.subVectors(this.pos, t.pos).setY(0).normalize().multiplyScalar(4)); speed = 4.8; backoff = true; }
     }
+    // a boss telegraph under our feet: dive clear of it first (a rescue waits)
+    const out = this.squad.escape(this.pos, _e);
+    if (out) { goal.copy(this.pos).addScaledVector(out, 4); speed = 5.2; backoff = true; }
     // ---- revive: kneel next to the downed teammate, no shooting; a hit or a zombie in our face starts it over
     if (r && !backoff && Math.hypot(r.pos.x - this.pos.x, r.pos.z - this.pos.z) < 1.5) {
       this.rescueT += dt;
@@ -194,7 +200,8 @@ class Bot {
     if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.ammo = this.weapon.mag; }
     if (t && t.alive) {
       const aimP = t.center(new THREE.Vector3());
-      aimP.y += t.height * (Math.random() < 0.25 ? 0.3 : 0.05);
+      // a riot shield stops body shots from the front: go for the head
+      aimP.y += t.height * (t.def.frontArmor ? 0.37 : Math.random() < 0.25 ? 0.3 : 0.05);
       const eye = _v.copy(this.pos); eye.y += 1.55;
       const want = Math.atan2(-(aimP.x - eye.x), -(aimP.z - eye.z));
       this.yaw += angleDiff(this.yaw, want) * Math.min(1, dt * 8);
@@ -271,7 +278,8 @@ class Bot {
 
   rearm(round) {
     const tier = Math.min(LOADOUT.length - 1, Math.floor((round - 1) / 2.5));
-    const pool = LOADOUT[tier].filter((id) => WEAPONS[id]);
+    let pool = LOADOUT[tier].filter((id) => isListed(WEAPONS[id]));
+    if (!pool.length) pool = listed().filter((w) => (w.cat === 'rifle' || w.cat === 'smg') && !w.special && !w.premium).map((w) => w.id);
     if (pool.length) {
       this.weapon = WEAPONS[pool[(this.slot + round) % pool.length]];
       this.ammo = this.weapon.mag;
@@ -327,6 +335,41 @@ export class BotSquad {
 
   players() {
     return this.bots.map((b) => ({ id: b.id, pos: b.pos, alive: b.alive && !b.downed, downed: b.downed, bot: b }));
+  }
+
+  /**
+   * Unit xz direction out of a boss telegraph that `p` stands in (ZombieManager.dangers, pushed by BossBrain.fx;
+   * same shapes as its hurtCircle / hurtCone / hurtLine), or null: circles radially, cones and lines sideways.
+   */
+  escape(p, out) {
+    const zm = this.game.zombies, list = zm?.dangers;
+    // acid / poison pools (spitters, bloaters, the colossus) too
+    for (const h of zm?.hazards || []) {
+      const dx = p.x - h.pos.x, dz = p.z - h.pos.z, dist = Math.hypot(dx, dz);
+      if (h.dps > 0 && dist < h.r + 0.6 && Math.abs(p.y - h.pos.y) < 1.5) return dist > 0.1 ? out.set(dx / dist, 0, dz / dist) : out.set(1, 0, 0);
+    }
+    if (!list?.length) return null;
+    for (let i = list.length - 1; i >= 0; i--) if (list[i].until < zm.time) list.splice(i, 1);
+    for (const { k, d } of list) {
+      const dx = p.x - d.p[0], dz = p.z - d.p[2], dist = Math.hypot(dx, dz);
+      if (Math.abs(p.y - d.p[1]) > 3) continue;
+      if (k === 'teleCircle') {
+        if (dist > d.r + 1) continue;
+        return dist > 0.1 ? out.set(dx / dist, 0, dz / dist) : out.set(1, 0, 0);
+      }
+      const fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+      const side = dx * fz - dz * fx, s = side < 0 ? -1 : 1;
+      if (k === 'teleCone') {
+        if (dist > d.r + 1 || Math.abs(angleDiff(d.yaw, Math.atan2(dx, dz))) > d.h + 0.25) continue;
+        // out past the rim when that is closer than the cone's edge
+        if (d.r + 1 - dist < dist * Math.sin(Math.min(1.5, d.h + 0.25))) return out.set(dx / (dist || 1), 0, dz / (dist || 1));
+        return out.set(fz * s, 0, -fx * s);
+      }
+      const along = dx * fx + dz * fz;
+      if (along < -1 || along > d.l + 1 || Math.abs(side) > d.w + 1) continue;
+      return out.set(fz * s, 0, -fx * s);
+    }
+    return null;
   }
 
   /** One bot per downed human goes to get them up (zombies still pick at the downed; nobody else revives them). */

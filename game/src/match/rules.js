@@ -18,7 +18,7 @@ export const ROUNDS = [
   { title: '第 6 回合', mix: [['walker', 36], ['runner', 12], ['spitter', 5], ['bloater', 4], ['crawler', 6], ['screamer', 2], ['riot', 3], ['brute', 1]], burst: [3, 5], interval: 1.1 },
   { title: '第 7 回合', mix: [['walker', 40], ['runner', 14], ['spitter', 6], ['bloater', 4], ['crawler', 8], ['screamer', 2], ['riot', 5], ['brute', 2]], burst: [4, 6], interval: 1.0, elite: 0.06 },
   { title: '第 8 回合', mix: [['walker', 42], ['runner', 18], ['spitter', 6], ['bloater', 5], ['crawler', 10], ['screamer', 3], ['riot', 6], ['brute', 2]], burst: [4, 6], interval: 0.95, elite: 0.08 },
-  { title: '第 9 回合', mix: [['walker', 46], ['runner', 20], ['spitter', 8], ['bloater', 6], ['crawler', 12], ['screamer', 3], ['riot', 8], ['brute', 3]], burst: [4, 7], interval: 0.9, elite: 0.1, intro: '最後的防線' },
+  { title: '第 9 回合', mix: [['walker', 50], ['runner', 22], ['spitter', 6], ['bloater', 6], ['crawler', 12], ['screamer', 3], ['riot', 6], ['brute', 2]], burst: [4, 6], interval: 0.9, elite: 0.1, intro: '最後的防線' },
   { title: '最終回合　災厄', mix: [['walker', 24], ['runner', 10], ['crawler', 6]], burst: [3, 4], interval: 1.8, boss: 'colossus', intro: '它來了。' },
 ];
 

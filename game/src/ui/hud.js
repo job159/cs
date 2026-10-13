@@ -313,7 +313,7 @@ export class HUD {
     // vitals
     if (st) {
       this._set('hp', this.hpEl, String(Math.max(0, Math.ceil(st.hp))));
-      this._set('ar', this.arEl, String(Math.ceil(st.armor)));
+      this._set('ar', this.arEl, String(Math.floor(st.armor)));   // (a sliver left absorbs nothing: no "1")
       this.hpBox.classList.toggle('low', st.hp < 30);
     }
     this._chips(info);

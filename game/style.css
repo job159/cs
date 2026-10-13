@@ -159,6 +159,18 @@ body.touch .xpbar { bottom: calc(52px + var(--safe-bottom)); }
 .card button { margin-top: auto; height: 34px; border: 1px solid #f2b544; background: rgba(242,181,68,.16); color: #fff; font-family: var(--num); font-size: 17px; }
 .card button:disabled { border-color: rgba(255,255,255,.15); background: none; color: #777; }
 .card.owned { border-color: rgba(143,227,136,.35); }
+/* short landscape phones: the shop takes the full height, every card keeps its own height (a premium card's skill
+   text no longer stretches the whole row past the fold) and gets a compact layout, so the buy buttons stay on screen */
+@media (max-height: 430px) {
+  .shop-panel { height: 96vh; }
+  .shop-head { padding: 5px 12px; }
+  .shop-grid { padding: 8px; gap: 8px; align-items: start; }
+  .card { padding: 7px 8px; gap: 4px; }
+  .card img { height: 40px; }
+  .card .cs div { font-size: 10px; }
+  .card .cs i { height: 3px; }
+  .card button { height: 32px; margin-top: 2px; }
+}
 /* perk picker */
 #perks { position: fixed; left: calc(16px + var(--safe-left)); top: calc(52px + var(--safe-top)); z-index: 30; display: none; pointer-events: auto; }
 #perks.on { display: block; }
@@ -166,6 +178,12 @@ body.touch .xpbar { bottom: calc(52px + var(--safe-bottom)); }
 #perks .pk-list { display: flex; gap: 6px; flex-wrap: wrap; max-width: 520px; }
 #perks button { background: rgba(10,12,14,.72); border: 1px solid rgba(242,181,68,.5); color: #eee; padding: 6px 10px; text-align: left; font-family: var(--font); }
 #perks button b { display: block; font-size: 13px; } #perks button span { font-size: 11px; color: #bbb; }
+/* keep clear of the boss bar (centred, from 58px down) and the combo: two rows on desktop; phones: one compact row
+   under the boss bar, right of the left fire button */
+body:not(.touch) #perks .pk-list { max-width: 340px; }
+body.touch #perks { left: calc(124px + var(--safe-left)); top: calc(96px + var(--safe-top)); }
+body.touch #perks .pk-title { font-size: 11px; margin-bottom: 2px; }
+body.touch #perks button { padding: 3px 6px; } body.touch #perks button b { font-size: 11px; } body.touch #perks button span { font-size: 9.5px; }
 #touch .t-buy { left: calc(214px + var(--safe-left)); top: calc(8px + var(--safe-top)); width: auto; min-width: 60px; height: 46px; border-radius: 4px; padding: 0 14px; color: #fff; font-family: var(--font); font-size: 14px; display: none; }
 #touch.can-buy .t-buy { display: flex; }
 
@@ -178,7 +196,7 @@ html { font-size: 16px; }
 @media (min-width: 1500px) and (min-height: 820px) { html { font-size: 20px; } }
 #gl { transition: opacity .6s; }
 body.bd-loading #gl { opacity: 0; }
-body.fe-menu #hud, body.fe-menu #touch { visibility: hidden !important; }
+body.fe-menu #hud, body.fe-menu #touch, body.fe-menu #perks { visibility: hidden !important; }
 .boot-tip { position: absolute; left: 50%; bottom: calc(1.6rem + var(--safe-bottom)); transform: translateX(-50%); width: min(40rem, 90vw); text-align: center; font-size: .82rem; line-height: 1.6; color: #a29d92; }
 #boot.match .boot-logo { font-size: 2.3rem; }
 

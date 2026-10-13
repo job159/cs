@@ -18,12 +18,37 @@ export const DEFAULTS = {
 
 export const XH_COLORS = ['#4dff6a', '#f2e34a', '#4de7ff', '#ffffff', '#ff4fd8', '#ff5a3d'];
 
-/** Picks a quality tier for 'auto': phones medium (low on <= 4 GB devices), desktops high. */
+let GPU = '';
+/** Remembers the GPU name (unmasked WebGL renderer string) for autoQuality(); called once the renderer exists. */
+export function noteGpu(gl) {
+  try {
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    GPU = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
+  } catch { GPU = ''; }
+}
+
+/**
+ * Phone GPU class from its name: 'low' only for entry-level chips (Adreno 5xx / 605-612 / 702, Mali-G31 / G51 / G52 /
+ * G57 / G71 / G72 and older Mali, PowerVR), where medium cannot hold a playable frame rate even at its lowest dynamic
+ * resolution; 'medium' for everything from the Adreno 613 / Mali-G68 class up (dynamic resolution covers the rest);
+ * null when the name says nothing (emulators, unknown vendors).
+ */
+export function phoneGpuTier(name) {
+  let m;
+  if ((m = /Adreno[^0-9]*(\d{3})/i.exec(name))) { const n = +m[1]; return n >= 613 && n !== 702 ? 'medium' : 'low'; }
+  if (/Immortalis|Xclipse|Apple/i.test(name)) return 'medium';
+  if ((m = /Mali-G(\d+)/i.exec(name))) { const s = +m[1]; return [31, 51, 52, 57, 71, 72].includes(s) ? 'low' : 'medium'; }
+  if (/Mali|PowerVR|Vivante|VideoCore/i.test(name)) return 'low';
+  return null;
+}
+
+/** Picks a quality tier for 'auto': desktops high; phones by GPU class (medium when unknown), low on <= 3 GB devices. */
 export function autoQuality() {
   const coarse = matchMedia('(pointer: coarse)').matches;
   if (!coarse) return 'high';
   const mem = navigator.deviceMemory || 4;
-  return mem <= 3 ? 'low' : 'medium';
+  if (mem <= 3) return 'low';
+  return phoneGpuTier(GPU) || 'medium';
 }
 
 export class Settings {

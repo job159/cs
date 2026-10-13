@@ -57,6 +57,7 @@ export class Match {
     this.game.hud?.setRound('準備作戰', '購買裝備');
     this.game.hud?.toast('購買時間：按 B 或點擊購買', 2600);
     this.game.audio?.playMusic?.('calm');
+    this.game.audio?.preload?.(['combat_low', 'combat_high']);   // decoded before round 1: the switch stays phase-locked
   }
 
   // ---------------------------------------------------------------- flow
@@ -66,6 +67,7 @@ export class Match {
     if (this.isMirror) { this._mirrorUpdate(); this._updateSupplies(dt); return; }
     if (this.state === 'warmup' || this.state === 'buy') {
       g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`);
+      this._countdownTick();
       if (this.timer <= 0) this.beginRound(this.round + 1);
       this._updateSupplies(dt);   // crates dropped at round end open during the buy time too (and the prompt refreshes)
       return;
@@ -75,7 +77,7 @@ export class Match {
       const left = this.queue.length + (g.zombies?.alive || 0);
       const R = ROUNDS[Math.max(0, this.round - 1)];
       g.hud?.setRound(R.title, `剩餘感染者 ${left}`);
-      if (this.boss) g.hud?.setBoss(this.boss.name, Math.max(0, this.boss.hp / this.boss.maxHp));
+      if (this.boss) { const f = Math.max(0, this.boss.hp / this.boss.maxHp); g.hud?.setBoss(this.boss.name, f); this._bossSupply(f); }
       if (left <= 0 && (!this.boss || this.boss.hp <= 0)) this.endRound();
       this._checkDefeat();
     }
@@ -88,12 +90,15 @@ export class Match {
     this.round = n;
     const R = ROUNDS[n - 1];
     this.state = 'round';
+    this._bossCrateRound = 0;   // (a wipe retry gets its boss crate again)
     const scale = (1 + 0.5 * (this.players - 1)) * this.diff.countMul;
     this.queue = [];
     for (const [type, count] of R.mix) for (let i = 0; i < Math.round(count * scale); i++) this.queue.push(type);
-    // shuffle, but keep heavies away from the very start of the round
-    for (let i = this.queue.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [this.queue[i], this.queue[j]] = [this.queue[j], this.queue[i]]; }
-    this.queue.sort((a, b) => (ZOMBIES[a].hp > 400 ? 1 : 0) - (ZOMBIES[b].hp > 400 ? 1 : 0) || 0);
+    // shuffled, but no heavies in the first quarter of the round. _spawnDirector pop()s from the END of the queue: the
+    // old sort put every heavy last, so the whole round's riots and brutes stormed in together at the very start
+    const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const light = shuffle(this.queue.filter((t) => ZOMBIES[t].hp <= 400)), lead = Math.floor(this.queue.length * 0.25);
+    this.queue = [...light.slice(0, lead), ...shuffle([...light.slice(lead), ...this.queue.filter((t) => ZOMBIES[t].hp > 400)])].reverse();
     this.spawnT = 2.5;
     const zm = g.zombies;
     zm.hpMul = this.diff.hpMul * (1 + 0.1 * (n - 1)) * (1 + 0.35 * (this.players - 1));
@@ -113,7 +118,7 @@ export class Match {
     this.addMoney(bonus);
     g.hud?.setBoss(null);
     this.boss = null;
-    g.audio?.play('round_win');
+    if (this.round < ROUNDS.length) g.audio?.play('round_win');   // the last one gets the victory cue alone
     g.hud?.toast(`回合完成　+$${bonus}`, 2400);
     // everyone back on their feet, a little health and armour back
     if (g.status) { if (g.status.downed || !g.status.alive) { g.status.alive = true; g.status.revive(50); } g.status.heal(30); }
@@ -122,12 +127,13 @@ export class Match {
     this.state = 'buy';
     this.timer = 20;
     g.audio?.playMusic?.('calm');
+    if (ROUNDS[this.round]?.boss) g.audio?.prepareMusic?.('boss');   // decoded during the buy time, on cue at the boss
   }
 
   victory() {
     this.state = 'victory';
     this.game.hud?.setRound('任務完成', '');
-    this.game.audio?.play('victory');
+    this._endCue('victory');
     this.game.onMatchEnd?.(true, this.stats);
   }
 
@@ -146,11 +152,12 @@ export class Match {
       this._respawn();
       this.state = 'buy'; this.timer = 12; this.round -= 1;
       for (const b of g.bots?.bots || []) b.rearm(this.round + 1); // revives fallen AI bots at our side
+      g.audio?.play('round_lose');
       g.audio?.playMusic?.('calm');
     } else {
       this.state = 'defeat';
       g.hud?.setRound('任務失敗', '');
-      g.audio?.play('defeat');
+      this._endCue('defeat');
       g.onMatchEnd?.(false, this.stats);
     }
   }
@@ -211,6 +218,9 @@ export class Match {
     const sp = ar ? new THREE.Vector3(...ar.center) : (this._pickSpawner() || new THREE.Vector3(0, 0, 25));
     const z = g.zombies.spawn(kind, sp, {});
     if (!z) return;
+    // AI teammates shoot like players: the boss gets their share of the squad health scaling too
+    const bots = g.bots?.bots.length || 0;
+    if (bots) { z.maxHp *= (1 + 0.35 * (this.players - 1 + bots * 0.5)) / (1 + 0.35 * (this.players - 1)); z.hp = z.maxHp; }
     const name = ZOMBIES[kind]?.zh || '首領';
     this.boss = { name, get hp() { return z.hp; }, get maxHp() { return z.maxHp; }, zombie: z };
     g.audio?.play('boss_warning');
@@ -339,6 +349,21 @@ export class Match {
   }
 
   /**
+   * Halfway through a boss: a gold crate drops at the supply point nearest us (CSO rare crate; long boss fights ran
+   * the guns dry). Every client drops its own (crates are local), on the host's boss health fraction.
+   */
+  _bossSupply(frac) {
+    if (frac > 0.5 || frac <= 0 || this._bossCrateRound === this.round) return;
+    this._bossCrateRound = this.round;
+    const g = this.game, pts = (g.world.def?.supply || []).map((p) => new THREE.Vector3(...p));
+    const me = g.player?.pos;
+    if (!pts.length || !me) return;
+    pts.sort((a, b) => a.distanceTo(me) - b.distanceTo(me));
+    this.dropSupply(pts.find((p) => !this.supplies.some((s) => s.pos.distanceTo(p) < 1)) || pts[0], { rare: true });
+    g.hud?.toast('補給箱空投！', 2000);
+  }
+
+  /**
    * Drops one crate at p (floor). owner: the player id whose glow it is for the first 60 s (null = everyone's; CSO:
    * a zombie's crate glows only for its killer), rare: gold boss / rare crate. Crates live on this client only.
    */
@@ -416,6 +441,20 @@ export class Match {
     }
   }
 
+  // ---------------------------------------------------------------- music / stingers
+  /** Victory / defeat: the loop fades out under the stinger, the menu theme fades in after it (results screen). */
+  _endCue(name) {
+    const a = this.game.audio;
+    if (a?.stinger) a.stinger(name, { then: 'menu_theme' }); else a?.play(name);
+  }
+
+  /** Last five seconds of the buy / warmup countdown tick once per second. */
+  _countdownTick() {
+    const s = Math.ceil(this.timer);
+    if (s !== this._tickS && s >= 1 && s <= 5) this.game.audio?.play('countdown_tick', { volume: s === 1 ? 0.9 : 0.7 });
+    this._tickS = s;
+  }
+
   snapshot() { return { state: this.state, round: this.round, timer: this.timer }; }
 
   // ---------------------------------------------------------------- network client mirror
@@ -430,6 +469,7 @@ export class Match {
     this.state = state;
     const g = this.game;
     if (state === 'round') {
+      this._bossCrateRound = 0;
       const R = ROUNDS[round - 1];
       g.hud?.toast(R?.intro || R?.title || '', 2400);
       g.audio?.play('round_start');
@@ -440,6 +480,7 @@ export class Match {
       g.hud?.toast(`全員陣亡　重試本回合（剩餘 ${this.retries} 次）`, 3000);
       g.zombies?.clear();
       this._respawn();
+      g.audio?.play('round_lose');
       g.audio?.playMusic?.('calm');
     } else if (state === 'buy' && prev === 'round') {
       const bonus = ECONOMY.roundBonus(round);
@@ -449,18 +490,20 @@ export class Match {
       if (g.status) { if (g.status.downed || !g.status.alive) { g.status.alive = true; g.status.revive(50); } g.status.heal(30); }
       this._dropSupplies(1);
       g.audio?.playMusic?.('calm');
-    } else if (state === 'victory') { g.audio?.play('victory'); g.onMatchEnd?.(true, this.stats); }
-    else if (state === 'defeat') { this.stats.deaths++; g.audio?.play('defeat'); g.onMatchEnd?.(false, this.stats); }
+      if (ROUNDS[round]?.boss) g.audio?.prepareMusic?.('boss');
+    } else if (state === 'victory') { this._endCue('victory'); g.onMatchEnd?.(true, this.stats); }
+    else if (state === 'defeat') { this.stats.deaths++; this._endCue('defeat'); g.onMatchEnd?.(false, this.stats); }
   }
 
   _mirrorUpdate() {
     const g = this.game;
     const R = ROUNDS[Math.max(0, this.round - 1)];
-    if (this.state === 'warmup' || this.state === 'buy') g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`);
+    if (this.state === 'warmup' || this.state === 'buy') { g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`); this._countdownTick(); }
     else if (this.state === 'round') g.hud?.setRound(R?.title || '', `剩餘感染者 ${this.left ?? 0}`);
     else if (this.state === 'victory') g.hud?.setRound('任務完成', '');
     else if (this.state === 'defeat') g.hud?.setRound('任務失敗', '');
     g.hud?.setBoss(this.bossFrac >= 0 && this.state === 'round' ? this.bossName : null, Math.max(0, this.bossFrac));
+    if (this.bossFrac >= 0 && this.state === 'round') this._bossSupply(this.bossFrac);
   }
 
   /** Host credited us with a kill. */

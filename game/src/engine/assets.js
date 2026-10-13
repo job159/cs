@@ -24,6 +24,31 @@ export async function instanceGLB(path) {
   return g.scene.clone(true);
 }
 
+/**
+ * One skeleton per skin inside an instance. SkeletonUtils.clone (and a per-mesh `new Skeleton` for LOD meshes) gives
+ * every skinned mesh its own skeleton, so a zombie of 8-19 meshes computed and uploaded 8-19 identical bone textures
+ * every frame, and each left a GPU texture behind when the zombie was dropped. Meshes whose skeletons have the same
+ * bones (same instances, same order) and the same bind inverses (one glTF skin) now share the first one.
+ */
+export function shareSkeletons(root) {
+  const bySkin = new Map(); // boneInverses array (shared by reference by every clone of one skin) -> skeletons
+  root.traverse((o) => {
+    if (!o.isSkinnedMesh || !o.skeleton) return;
+    const sk = o.skeleton;
+    let list = bySkin.get(sk.boneInverses);
+    if (!list) bySkin.set(sk.boneInverses, (list = []));
+    const same = list.find((s) => s === sk || (s.bones.length === sk.bones.length && s.bones.every((b, i) => b === sk.bones[i])));
+    if (!same) { list.push(sk); return; }
+    if (same !== sk) { o.skeleton = same; sk.dispose(); }
+  });
+}
+
+/** Frees what an instance owns on the GPU (its skeletons' bone textures); geometries / materials are shared. */
+export function disposeSkeletons(root) {
+  const seen = new Set();
+  root.traverse((o) => { if (o.isSkinnedMesh && o.skeleton && !seen.has(o.skeleton)) { seen.add(o.skeleton); o.skeleton.dispose(); } });
+}
+
 export function loadTexture(path, { srgb = true, repeat = true, aniso = 8 } = {}) {
   return once('tex:' + path + srgb, async () => {
     const t = await texLoader.loadAsync(BASE + path);

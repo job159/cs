@@ -17,7 +17,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { buildMannequin } from '../zombies/mannequin.js';
-import { loadGLB, instanceGLB } from '../engine/assets.js';
+import { loadGLB, instanceGLB, shareSkeletons, disposeSkeletons } from '../engine/assets.js';
 import { applyHardSurface } from '../gfx/materials.js';
 import { WEAPONS } from '../weapons/defs.js';
 import { RAMP } from '../fx/fx.js';
@@ -183,6 +183,7 @@ export class RemotePlayer {
       mesh.visible = false; mesh.frustumCulled = false; mesh.castShadow = true;
       this.lod1.push(mesh);
     });
+    shareSkeletons(this.model);   // one bone texture per skin instead of one per mesh
     this.isFar = false;
   }
 
@@ -488,5 +489,5 @@ export class RemotePlayer {
     return this.upper.acts[name] || this.lower.acts[name];
   }
 
-  dispose() { this._returnMag(); this.game.scene.remove(this.root); this.tag.remove(); }
+  dispose() { this._returnMag(); this.game.scene.remove(this.root); if (this.model) disposeSkeletons(this.model); this.tag.remove(); }
 }

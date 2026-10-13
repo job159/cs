@@ -153,6 +153,8 @@ export class BossBrain {
   /** Visual effect replicated to every client (and played locally). */
   fx(kind, data = {}) {
     this.mgr.net?.fx('boss', { id: this.z.id, k: kind, d: data });
+    // telegraphed areas, read by the AI teammates (bots.js) to step out before the hit lands
+    if (kind === 'teleCircle' || kind === 'teleCone' || kind === 'teleLine') (this.mgr.dangers ||= []).push({ k: kind, d: data, until: this.mgr.time + (data.t ?? 1) + 0.4 });
     this.onFx(kind, data);
   }
   onFx() {}

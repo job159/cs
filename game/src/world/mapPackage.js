@@ -36,9 +36,9 @@ export const TEX_LIMITS = {
 const MAX_POINT_LIGHTS = { low: 2, medium: 4, high: 6, ultra: 6 };
 // Realtime sun-shadow casters of a baked map: static-on-static shadows already come from the baked sun mask, so the
 // realtime shadow map only needs the big occluders (facades, vehicles, containers, bridge, ramps) to shade players and
-// zombies. Small detail (props, window frames, signs, car trim, brackets, sandbags, wires) stays out of the shadow pass:
-// Lost Town drops from ~720k to ~300k shadow triangles. map.json materials[].rtCast overrides per material.
-const RT_CAST_SKIP = /^(prop_|frame_|sign_|car_plastic|car_chrome|car_light|steel_dark|sandbag|cone_|rubble|lamp_|wire|tape_)/;
+// zombies. Small detail (props, window frames, signs, car trim, brackets, sandbags, wires, 15 cm curbs) stays out of the
+// shadow pass: Lost Town drops from ~720k to ~260k shadow triangles. map.json materials[].rtCast overrides per material.
+const RT_CAST_SKIP = /^(prop_|frame_|sign_|car_plastic|car_chrome|car_light|steel_dark|sandbag|cone_|rubble|lamp_|wire|tape_|curb$)/;
 
 // ------------------------------------------------------------------------------------------ fetch / images
 const texCache = new Map();   // url|size|kind -> Promise<Texture>

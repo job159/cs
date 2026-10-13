@@ -254,6 +254,7 @@ export class Renderer {
 
   setQuality(name) {
     const q = QUALITY[name] || QUALITY.high;
+    if (this.q && this.q !== q) { this.gameScale = undefined; this.dynCeil = this.dynFloor = null; } // what the old tier learned no longer applies
     this.qualityName = name in QUALITY ? name : 'high';
     this.q = q;
     this.gl.shadowMap.enabled = q.shadows > 0;
@@ -314,18 +315,82 @@ export class Renderer {
     this._buildTargets();
   }
 
-  // Called once per frame with the real frame time; adapts this.scale.
+  /** Menus: pins the HDR scale (cheap backdrop) and remembers the in-game one for unpinScale(). */
+  pinScale(s) {
+    if (!this.fixedScale) { this.gameScale = this.scale; this.fixedScale = true; }
+    this.scale = Math.max(this.q.minScale, Math.min(1, s));
+    this._applyScale();
+  }
+
+  /** Match start: back to the last in-game scale (full on the first match), adaptive again after a short grace. */
+  unpinScale() {
+    if (this.fixedScale) { this.fixedScale = false; this.scale = Math.max(this.q.minScale, Math.min(1, this.gameScale ?? 1)); }
+    this._applyScale();
+    this.frameTimes.length = 0;
+    this.dynCooldown = 1;
+    this.dynProbe = null;
+    this.dynStep = null;
+    this.dynUseless = 0;
+  }
+
+  // Called once per frame with the real frame time; adapts this.scale. Every decision looks at >= 30 frames rendered
+  // entirely at the current scale (the window restarts on each change).
+  //  - Slow frames step the scale down. A step that does not make frames >= 8% faster means the frame is bound by the CPU /
+  //    driver (draw calls, game logic), not by pixels: after two such steps in a row both are undone and that scale is
+  //    held for a while (30 s, doubling up to 2 min) instead of blurring the picture for nothing.
+  //  - Frame time alone cannot show headroom on a vsync-capped display (a 60 Hz phone never reports less than 16.7 ms),
+  //    so a scale lowered by one heavy moment would stay low for the rest of the match. Once frames sit steadily on the
+  //    refresh interval the scale probes upward in small steps; a probe that makes frames miss vsync is undone and that
+  //    scale is skipped for a while (15 s, doubling on each failed probe up to 2 min).
   adapt(dt) {
-    this.frameTimes.push(dt);
-    if (this.frameTimes.length > 40) this.frameTimes.shift();
+    const ft = this.frameTimes;
+    ft.push(dt);
+    if (ft.length > 40) ft.shift();
     this.dynCooldown -= dt;
-    if (this.dynCooldown > 0 || this.frameTimes.length < 30 || this.fixedScale) return;
-    const sorted = [...this.frameTimes].sort((a, b) => a - b);
+    this.dynClock = (this.dynClock || 0) + dt;
+    if (this.dynCooldown > 0 || ft.length < 30 || this.fixedScale) return;
+    const sorted = [...ft].sort((a, b) => a - b);
     const p75 = sorted[Math.floor(sorted.length * 0.75)];
+    const p90 = sorted[Math.floor(sorted.length * 0.9)];
+    const mean = ft.reduce((a, b) => a + b, 0) / ft.length;
+    const vsync = Math.max(1 / 170, sorted[Math.floor(sorted.length * 0.1)]); // refresh interval estimate
+    const now = this.dynClock;
+    if (this.dynProbe && now - this.dynProbe.t > 4) this.dynProbe = null; // survived: keep it
     let s = this.scale;
-    if (p75 > this.targetFrame * 1.12) s = Math.max(this.q.minScale, s - 0.05);
-    else if (p75 < this.targetFrame * 0.8) s = Math.min(1, s + 0.025);
-    if (s !== this.scale) { this.scale = s; this._applyScale(); this.dynCooldown = 0.6; }
+    if (p75 > this.targetFrame * 1.12) {
+      const step = this.dynStep;
+      if (step && !step.checked) { step.checked = true; this.dynUseless = mean > step.mean * 0.92 ? (this.dynUseless || 0) + 1 : 0; }
+      if (this.dynProbe) { // the last upward step cost frames: undo it and stay below it for a while
+        this.dynBackoff = Math.min(120, (this.dynBackoff || 7.5) * 2);
+        this.dynCeil = { scale: s, until: now + this.dynBackoff };
+        s = this.dynProbe.from;
+        this.dynProbe = null;
+      } else if (this.dynUseless >= 2) { // fewer pixels did not help: back to where the useless steps started
+        this.dynHold = Math.min(120, (this.dynHold || 15) * 2);
+        s = Math.min(1, step.restore);
+        this.dynFloor = { scale: s, until: now + this.dynHold };
+        this.dynUseless = 0;
+        this.dynStep = null;
+      } else {
+        const floor = this.dynFloor && now < this.dynFloor.until ? this.dynFloor.scale : 0;
+        const next = Math.max(this.q.minScale, floor, s - (p75 > this.targetFrame * 1.6 ? 0.1 : 0.05));
+        if (next < s - 1e-4) { this.dynStep = { mean, restore: this.dynUseless && step ? step.restore : s }; s = next; }
+      }
+    } else {
+      this.dynStep = null;
+      this.dynUseless = 0;
+      if (s < 1) {
+        const ceil = this.dynCeil && now < this.dynCeil.until ? this.dynCeil.scale : 2;
+        const fast = p75 < this.targetFrame * 0.8;                                   // high-refresh display with headroom
+        const steady = vsync <= this.targetFrame * 1.05 && p90 <= vsync * 1.2 && now - (this.dynChanged || 0) > 2.5;
+        const up = Math.min(1, s + 0.025);
+        if ((fast || steady) && up < ceil - 1e-4) {
+          if (!fast) this.dynProbe = { from: s, t: now };
+          s = up;
+        }
+      }
+    }
+    if (s !== this.scale) { this.scale = s; this._applyScale(); ft.length = 0; this.dynCooldown = 0.2; this.dynChanged = now; }
   }
 
   /** Renders world (which may contain the depth-hacked viewmodel) and post-processes to the canvas. */

@@ -457,6 +457,9 @@ export class Viewmodel {
     if (!clipOn) this.clipHide = 0;
     this.hideT = Math.max(0, this.hideT - dt);
     this.readyW = damp(this.readyW, this.readyLayer ? 1 : 0, 4, dt);
+    // quick-throw dip (Throwables sets `dip`): the gun ducks out of the way and comes back up
+    this.dip = Math.max(0, (this.dip || 0) - dt * 1.4);
+    this.lowered = damp(this.lowered, this.dip, 18, dt);
     if (w.dual) {
       if (this._dualFlip) { w.side = w.side === 'r' ? 'l' : 'r'; this._dualFlip = false; }
       const f = this._follow;

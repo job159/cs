@@ -1,0 +1,19 @@
+{
+  "sounds": {},
+  "aliases": {
+    "grenade_pin": { "to": "magRelease", "vol": 1.1, "pitch": [1.12, 1.2], "note": "pin pull: short metal latch click pitched up (throwables.js, with 'swing')" },
+    "streak_2": { "to": "kill_confirm_thud", "vol": 0.7, "note": "multi-kill weight under the climbing killmark_ding (ui/killmarks.js)" },
+    "streak_3": { "to": "kill_confirm_thud", "vol": 0.9, "pitch": [0.9, 0.9] },
+    "streak_5": { "to": "achievement", "vol": 0.45 },
+    "streak_10": { "to": "achievement", "vol": 0.7 },
+    "fire_spot": { "to": "amb_fire", "spatial": true, "range": [2, 26], "voices": 4, "note": "positional crackle loop at a burning prop of the map fx (game.js ambience)" },
+    "butcher_idle": { "to": "brute_idle", "pitch": [0.8, 0.86], "range": [6, 68], "note": "boss voices: the brute's, lower and carrying further (zombies/defs.js voice: 'butcher')" },
+    "butcher_attack": { "to": "brute_attack", "pitch": [0.8, 0.86], "range": [6, 75] },
+    "butcher_pain": { "to": "brute_pain", "pitch": [0.8, 0.86], "range": [6, 68] },
+    "butcher_death": { "to": "brute_death", "pitch": [0.78, 0.82], "range": [6, 90] },
+    "colossus_idle": { "to": "brute_idle", "pitch": [0.6, 0.66], "range": [10, 90], "note": "zombies/defs.js voice: 'colossus'" },
+    "colossus_attack": { "to": "brute_attack", "pitch": [0.6, 0.66], "range": [10, 100] },
+    "colossus_pain": { "to": "brute_pain", "pitch": [0.6, 0.66], "range": [10, 90] },
+    "colossus_death": { "to": "brute_death", "pitch": [0.56, 0.6], "range": [10, 120] }
+  }
+}

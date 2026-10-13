@@ -1,5 +1,6 @@
 // Weapon definitions (realistic standard-issue arsenal). Special / premium weapons extend these in
-// game/src/weapons/specials/*.js and register through registerWeapon().
+// game/src/weapons/specials/*.js and register through registerWeapon(). Which ones this build offers: WIP / listed()
+// at the end of the file.
 //
 // Units: damage per bullet vs a wave-1 zombie with 150 HP (head x4.5 => rifles one-tap heads);
 // rpm rounds/min; spread degrees (cone half-angle); recoil degrees per shot; speed = move speed m/s.
@@ -258,6 +259,34 @@ def({ id: 'knife', zh: '戰術刀', en: 'Field Knife', cat: 'melee', price: 0, d
   mag: 0, reserve: 0, range: [1.9, 1.9, 1], speed: 5.6, knock: 2.2, stagger: 0.5, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
   kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'knife', shell: null, flash: null, tracer: 0 });
 
+// ---------------------------------------------------------------- build roster
+// Weapons this build does not offer yet stay registered (stats, specials, ?w=<id> for development) but carry
+// `wip` = why, and listed() keeps them out of the shop, the armory, bot loadouts and any random pick. The full
+// version enables a weapon by deleting it from WIP (and shipping its model).
+//   premium  神兵 still in production (mechanics / presentation unfinished)
+//   model    no first-person model yet (game/assets/weapons/<id>.glb): it would equip as an invisible gun
+const WIP = {
+  premium: ['chiwen', 'bifang', 'guiche'],
+  model: ['scar', 'aug', 'm870', 'usas', 'db', 'm249', 'mg42', 'm134', 'awp', 'barrett', 'kar98', 'rpg', 'knife'],
+};
+for (const [why, ids] of Object.entries(WIP)) for (const id of ids) { const w = W.find((o) => o.id === id); if (w) w.wip = why; }
+
 export const WEAPONS = Object.fromEntries(W.map((w) => [w.id, w]));
 export function registerWeapon(w) { WEAPONS[w.id] = w; return w; }
 export function slotOf(w) { return w.slot ?? CATS[w.cat]?.slot ?? 1; }
+/** Offered in this build (shop, armory, bots, random picks); `wip` weapons only through ?w=<id>. */
+export function isListed(w) { return !!w && !w.wip && !w.hidden; }
+/** Listed weapons, optionally of one category, cheapest first. */
+export function listed(cat) { return Object.values(WEAPONS).filter((w) => isListed(w) && (!cat || w.cat === cat)).sort((a, b) => a.price - b.price); }
+/** Series tier for UI frames (ui/crosshairs.js TIERS): 'standard' for the plain arsenal. */
+export function tierOf(w) { return w?.tier || (w?.special || w?.premium ? 'anti' : 'standard'); }
+/** A premium weapon's signature skill as UI text { key: ★ / ◎, zh, desc, src }; null for standard issue. */
+export function skillText(w) {
+  const sp = w?.special;
+  if (!sp) return null;
+  const h = sp.hint || sp.skills || {};
+  const slot = ['tap', 'alt', 'hold', 'ult'].find((k) => h[k]?.zh);
+  if (!slot) return null;
+  const src = sp.hint?.src || Object.values(sp.meters || {}).map((m) => m.src).filter(Boolean)[0] || '';
+  return { key: slot === 'alt' ? '◎' : '★', zh: h[slot].zh, desc: h[slot].desc || '', src };
+}

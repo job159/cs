@@ -21,8 +21,12 @@ const CATALOG = [
     objective: '死守中央路口，撐過 10 波屍潮並擊敗首領',
     rounds: 10, boss: true, plan: 'cross', thumb: 'assets/maps/losttown/thumb.jpg',
     load: () => import('./losttown.js'),
-    // north avenue looking down at the central fort
-    preview: { path: [[7, 4.2, -38, 0, 2.5, 0], [-5, 5.5, -27, 0, 2, 2], [6, 3.6, -19, -2, 2.5, 0]], period: 48 },
+    // slow crane between two hero views of the fort, holding on each: from the South Avenue mouth (fort, LOST TOWN
+    // letter boards, the rail bridge up North Avenue) up over the fort's south-east corner to the East Street mouth
+    // (LEAVE TOWN LED gantry, FIZZ COLA billboard), and back. The fort sits right of centre (the menu covers the
+    // left); every key stays in the open plaza / carriageway above the awnings, and the crane legs pass over the
+    // SE bike-signal arm's tip (y 6.2) about 2 m above it. Checked: >= 3 m from collision along the whole loop.
+    preview: { path: [[-2.5, 6.4, 23.5, -5.5, 3.6, -8], [7.6, 9.0, 7.6, -2.2, 2.2, -2.0], [23, 6.2, 2.2, -8, 3.6, 5.5], [8.0, 9.4, 8.0, -1.8, 2.4, -2.4]], period: 80 },
   },
   {
     id: 'test', kind: 'training', status: 'ready',

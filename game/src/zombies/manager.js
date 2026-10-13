@@ -3,9 +3,10 @@
 // Implements the `game.targets` interface used by weapons (raycast / inRadius).
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { loadGLB } from '../engine/assets.js';
+import { loadGLB, shareSkeletons, disposeSkeletons } from '../engine/assets.js';
 import { ZOMBIES, DEFAULT_HITBOXES, PART_OF, SEVER } from './defs.js';
 import { buildMannequin } from './mannequin.js';
+import { STANDINS, buildStandin, standinBases } from './standins.js';
 import { NavGrid, NAV } from '../world/nav.js';
 import { pick, rand, clamp, angleDiff, damp } from '../engine/util.js';
 import { Telegraphs } from './telegraph.js';
@@ -68,6 +69,7 @@ class Zombie {
     if (def.brain && BRAINS[def.brain]) this.brain = new BRAINS[def.brain](this, mgr);
     this.target = null;
     this.deathT = 0;
+    this.stride = 1;                        // root scale the locomotion clips stretch over (spawn sets it)
     // bones
     this.bones = {};
     this.root.traverse((o) => { if (o.isBone) this.bones[o.name] = o; if (o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; o.receiveShadow = true; } });
@@ -172,8 +174,8 @@ class Zombie {
       const facing = -(fx * info.dir.x + fz * info.dir.z); // >0: shot comes from the front
       if (facing > fa.cone) {
         amount *= info.part === 'head' ? 1 - fa.headReduce : 1 - fa.reduce;
-        g.fx?.impact(1, info.point, info.normal || _hitN.copy(info.dir).negate(), info.dir, { decal: false, big: 0.5 });
-        g.audio?.play('armor_hit', { pos: info.point, volume: 0.8 });
+        g.fx?.impact(1, info.point || this.center(_v2), info.normal || _hitN.copy(info.dir).negate(), info.dir, { decal: false, big: 0.5 });
+        g.audio?.play('armor_hit', { pos: info.point || this.pos, volume: 0.8 });
         info.armored = true;
       }
     }
@@ -288,7 +290,7 @@ class Zombie {
       const run = b[b.length - 1].run;
       if (run !== undefined && !!run !== this.netRun) { this.netRun = !!run; this.running = this.netRun; if (this.alive && this.action === this.loco) this.setLoco(this.running); }
       if (this.alive && this.loco && this.action === this.loco) {
-        const nominal = this.running ? this.def.nominal.run : this.def.nominal.walk;
+        const nominal = (this.running ? this.def.nominal.run : this.def.nominal.walk) * this.stride;
         this.loco.timeScale = speed > 0.1 ? clamp(speed / nominal, 0.5, 1.8) : 0.35;
       }
       // predicted death the host never confirmed: bring it back
@@ -418,7 +420,7 @@ class Zombie {
     // ---- animation (rate-limited by distance)
     const loco = this.loco;
     if (loco && this.action === loco) {
-      const nominal = this.running ? d.nominal.run : d.nominal.walk;
+      const nominal = (this.running ? d.nominal.run : d.nominal.walk) * this.stride;
       loco.timeScale = speed > 0.05 ? clamp(speed / nominal, 0.5, 1.8) : 0.35;
     }
     this.root.rotation.y = this.yaw;
@@ -618,6 +620,8 @@ export class ZombieManager {
     const need = new Set();
     for (const t of types) for (const m of ZOMBIES[t]?.models || []) need.add(m);
     await Promise.all([...need].map((m) => this._loadModel(m)));
+    await this._buildStandins([...need]);
+    this._warmup();
     // navigation
     const w = this.game.world;
     this.nav = w.nav || (w.collision ? NavGrid.build(w.collision, w.bounds, 0.5) : null);
@@ -637,11 +641,87 @@ export class ZombieManager {
       }
       try { entry.lod1 = (await loadGLB(`zombies/${id}_lod1.glb`)).scene; } catch { entry.lod1 = null; }
     } catch {
-      const m = buildMannequin();
-      entry = { scene: m.scene, hitboxes: null, height: 1.75, scale: 1, clips: m.animations, fallback: true };
+      entry = { missing: true };   // not built (yet): a stand-in (zombies/standins.js) or another model replaces it
     }
     this.models.set(id, entry);
     return entry;
+  }
+
+  /** Real model entry (loaded from its own GLB)? */
+  _real(id) { const e = this.models.get(id); return !!e && !e.missing && !e.standin && !e.fallback; }
+
+  /** Builds stand-ins for every requested model id whose GLB is missing (zombies/standins.js recipes). */
+  async _buildStandins(ids) {
+    const missing = ids.filter((m) => this.models.get(m)?.missing && STANDINS[m]);
+    if (!missing.length) return;
+    const bases = new Set();
+    for (const m of missing) for (const b of standinBases(m)) bases.add(b);
+    await Promise.all([...bases].map((b) => this._loadModel(b)));
+    for (const m of missing) {
+      const b = STANDINS[m].base.find((x) => this._real(x));
+      if (!b) continue;
+      try { this.models.set(m, buildStandin(m, STANDINS[m], this.models.get(b), b)); } catch (e) { console.warn('zombie stand-in failed', m, e); }
+    }
+  }
+
+  /**
+   * Load-time warm-up. One hidden, shell-patched instance of every loaded model (LOD0 + LOD1) under the zombie
+   * root: the loading screen's compileAsync(scene) prepares hidden meshes too, so the first spawn of a type
+   * (stand-in grades, boss materials) never stalls on shader compiles mid-round (the colossus' first frame went
+   * from ~1.5 s to ~0.1 s on desktop). Never rendered; dropped on the first update().
+   */
+  _warmup() {
+    if (this.warm) return;
+    this.warm = new THREE.Group();
+    this.warm.name = 'zombie-warmup';
+    this.warm.visible = false;
+    for (const e of this.models.values()) {
+      if (e.missing || e.fallback) continue;
+      // the clip retarget too (~0.1-0.3 s per model): a boss entrance must not freeze the round
+      if (!e.standin && this.animSrc && !e.retargeted) {
+        try { e.retargeted = retargetClips(this.animSrc.animations, this.animSrc.scene, e.scene); } catch (err) { console.warn('retarget failed', err); e.retargeted = this.clips; }
+      }
+      for (const src of [e.scene, e.lod1]) {
+        if (!src) continue;
+        const s = cloneSkinned(src);
+        s.traverse((o) => { if (o.isSkinnedMesh) o.frustumCulled = false; });
+        patchShell(s);
+        this.warm.add(s);
+      }
+    }
+    this.root.add(this.warm);
+    // and the GPU texture uploads (2k maps: the first visible frame of a model paid ~0.1-0.5 s for them)
+    const gl = this.game.renderer?.gl;
+    if (gl?.initTexture) {
+      const seen = new Set();
+      this.warm.traverse((o) => {
+        if (!o.isMesh) return;
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+          for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap']) {
+            const t = m?.[k];
+            if (t?.isTexture && !seen.has(t)) { seen.add(t); try { gl.initTexture(t); } catch { /* uploaded on first use instead */ } }
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Model id for a new zombie: the requested one (network spawns) if usable, else one of the type's models that
+   * loaded or has a stand-in (bosses: the first, i.e. their own model when it exists); any real model if the type
+   * has none; the mannequin only when no zombie model loaded at all.
+   */
+  _pickModel(def, want) {
+    const ok = (m) => { const e = this.models.get(m); return !!e && !e.missing; };
+    if (want && ok(want)) return want;
+    const c = def.models.filter(ok);
+    if (c.length) return def.boss ? c[0] : pick(c);
+    for (const [m, e] of this.models) if (!e.missing && !e.fallback) return m;
+    if (!this.models.has('mannequin')) {
+      const mm = buildMannequin();
+      this.models.set('mannequin', { scene: mm.scene, hitboxes: null, height: 1.75, scale: 1, clips: mm.animations, fallback: true });
+    }
+    return 'mannequin';
   }
 
   players() {
@@ -658,9 +738,9 @@ export class ZombieManager {
   spawn(type, pos, opts = {}) {
     const def = ZOMBIES[type];
     if (!def) return null;
-    // bosses use their own model whenever it loaded; the stand-ins after it are only fallbacks
-    const mid = opts.model || (def.boss ? def.models.find((m) => this.models.get(m) && !this.models.get(m).fallback) || def.models.at(-1) : pick(def.models));
-    const entry = this.models.get(mid) || this.models.values().next().value;
+    // bosses use their own model whenever it loaded; the ids after it (and stand-ins) are only fallbacks
+    const mid = this._pickModel(def, opts.model);
+    const entry = this.models.get(mid);
     if (!entry) return null;
     const scene = cloneSkinned(entry.scene);
     const lod0 = [], lod1 = [];
@@ -683,12 +763,21 @@ export class ZombieManager {
         lod1.push(m);
       });
     }
-    // library clips are retargeted once per model (rest poses / armature orientation may differ)
-    if (!entry.fallback && this.animSrc && !entry.retargeted) {
-      try { entry.retargeted = retargetClips(this.animSrc.animations, this.animSrc.scene, entry.scene); } catch (e) { console.warn('retarget failed', e); entry.retargeted = this.clips; }
+    shareSkeletons(scene);   // one bone texture per skin and zombie instead of one per mesh
+    // library clips are retargeted once per model (rest poses / armature orientation may differ); a stand-in shares
+    // its base model's (same rest rotations and pelvis: only bone scales / offsets the clips never key differ)
+    const src = (entry.standinOf && this.models.get(entry.standinOf)) || entry;
+    if (!src.fallback && this.animSrc && !src.retargeted) {
+      try { src.retargeted = retargetClips(this.animSrc.animations, this.animSrc.scene, src.scene); } catch (e) { console.warn('retarget failed', e); src.retargeted = this.clips; }
     }
-    const clips = !entry.fallback && entry.retargeted ? entry.retargeted : entry.clips;
-    const z = new Zombie(this, type, def, { scene, hitboxes: entry.hitboxes, height: entry.height, scale: entry.scale }, clips, pos);
+    const clips = !src.fallback && src.retargeted ? src.retargeted : entry.clips;
+    // root scale: a stand-in's own; a boss on a borrowed model / stand-in / the mannequin is scaled up to its real size
+    let rs = entry.scale || 1;
+    if (def.boss && (entry.standin || entry.fallback || mid !== def.models[0])) rs = def.fallbackScale || rs;
+    const z = new Zombie(this, type, def, { scene, hitboxes: entry.hitboxes, height: entry.height, scale: rs }, clips, pos);
+    if (rs !== 1) z.root.scale.setScalar(rs);
+    z.stride = rs;   // longer legs, longer steps: locomotion clips play slower for the same ground speed
+    if (entry.severed) for (const b of entry.severed) z.severed.add(b);   // limbs the model never had (legless crawler)
     if (opts.hpMul) { z.maxHp *= opts.hpMul; z.hp = z.maxHp; }
     if (opts.elite) this._makeElite(z, opts.elite);
     if (this.nav) { const k = this.nav.nearestWalkable(pos.x, pos.z, 10); if (k >= 0) { this.nav.cellCenter(k, _v); z.pos.set(_v.x, _v.y, _v.z); z.groundY = _v.y; } }
@@ -696,12 +785,9 @@ export class ZombieManager {
     z.lod0 = lod0; z.lod1 = lod1;
     z.shell = patchShell(scene);   // per-zombie status-shell uniforms (fx/zfx.js: berserk, healed, burning, elite...)
     z.poseQ = entry.poseQ ? entry.poseQ.map(([b, q]) => [z.bones[b], q]).filter(([b]) => b) : null;
-    // bosses rendered with a stand-in model (or the mannequin) get scaled up to their real size
-    const fs = entry.fallback || (def.boss && mid !== def.models[0]) ? (def.fallbackScale || 1) : 1;
-    if (fs !== 1) { z.root.scale.setScalar(fs); for (const h of z.hitboxes) h.r *= fs; }
     if (def.boss) { z.height = def.height; z.radius = def.radius; }
     if (opts.puppet) { z.puppet = true; if (opts.running !== undefined) { z.running = opts.running; z.setLoco(z.running); } }
-    if (opts.model === undefined) z.modelId = mid; else z.modelId = opts.model;
+    z.modelId = mid;
     this.root.add(scene);
     this.list.push(z);
     this.byId.set(z.id, z);
@@ -731,7 +817,10 @@ export class ZombieManager {
     z.elite = true;
     z.maxHp *= 3; z.hp = z.maxHp;
     z.walkSpeed *= 1.2;
-    z.root.scale.setScalar(1.12);   // look: the purple elite rim + diamond marker (fx/zfx.js, keyed on z.elite)
+    // look: the purple elite rim + diamond marker (fx/zfx.js, keyed on z.elite); on top of a stand-in's own scale
+    z.root.scale.multiplyScalar(1.12);
+    for (const h of z.hitboxes) h.r *= 1.12;
+    z.height *= 1.12; z.stride *= 1.12;
   }
 
   /** Whole-body status tint (fx/zfx.js SHELL kinds: burning, frozen, poisoned, hardened, berserk, healed...) for dur s. */
@@ -901,6 +990,8 @@ export class ZombieManager {
   update(dt) {
     this.time += dt;
     this.frame++;
+    // the load-time warm-up instances (_warmup) are done once the game runs: the loading screen compiled them
+    if (this.warm?.parent) this.warm.removeFromParent();
     // the live count drives round end / spawn caps: recount it so it can never drift (stale kills, predicted deaths)
     let n = 0;
     for (const z of this.list) if (z.alive) n++;
@@ -927,7 +1018,7 @@ export class ZombieManager {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const z = this.list[i];
       const keep = z.update(dt, this);
-      if (!keep) { this.root.remove(z.root); z.mixer.stopAllAction(); this.list.splice(i, 1); this.byId.delete(z.id); continue; }
+      if (!keep) { this.root.remove(z.root); z.mixer.stopAllAction(); disposeSkeletons(z.root); this.list.splice(i, 1); this.byId.delete(z.id); continue; }
       if (this.authority) this._unstick(z, dt);
       // animation LOD: near & visible every frame, far / off-screen less often
       sphere.center.set(z.pos.x, z.pos.y + z.height * 0.5, z.pos.z); sphere.radius = z.height;
@@ -960,8 +1051,8 @@ export class ZombieManager {
     const out = [];
     for (const z of this.list) {
       if (!z.alive) continue;
-      // broad phase: vertical cylinder
-      const r = z.radius + 0.45;
+      // broad phase: vertical cylinder wide enough for the limbs (scaled stand-ins / elites, bosses' arm spans)
+      const r = z.radius + 0.45 * Math.max(1, z.root.scale.x) + (z.def.boss ? z.height * 0.35 : 0);
       const ox = origin.x - z.pos.x, oz = origin.z - z.pos.z;
       const a = dir.x * dir.x + dir.z * dir.z;
       const b = 2 * (ox * dir.x + oz * dir.z);
@@ -1098,7 +1189,7 @@ export class ZombieManager {
 
   /** Drops every zombie at once (wipe retry). Stale references (hits in flight, bot targets) see them dead. */
   clear() {
-    for (const z of this.list) { z.alive = false; z.state = 'dead'; z.mixer.stopAllAction(); this.root.remove(z.root); }
+    for (const z of this.list) { z.alive = false; z.state = 'dead'; z.mixer.stopAllAction(); this.root.remove(z.root); disposeSkeletons(z.root); }
     this.list.length = 0;
     this.byId.clear();
     this.hash.clear();
@@ -1106,6 +1197,7 @@ export class ZombieManager {
     for (const h of this.hazards) h.vis?.stop();
     this.hazards.length = 0;
     this.telegraphs.clear();
+    if (this.dangers) this.dangers.length = 0;   // (the bots' copy of the telegraphs)
     this.alive = 0;
     if (this.authority) this.net?.zombiesCleared?.(); // clients drop their puppets
   }

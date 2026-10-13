@@ -771,7 +771,7 @@ export const SUPPLY = [
   { id: 'SUP_N', pos: [-6.6, SW, -35.2], kind: 'street', note: 'by the red newspaper boxes outside the deli (24-35 m run)' },
   { id: 'SUP_W', pos: [-36.0, G, 1.4], kind: 'street', note: 'behind the box truck (rear doors)' },
   { id: 'SUP_E', pos: [36.5, G, 3.8], kind: 'street', note: 'beside the army truck tailgate' },
-  { id: 'SUP_S', pos: [5.2, G, 31.0], kind: 'street', note: 'by the bus shelter' },
+  { id: 'SUP_S', pos: [4.3, G, 31.0], kind: 'street', note: 'on the road by the bus shelter (x 5.2 straddled the curb: the crate sank into the sidewalk)' },
   { id: 'SUP_C_SHOP', pos: [14.0, SW, 15.2], kind: 'interior', note: 'inside the candy shop (C_SE)' },
   { id: 'SUP_WX', pos: [-60.0, G, 4.0], kind: 'far', note: 'West Cross Street, under the LED glow — high risk' },
   { id: 'SUP_EX', pos: [59.0, G, -4.0], kind: 'far', note: 'East Cross Street at the dock' },
@@ -780,8 +780,11 @@ export const SUPPLY = [
 
 // ---------------------------------------------------------------------------------------------------------------
 // BOSS ARENAS — center = where the boss enters the playable nav (the runtime spawns it there; must be walkable and
-// >= 25 m from the fort); radius = leash / fight area (covers the fort so it can reach the roof edge with its 3-5 m
-// attacks). Vertical clearance >= 9 m everywhere inside except the signal-mast arms (bossBreakable).
+// >= 25 m from the fort); radius = the runtime's flight orbit (the colossus circles center at center.y + 13 m in its air
+// phase; zombies/brains/colossus.js), so center + radius must keep its ~4 m-wide body over open sky: in Lost Town's
+// 18 m street canyon that is a tight circle above North Avenue (a 34 m orbit put it inside C_NW / C_NE / N_W2, out of
+// sight of the fort, about a third of the air phase). The butcher only uses center. Vertical clearance >= 9 m
+// everywhere along the boss lanes except the signal-mast arms (bossBreakable).
 // ---------------------------------------------------------------------------------------------------------------
 export const BOSS_ARENAS = {
   mid: {
@@ -791,8 +794,8 @@ export const BOSS_ARENAS = {
     mechanics: ['propane tanks in the grocery produce stack (shoot -> stagger)', 'the boss rams the fort: camera shake + containers dent (no breach)'],
   },
   final: {
-    boss: 'colossus', round: 10, center: [0, G, -40], radius: 34, entry: 'climbs onto the rail bridge (behind the LOST TOWN boards), smashes 3 letter boards and drops 6.6 m into North Avenue',
-    intro: { from: [0, 6.6, -68], to: [0, G, -40], seconds: 6 }, lane: rect(-5.5, -62, 5.5, -9),
+    boss: 'colossus', round: 10, center: [0, G, -34], radius: 4, entry: 'climbs onto the rail bridge (behind the LOST TOWN boards), smashes 3 letter boards and drops 6.6 m into North Avenue',
+    intro: { from: [0, 6.6, -68], to: [0, G, -34], seconds: 6 }, lane: rect(-5.5, -62, 5.5, -9),
     clearance: 'North Avenue 18 m wide, 53 m long, open sky (no overhead items) — the long arm is the runway; fort reached at z -9',
     mechanics: ['phase 2: rips the bike-signal masts off and throws them', 'phase 3: storm — lightning lights the canyon, zombie waves from every gate'],
   },

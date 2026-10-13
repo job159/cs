@@ -50,7 +50,7 @@ export class Throwables {
     const dir = cam.getWorldDirection(new THREE.Vector3());
     const pos = cam.position.clone().addScaledVector(dir, 0.4).add(new THREE.Vector3(0.12, -0.1, 0).applyQuaternion(cam.quaternion));
     const vel = dir.multiplyScalar(t.speed).add(new THREE.Vector3(0, 3.2, 0)).add(g.player.vel);
-    g.vm.lowered = 0.6;
+    g.vm.dip = 0.6;
     g.audio?.play('swing', { volume: 0.7 });
     g.audio?.play('grenade_pin', { volume: 0.8 });
     haptic(15);

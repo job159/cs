@@ -1,5 +1,6 @@
 {
   "manifests": [
+    "manifest.aliases.json",
     "manifest.antical.json",
     "manifest.creatures.json",
     "manifest.impacts.json",
