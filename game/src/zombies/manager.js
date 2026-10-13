@@ -10,6 +10,7 @@ import { NavGrid, NAV } from '../world/nav.js';
 import { pick, rand, clamp, angleDiff, damp } from '../engine/util.js';
 import { Telegraphs } from './telegraph.js';
 import { retargetClips } from './retarget.js';
+import { patchShell } from '../fx/zfx.js';
 import { ButcherBrain } from './brains/butcher.js';
 import { ColossusBrain } from './brains/colossus.js';
 
@@ -99,8 +100,13 @@ class Zombie {
     return null;
   }
 
+  get zfx() { return this.mgr.game.fx?.zfx; }
+
   playOnce(name, { fade = 0.12, speed = 1, net = true } = {}) {
     if (net && !this.puppet && this.alive) this.mgr.net?.zombieAnim(this, name, speed);
+    // CSO cues keyed on the clips the host replicates ('za'): crawler pounce, the end of a brute charge
+    if (this.alive && this.def.leap && name === (this.def.anim.leap || 'leap')) this.zfx?.leapCue(this);
+    if (this._charging) { this._charging = false; this._chargeEnd = this.mgr.time; this.zfx?.chargeImpact(this.pos, 0.8); }
     const a = this.actions[this.actions[name] ? name : this._clip(name)];
     if (!a) return null;
     a.reset();
@@ -121,6 +127,12 @@ class Zombie {
     if (!a) return;
     if (this.action === a) return;
     if (!this.puppet && this.alive) this.mgr.net?.zombieLoco?.(this, running); // puppets leave their one-shot too
+    // brute charge wind-up (host: _special just set chargeDir; clients: the host's 'zl' run = 1 — a puppet whose
+    // stagger clip ends before the host's 'zl' 0 re-enters the run loco, hence the cooldown)
+    if (running && this.def.charge && this.alive && !this._charging && this.mgr.time - (this._chargeEnd ?? -9) > 2) {
+      this._charging = true;
+      this.zfx?.bruteCharge(this, this.puppet ? null : this.chargeDir, { len: this.def.charge.speed * 2 });
+    }
     a.reset(); a.setLoop(THREE.LoopRepeat, Infinity); a.enabled = true; a.setEffectiveWeight(1);
     if (this.action) a.crossFadeFrom(this.action, 0.25, false);
     a.play();
@@ -169,6 +181,7 @@ class Zombie {
     if (this.purgeT > 0) amount *= this.purgeMul || 1.1;
     this.hp -= amount;
     this.lastHitAt = mgr.time;
+    if (info.burn) this.zfx?.status(this, 'burning', 0.9);
     const dir = info.dir || _v.set(0, 0, 1);
     // knockback (CSO-style shove) and upper-body flinch
     const kres = 1 - (this.def.knockRes || 0);
@@ -242,8 +255,13 @@ class Zombie {
     if (info.explosive) { this.kvel.y = 3 + Math.random() * 2; }
     mgr.game.audio?.play((this.def.voice || 'zombie') + '_death', { pos: this.pos });
     mgr.game.audio?.play('body_fall', { pos: this.pos, delay: 0.7, volume: 0.8 });
+    this.zfx?.killFlash(this);
+    if (this.def.boss) this.zfx?.bossDeath(this);
+    // CSO venom guard: a headshot kill doesn't blow the bloater up, it deflates (rewards the precise shot)
+    const popped = this.def.explode && (info.part === 'head' || info.headshot) && !info.explosive;
+    if (popped) this.zfx?.bloaterDeflate(this);
     if (this.puppet) return;
-    if (this.def.explode) mgr.explode(this);
+    if (this.def.explode && !popped) mgr.explode(this);
     mgr.onKilled(this, info);
   }
 
@@ -640,7 +658,8 @@ export class ZombieManager {
   spawn(type, pos, opts = {}) {
     const def = ZOMBIES[type];
     if (!def) return null;
-    const mid = opts.model || pick(def.models);
+    // bosses use their own model whenever it loaded; the stand-ins after it are only fallbacks
+    const mid = opts.model || (def.boss ? def.models.find((m) => this.models.get(m) && !this.models.get(m).fallback) || def.models.at(-1) : pick(def.models));
     const entry = this.models.get(mid) || this.models.values().next().value;
     if (!entry) return null;
     const scene = cloneSkinned(entry.scene);
@@ -675,6 +694,7 @@ export class ZombieManager {
     if (this.nav) { const k = this.nav.nearestWalkable(pos.x, pos.z, 10); if (k >= 0) { this.nav.cellCenter(k, _v); z.pos.set(_v.x, _v.y, _v.z); z.groundY = _v.y; } }
     if (opts.id) z.id = opts.id;
     z.lod0 = lod0; z.lod1 = lod1;
+    z.shell = patchShell(scene);   // per-zombie status-shell uniforms (fx/zfx.js: berserk, healed, burning, elite...)
     z.poseQ = entry.poseQ ? entry.poseQ.map(([b, q]) => [z.bones[b], q]).filter(([b]) => b) : null;
     // bosses rendered with a stand-in model (or the mannequin) get scaled up to their real size
     const fs = entry.fallback || (def.boss && mid !== def.models[0]) ? (def.fallbackScale || 1) : 1;
@@ -711,11 +731,11 @@ export class ZombieManager {
     z.elite = true;
     z.maxHp *= 3; z.hp = z.maxHp;
     z.walkSpeed *= 1.2;
-    z.root.scale.setScalar(1.12);
-    z.root.traverse((o) => {
-      if (o.isMesh && o.material?.emissive) { o.material = o.material.clone(); o.material.emissive.set(0x5a1060); o.material.emissiveIntensity = 0.35; }
-    });
+    z.root.scale.setScalar(1.12);   // look: the purple elite rim + diamond marker (fx/zfx.js, keyed on z.elite)
   }
+
+  /** Whole-body status tint (fx/zfx.js SHELL kinds: burning, frozen, poisoned, hardened, berserk, healed...) for dur s. */
+  status(z, kind, dur = 1) { this.game.fx?.zfx?.status(z, kind, dur); }
 
   /**
    * Steering direction (unit, xz) down the nav flow field; null if there is no downhill step.
@@ -979,13 +999,15 @@ export class ZombieManager {
   }
 
   _updateHazards(dt) {
-    const g = this.game;
+    const g = this.game, zfx = g.fx?.zfx;
     for (let i = this.hazards.length - 1; i >= 0; i--) {
       const h = this.hazards[i];
+      if (zfx && !h.vis) h.vis = zfx.hazard(h);     // mottled ground stain + glow (fx/zfx.js)
       h.t -= dt;
-      if (h.t <= 0) { this.hazards.splice(i, 1); continue; }
-      // wisps scale with the pool's area (a spitter puddle is r 1.6; boss pools are 2.2-2.6)
-      for (let n = dt * 12 * Math.max(1, h.r * h.r / 2.56); n > 0; n--) if (n >= 1 || Math.random() < n) {
+      if (h.t <= 0) { h.vis?.stop(); this.hazards.splice(i, 1); continue; }
+      if (zfx) zfx.hazardTick(h, dt);               // low poison mist + bubbles
+      // fallback wisps scale with the pool's area (a spitter puddle is r 1.6; boss pools are 2.2-2.6)
+      else for (let n = dt * 12 * Math.max(1, h.r * h.r / 2.56); n > 0; n--) if (n >= 1 || Math.random() < n) {
         const a = Math.random() * 6.28, r = Math.random() * h.r;
         const acid = h.kind === 'acid';
         g.fx?.particles.spawn({ x: h.pos.x + Math.cos(a) * r, y: h.pos.y + 0.05, z: h.pos.z + Math.sin(a) * r, vx: 0, vy: 0.3 + Math.random() * 0.4, vz: 0, life: 1.2, size: 0.2, size1: 0.8, color: acid ? [0.35, 0.65, 0.08, 0.35] : [0.4, 0.5, 0.15, 0.3], color1: [0.3, 0.4, 0.1, 0], frame: 1, drag: 1 });
@@ -1003,17 +1025,28 @@ export class ZombieManager {
     const g = this.game;
     if (this.authority) this.net?.fx('spit', { id: z.id, to: target.pos.toArray() });
     const from = z.center(new THREE.Vector3()); from.y += 0.35;
-    const to = target.pos.clone(); to.y += 1.0;
+    // aimed at the feet: the lob lands where the warning sweep is (aimed at the chest with no target collision it
+    // flew on and splashed ~5 m behind a player standing still)
+    const to = target.pos.clone(); to.y += 0.15;
     const dist = from.distanceTo(to);
     const t = dist / z.def.spit.speed;
     const vel = to.sub(from).multiplyScalar(1 / t); vel.y += 0.5 * 9.8 * t * 0.6;
     const mesh = new THREE.Mesh(spitGeo || (spitGeo = new THREE.SphereGeometry(0.09, 8, 6)), spitMat || (spitMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.4, 0.3) })));
     g.audio?.play('spitter_spit', { pos: from });
+    // CSO-style read: a green countdown sweep where it will land, a glowing tail, an acid pool on impact
+    const zfx = g.fx?.zfx;
+    const warn = zfx?.spitWarn(target.pos, 1.8, t);
+    const trail = zfx?.spitTrail();
     g.projectiles.spawn({
       pos: from, vel, gravity: 9.8 * 0.6, life: 4, mesh, radius: 0.1, hitTargets: false, faceVelocity: false,
-      onUpdate: (p) => { if (Math.random() < 0.6) g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, vx: 0, vy: -0.3, vz: 0, life: 0.4, size: 0.06, size1: 0.02, color: [0.4, 0.8, 0.08, 0.9], frame: 7, gravity: 4 }); },
+      onUpdate: (p, dt) => {
+        if (trail) trail.tick(p.pos, dt);
+        else if (Math.random() < 0.6) g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, vx: 0, vy: -0.3, vz: 0, life: 0.4, size: 0.06, size1: 0.02, color: [0.4, 0.8, 0.08, 0.9], frame: 7, gravity: 4 });
+      },
+      onEnd: () => { trail?.stop(); warn?.stop(0.12); },
       onHit: (p, point, normal) => {
         g.fx?.blood(point, normal, p.vel.clone().normalize(), 1.5, { acid: true });
+        zfx?.acidSplash(point, normal, 1.6, z.def.spit.pool);
         g.audio?.play('acid_splash', { pos: point });
         for (const pl of this.players()) {
           if (this.authority && pl.pos.distanceTo(point) < 1.6 + 0.4) g.damagePlayer?.(z.def.spit.dmg * (this.dmgMul || 1), { from: point, acid: true, player: pl });
@@ -1028,7 +1061,9 @@ export class ZombieManager {
     const g = this.game;
     if (this.authority) this.net?.fx('scream', { id: z.id });
     const sd = z.def.scream, hd = z.def.heal;
-    g.fx?.particles.spawn({ additive: true, x: z.pos.x, y: z.pos.y + 1.6, z: z.pos.z, life: 0.5, size: 0.5, size1: sd.radius * 1.6, color: [1.2, 0.6, 2.0, 1], color1: [0.4, 0.2, 0.8, 0], frame: 11 });
+    const zfx = g.fx?.zfx;
+    if (zfx) { zfx.screamWave(z, sd.radius, sd.slowTime); zfx.healPulse(z, hd.radius, null, 5); }   // same healed set as below
+    else g.fx?.particles.spawn({ additive: true, x: z.pos.x, y: z.pos.y + 1.6, z: z.pos.z, life: 0.5, size: 0.5, size1: sd.radius * 1.6, color: [1.2, 0.6, 2.0, 1], color1: [0.4, 0.2, 0.8, 0], frame: 11 });
     // every client slows its own player (the host does the same for itself)
     const d = g.player ? g.player.pos.distanceTo(z.pos) : 1e9;
     if (d < sd.radius) g.playerStatus?.('slow', sd.slowTime * (1 - d / sd.radius * 0.5), sd.slow);
@@ -1043,9 +1078,8 @@ export class ZombieManager {
     const g = this.game, e = z.def.explode;
     if (this.authority) this.net?.fx('explode', { id: z.id });
     const p = z.center(new THREE.Vector3());
-    g.fx?.explosion(p, { radius: e.radius, scale: 0.9, color: [0.55, 0.9, 0.25] });
-    g.fx?.blood(p, UP, UP, 4, { acid: true });
-    g.fx?.gibs(p, UP, 14, [0.25, 0.35, 0.08]);
+    if (g.fx?.zfx) g.fx.zfx.bloaterBurst(p, e.radius, z.pos.y);   // venom-guard style layers (06b §9.4.2)
+    else { g.fx?.explosion(p, { radius: e.radius, scale: 0.9, color: [0.55, 0.9, 0.25] }); g.fx?.blood(p, UP, UP, 4, { acid: true }); g.fx?.gibs(p, UP, 14, [0.25, 0.35, 0.08]); }
     g.audio?.play('bloater_pop', { pos: p, volume: 1.2 });
     for (const pl of this.players()) {
       const d = pl.pos.distanceTo(p);
@@ -1069,6 +1103,7 @@ export class ZombieManager {
     this.byId.clear();
     this.hash.clear();
     this.losCache.clear();
+    for (const h of this.hazards) h.vis?.stop();
     this.hazards.length = 0;
     this.telegraphs.clear();
     this.alive = 0;

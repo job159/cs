@@ -4,8 +4,10 @@
 import * as THREE from 'three';
 import { BossBrain } from './base.js';
 import { rand } from '../../engine/util.js';
+import { SURF } from '../../world/collision.js';
 
 const _v = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
 let rockGeo = null, rockMat = null; // shared by every thrown rock (no GPU buffers per throw)
 
 export class ButcherBrain extends BossBrain {
@@ -23,7 +25,7 @@ export class ButcherBrain extends BossBrain {
     this.attacks = [
       { id: 'swipe', w: 4, cd: 2.2, max: 5.2, dur: 1.5, recover: 0.4,
         start(a, t) { this.face(t.pos, 1, 99); a.data.yaw = this.z.yaw; this.z.playOnce('attack_b', { speed: 0.75 }); this.fx('teleCone', { p: this.z.pos.toArray(), yaw: a.data.yaw, r: 5.4, h: 0.85, t: 0.8 }); },
-        events: [[0.8, function (a) { this.hurtCone(this.z.pos, a.data.yaw, 5.4, 0.85, 30, { knock: 7 }); this.fx('whoosh', { p: this.z.pos.toArray() }); }]] },
+        events: [[0.8, function (a) { this.hurtCone(this.z.pos, a.data.yaw, 5.4, 0.85, 30, { knock: 7 }); this.fx('whoosh', { p: this.z.pos.toArray(), yaw: a.data.yaw }); }]] },
       { id: 'charge', w: 3, cd: 7, min: 7, max: 28, los: true, dur: 3.2, recover: 0.8,
         start(a, t) {
           this.face(t.pos, 1, 99);
@@ -91,6 +93,50 @@ export class ButcherBrain extends BossBrain {
     this.g.hud?.toast('屠宰者暴怒了！背部腫瘤外露', 2400);
   }
 
+  /** Bone blade: shots on the cleaver chip bone (reduced damage, no blood). */
+  damageMul(info) {
+    let m = super.damageMul(info);
+    if (info.box === 'cleaver' && m > 0) {
+      m *= 0.4;
+      info.armored = true;
+      if (info.point) this.g.fx?.impact(SURF.tile, info.point, info.normal || _v.copy(info.dir || UP).negate(), info.dir || UP, { decal: false, big: 0.6 });
+    }
+    return m;
+  }
+
+  /**
+   * Rage look: the authored emissive masks (veins radiating from the back tumour, the cleaver's edge and cracks,
+   * the tumour fissures) light up bright orange; the tumour (the rage weak point) pulses. Only the meshes the
+   * model lists in extras.rage (or, for older models, those with an emissive map) change; the eyes keep their glow.
+   */
+  enrageLook() {
+    if (this.enraged) return;
+    this.enraged = true;
+    const cfg = this.z.root.userData?.rage || this.mgr.models?.get(this.z.modelId)?.scene?.userData?.rage || {};
+    const color = new THREE.Color().fromArray(cfg.color || [1, 0.35, 0.08]);
+    const meshes = cfg.meshes || null, pulse = cfg.pulse || ['tumour'];
+    const intensity = cfg.intensity ?? 2.8;
+    const done = new Map();
+    this.z.root.traverse((o) => {
+      if (!o.isMesh || !o.material?.emissive) return;
+      const base = o.name.replace(/_lod1$/, '');
+      if (meshes ? !meshes.includes(base) : (!o.material.emissiveMap || base === 'eyes')) return;
+      // per-zombie materials (patched by fx/zfx.js patchShell) change in place: cloning would drop the status shell
+      let m = done.get(o.material);
+      if (!m) {
+        m = o.material.userData?.zshell ? o.material : o.material.clone();
+        m.emissive.copy(color);
+        m.emissiveIntensity = (cfg.intensityOf?.[base] ?? 1) * intensity;
+        done.set(o.material, m);
+      }
+      o.material = m;
+      if (pulse.includes(base)) {
+        const k0 = m.emissiveIntensity;
+        o.onBeforeRender = () => { m.emissiveIntensity = k0 * (0.72 + 0.38 * Math.sin(performance.now() * 0.0065) ** 2); };
+      }
+    });
+  }
+
   onSummon() {
     this.z.playOnce('scream', { speed: 0.9 });
     this.fx('roar', { p: this.z.pos.toArray() });
@@ -98,28 +144,29 @@ export class ButcherBrain extends BossBrain {
   }
 
   // ---------------------------------------------------------------- visuals (host + clients)
+  // CSO boss grammar (06b §6.3): ground warning -> one big single-colour effect -> aftermath + screen overlay for
+  // whoever it reaches. Effects live in fx/zfx.js; the charge dust trail runs there off z.running.
   onFx(kind, d) {
-    const g = this.g, tele = this.tele;
+    const g = this.g, tele = this.tele, zfx = g.fx?.zfx;
     const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
     switch (kind) {
       case 'teleCone': tele?.cone(V(d.p), d.yaw, d.r, d.h, d.t); break;
       case 'teleLine': tele?.line(V(d.p), d.yaw, d.l, d.w, d.t); break;
       case 'teleCircle': tele?.circle(V(d.p), d.r, d.t); break;
-      case 'whoosh': g.audio?.play('swingHeavy', { pos: V(d.p), volume: 1.2, pitch: 0.6 }); break;
-      case 'roar': g.audio?.play('brute_roar', { pos: V(d.p), volume: 1.3, pitch: 0.8 }); g.addShake(0.25); break;
-      case 'impact': g.audio?.play('explosion_small', { pos: V(d.p) }); g.addShake(0.6); g.fx?.impact(0, V(d.p).setY(d.p[1] + 1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0), { big: 3, decal: false }); break;
-      case 'quake': {
+      case 'whoosh': g.audio?.play('swingHeavy', { pos: V(d.p), volume: 1.2, pitch: 0.6 }); if (d.yaw !== undefined) zfx?.swipe(V(d.p), d.yaw, 5.4, 0.85); break;
+      case 'roar': g.audio?.play('brute_roar', { pos: V(d.p), volume: 1.3, pitch: 0.8 }); g.addShake(0.25); zfx?.roar(this.z, 1.8); break;
+      case 'impact':   // slammed into a wall: stunned, back exposed
+        g.audio?.play('explosion_small', { pos: V(d.p) }); g.addShake(0.6);
+        if (zfx) zfx.wallSlam(this.z, 2.2);
+        else g.fx?.impact(0, V(d.p).setY(d.p[1] + 1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0), { big: 3, decal: false });
+        break;
+      case 'quake': {   // leaping slam: shock ring, radial dust, debris, cracks
         const p = V(d.p);
         g.audio?.play('brute_stomp', { pos: p, volume: 1.4 });
         g.audio?.play('explosion_small', { pos: p, volume: 0.8 });
         const dist = p.distanceTo(g.camera.position);
         g.addShake(Math.max(0.15, 0.9 - dist / 25));
-        for (let i = 0; i < 24; i++) {
-          const a = (i / 24) * Math.PI * 2;
-          g.fx?.particles.spawn({ x: p.x + Math.cos(a) * 1.5, y: p.y + 0.2, z: p.z + Math.sin(a) * 1.5, vx: Math.cos(a) * 9, vy: 0.6, vz: Math.sin(a) * 9, life: 0.8, size: 0.6, size1: 2.2, color: [0.5, 0.47, 0.42, 0.55], color1: [0.5, 0.47, 0.42, 0], frame: 12, drag: 2.5 });
-        }
-        g.fx?.particles.spawn({ additive: true, x: p.x, y: p.y + 0.2, z: p.z, life: 0.35, size: 1, size1: d.r * 2.2, color: [2.5, 1.6, 1, 1], color1: [0.6, 0.4, 0.2, 0], frame: 11 });
-        g.fx?.decals.add(p.clone().setY(p.y + 0.02), new THREE.Vector3(0, 1, 0), { frame: 15, size: 5, tint: 3, alpha: 0.8 });
+        zfx?.quake(p, d.r, { col: [2.4, 1.5, 0.8], scale: 1.2 });
         break;
       }
       case 'throw': {
@@ -129,17 +176,23 @@ export class ButcherBrain extends BossBrain {
         const rock = new THREE.Mesh(rockGeo || (rockGeo = new THREE.DodecahedronGeometry(0.55, 0)), rockMat || (rockMat = new THREE.MeshStandardMaterial({ color: 0x5b5752, roughness: 0.95 })));
         rock.castShadow = true;
         g.audio?.play('swingHeavy', { pos: from, pitch: 0.5 });
+        const trail = g.fx?.zfx?.rockTrail();   // dust wake + shed grit while it flies
         g.projectiles?.spawn({ pos: from, vel, gravity: 12, life: t + 0.5, mesh: rock, radius: 0.5, hitTargets: false, faceVelocity: false,
-          onUpdate: (p, dt) => { rock.rotation.x += dt * 6; rock.rotation.z += dt * 4; },
-          onHit: (p, point) => { g.fx?.explosion(point, { radius: 3.4, scale: 0.7, color: [0.6, 0.5, 0.4] }); g.audio?.play('debris_fall', { pos: point }); return true; } });
+          onUpdate: (p, dt) => { rock.rotation.x += dt * 6; rock.rotation.z += dt * 4; trail?.tick(p.pos, dt); },
+          onHit: (p, point) => {
+            if (zfx) zfx.rockImpact(point, 3.4); else g.fx?.explosion(point, { radius: 3.4, scale: 0.7, color: [0.6, 0.5, 0.4] });
+            g.audio?.play('debris_fall', { pos: point });
+            return true;
+          } });
         break;
       }
-      case 'rage':
+      case 'rage':   // red rim shell (the zombie's status-shell uniforms; never clone its materials), steam, ground pulse
         g.audio?.play('brute_roar', { pos: V(d.p), volume: 1.5, pitch: 0.7 });
         g.addShake(0.5);
-        this.z.root.traverse((o) => { if (o.isMesh && o.material?.emissive) { o.material = o.material.clone(); o.material.emissive.set(0x8a1a05); o.material.emissiveIntensity = 0.6; } });
+        zfx?.rageAura(this.z, 1);
+        this.enrageLook();   // the model's own emissive masks (veins, cleaver edge, tumour) light up
         break;
-      case 'frenzy': g.audio?.play('brute_roar', { pos: this.z.pos, volume: 1.5, pitch: 0.9 }); break;
+      case 'frenzy': g.audio?.play('brute_roar', { pos: this.z.pos, volume: 1.5, pitch: 0.9 }); zfx?.rageAura(this.z, 2); break;
     }
   }
 }

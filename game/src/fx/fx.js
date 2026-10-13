@@ -14,6 +14,8 @@ import { Ribbons } from './ribbons.js';
 import { SmokeVolumes } from './smokevol.js';
 import { Infernos } from './inferno.js';
 import { ScreenFX } from './screenfx.js';
+import { PremiumKit } from './kit.js';
+import { ZFX } from './zfx.js';
 import { SURF } from '../world/collision.js';
 
 export { FRAME, RAMP, DECAL, DECAL_TINT };
@@ -100,6 +102,9 @@ export class FX {
     this.smokes = new SmokeVolumes(this, { quality: this.k });
     this.infernos = new Infernos(this, { quality: this.k });
     this.screen = new ScreenFX(this);
+    this.kit = new PremiumKit(this);   // fx.overlay / summons / wings / sigils / motes (kit.js, docs/FX.md)
+    this.zfx = new ZFX(this);          // zombie / boss / supply FX: status shells, ground rings, icons (zfx.js)
+    this.ground = this.zfx.ground;     // fx.ground.add(kind, pos, opts) (groundfx.js)
     this.particles.floorFn = (x, z) => this._floorAt(x, z);
     this._floorCache = new Map();
     this.time = 0;
@@ -136,6 +141,7 @@ export class FX {
     this._updateLighting();
     this._updateBarrel(dt);
     this._updateZombies(dt);
+    this.zfx.update(dt);
     this.smokes.update(dt);
     this.infernos.update(dt);
     this.particles.update(dt);
@@ -144,6 +150,7 @@ export class FX {
     this.decals.update(dt);
     this.ribbons.update(dt);
     this.screen.update(dt);
+    this.kit.update(dt);
   }
 
   /** Scene light estimate (sun + hemisphere / ambient + environment) for lit smoke, blood and decals. */
@@ -756,5 +763,7 @@ export class FX {
   clear() {
     for (const l of this.particles.layers) l.clear();
     this.decals.clear();
+    this.kit.clear();
+    this.zfx.clear();
   }
 }

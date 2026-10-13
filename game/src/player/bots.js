@@ -128,7 +128,7 @@ class Bot {
       this._sync(dt, 0);
       return;
     }
-    if (!this.alive) { this.view.alive = false; return; }
+    if (!this.alive) { this._sync(dt, 0); return; } // the view plays the death clip and keeps the body
     const leader = g.player.pos;
     // ---- think: pick target a few times per second
     this.thinkT -= dt;
@@ -292,9 +292,10 @@ class Bot {
   _sync(dt, moved) {
     const v = this.view;
     v.yaw = this.yaw; v.pitch = this.pitch; v.alive = this.alive; v.downed = this.downed; v.hp = this.hp;
+    // clip state for the view (remote.js picks idle / walk / run by speed, aim / reload / revive overlays)
+    v.moveSpeed = moved; v.reloading = this.reloadT > 0; v.reviving = this.rescueT > 0; v.aiming = !!(this.target && this.target.alive);
     v.buf.length = 0; // driven directly, no interpolation
     v.update(dt, 0);
-    if (v.loco) v.loco.timeScale = Math.min(1.6, moved / 3.5 + (moved > 0.1 ? 0.3 : 0));
   }
 }
 

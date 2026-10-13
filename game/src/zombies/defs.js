@@ -85,6 +85,8 @@ export const PART_OF = {
   head: 'head', neck: 'head', chest: 'chest', belly: 'body', pelvis: 'body',
   upperarm_l: 'limb', lowerarm_l: 'limb', upperarm_r: 'limb', lowerarm_r: 'limb',
   thigh_l: 'limb', calf_l: 'limb', thigh_r: 'limb', calf_r: 'limb',
+  hand_l: 'limb', hand_r: 'limb', foot_l: 'limb', foot_r: 'limb',
+  cleaver: 'limb',   // the butcher's bone blade (its brain further reduces it and plays bone chips instead of blood)
 };
 
 // dismemberment: hitbox -> bone to collapse (its whole subtree disappears) and the attachment bone for the stump

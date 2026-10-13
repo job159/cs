@@ -3,11 +3,11 @@
 import * as THREE from 'three';
 import { WEAPONS, slotOf } from './defs.js';
 import { fireBullet, splash } from './ballistics.js';
-import { drawClip, holsterClip, inspectClip, reloadClipFor, shellStart, shellInsert, shellEnd, pumpCycle, boltCycle, knifeSlash, knifeStab } from '../player/clips.js';
+import { drawClip, holsterClip, inspectClip, dualInspectClip, reloadClipFor, shellStart, shellInsert, shellEnd, pumpCycle, boltCycle, knifeSlash, knifeStab, clipFor } from '../player/clips.js';
 import { gauss, clamp, DEG } from '../engine/util.js';
 import { hardSurface } from '../gfx/materials.js';
 import { TRACER_EVERY, FRAME, RAMP } from '../fx/fx.js';
-import { SPECIALS, specialOf } from './specials.js';
+import { SPECIALS, specialOf, tickSpecial, disposeSpecial, chargeState } from './specials.js';
 
 const _dir = new THREE.Vector3();
 const _right = new THREE.Vector3();
@@ -16,13 +16,126 @@ const _o = new THREE.Vector3();
 const _p = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler();
+const _ta = new THREE.Vector3(), _tb = new THREE.Vector3();
+const _col = new THREE.Color();
+const UP = new THREE.Vector3(0, 1, 0);
 
 const DRAW_TIME = { pistol: 0.45, smg: 0.6, rifle: 0.75, shotgun: 0.75, mg: 1.1, sniper: 0.9, heavy: 1.2, melee: 0.4, grenade: 0.4 };
+// §1.7.2 ready overlay layer used when a premium def has `ready` but no `ready.layer`
+const READY_LAYER = { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.6, glowMul: 1.5 };
 
 export function haptic(ms) {
   if (haptic.enabled === false) return; // settings: 震動回饋 off
   try { window.NativeBridge?.vibrate?.(ms); } catch { /* not on Android */ }
   if (!window.NativeBridge && navigator.vibrate && matchMedia('(pointer: coarse)').matches) navigator.vibrate(ms);
+}
+
+// ------------------------------------------------------------------ premium clip events (spec §4.2 row 0.4, 05d §7.1)
+// Clips fire these through Arsenal._clipEvent; visual ones are routed to the FX / HUD side through the small
+// adapters below, so those tracks implement the looks and clips never change. Arguments:
+//   fx       { id, at: 'socket' (default) | 'aim' | 'self', socket = 'muzzle', to: socket | 'aim' (BOLT / BEAM end),
+//            range, ground, color ('#hex' x k, or HDR [r,g,b]), k (HDR scale, 3), vm, seed, ...component options }
+//            -> the premium kit (fx/kit.js, table KIT_FX): RING / SIGIL / PILLAR -> fx.sigils, MOTE (kind, n) /
+//            TRAIL_DROP (kind) -> fx.motes, GHOST / SHADOW / SWARM -> fx.summons, WING (open | close) -> fx.wings.vm;
+//            else fx.component(id, opts); else a stand-in built from the base toolkit (RING SPRAY MOTE FLIP BOLT
+//            BEAM PILLAR SIGIL); else a one-time warning. opts carry pos (world, as it appears), dir, vm, camPos
+//            (camera space for viewmodel-layer effects) and seed.
+//   trail    { on: true | false, id = 'blade', from = 'base', to = 'tip' | null (single-socket streak), color,
+//            color1, width, life, profile, k, hitColor (melee: the trail turns this colour on a hit, §1.17), keep }
+//            viewmodel ribbon pushed from the posed sockets every frame; ends with the clip unless `keep`
+//   hitstop  ms                                   -> game.hitStop
+//   shake    trauma 0..1                          -> game.addShake
+//   fov      [deltaDeg, sec] punch | { to: deg, sec } held offset (charge stages)   -> game.fovKick if the game
+//            has one, else this arsenal's own (camera.zoom, the viewmodel keeps its FOV)
+//   tint     { rgb | color, a (<= 0.35), in, hold, out }        -> fx.overlay.tint (else an additive screen kick)
+//   overlay  { id: 'RADIAL' | 'TUNNEL' | 'RIFT' | 'CLOUDSEA' | 'CURTAIN' | 'BORDER' | 'ink' | status..., dur, key,
+//            off } -> fx.overlay.add(kind, opts); { key, off: true } stops a running one
+//   haptic   'tick' | 'thud' | 'ready_double' | ms   (§1.13, 70 ms apart at least)
+//   glow     { to, sec, u: 'emissive' | 'pCharge' | 'pRimStr' | 'pFlash', mat }   -> vm.glowTo
+//   vmHide   true | false | 'all' | { on, mode: 'gun' | 'all', sec }   (clip-scoped unless sec is given)
+//   summon   { id = 'GHOST', at = 'aim', range, ground, seed, ... }  -> fx.summons (ghost / shadow / swarm, as fx)
+//   hud      { id, ... }                          -> game.hud.clipEvent(id, arg) (fallback: toast of arg.text)
+// Unknown events go to the special: onClipEvent(ws, name, arg, game) (parry windows, custom hits...).
+/** Comfort switches (§1.14 #6) for the clip-driven screen effects; settings may flip them. */
+export const clipComfort = { shake: true, fov: true, overlay: true, hitstop: true };
+// premium kit components: id -> [fx module, method, call(module, P, opts, arsenal)]; P = Arsenal._fxPlace()
+const KIT_FX = {
+  RING: ['sigils', 'ring', (m, P, o) => m.ring(P.pos, o)],
+  SIGIL: ['sigils', 'sigil', (m, P, o) => m.sigil(P.pos, o)],
+  PILLAR: ['sigils', 'pillar', (m, P, o) => m.pillar(P.pos, o)],
+  // motes burst upward unless the clip asks for the barrel direction (forward: true) or gives a cone axis (cone: Vector3)
+  MOTE: ['motes', 'burst', (m, P, o) => m.burst(o.kind || 'petal', P.pos, o.n ?? o.count ?? 8, { ...o, dir: o.cone || (o.forward ? P.dir : null) })],
+  TRAIL_DROP: ['motes', 'trailDrop', (m, P, o, a) => m.trailDrop(P.pos, a._toPoint(o), o.kind || 'feather', o)],
+  GHOST: ['summons', 'ghost', (m, P, o) => m.ghost({ ...o, pos: P.pos })],
+  SHADOW: ['summons', 'shadow', (m, P, o) => m.shadow(P.pos, o)],
+  SWARM: ['summons', 'swarm', (m, P, o) => m.swarm({ ...o, center: P.pos })],
+  WING: ['wings', 'vm', (m, P, o, a) => a._wingEvent(m, o)],
+};
+const HAPTIC = { tick: [12], thud: [40], ready_double: [25, 80, 25], double: [25, 80, 25] };
+const camel = (id) => id.toLowerCase().replace(/_(\w)/g, (m, c) => c.toUpperCase());
+const _warned = new Set();
+function warnOnce(key, msg) { if (!_warned.has(key)) { _warned.add(key); console.warn('[clip] ' + msg); } }
+/** HDR linear colour: '#hex' (or 0xhex) × k, an [r, g, b] array as is, else `def`. */
+function hdrOf(c, k = 1, def = [k, k, k]) {
+  if (Array.isArray(c)) return c.slice(0, 3);
+  if (typeof c === 'string' || typeof c === 'number') { _col.set(c); return [_col.r * k, _col.g * k, _col.b * k]; }
+  return def;
+}
+const R = Math.random;
+
+/**
+ * Stand-ins for kit components, built from the base toolkit so every clip event shows something before (or
+ * without) the premium kit. P = placement from Arsenal._fxPlace: { pos (world), dir, cam (camera space), cdir, vm }.
+ */
+const FX_FALLBACK = {
+  RING(g, P, o, col) {
+    const flat = !P.vm && (o.ground || o.at === 'self');
+    g.fx.shockwave(P.vm ? P.cam : P.pos, { normal: flat ? UP : null, r0: o.r0 ?? (P.vm ? 0.01 : 0.2), r1: o.r1 ?? (P.vm ? 0.1 : 3), life: o.life ?? 0.4, color: col, thin: o.thin ?? true, vm: P.vm });
+  },
+  SPRAY(g, P, o, col) {
+    const p = P.vm ? P.cam : P.pos, d = P.vm ? P.cdir : P.dir, n = Math.min(64, o.n ?? 12), sp = o.speed ?? (P.vm ? 1 : 6), s = P.vm ? 0.004 : 0.015;
+    for (let i = 0; i < n; i++) {
+      _ta.set(R() - 0.5, R() - 0.5, R() - 0.5).multiplyScalar(o.cone ?? 1.2).add(d).normalize().multiplyScalar(sp * (0.5 + R()));
+      g.fx.particles.spawn({ additive: true, vm: P.vm, x: p.x, y: p.y, z: p.z, vx: _ta.x, vy: _ta.y, vz: _ta.z, life: 0.2 + R() * 0.3, size: s, stretch: P.vm ? 0.02 : 0.03,
+        color: [...col, 1], color1: [col[0] * 0.3, col[1] * 0.3, col[2] * 0.3, 0], frame: FRAME.spark, gravity: P.vm ? 0.8 : 5, drag: 2 });
+    }
+  },
+  MOTE(g, P, o, col) {
+    const p = P.vm ? P.cam : P.pos, n = Math.min(48, o.n ?? 10), s = P.vm ? 0.006 : 0.05, sp = P.vm ? 0.12 : 1.2;
+    for (let i = 0; i < n; i++) {
+      g.fx.particles.spawn({ additive: true, vm: P.vm, x: p.x, y: p.y, z: p.z, vx: (R() - 0.5) * sp, vy: R() * sp * 0.8, vz: (R() - 0.5) * sp, life: 0.8 + R() * 0.8,
+        size: s * (0.6 + R() * 0.8), color: [...col, 1], color1: [col[0] * 0.5, col[1] * 0.5, col[2] * 0.5, 0], frame: FRAME.glow, gravity: P.vm ? 0.15 : 1.2, drag: 3, spin: (R() - 0.5) * 6 });
+    }
+  },
+  FLIP(g, P, o, col) {
+    const p = P.vm ? P.cam : P.pos, s = o.size ?? (P.vm ? 0.05 : 0.4);
+    g.fx.particles.spawn({ additive: true, vm: P.vm, x: p.x, y: p.y, z: p.z, life: o.life ?? 0.14, size: s, size1: s * 1.4, color: [...col, 1], color1: [0, 0, 0, 0], frame: FRAME.glint, rot: R() * 6.28 });
+  },
+  BOLT(g, P, o, col, a) { g.fx.bolt(P.pos, a._toPoint(o), { col, glow: col.map((c) => c * 0.35), width: o.width ?? 0.12, life: o.life ?? 0.3, levels: o.levels ?? 4 }); },
+  BEAM(g, P, o, col, a) { g.fx.beam(P.pos, a._toPoint(o), { core: col, glow: col.map((c) => c * 0.3), wCore: o.wCore ?? 0.03, wGlow: o.wGlow ?? 0.18, life: o.life ?? 0.4 }); },
+  PILLAR(g, P, o, col) { g.fx.beam(P.pos, _tb.copy(P.pos).addScaledVector(UP, o.h ?? 8), { core: col, glow: col.map((c) => c * 0.3), wCore: (o.radius ?? 0.6) * 0.3, wGlow: (o.radius ?? 0.6) * 2, life: o.life ?? 0.7, shrink: 0.2 }); },
+  SIGIL(g, P, o, col) { g.fx.shockwave(P.pos, { normal: UP, r0: (o.radius ?? 3) * 0.95, r1: o.radius ?? 3, life: o.life ?? 1.5, color: col, thin: true }); },
+};
+// viewmodel-only events (handled in Viewmodel.play) that also pass through _clipEvent
+const VM_EVENTS = new Set(['anchorL', 'anchorR', 'poseL', 'poseR']);
+
+/**
+ * Rare reload timing (§1.7.1): at most 0.2 s longer than the normal reload (`rare.extra`, default 0.2) and its
+ * 'ammo' event moved so the rounds land at the same moment as in the normal clip. Returns { clip, total }.
+ */
+function retimeRare(rare, base, t) {
+  const total = t + Math.min(0.2, Math.max(0, rare.extra ?? 0.2));
+  const at = base.events?.find((e) => e[1] === 'ammo')?.[0];
+  const events = (rare.events || []).filter((e) => e[1] !== 'ammo');
+  if (at != null) events.push([at * t / total, 'ammo']);
+  return { clip: { ...rare, events, _sorted: false }, total };
+}
+
+// summons without a summons module: a column of light, a ground ring and a burst where it lands
+function summonStandIn(g, P, o, col) {
+  FX_FALLBACK.PILLAR(g, P, { h: 10, radius: 0.9, life: 0.9 }, col);
+  FX_FALLBACK.RING(g, P, { at: 'self', r1: 4, life: 0.5 }, col);
+  g.fx.sparkBurst?.(_ta.copy(P.pos).addScaledVector(UP, 0.8), { color: col, color1: col.map((c) => c * 0.3), count: 24, speed: 8, glow: 1 });
 }
 
 class WeaponState {
@@ -60,6 +173,16 @@ export class Arsenal {
     this.lastClick = 0;
     this.knifeDir = 1;
     this.spinSound = null;
+    // premium clip layer (spec §4.2 rows 0.3 / 0.4)
+    this.firstDrawn = new Set();   // weapon ids whose first draw played this match (Arsenal lives one match)
+    this.firstDrawing = false;
+    this.trails = new Map();       // clip `trail` ribbons by id
+    this.overlays = new Map();     // clip overlays by key (stoppable)
+    this._fovKicks = []; this._fovHold = null; this._fovDeg = 0;
+    this._hapticAt = -1e9;
+    this._inspecting = null;
+    this._idleT = 0;
+    this.vm.afterUpdate = (dt) => this._trailTick(dt);   // trails follow the posed sockets
   }
 
   /** Stat modifiers from the current weapon's signature mechanic. */
@@ -80,10 +203,34 @@ export class Arsenal {
     ws.game = this.game;
     specialOf(ws)?.init(ws);
     const slot = slotOf(def);
+    // the weapon this replaces leaves the inventory: its special releases discs, skills, world objects (once)
+    const old = this.owned[slot];
+    if (old && old !== ws) disposeSpecial(old, this.game);
     this.owned[slot] = ws;
     if (select) this.select(slot, true);
     return ws;
   }
+
+  /**
+   * Plays a clip (id registered in clips.js, a factory or a clip object) on the viewmodel with its events routed
+   * through _clipEvent (specials, skills, tests). opts: duration (s; else clip.duration), lock (the weapon cannot
+   * fire / reload until it ends), anything else goes to the clip factory. Returns the clip, or null.
+   */
+  playClip(id, { duration, lock = false, ...opts } = {}) {
+    const clip = clipFor(id, this.vm, { def: this.current?.def, ...opts });
+    if (!clip) { warnOnce('clip:' + id, `unknown clip '${id}'`); return null; }
+    const dur = duration ?? clip.duration ?? 1;
+    if (lock && (this.state === 'idle' || this.state === 'action')) { this.state = 'action'; this.timer = dur; }
+    this._inspecting = null;
+    this.vm.play(clip, { duration: dur, onEvent: (n, a) => this._clipEvent(n, a) });
+    return clip;
+  }
+
+  /** FOV punch (deg, s) on the world camera; the viewmodel keeps its own FOV. Shared with other systems. */
+  fovKick(deg, sec = 0.3) { if (clipComfort.fov) this._fovKicks.push({ deg, dur: Math.max(0.05, sec), t: 0 }); }
+  /** Held FOV offset (charge stages: −1° a stage), eased over sec; fovHold(0) releases it. */
+  fovHold(deg, sec = 0.2) { this._fovHold = { from: this._fovHold ? this._holdNow() : 0, to: clipComfort.fov ? deg : 0, t: 0, dur: Math.max(1e-3, sec) }; }
+  _holdNow() { const h = this._fovHold; return h ? h.from + (h.to - h.from) * Math.min(1, h.t / h.dur) : 0; }
 
   get def() { return this.current?.def; }
 
@@ -112,10 +259,17 @@ export class Arsenal {
     this.vm.aimTarget = 0;
     await this.vm.setWeapon(ws.def.model || ws.def.id, ws.def);
     if (this.current !== ws) return;
-    const t = (ws.def.draw ?? DRAW_TIME[ws.def.cat] ?? 0.7);
+    this._clipReset();
+    if ((ws.def.tier ?? ws.def.premium?.tier) === 'mythic') this.vm.weapon?.premium?.draw?.();   // §1.17 draw colour shift
+    // premium first draw (§1.7.1 beat 1): once per match per weapon, fire cancels it (update)
+    const fd = ws.def.premium?.firstDraw;
+    const first = fd && !this.firstDrawn.has(ws.def.id) ? clipFor(fd, this.vm, { def: ws.def }) : null;
+    if (first) this.firstDrawn.add(ws.def.id);
+    this.firstDrawing = !!first;
+    const t = first ? first.duration ?? 1.5 : (ws.def.draw ?? DRAW_TIME[ws.def.cat] ?? 0.7);
     this.state = 'draw';
     this.timer = t;
-    this.vm.play(drawClip(ws.def.cat === 'mg' || ws.def.cat === 'heavy'), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
+    this.vm.play(first || drawClip(ws.def.cat === 'mg' || ws.def.cat === 'heavy'), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
     if (ws.slideLocked) this.vm.partState.slide = { v: 1 };
     this.game.hud?.weaponChanged?.(ws);
   }
@@ -126,6 +280,9 @@ export class Arsenal {
     const ws = this.current;
     this.sinceShot += dt;
     this.fireCd = Math.max(0, this.fireCd - dt);
+    this._fxTick(dt);
+    // every owned weapon's special runs each frame (holstered timers, thrown discs); update() only for the held one
+    for (const o of Object.values(this.owned)) tickSpecial(o, dt, this.game, o === ws && this.state !== 'holster' && this.state !== 'loading');
     // recoil recovery once the spray pauses
     if (ws) {
       const r = ws.def.recoil || {};
@@ -150,9 +307,11 @@ export class Arsenal {
     const def = ws.def;
 
     const sp = specialOf(ws);
-    sp?.update?.(ws, dt, this.game);
+    this._premiumState(ws, dt);
     if (this.state === 'reload' && s.pressed.reload && sp?.onReloadInput) sp.onReloadInput(ws, this.game);
-    if (this.state === 'draw' || this.state === 'reload' || this.state === 'cycle' || this.state === 'melee') {
+    // the premium first draw is a show, not a lockout: firing cuts it (§1.7.1 beat 1)
+    if (this.state === 'draw' && this.firstDrawing && (s.pressed.fire || s.held.fire)) { this.firstDrawing = false; this.vm.stopClip(); this.vm.glowTo(1, 0.15); this.timer = 0; }
+    if (this.state === 'draw' || this.state === 'reload' || this.state === 'cycle' || this.state === 'melee' || this.state === 'action') {
       this.timer -= dt;
       if (this.state === 'reload' && def.reloadStyle === 'shell' || this.state === 'reload' && this.shellReload) {
         // tube reloads can be interrupted by firing once at least one shell is in
@@ -167,7 +326,15 @@ export class Arsenal {
     this.vm.aimTarget = !altTaken && s.held.alt && def.cat !== 'melee' ? 1 : 0;
     if (s.pressed.special && sp?.onSpecial) sp.onSpecial(ws, this.game);
     if (s.pressed.reload) this.reload();
-    if (s.pressed.inspect && this.state === 'idle') { this.vm.play(inspectClip(), { duration: 2.6 }); }
+    if (s.pressed.inspect && this.state === 'idle') this._inspect(ws);
+    if (this._inspecting) {
+      // hold inspect = loop the fidget segment; firing, aiming or another clip ends it (CS2)
+      const c = this.vm.clip;
+      if (c.clip !== this._inspecting || !c.active) this._inspecting = null;
+      else if (s.pressed.fire || s.held.fire || s.held.alt) { this.vm.stopClip(); this._inspecting = null; this.vm.glowTo(1, 0.2); }
+      else c.hold = !!s.held.inspect;
+    }
+    if (!this._inspecting && this.vm.weapon?.premium?.inspect) this.vm.weapon.premium.setInspect(false);
 
     if (def.mode === 'melee') { this._melee(s, ws); return; }
     this._updateSpin(dt, s, ws);
@@ -209,6 +376,7 @@ export class Arsenal {
   _finishState(ws) {
     const prev = this.state;
     this.state = 'idle';
+    this.firstDrawing = false;
     if (prev === 'reload' && this.shellReload) { this._shellStep(ws); return; }
     if (prev === 'cycle') ws.needsCycle = false;
   }
@@ -298,6 +466,7 @@ export class Arsenal {
     this.recoilYaw += (rc.side ?? 0.5) * (pat * 0.8 + (Math.random() - 0.5) * 0.6);
     g.punch.impulse(-upK * DEG * 6, (Math.random() - 0.5) * (rc.side ?? 0.5) * DEG * 5, (Math.random() - 0.5) * DEG * 3 * upK);
     this.vm.kick(def.kick || {});
+    if (def.premium?.fireFlash) this.vm.weapon?.premium?.fire(def.premium.fireFlash);   // §1.5.5 pFlash on fire (some weapons)
     if (this.vm.weapon?.parts.slide) { this.vm.cycle('slide', 0.065); if (ws.ammo === 0) { ws.slideLocked = true; setTimeout(() => { if (ws.slideLocked) this.vm.partState.slide = { v: 1 }; }, 80); } }
     else if (this.vm.weapon?.parts.bolt && def.mode === 'auto' && (this.vm.weapon.meta.chargeSide === 'right' || this.vm.weapon.meta.chargeSide === 'left')) this.vm.cycle('bolt', 60 / def.rpm * 0.8);
     if (this.vm.weapon?.parts.trigger) this.vm.cycle('trigger', 0.09);
@@ -307,7 +476,7 @@ export class Arsenal {
       const dirW = this.vm.socketDir('muzzle', new THREE.Vector3());
       // mz is the TRUE position of the first-person muzzle: the flash is drawn in viewmodel space and its light
       // sits at the real gun so the handguard / sights / glove flash orange (CS2). Special modes recolour it.
-      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, weapon: def.id, lightPos: mz, suppressed: !!def.suppressed, scale: def.fx?.flashScale ?? 1,
+      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, weapon: def.id, lightPos: mz, suppressed: !!def.suppressed, scale: (def.fx?.flashScale ?? 1) * (this.vm.weapon?.dual && this.vm.weapon.side === 'l' ? 0.85 : 1),
         ramp: mods.flash === 'energy' ? RAMP.blue : mods.flash === 'magma' ? RAMP.red : def.fx?.ramp ?? null });
     }
     if (def.shell && def.mode !== 'pump' && def.mode !== 'bolt') this._ejectShell(def.shell);
@@ -404,6 +573,8 @@ export class Arsenal {
     if (style === 'shell_tube' || style === 'shell' || def.mode === 'pump' && style !== 'drum') {
       this.shellReload = true; this.shellEnding = false; this.shellNeedsPump = empty || ws.needsCycle;
       this.state = 'reload';
+      this._reloadApplied = true;   // shells load in shellInsert only (_shellStep re-arms it per shell)
+      this.vm.weapon?.premium?.reloadStart();
       const t = (def.reloadStart ?? 0.4) * this.reloadMul;
       this.timer = t;
       this.shellPhase = 'start';
@@ -412,12 +583,21 @@ export class Arsenal {
     }
     this.shellReload = false;
     const t = (empty ? def.reloadEmpty ?? def.reload : def.reload) * this.reloadMul;
-    this.reloadTotal = t;
+    let clip = reloadClipFor(this.vm, style, empty), total = t;
+    // rare reload (§1.7.1, §2.25): 1 in premium.rareReloadEvery (8), at most 0.2 s longer, ammo lands on the same frame
+    const pr = def.premium;
+    ws.reloads = (ws.reloads || 0) + 1;
+    if (pr?.rareReload && ws.reloads % (pr.rareReloadEvery ?? 8) === 0) {
+      const rare = clipFor(pr.rareReload, this.vm, { def, empty, style });
+      if (rare) ({ clip, total } = retimeRare(rare, clip, t));
+    }
+    this.reloadTotal = total;
     this.state = 'reload';
-    this.timer = t;
+    this.timer = total;
     this._reloadApplied = false;
-    const clip = reloadClipFor(this.vm, style, empty);
-    this.vm.play(clip, { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
+    this._inspecting = null;
+    this.vm.weapon?.premium?.reloadStart();   // the premium glow "breathes out" while reloading (§1.5.5)
+    this.vm.play(clip, { duration: total, onEvent: (n, a) => this._clipEvent(n, a) });
   }
 
   _shellStep(ws) {
@@ -426,6 +606,7 @@ export class Arsenal {
     if (ws.ammo >= def.mag || ws.reserve <= 0 || this.shellEnding) { this._endShellReload(ws); return; }
     this.shellPhase = 'insert';
     this.state = 'reload';
+    this._reloadApplied = false;   // one shell per insert clip
     const t = def.reload * this.reloadMul;
     this.timer = t;
     this.vm.play(shellInsert(), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
@@ -435,6 +616,8 @@ export class Arsenal {
     this.shellEnding = true;
     this.shellPhase = 'end';
     this.state = 'reload';
+    this._reloadApplied = true;
+    this.vm.weapon?.premium?.reloadEnd();
     const pump = this.shellNeedsPump;
     const t = (def(ws).reloadEnd ?? 0.45) * (pump ? 1.6 : 1) * this.reloadMul;
     this.timer = interrupted ? t * 0.6 : t;
@@ -445,27 +628,298 @@ export class Arsenal {
     const g = this.game;
     const ws = this.current;
     if (name === 'snd') g.audio?.play(arg, { volume: 0.9 });
-    else if (name === 'ammo' && ws) {
+    else if (name === 'ammo' || name === 'ammo1') {
+      // a reload loads once: events from a stale, replayed or fast-forwarded clip (tempo perfect reload, rare
+      // reloads, a clip still running after the state moved on) are no-ops
+      if (!ws || this.state !== 'reload' || this._reloadApplied) return;
+      this._reloadApplied = true;
+      if (name === 'ammo1') {
+        if (ws.reserve > 0 && ws.ammo < ws.def.mag) { ws.ammo++; ws.reserve--; g.hud?.ammoChanged?.(); }
+        return;
+      }
       const need = ws.def.mag - ws.ammo;
       const take = Math.min(need, ws.reserve);
       ws.ammo += take; ws.reserve -= take;
       ws.slideLocked = false;
       ws.needsCycle = false;
       if (this.vm.partState.slide) this.vm.partState.slide.v = 0;
+      this.vm.weapon?.premium?.reloadEnd();
       g.hud?.ammoChanged?.();
-    } else if (name === 'ammo1' && ws) {
-      if (ws.reserve > 0 && ws.ammo < ws.def.mag) { ws.ammo++; ws.reserve--; g.hud?.ammoChanged?.(); }
-    } else if (name === 'shellOut' && ws?.def.shell) {
-      for (let i = 0; i < (arg || 1); i++) this._ejectShell(ws.def.shell);
+    } else if (name === 'shellOut') {
+      if (ws?.def.shell) for (let i = 0; i < (arg || 1); i++) this._ejectShell(ws.def.shell);
     } else if (name === 'magDrop') {
       // a real magazine falls to the floor (not for tactical reloads with ammo left)
       if (ws && ws.ammo === 0) this._dropMag();
-    } else if (name === 'hit') this._meleeHit();
+    } else if (name === 'hit') this._meleeHit(arg);
+    // ---- premium events (see the table at the top of this file)
+    else if (name === 'fx') this._clipFx(typeof arg === 'string' ? { id: arg } : arg || {});
+    else if (name === 'trail') this._clipTrail(arg || {});
+    else if (name === 'hitstop') { if (clipComfort.hitstop) g.hitStop?.(Math.min(0.15, (typeof arg === 'number' ? arg : arg?.ms ?? 80) / 1000)); }
+    else if (name === 'shake') { if (clipComfort.shake) g.addShake?.(Math.min(1, typeof arg === 'number' ? arg : arg?.trauma ?? 0.2)); }
+    else if (name === 'fov') this._clipFov(arg);
+    else if (name === 'tint') this._clipTint(arg || {});
+    else if (name === 'overlay') this._clipOverlay(typeof arg === 'string' ? { id: arg } : arg || {});
+    else if (name === 'haptic') this._clipHaptic(arg);
+    else if (name === 'glow') this.vm.glowTo(arg?.to ?? 1, arg?.sec ?? 0.2, { u: arg?.u, mat: arg?.mat });
+    else if (name === 'vmHide') this._clipHide(arg);
+    else if (name === 'summon') this._clipSummon(typeof arg === 'string' ? { id: arg } : arg || {});
+    else if (name === 'hud') this._clipHud(typeof arg === 'string' ? { id: arg } : arg || {});
+    else if (!VM_EVENTS.has(name)) {
+      const sp = specialOf(ws);
+      if (sp?.onClipEvent) sp.onClipEvent(ws, name, arg, g);
+      else warnOnce('ev:' + name, `event '${name}' has no handler (special.onClipEvent)`);
+    }
+  }
+
+  // ------------------------------------------------------------------ premium clip layer
+
+  /** Weapon switched: clip-scoped screen state ends. */
+  _clipReset() {
+    for (const t of this.trails.values()) t.r.stop();
+    this.trails.clear();
+    for (const o of this.overlays.values()) o.stop?.();
+    this.overlays.clear();
+    this._fovHold = null;
+    this._inspecting = null;
+    this._idleT = 0;
+  }
+
+  /** Ready layer, state-driven glow (§1.5.5) and the ready idle extra, from the special's charge state. */
+  _premiumState(ws, dt) {
+    const vm = this.vm, pr = ws.def.premium;
+    if (!pr) return;
+    const cs = specialOf(ws) ? chargeState(ws, this.game) : null;
+    const ready = !!cs?.ready;
+    // ready overlay (§1.7.2); premium.idleLayers [0-33 %, 34-99 %] are the §1.17 idle tiers below ready
+    const tiers = pr.idleLayers;
+    const layer = pr.ready && ready ? pr.ready.layer || READY_LAYER : tiers && cs ? tiers[cs.charge < 0.34 ? 0 : 1] || null : null;
+    if (layer !== vm.readyLayer) vm.setReadyLayer(layer);
+    // the premium shader's state (gfx/premium.js PremiumState, §1.5.5): reload dips are driven from reload / ammo
+    const st = vm.weapon?.premium;
+    if (st && cs) { st.setMeter(cs.charge || 0); st.setReady(ready); st.setSkill(!!cs.active); }
+    const extra = vm.readyLayer?.idleExtra;
+    if (extra && this.state === 'idle' && !vm.clip.active && this.sinceShot > 1) {
+      if ((this._idleT += dt) >= (vm.readyLayer.every ?? 2.5)) { this._idleT = 0; this.playClip(extra); }
+    } else this._idleT = 0;
+  }
+
+  _inspect(ws) {
+    const pr = ws.def.premium;
+    // 1 in 10 plays the rare inspect (§1.7.1 beat 11, §2.25)
+    const rare = pr?.rareInspect && Math.random() < (pr.rareInspectChance ?? 0.1);
+    const list = pr?.inspect ? [].concat(pr.inspect) : [];
+    const id = rare ? pr.rareInspect : list.length ? list[(Math.random() * list.length) | 0] : null;
+    const clip = (id && clipFor(id, this.vm, { def: ws.def, rare })) || (this.vm.weapon?.dual ? dualInspectClip() : inspectClip());
+    this._inspecting = clip;
+    if ((ws.def.tier ?? pr?.tier) === 'mythic') this.vm.weapon?.premium?.setInspect(true);   // rim x1.5 while inspecting
+    this.vm.play(clip, { duration: clip.duration ?? 2.6, onEvent: (n, a) => this._clipEvent(n, a) });
+  }
+
+  /** Where a clip effect happens. at: 'socket' (muzzle by default) | 'aim' (crosshair ray) | 'self' (feet). */
+  _fxPlace(o) {
+    const g = this.game, vm = this.vm, cam = g.camera;
+    const at = o.at || 'socket';
+    const P = { pos: new THREE.Vector3(), dir: cam.getWorldDirection(new THREE.Vector3()), cam: null, cdir: null, vm: false, socket: null, at };
+    if (at === 'aim') P.pos.copy(this._aimPoint(o));
+    else if (at === 'self') P.pos.copy(g.player?.pos ?? cam.position);
+    else {
+      const name = o.socket || 'muzzle';
+      P.socket = name;
+      if (vm.socketApparent(name, P.pos)) {
+        vm.socketDir(name, P.dir);
+        P.vm = o.vm ?? true;
+        P.cam = vm.socketCam(name);
+        P.cdir = new THREE.Vector3(0, 0, -1).applyQuaternion(vm.gunRoot.quaternion);
+      } else { warnOnce('sock:' + name, `socket '${name}' missing on ${vm.weapon?.id}`); P.pos.copy(cam.position).addScaledVector(P.dir, 0.6); }
+    }
+    return P;
+  }
+  _aimPoint(o, out = new THREE.Vector3()) {
+    const g = this.game, cam = g.camera, d = cam.getWorldDirection(_tb), range = o.range ?? 30;
+    const hit = g.world?.collision?.raycast(cam.position, d, range);
+    out.copy(cam.position).addScaledVector(d, hit ? Math.max(0, hit.dist - 0.05) : range);
+    if (o.ground) { const y = g.world?.collision?.floorBelow?.(_ta.set(out.x, out.y + 0.5, out.z), 0.2, 30); if (Number.isFinite(y)) out.y = y; }
+    return out;
+  }
+
+  _clipFx(o) {
+    const g = this.game, fx = g.fx, id = String(o.id || '').toUpperCase();
+    if (!fx || !id) return null;
+    const P = this._fxPlace(o);
+    const col = hdrOf(o.color, o.k ?? 3, [3, 3, 3]);
+    // components keep their own colours unless the clip names one
+    const opts = { ...o, id, pos: P.pos, dir: P.dir, vm: P.vm, camPos: P.cam, seed: o.seed ?? ((Math.random() * 2147483647) | 0) };
+    if (o.color != null) opts.color = col; else delete opts.color;
+    // 1) a premium kit component (fx/kit.js); a ring on the viewmodel stays a stand-in (sigils.ring lies on the ground)
+    const k = KIT_FX[id], host = k && fx[k[0]];
+    if (typeof host?.[k[1]] === 'function' && !(id === 'RING' && P.vm)) return k[2](host, P, opts, this);
+    // 2) a generic component hook on the FX side
+    const r = fx.component?.(id, opts);
+    if (r !== undefined && r !== false && r !== null) return r;
+    // 3) stand-ins from the base toolkit
+    if (FX_FALLBACK[id]) return FX_FALLBACK[id](g, P, o, col, this);
+    warnOnce('fx:' + id, `fx '${id}': no handler (fx.${k ? k[0] + '.' + k[1] : 'component'})`);
+    return null;
+  }
+  /** End point for BOLT / BEAM: another socket, or the crosshair ray ('aim', default). */
+  _toPoint(o) { return o.to && o.to !== 'aim' ? this.vm.socketApparent(o.to, new THREE.Vector3()) || this._aimPoint(o) : this._aimPoint(o); }
+  /** WING on the held gun: { open: dur } spreads (created on first use), { close: dur } folds, { off } detaches. */
+  _wingEvent(wings, o) {
+    if (this._wing && (this._wing.alive === false || this._wingGun !== this.vm.weapon)) this._wing = null;   // gun swapped
+    const w = this._wing;
+    if (o.off) { w?.detach(); this._wing = null; return null; }
+    if (o.close != null) { w?.close(typeof o.close === 'number' ? o.close : 0.2); return w; }
+    if (!w) {
+      const { id, pos, dir, vm, camPos, color, seed, at, socket, open, ...opts } = o;
+      this._wing = wings.vm({ ...opts, open: false });
+      this._wingGun = this.vm.weapon;
+    }
+    this._wing?.openWing(typeof o.open === 'number' ? o.open : 0.25);
+    return this._wing;
+  }
+
+  _clipSummon(o) {
+    const g = this.game, fx = g.fx, id = String(o.id || 'GHOST').toUpperCase();
+    if (!fx) return null;
+    const P = this._fxPlace({ at: 'aim', ground: true, ...o });
+    const col = hdrOf(o.color, o.k ?? 3, [3, 3, 3]);
+    const opts = { ...o, id, pos: P.pos, dir: P.dir, seed: o.seed ?? ((Math.random() * 2147483647) | 0), caster: g.localId };
+    if (o.color != null) opts.color = col; else delete opts.color;
+    const k = KIT_FX[id];
+    if (k?.[0] === 'summons' && typeof fx.summons?.[k[1]] === 'function') return k[2](fx.summons, P, opts, this);
+    warnOnce('summon:' + id, `summon '${id}': no fx.summons.${k?.[1] || camel(id)}(), drawing a stand-in`);
+    summonStandIn(g, P, o, col);
+    return null;
+  }
+
+  _clipTrail(o) {
+    const id = o.id || 'blade', cur = this.trails.get(id);
+    if (o.on === false) { cur?.r.stop(); this.trails.delete(id); return; }
+    cur?.r.stop();
+    const fx = this.game.fx, w = this.vm.weapon;
+    if (!fx?.trail || !w) return;
+    const from = o.from || 'base', to = o.to === undefined ? 'tip' : o.to;
+    if (!w.has(from)) { warnOnce('trail:' + from, `trail socket '${from}' missing on ${w.id}`); return; }
+    const two = !!to && w.has(to);
+    this.trails.set(id, { r: this._trailRibbon(o, two, o.color, o.color1), from, to: two ? to : null, o, clip: this.vm.clip.clip });
+  }
+  _trailRibbon(o, two, c0, c1) {
+    const k = o.k ?? 3;
+    return this.game.fx.trail({ vm: true, width: o.width ?? 0.02, life: o.life ?? 0.18, taper: o.taper ?? 0, segs: o.segs ?? 20, profile: o.profile ?? (two ? 'slash' : 'soft'),
+      color: [...hdrOf(c0 ?? '#ffffff', k), 1], color1: c1 != null ? [...hdrOf(c1, k), 0] : null });
+  }
+  /** vm.afterUpdate: push the posed sockets (camera space) into the running trails. */
+  _trailTick() {
+    const vm = this.vm;
+    for (const [id, t] of this.trails) {
+      if (t.r.stopped || !t.o.keep && (!vm.clip.active || vm.clip.clip !== t.clip)) { t.r.stop(); this.trails.delete(id); continue; }
+      const a = vm.socketCam(t.from, _ta);
+      if (!a) continue;
+      if (t.to) t.r.push(a, vm.socketCam(t.to, _tb)); else t.r.push(a);
+    }
+  }
+  /** Melee hit during a trail with hitColor: the rest of the swing burns in the element colour (§1.17). */
+  _trailHit() {
+    for (const t of this.trails.values()) {
+      if (!t.o.hitColor || t.hit) continue;
+      t.r.stop();
+      t.r = this._trailRibbon({ ...t.o, k: (t.o.k ?? 3) * 1.5 }, !!t.to, t.o.hitColor, t.o.hitColor1 ?? t.o.hitColor);
+      t.hit = true;
+    }
+  }
+
+  _clipFov(a) {
+    if (Array.isArray(a)) a = { kick: a[0], sec: a[1] };
+    else if (typeof a === 'number') a = { kick: a };
+    if (!a) return;
+    if (a.kick != null) { if (this.game.fovKick) this.game.fovKick(a.kick, a.sec ?? 0.3); else this.fovKick(a.kick, a.sec ?? 0.3); }
+    else this.fovHold(a.to ?? a.deg ?? 0, a.sec ?? 0.2);
+  }
+  /** FOV envelopes -> camera.zoom (the game's _updateFov owns camera.fov; zoom survives its updates). */
+  _fxTick(dt) {
+    let deg = 0;
+    const h = this._fovHold;
+    if (h) { h.t += dt; deg += this._holdNow(); if (h.t >= h.dur && h.to === 0) this._fovHold = null; }
+    for (let i = this._fovKicks.length - 1; i >= 0; i--) {
+      const k = this._fovKicks[i];
+      k.t += dt;
+      const atk = Math.min(0.07, k.dur * 0.25);
+      if (k.t >= k.dur) { this._fovKicks.splice(i, 1); continue; }
+      const u = k.t < atk ? k.t / atk : 1 - (k.t - atk) / (k.dur - atk);
+      deg += k.deg * (k.t < atk ? 1 - (1 - u) * (1 - u) : u * u * (3 - 2 * u));
+    }
+    const cam = this.game.camera;
+    if (!cam || Math.abs(deg - this._fovDeg) < 1e-4) return;
+    this._fovDeg = deg;
+    const f = cam.fov * Math.PI / 360;
+    cam.zoom = Math.tan(f) / Math.tan(Math.min(Math.PI * 0.45, Math.max(0.05, f + deg * Math.PI / 360)));
+    cam.updateProjectionMatrix();
+  }
+
+  _clipTint(o) {
+    if (!clipComfort.overlay) return;
+    const col = hdrOf(o.rgb ?? o.color ?? '#ffffff', 1), a = Math.min(0.35, o.a ?? 0.16);
+    const fi = o.in ?? 0.05, fo = o.out ?? 0.3, dur = fi + (o.hold ?? 0) + fo;
+    const ov = this.game.fx?.overlay;
+    if (ov?.tint) return ov.tint(col, a, dur, { fadeIn: fi, fadeOut: fo });
+    warnOnce('tint', 'tint: no fx.overlay.tint(), using an additive screen kick');
+    this.game.fx?.screen?.kick(col.map((c) => c * a * 1.5), dur);
+    return null;
+  }
+
+  _clipOverlay(o) {
+    const kind = String(o.id || '').toLowerCase(), key = o.key || kind;
+    if (o.off) { this.overlays.get(key)?.stop?.(); this.overlays.delete(key); return; }
+    if (!clipComfort.overlay || !kind) return;
+    const ov = this.game.fx?.overlay;
+    if (ov?.add) {
+      const { id, key: _k, off, ...opts } = o;
+      if (opts.color != null) opts.color = hdrOf(opts.color, 1);
+      const e = ov.add(kind, opts);
+      if (e) this.overlays.set(key, e);
+      return e;
+    }
+    // no overlay module: speed lines read a little through chromatic aberration, the rest is skipped
+    warnOnce('ov:' + kind, `overlay '${kind}': no fx.overlay`);
+    if (kind === 'radial' && this.game.renderer?.post) {
+      const post = this.game.renderer.post;
+      post.aberration = Math.max(post.aberration, 0.3);
+      setTimeout(() => { post.aberration = 0; }, (o.dur ?? 0.35) * 1000);
+    }
+  }
+
+  _clipHaptic(a) {
+    const pat = typeof a === 'number' ? [a] : HAPTIC[a];
+    if (!pat) { warnOnce('hap:' + a, `haptic '${a}' unknown`); return; }
+    const now = performance.now();
+    if (now - this._hapticAt < 70) return;   // §1.13: 70 ms apart at least
+    let t = 0;
+    for (let i = 0; i < pat.length; i += 2) {
+      const ms = pat[i];
+      if (t === 0) haptic(ms); else setTimeout(() => haptic(ms), t);
+      t += ms + (pat[i + 1] ?? 0);
+    }
+    this._hapticAt = now + t - pat[pat.length - 1];
+  }
+
+  _clipHide(a) {
+    const obj = a && typeof a === 'object';
+    const on = obj ? a.on ?? true : !!a;
+    const mode = a === 'all' || obj && a.mode === 'all' ? 2 : 1;
+    if (obj && a.sec) this.vm.hideFor(on ? a.sec : 0, mode);
+    else this.vm.clipHide = on ? mode : 0;
+  }
+
+  _clipHud(o) {
+    const h = this.game.hud;
+    if (h?.clipEvent) return h.clipEvent(o.id, o);
+    warnOnce('hud:' + o.id, `hud '${o.id}': no hud.clipEvent()${o.text ? ', showing a toast' : ''}`);
+    if (o.text) h?.toast?.(o.sub ? `${o.text}　${o.sub}` : o.text, (o.dur ?? 1.6) * 1000);
   }
 
   _dropMag() {
     const g = this.game;
-    const part = this.vm.weapon?.parts.mag;
+    const part = this.vm.weapon?.part('mag');   // dual: the gun that fired last ('R_mag' / 'L_mag')
     if (!part) return;
     const clone = part.node.clone(true);
     const wp = this.vm.socketApparent('magwell', new THREE.Vector3()) || g.camera.position.clone();
@@ -516,14 +970,16 @@ export class Arsenal {
     }
   }
 
-  _meleeHit() {
+  /** Melee hit at the clip's `hit` event; arg { range, dmg, kb } (05d §7.1) overrides the def for this swing. */
+  _meleeHit(arg) {
     const g = this.game;
     const ws = this.current;
     if (!ws) return;
     const def = ws.def;
     const heavy = this.meleeHeavy;
-    const range = heavy ? def.heavy?.range ?? 2 : def.range?.[0] ?? 1.8;
-    const dmg = heavy ? def.heavy?.dmg ?? def.dmg * 2.5 : def.dmg;
+    const o = arg && typeof arg === 'object' ? arg : {};
+    const range = o.range ?? (heavy ? def.heavy?.range ?? 2 : def.range?.[0] ?? 1.8);
+    const dmg = o.dmg ?? (heavy ? def.heavy?.dmg ?? def.dmg * 2.5 : def.dmg);
     g.camera.getWorldDirection(_dir);
     // a short fan of rays so slashes are forgiving
     const hitTargets = new Set();
@@ -536,7 +992,8 @@ export class Arsenal {
       if (th && !hitTargets.has(th.target)) {
         hitTargets.add(th.target);
         const backstab = th.target.isBackTo?.(g.camera.position) ? 2 : 1;
-        const res = th.target.damage({ amount: dmg * backstab * (th.part === 'head' ? def.head ?? 2 : 1) * this.dmgMul, part: th.part, point: th.point, normal: th.normal, dir: d, dist: th.dist, knock: def.knock * (heavy ? 2 : 1), stagger: heavy ? 1 : def.stagger, weapon: def.id, shooter: g.localId, melee: true, headshot: th.part === 'head' });
+        const res = th.target.damage({ amount: dmg * backstab * (th.part === 'head' ? def.head ?? 2 : 1) * this.dmgMul, part: th.part, point: th.point, normal: th.normal, dir: d, dist: th.dist, knock: o.kb ?? def.knock * (heavy ? 2 : 1), stagger: heavy ? 1 : def.stagger, weapon: def.id, shooter: g.localId, melee: true, headshot: th.part === 'head' });
+        if (hitTargets.size === 1) this._trailHit();
         g.hud?.onHit?.({ amount: dmg, part: th.part, headshot: th.part === 'head' }, res, th.target);
         g.audio?.play('knife_hit_flesh', { pos: th.point });
         g.hitStop?.(heavy ? 0.06 : 0.035);

@@ -178,47 +178,56 @@ export class ColossusBrain extends BossBrain {
 
   chase(dt, target, tdist) { return this.flying ? 0 : super.chase(dt, target, tdist); }
 
-  // ---------------------------------------------------------------- visuals
+  // ---------------------------------------------------------------- visuals (host + clients)
+  // CSO boss grammar (06b §6.3): ground warning -> one big single-colour effect -> aftermath + screen overlay.
+  // Effects live in fx/zfx.js (wing gusts and the crash-landing impact run there per frame).
   onFx(kind, d) {
-    const g = this.g, tele = this.tele;
+    const g = this.g, tele = this.tele, zfx = g.fx?.zfx;
     switch (kind) {
       case 'teleCone': tele?.cone(V(d.p), d.yaw, d.r, d.h, d.t); break;
       case 'teleLine': tele?.line(V(d.p), d.yaw, d.l, d.w, d.t, { color: 0x7dff2a }); break;
       case 'teleCircle': tele?.circle(V(d.p), d.r, d.t); break;
       // ground hazards: pushed on every peer so clients see them (only the host's _updateHazards deals the dps)
       case 'pools': for (const q of d.at) this.mgr.hazards.push({ pos: V(q), r: d.r, t: d.t, dps: d.dps, kind: d.k }); break;
-      case 'screech': g.audio?.play('screamer_scream', { pos: V(d.p), volume: 1.4, pitch: 0.55 }); g.addShake(0.2); break;
+      case 'screech': g.audio?.play('screamer_scream', { pos: V(d.p), volume: 1.4, pitch: 0.55 }); g.addShake(0.2); zfx?.screech(this.z); break;
       case 'quake': {
         const p = V(d.p);
         g.audio?.play('brute_stomp', { pos: p, volume: 1.5, pitch: 0.7 });
         g.addShake(Math.max(0.2, 1 - p.distanceTo(g.camera.position) / 35));
-        g.fx?.particles.spawn({ additive: true, x: p.x, y: p.y + 0.3, z: p.z, life: 0.45, size: 1, size1: d.r * 2.4, color: [2, 1.4, 0.9, 1], color1: [0.5, 0.3, 0.2, 0], frame: 11 });
-        for (let i = 0; i < 30; i++) {
-          const a = (i / 30) * Math.PI * 2;
-          g.fx?.particles.spawn({ x: p.x + Math.cos(a) * 2, y: p.y + 0.3, z: p.z + Math.sin(a) * 2, vx: Math.cos(a) * d.r, vy: 0.8, vz: Math.sin(a) * d.r, life: 1, size: 0.9, size1: 3, color: [0.45, 0.42, 0.38, 0.6], color1: [0.45, 0.42, 0.38, 0], frame: 12, drag: 2 });
-        }
+        zfx?.quake(p, d.r, { col: [2.0, 1.5, 1.0], scale: 1.5 });
         break;
       }
       case 'sporeLaunch': {
         const from = V(d.p); from.y += this.z.height * 0.8;
         g.audio?.play('spitter_spit', { pos: from, volume: 1.4, pitch: 0.6 });
+        zfx?.sporeLaunch(from);
         for (const t of d.to) {
           const to = V(t);
           const time = 2.2;
           const vel = to.clone().sub(from).multiplyScalar(1 / time); vel.y += 0.5 * 9.8 * time;
           const m = new THREE.Mesh(sporeGeo || (sporeGeo = new THREE.SphereGeometry(0.35, 10, 8)), sporeMat || (sporeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.2, 0.35) })));
+          const trail = zfx?.sporeTrail();   // green tail + spore smoke
           g.projectiles?.spawn({ pos: from.clone(), vel, gravity: 9.8, life: time + 0.4, mesh: m, radius: 0.3, hitTargets: false, faceVelocity: false,
-            onUpdate: (p) => { if (Math.random() < 0.5) g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, life: 0.6, size: 0.3, size1: 0.8, color: [0.35, 0.6, 0.1, 0.5], color1: [0.3, 0.5, 0.1, 0], frame: 1 }); },
-            onHit: (p, point) => { g.fx?.explosion(point, { radius: 3.2, scale: 0.6, color: [0.5, 0.95, 0.2] }); g.audio?.play('bloater_pop', { pos: point }); return true; } });
+            onUpdate: (p, dt) => {
+              if (trail) trail.tick(p.pos, dt);
+              else if (Math.random() < 0.5) g.fx?.particles.spawn({ x: p.pos.x, y: p.pos.y, z: p.pos.z, life: 0.6, size: 0.3, size1: 0.8, color: [0.35, 0.6, 0.1, 0.5], color1: [0.3, 0.5, 0.1, 0], frame: 1 });
+            },
+            onEnd: () => trail?.stop(),
+            onHit: (p, point) => {
+              if (zfx) zfx.sporeBurst(point, 3.2); else g.fx?.explosion(point, { radius: 3.2, scale: 0.6, color: [0.5, 0.95, 0.2] });
+              g.audio?.play('bloater_pop', { pos: point });
+              return true;
+            } });
         }
         break;
       }
-      case 'tendril': g.audio?.play('crawler_screech', { pos: this.z.pos, volume: 1.2, pitch: 0.5 }); break;
-      case 'breathCharge': g.audio?.play('spitter_gurgle', { pos: this.z.pos, volume: 1.5, pitch: 0.5 }); break;
-      case 'breath': {
+      case 'tendril': g.audio?.play('crawler_screech', { pos: this.z.pos, volume: 1.2, pitch: 0.5 }); zfx?.tendril(this.z, d.t ?? 2.6); break;
+      case 'breathCharge': g.audio?.play('spitter_gurgle', { pos: this.z.pos, volume: 1.5, pitch: 0.5 }); zfx?.breathCharge(this.z, 1.3); break;
+      case 'breath': {   // acid breath: a pale green wash pouring from the mouth onto the strip (the pools fx adds the acid)
         const from = this.z.center(new THREE.Vector3()); from.y += 1.5;
         const yaw = d.yaw;
         g.audio?.play('fire_burst', { pos: from, volume: 1.4 });
+        if (zfx) { zfx.breath(this.z, V(d.p), yaw, 34, 2.6); break; }
         for (let i = 0; i < 70; i++) {
           const L = (i / 70) * 34;
           const tgt = V(d.p).add(_v.set(Math.sin(yaw) * L, 0, Math.cos(yaw) * L));
@@ -228,9 +237,10 @@ export class ColossusBrain extends BossBrain {
         }
         break;
       }
-      case 'takeoff': g.audio?.play('screamer_scream', { pos: V(d.p), pitch: 0.6 }); break;
+      case 'takeoff': g.audio?.play('screamer_scream', { pos: V(d.p), pitch: 0.6 }); zfx?.takeoff(this.z); break;
       case 'metamorph': {
         g.addShake(0.8);
+        zfx?.metamorph(this.z, 4.5);
         g.audio?.play('brute_roar', { pos: this.z.pos, volume: 1.6, pitch: 0.5 });
         g.fx?.blood(this.z.center(new THREE.Vector3()), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 1, 0), 6);
         g.fx?.gibs(this.z.center(new THREE.Vector3()), new THREE.Vector3(0, 1, 0), 24);
@@ -239,7 +249,7 @@ export class ColossusBrain extends BossBrain {
         for (const w of [wl, wr]) if (w) { w.scale.setScalar(0.01); this._unfold = (this._unfold || []).concat(w); }
         break;
       }
-      case 'crash': g.addShake(1); g.audio?.play('explosion_large', { pos: this.z.pos }); break;
+      case 'crash': g.addShake(1); g.audio?.play('explosion_large', { pos: this.z.pos }); zfx?.crash(this.z); break;   // impact fx when it hits the ground
     }
   }
 }

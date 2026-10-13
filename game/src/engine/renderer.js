@@ -92,6 +92,8 @@ uniform vec3 flashColor;   // additive full-screen flash (explosions, buy, boss)
 uniform float aberration;
 uniform float grain;
 uniform float scopeMask;   // 0..1 sniper scope vignette
+uniform float uEdge;       // 0..1 element-colour screen border (BORDER, PREMIUM_WEAPONS §1.9 #4), alpha capped at 0.35
+uniform vec3 uEdgeColor;   // linear colour
 varying vec2 vUv;
 
 vec3 acesFitted(vec3 c) {
@@ -150,6 +152,14 @@ void main() {
     float ring = smoothstep(0.36, 0.40, d);
     col = mix(col, vec3(0.0), ring * scopeMask);
   }
+  if (uEdge > 0.0) {
+    // buff border: a rounded frame that fades in from 45 % of the screen radius; mixed after grading so
+    // the alpha is what the player sees (cap 0.35, the ready reminder uses ~0.08)
+    vec2 e = abs(cc) * 2.0;
+    float fr = pow(pow(e.x, 4.0) + pow(e.y, 4.0), 0.25);
+    float a = min(uEdge, 0.35) * smoothstep(0.45, 1.05, fr) * (0.85 + 0.15 * sin(time * 2.4 + fr * 6.0));
+    col = mix(col, uEdgeColor, a);
+  }
   col = toSRGB(col);
   col += (hash(uv * 1000.0 + fract(time) * 37.0) - 0.5) * grain;
   gl_FragColor = vec4(col, 1.0);
@@ -197,14 +207,23 @@ export class Renderer {
       saturation: 1.0, contrast: 1.04,
       shadowTint: new THREE.Vector3(1, 1, 1), highlightTint: new THREE.Vector3(1, 1, 1),
       vignette: 0.35, damage: 0, lowHealth: 0, flashColor: new THREE.Vector3(), aberration: 0, grain: 0.03, scopeMask: 0,
+      edge: 0, edgeColor: new THREE.Color(0, 0, 0),   // BORDER: alpha 0..0.35 + linear colour (setEdge)
     };
+    this.edgeEnabled = true;                            // settings switch (§1.14 #6)
     const u = {};
     for (const [k, v] of Object.entries(this.post)) u[k] = { value: v };
     u.tScene = { value: null }; u.tBloom = { value: null }; u.time = { value: 0 }; u.sceneTexel = { value: new THREE.Vector2() };
+    u.uEdge = { value: 0 }; u.uEdgeColor = { value: new THREE.Color() };
     u.uvScale = this.uvScale;
     this.compMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: COMPOSITE_FRAG, uniforms: u, depthTest: false, depthWrite: false });
     this.quad = new FullScreenQuad(this.downMat);
     this.setQuality('high');
+  }
+
+  /** BORDER: element-colour screen frame. color: hex / THREE.Color (sRGB), alpha 0..0.35 (0 = off). */
+  setEdge(color, alpha = 0.25) {
+    if (color !== null && color !== undefined) this.post.edgeColor.set(color);
+    this.post.edge = Math.max(0, Math.min(0.35, alpha));
   }
 
   setQuality(name) {
@@ -319,7 +338,9 @@ export class Renderer {
 
     // composite. The scaled viewport lives in the lower-left corner of every target.
     const c = this.compMat.uniforms;
-    for (const k of Object.keys(this.post)) c[k].value = this.post[k];
+    for (const k of Object.keys(this.post)) if (c[k]) c[k].value = this.post[k];
+    c.uEdge.value = this.edgeEnabled ? this.post.edge : 0;
+    c.uEdgeColor.value.copy(this.post.edgeColor);
     c.tScene.value = this.rt.texture;
     c.tBloom.value = low.texture;
     c.time.value = time;

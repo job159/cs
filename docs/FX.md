@@ -23,6 +23,12 @@ ever extracted or downloaded from a game or a rip site. Reference frames may onl
 | `smokevol.js` | CS2 smoke grenades: flood-filled lit puff volume, bullet tunnels, HE holes, in-smoke overlay |
 | `inferno.js` | Molotov / incendiary fire spreading over the floor |
 | `screenfx.js` | Flashbang white-out + frozen afterimage, short screen kicks (via `renderer.post.flashColor`) |
+| `kit.js` + `kitutil.js` | Premium FX kit facade (`fx.overlay`, `fx.summons`, `fx.wings`, `fx.sigils`, `fx.motes`), seeded PRNG, shared tiling noise texture — see *Premium FX kit* below |
+| `overlays.js` | Full-screen overlays (TINT, RADIAL, TUNNEL, RIFT, CLOUDSEA, ink filter, CURTAIN, BORDER fallback) + CSO status overlays (burn, poison, frost, electric) |
+| `summons.js` | GHOST glazed-spirit summons (dissolve in / out, exit motes), SHADOW puppet clones, instanced SWARM flocks, built-in spirit shapes |
+| `wings.js` | WING feather fans (glow / cloisonné) on the viewmodel or a third-person socket |
+| `sigils.js` | SIGIL magic-circle atlas (12 original procedural designs) + PILLAR light columns + RING |
+| `motes.js` | Falling theme sprites (feathers, petals, paper, gold paper, porcelain shards, ink, glow feathers, embers, frost) + TRAIL_DROP |
 
 Callers: `weapons/arsenal.js` (muzzle, tracers with CS2 cadence, casings, rocket trail),
 `weapons/ballistics.js` (impacts, `bulletPath` for smoke tunnels), `weapons/throwables.js` (frag → `explosion`,
@@ -205,6 +211,119 @@ Recipes (from 06b): Thunderbolt = `beam` (core [2.5,3.5,8], glow [0.6,0.5,2.2], 
 shrink 0.4) + blue `sparkBurst` at the hit; JANUS lightning = `bolt` with col [6,3.6,0.6], glow [2.2,1,0.1],
 width 0.22, levels 3, jitter 0.06; blade = `trail({ life: 0.14, color: [4,3.2,2.2,1], color1: element×1.5 })`
 pushed with root/tip; Balrog charged shot = `muzzle(…, { ramp: RAMP.red })` + `explosion(hit, { scale: 0.35 })`.
+
+## Premium FX kit (PREMIUM_WEAPONS §1.7.5 / §4.2 row 0.5)
+
+Reusable components for premium weapons (summon 5 beats §1.7.3, L0–L4 levels §1.7.4, budgets §1.14). All
+textures are generated procedurally at load (Canvas 2D or per-pixel JS, cached per page); every component takes
+an optional `seed` so a networked skill event `{ id, seed, pos, dir }` replays identically on each client.
+Colours are linear HDR `[r, g, b]` (also `'#hex'`, `THREE.Color`, `Vector3`); additive parts above 1 bloom.
+`kit.js` installs the five objects on the facade (`fx.kit` holds them too); `fx.clear()` clears them all.
+Data-driven clip / skill events can use the spec's component codes directly:
+`fx.kit.play(code, opts)` with `TINT`, `RADIAL`, `TUNNEL`, `RIFT`, `CLOUDSEA`, `CURTAIN`, `INK`, `BORDER`, `BURN` /
+`POISON` / `FROST` / `ELECTRIC`, `SIGIL`, `PILLAR`, `RING`, `GHOST`, `SHADOW`, `SWARM`, `WING`, `MOTE`, `TRAIL_DROP`
+(options as the calls below; `dur` / `amt` / `pos` / `from` / `to` / `kind` / `parent` where relevant), e.g. the
+Appendix A `overlay: { fx: 'TUNNEL', look: 'wave_pipe' }` → `fx.kit.play(o.fx, o)`.
+
+### `fx.overlay` — full-screen overlays (`overlays.js`)
+
+Drawn inside the HDR scene pass (they bloom and tonemap like the world). *Front* passes (mul + premultiplied add)
+cover the viewmodel like CSO's 2D sprites; *back* passes (RADIAL, RIFT, CLOUDSEA, CURTAIN, TUNNEL) sit just behind
+the gun's squeezed depth range, in front of the world. One ubershader per pass, all kinds gated by uniforms.
+
+| Call | Effect |
+|---|---|
+| `status(kind, strength = 1, dur = 1.2, { color })` | CSO status overlays (06b §6.2 / §9.8): `'burn'` licking flames rising from the bottom + embers + warm frame, `'poison'` opaque lime blotches with drips and bubbles, `'frost'` rime + feathery crystals + crack front + glints, `'electric'` arcs crawling on the border re-dealt every 50 ms (`color`, default violet). Calling again refreshes (max strength, extended time) instead of stacking |
+| `tint(color, alpha = 0.2, dur = 0.6)` | TINT: `col = mix(col, col·tint·1.6 + tint·0.05, α)`, α capped at 0.35 |
+| `radial(amt = 1, dur = 0.35, { color, ink, r0, seed })` | RADIAL speed lines from the centre (centre kept clean), re-dealt every 40 ms; `ink: true` = black lines |
+| `ink(amt = 1, dur = Infinity)` | ink-wash filter (負屓 書寫): desaturate + exposure / contrast (renderer `post` deltas), rice-paper grain, ink bleeding in from the edges |
+| `rift(dur = 1.2, { angle = 1.75, open = 1, seed })` | RIFT: rice-paper tear opening in 0.2 s (torn fibre lip, ink blooming inside) + ink speed lines |
+| `cloudsea(dur = 4, { sun, seed })` | CLOUDSEA: three parallax billowy cloud banks rising over the lower screen, gold rims, sunrise sky (玉山 雲海日出) |
+| `curtain(dur = 3, { color })` | CURTAIN (simple): velvet drapes slide in from the sides (≤ 24 % each) + scalloped valance, gold trim |
+| `tunnel(dur = 2.5, { look, color, amt })` | TUNNEL around the camera: `'wave'` = 螭吻 wave pipe (220° curl over the top and right, helical foam lines, foaming lip flinging droplets every 0.4 s, centre 35 % open), `'lava'` = twin's molten pipe, `'rings'` = generic light / ice rings |
+| `border(color, alpha = 0.25, dur = Infinity)` | BORDER: drives the composite's `post.edge` / `post.edgeColor` (as a delta, so `renderer.setEdge` users coexist); own edge glow if the renderer has none |
+| `add(kind, opts)` | generic form; `opts`: `amt`, `dur`, `fadeIn`, `fadeOut` + the per-kind options above |
+
+Every call returns a handle `{ stop(fade), set(opts), alive, level }`. `fx.overlay.scale` (0..1) is the settings
+multiplier; `fx.overlay.active` lists live entries. Budgets: ≤ 4 live overlays (the weakest fades out), one L4
+screen (TUNNEL / CLOUDSEA / RIFT / CURTAIN / ink) at a time (a new one replaces the old in 0.15 s), TINT α ≤ 0.35,
+full-screen α ≤ 0.5, nothing in the central 20 %. Quality: **low** = cheap edge-only status variants, TUNNEL →
+coloured BORDER, CLOUDSEA → gold tint, RIFT → short white tint, CURTAIN → dark red tint, RADIAL dropped;
+**medium** drops RADIAL; **high / ultra** everything.
+
+### `fx.sigils` — SIGIL, PILLAR, RING (`sigils.js`)
+
+`SIGIL` designs (original, procedural Canvas 2D; pseudo seal glyphs come from a stroke grammar, not real
+characters): `clouds` 雲紋, `seal` 篆印, `bagua` 八方陣, `censer` 香爐雲紋, `isobar` 等壓線, `mountainSea` 山海紋,
+`nian` 剪紙「年」, `vortex` 漩渦水紋, `thunder` 雷紋, `flame` 火焰雲紋, `wind` 風紋, `square` 方陣 (no spin).
+Each is a white mask in one channel of a 1024² RGBA texture (4 per texture, 3 textures, built lazily per group in
+~0.1 s; 512² on low). Designs use three concentric bands that the shader spins independently (inner +35°/s,
+outer −20°/s by default); a mip-biased second fetch gives the glow halo. `fx.sigils.preload(['censer'])` at
+weapon equip avoids a first-use hitch; `fx.sigils.debugURL('seal')` returns a PNG of a design.
+
+| Call | Effect |
+|---|---|
+| `sigil(pos, { design, radius = 6, color, color1, intensity, life = 2.6, grow = 0.25, spin, pulse, normal, face, lift, glow, seed })` → `{ mesh, stop(fade), set({ color, color1, intensity, spin }), alive }` | ground magic circle: appears scale 0.6 → 1 (easeOutBack) with a 0.15 s white flash, bands spin, pulses, fades out; `color` centre → `color1` rim; `normal` (default up, `'camera'` = upright billboard, e.g. M02's 「報」 seal); turned so its top faces away from `face` (default the camera) |
+| `pillar(pos, { radius = 1.2, height = 14, color, color1, life = 0.8, strike = 0.08, square, rise, motes = 14, ring, light })` → `{ mesh, stop(), alive }` | light column: hot core + soft sheath (one draw), streaks racing up, ground flare, strike flash, rising glints, ground RING, one pooled light flash; `square: true` = M06 seal court; `rise: true` = grows up from the ground |
+| `ring(pos, opts)` | RING: flat `fx.shockwave` on the ground |
+
+Budget: ≤ 6 sigils alive (L2: 2 per player); the oldest fades early.
+
+### `fx.summons` — GHOST, SHADOW, SWARM (`summons.js`)
+
+| Call | Effect |
+|---|---|
+| `ghost({ shape \| mesh \| geometry, shapeOpts, pos, yaw \| quat, size, base, core, rim, edge, opacity, glaze, dark, rimPower, flowSpeed, appear = 0.35, life = 3, out = 0.5, motion, bob, flap, wave, exit, big, seed })` → `{ obj, t, alive, dissolveOut(dur), flash(k), lunge(target, dur), remove() }` | glazed porcelain spirit: depth pre-pass (only the front surface shows), fresnel rim (`rim`), glaze highlight following the scene sun, light veins drifting up the body (`core`), ground-up dissolve in (`appear`), extremities-first dissolve out (`out`) with a hot `edge`, then `exit: { kind, count, palette, color, speed }` motes thrown off the body surface (`kind: 'spray'` = water). `dark: true` = black silhouette + rim (金烏影). `motion: 'rise'` comes up out of the ground, `'hover'` bobs. Built-in `shape`s: `bird` (flapping; `shapeOpts.tail` 2.4 = magpie), `fish` (whale flukes, `wave.axis [0,1,0]`), `serpent` (water dragon, travelling `wave`), `bell`, `stele`, `orb`, `blade`; weapon spirits (lion, nian…) pass a GLB `mesh`. `big` (default when size > 3): one big spirit at a time, the previous dissolves (§1.7.3) |
+| `shadow(pos, { height = 1.8, face, rise = 0.1, life = 1.6, slashes, every = 0.3, delay, glow, trailColor, seed })` → `{ obj, slash(), stop(), tip(out), alive }` | SHADOW: original shadow-puppet swordsman (five riveted leather plates — head, robe, sleeve, sword arm, rod; vermilion + ink with lace cut-outs, backlit, gold edges) propped up from the ground in 0.1 s, faces the camera, looks towards `face`, slashes with a blade trail, falls back and scatters paper scraps |
+| `swarm({ shape = 'bird', shapeOpts, count = 12, center, radius, height, size, speed, …ghost colours, life, appear, trails, trailColor, flap, exit: { kind, color }, seed })` → `{ obj, center, dive(i, target, dur), diveAll(targets, every), exit(point?), stop(), alive }` | instanced flock (one draw + pre-pass): orbits `center` (Vector3 or function), banks into turns, `dive` swoops to a target and back dragging a TRAIL, `exit(point)` flies home one by one and dissolves (no point: dissolve in place with feather motes) |
+
+### `fx.wings` — WING (`wings.js`)
+
+| Call | Effect |
+|---|---|
+| `vm(opts)` → Wing | first-person fans on the current gun at `S_wingL` / `S_wingR` (fallback: receiver flanks, scale 0.7); detached automatically when the gun is swapped |
+| `attach(parent, { vm, side, preset, anchors, count = 7, spacing = 15, sweep = 25, scale, style, shape, core, tip, enamel, gold, open })` → Wing | any Object3D; `preset: 'back'` (3P `S_back`, scale 3.2 ≈ 2.4 m span) or `'vm'`; `anchors { L, R }` local positions |
+| Wing: `openWing(dur = 0.25)`, `close(dur = 0.2)`, `set({ core, tip, gold, enamel, glow })`, `sparkle(n = 16)`, `detach()` | open = easeOutBack with a 20 ms stagger; `glow` 1.5 for the ready state; `sparkle` sheds light dust from the feather tips |
+
+Cards: innermost 0.22×0.05 m, +12 % length per card, outermost ≈ 0.42×0.07 m, idle sway, light flowing out at
+0.4 uv/s. Styles: `'glow'` additive (white root → `tip` colour) and `'cloisonne'` 掐絲琺瑯 (gold wire cells with
+glowing `enamel` [c0, c1, c2], M03 畢方). Quality: 3 / 5 / 7 cards per side (low / medium / high), same fan
+angle. First person: a guard shrinks a side whose cards would enter the central 20 % or exceed 25 % of the screen.
+
+### `fx.motes` — falling sprites + TRAIL_DROP (`motes.js`)
+
+Kinds (`MOTE`): `feather`, `petal`, `paper` (red), `goldpaper` (金紙 with foil square), `shard` (porcelain: glaze
+colour + white body on the broken edge, bounces), `ink` (drops, stain decal on landing), `splat`, `glowfeather`,
+`ember`, `frost` — the last three emissive. Real 3D tumbling quads with falling-leaf sway, wind
+(`fx.motes.wind`), landing (paper / feathers lie flat, then shrink away).
+
+| Call | Effect |
+|---|---|
+| `spawn(kind, pos, { vel, color, color2, size, life, fall, gravity, emit, owner, seed })` | one mote |
+| `burst(kind, pos, count, { speed, dir, spread, radius, palette, color, size, life, seed })` | burst (half count on low) |
+| `trailDrop(from, to, kind, { owner, spacing = 2, scoped, max = 24, … })` → count | TRAIL_DROP (§1.17): one mote every 2 m along a bullet path / blade arc, ~1.2 s, ≤ 24 alive per `owner`, half density when `scoped` |
+
+Pools: 300 / 150 / 60 motes (high / medium / low, §1.14) in two draw calls (lit alpha-tested with
+alpha-to-coverage, emissive additive).
+
+### Draw calls and programs
+
+Live only while used: overlays 1–3 full-screen quads + tunnel 1; each sigil 1; each pillar 1; each ghost /
+swarm 2 (depth pre-pass + colour); each shadow puppet 5 small plates; wings 1 per pair; motes 2. Every program is
+created at match load (hidden prototypes) so the scene precompile covers it — no first-use shader hitch.
+
+### QA recipes
+
+`?w=akm&match=0`, then in `--eval`: `const fx = __cf.game.fx; __cf.stop();` and e.g.
+`fx.overlay.status('poison', 1, 3)`, `fx.overlay.tunnel(2.5, { look: 'wave' })`,
+`fx.sigils.sigil(p, { design: 'vortex', radius: 5, color: [0.5, 2, 3.2] })` + `fx.sigils.pillar(p, {...})` +
+`fx.summons.ghost({ shape: 'serpent', pos: p, size: 8, motion: 'rise', exit: { kind: 'spray' } })`,
+`fx.summons.swarm({ shapeOpts: { tail: 2.4 }, center: p })` then `.diveAll([...])`, `fx.summons.shadow(p, { slashes: 3 })`,
+`fx.wings.vm({ style: 'cloisonne' })`, `fx.motes.burst('shard', p, 10)`, stepping with `__cf.step(n)` between
+snapshots. Contact sheets: draw `document.querySelector('canvas')` into a 2D canvas right after each
+`__cf.step()` (the drawing buffer is still valid in the same task). Review sheets of the kit:
+`captures/fx/kit_*.png` (gitignored: `ov*` overlays, `sig0` raw sigil designs, `w1` sigils / pillars, `s2` summons,
+`wg1` wings, `seq1` a full 5-beat summon, `lq1` low quality, `mq` motes close-up).
 
 ## Performance
 

@@ -8,6 +8,23 @@ import { pick, rand } from '../engine/util.js';
 
 const _v = new THREE.Vector3();
 
+// Supply crate (06b §7.1, §9.6.4): steel crate whose lid seam glows blue — only for the killer for 60 s (CSO), then
+// white-blue for everyone; boss / rare crates gold. Glow column + gear ring from fx/zfx.js.
+const CRATE = { killer: [0.3, 0.9, 2.4], open: [0.6, 0.9, 1.6], gold: [4, 2.6, 0.8] };
+let crateKit = null;
+function crateParts() {
+  if (crateKit) return crateKit;
+  crateKit = {
+    body: new THREE.BoxGeometry(0.9, 0.42, 0.6), lid: new THREE.BoxGeometry(0.94, 0.1, 0.64), seam: new THREE.BoxGeometry(0.952, 0.024, 0.652),
+    strap: new THREE.BoxGeometry(0.07, 0.56, 0.665), latch: new THREE.BoxGeometry(0.1, 0.07, 0.03),
+    steel: new THREE.MeshStandardMaterial({ color: 0x6b7a52, roughness: 0.7, metalness: 0.15 }),
+    lidMat: new THREE.MeshStandardMaterial({ color: 0x4f5b3c, roughness: 0.62, metalness: 0.2 }),
+    strapMat: new THREE.MeshStandardMaterial({ color: 0x17191b, roughness: 0.8, metalness: 0.2 }),
+    latchMat: new THREE.MeshStandardMaterial({ color: 0x8a8d90, roughness: 0.35, metalness: 0.9 }),
+  };
+  return crateKit;
+}
+
 export class Match {
   constructor(game, { difficulty = 'normal', players = 1 } = {}) {
     this.game = game;
@@ -218,16 +235,40 @@ export class Match {
   addXp(n) {
     if (this.level >= MAX_LEVEL) return;
     this.xp += n;
+    const lv0 = this.level;
     while (this.level < MAX_LEVEL && this.xp >= xpFor(this.level + 1)) {
       this.level++;
       this.pendingPerks++;
       this.game.audio?.play('level_up');
       this.game.status?.heal(25);
-      this.game.hud?.toast(`等級提升　Lv ${this.level}`, 1600);
       this.game.onLevelUp?.(this.level);
     }
+    if (this.level > lv0) this._levelUpFx();
     const a = xpFor(this.level), b = xpFor(this.level + 1);
     this.xpFrac = this.level >= MAX_LEVEL ? 1 : (this.xp - a) / (b - a);
+  }
+
+  /** CSO level-up (06b §7.2, §9.6.5): a dark text band low in the middle + a gold ring at our feet (own view only). */
+  _levelUpFx() {
+    const g = this.game;
+    if (g.player) g.fx?.zfx?.levelUp(g.player.pos);
+    let el = this._lvlEl;
+    if (!el) {
+      el = this._lvlEl = document.createElement('div');
+      el.className = 'cf-lvlup';
+      el.style.cssText = 'position:fixed;left:50%;top:74%;width:44%;min-width:260px;padding:.35em 0;text-align:center;pointer-events:none;opacity:0;'
+        + 'font:600 20px/1.2 "Barlow Condensed","Noto Sans TC","Microsoft JhengHei",sans-serif;color:#fff;letter-spacing:.06em;text-shadow:0 1px 2px #000;'
+        + 'background:linear-gradient(90deg,transparent,rgba(0,0,0,.45) 18%,rgba(0,0,0,.45) 82%,transparent);transform:translate(-50%,8px)';
+      (g.hud?.root || document.body).appendChild(el);
+    }
+    // gold 4-point sparkle on the left end, then the text
+    el.innerHTML = '<svg width="22" height="22" viewBox="-11 -11 22 22" style="vertical-align:-4px;margin-right:.5em;filter:drop-shadow(0 0 4px #ffcc44)">'
+      + '<path d="M0-11L2-2L11 0L2 2L0 11L-2 2L-11 0L-2-2Z" fill="#ffe08a"/></svg>等級提升！<b style="color:#ffd35a;margin-left:.4em">Lv.' + this.level + '</b>';
+    el.style.transition = 'none'; el.style.opacity = '0'; el.style.transform = 'translate(-50%,8px)';
+    void el.offsetWidth;
+    el.style.transition = 'opacity .2s, transform .2s'; el.style.opacity = '1'; el.style.transform = 'translate(-50%,0)';
+    clearTimeout(this._lvlTimer);
+    this._lvlTimer = setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }, 2500);
   }
 
   /** Spends a pending perk point; id one of PERKS[].id (auto: alternate attack / health). */
@@ -293,22 +334,71 @@ export class Match {
     for (let i = 0; i < n; i++) {
       const p = pick(pts);
       if (this.supplies.some((s) => s.pos.distanceTo(p) < 1)) continue;
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.55, 0.6), new THREE.MeshStandardMaterial({ color: 0x4f5a3a, roughness: 0.7, emissive: 0x16304a, emissiveIntensity: 0.6 }));
-      mesh.position.copy(p).setY(p.y + 0.28);
-      mesh.castShadow = true;
-      g.scene.add(mesh);
-      this.supplies.push({ pos: p, mesh, t: 0 });
-      g.audio?.play('supply_drop', { pos: p });
+      this.dropSupply(p, { owner: g.localId });
     }
+  }
+
+  /**
+   * Drops one crate at p (floor). owner: the player id whose glow it is for the first 60 s (null = everyone's; CSO:
+   * a zombie's crate glows only for its killer), rare: gold boss / rare crate. Crates live on this client only.
+   */
+  dropSupply(p, { owner = null, rare = false } = {}) {
+    const g = this.game, K = crateParts();
+    const mesh = new THREE.Group();
+    const part = (geo, mat, x, y, z, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true; mesh.add(m); return m; };
+    part(K.body, K.steel, 0, 0.21, 0);
+    const seamMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0) });
+    part(K.seam, seamMat, 0, 0.432, 0, false);
+    const lid = part(K.lid, K.lidMat, 0, 0.494, 0);
+    for (const x of [-0.3, 0.3]) part(K.strap, K.strapMat, x, 0.27, 0);
+    for (const z of [-0.33, 0.33]) part(K.latch, K.latchMat, 0, 0.43, z, false);
+    mesh.rotation.y = Math.random() * Math.PI;
+    mesh.position.copy(p).setY(p.y + 3);          // falls in, bounces once
+    g.scene.add(mesh);
+    this.supplies.push({ pos: p.clone(), mesh, lid, seamMat, t: 0, vy: 0, landed: false, owner, rare, glow: null, phase: '' });
+    g.audio?.play('supply_drop', { pos: p });
+  }
+
+  /** Crate drop-in, seam glow (killer-only 60 s, then everyone's), column + gear ring, lid pop when opened. */
+  _crateFx(s, dt) {
+    const g = this.game, zfx = g.fx?.zfx, m = s.mesh;
+    if (!s.landed) {
+      s.vy -= 14 * dt;
+      m.position.y += s.vy * dt;
+      if (m.position.y <= s.pos.y) {
+        m.position.y = s.pos.y;
+        if (s.vy < -3) { s.vy *= -0.25; if (!s.thud) { s.thud = true; zfx?.supplyLand(s.pos); } } else { s.vy = 0; s.landed = true; }
+      }
+    }
+    if (s.opened !== undefined) {
+      // lid swings open on its back edge (hinge at z = -0.32) in 0.15 s
+      const a = Math.min(1, s.opened / 0.15) * 1.9;
+      s.lid.position.set(0, 0.494 + 0.32 * Math.sin(a), -0.32 + 0.32 * Math.cos(a));
+      s.lid.rotation.x = -a;
+      return;
+    }
+    const mine = s.owner == null || s.owner === g.localId, shared = s.t > 60;
+    const phase = !mine && !shared ? 'hidden' : s.rare ? 'gold' : shared ? 'open' : 'killer';
+    const col = CRATE[phase] || null;
+    if (phase !== s.phase && (s.landed || !col)) {
+      s.phase = phase;
+      if (!col) { s.glow?.stop(); s.glow = null; }
+      else if (s.glow) s.glow.setColor(col);
+      else s.glow = zfx?.supplyGlow(s.pos, col) || null;
+    }
+    const k = col ? 0.65 + 0.35 * Math.sin(s.t * 1.2 * Math.PI * 2) : 0;   // 1.2 Hz breathing, ±35 %
+    if (col) s.seamMat.color.setRGB(col[0] * k, col[1] * k, col[2] * k); else s.seamMat.color.setRGB(0.02, 0.025, 0.03);
   }
 
   _updateSupplies(dt) {
     const g = this.game;
     let near = null;
     const up = !g.status || g.status.alive && !g.status.downed; // downed / dead players can't open crates
-    for (const s of this.supplies) {
+    for (let i = this.supplies.length - 1; i >= 0; i--) {
+      const s = this.supplies[i];
       s.t += dt;
-      s.mesh.material.emissiveIntensity = 0.4 + Math.sin(s.t * 4) * 0.3;
+      this._crateFx(s, dt);
+      if (s.opened !== undefined) { s.opened += dt; if (s.opened > 0.7) { g.scene.remove(s.mesh); s.seamMat.dispose(); this.supplies.splice(i, 1); } continue; }
       if (up && s.pos.distanceTo(g.player.pos) < 1.8) near = s;
     }
     g.hud?.setPrompt(near ? '按 E 開啟補給箱' : '');
@@ -320,8 +410,9 @@ export class Match {
       g.audio?.play('ui_buy');
       g.hud?.toast('補給：彈藥、護甲、生命');
       void ws;
-      g.scene.remove(near.mesh);
-      this.supplies.splice(this.supplies.indexOf(near), 1);
+      near.opened = 0;     // lid pops, sparkles, removed after 0.7 s
+      near.glow?.stop(); near.glow = null;
+      g.fx?.zfx?.supplyOpen(near.pos, near.rare ? CRATE.gold : [1.2, 2.2, 4.0]);
     }
   }
 

@@ -1,10 +1,15 @@
 // Asset QA viewer (dev): index.html?view=weapon&id=akm[&grid=1][&yaw=30&pitch=10&dist=1.2][&env=room]
 // grid=1 renders a 2x2 contact sheet (right side, left side, front 3/4, top 3/4) into one image so a
 // single screenshot shows the whole model. window.__shotReady flips true once rendered.
+// Finishes (PREMIUM_WEAPONS §3.10): &finish=<id>&seed=<0-999>&float=<0-1>&sfx=pearl:0.2,glitter:0.8&side=play&flat=1
+//   &counter=<kills>[&boss=1] mounts a 斬數計.
+// Premium presets (§1.5) on any model: &pv=auto | <matKey>:<preset>,... | all:<preset>  &remap=<key>:<newKey>,...
+//   &elem=<element> &charge=0..1 &ready=1 &t=<time s> &dissolve=0..1 &core=<mode> &pvp=<json per-preset params>
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { instanceGLB } from '../engine/assets.js';
 import { applyHardSurface, materialUniforms } from '../gfx/materials.js';
+import { tickPremium } from '../gfx/premium.js';
 
 export async function runViewer(renderer, params) {
   const kind = params.get('view');
@@ -18,7 +23,8 @@ export async function runViewer(renderer, params) {
   const pmrem = new THREE.PMREMGenerator(renderer.gl);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
   scene.environmentIntensity = +(params.get('envi') || 0.9);
-  const key = new THREE.DirectionalLight(0xfff1e0, +(params.get('key') || 2.2));
+  const key = new THREE.DirectionalLight(0xfff1e0, +(params.get('key') || (params.get('flat') ? 0.6 : 2.2)));
+  if (params.get('flat')) scene.environmentIntensity = 1.4;
   key.position.set(1.5, 2.5, 1.2);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -31,7 +37,33 @@ export async function runViewer(renderer, params) {
   const path = kind === 'weapon' ? `weapons/${id}.glb` : `${kind}/${id}.glb`;
   const model = await instanceGLB(path);
   const fin = params.get('finish');
-  applyHardSurface(model, { wear: +(params.get('wear') || 1), finish: fin ? { id: fin, seed: +(params.get('seed') || 0), wear: +(params.get('fwear') || 0.3) } : undefined, melee: id === 'knife' });
+  const list = (k) => (params.get(k) || '').split(',').filter(Boolean).map((e) => e.split(':'));
+  // material remap (premium preview on an existing gun) + preset assignment
+  const remap = Object.fromEntries(list('remap'));
+  const keys = new Set();
+  model.traverse((o) => { if (o.isMesh) { const k = o.userData.mat || o.material?.name; if (remap[k]) o.userData.mat = remap[k]; keys.add(o.userData.mat || k); } });
+  let premium;
+  if (params.get('pv')) {
+    const presets = {};
+    for (const [k, p] of list('pv')) { if (k === 'all') for (const kk of keys) presets[kk] = p; else if (p) presets[k] = p; }
+    premium = { element: params.get('elem') || 'radiant', presets, pv: JSON.parse(params.get('pvp') || '{}'), seed: +(params.get('kiln') || 0) };
+  }
+  const sfx = params.get('sfx') ? Object.fromEntries(list('sfx').map(([k, v]) => [k, k === 'glitter' ? { amt: +(v || 0.8), scale: 1000, rainbow: 0.2 } : +(v || 0.2)])) : undefined;
+  const fl = params.get('float') ?? (params.get('fwear') ? +params.get('fwear') / 2 : null);
+  applyHardSurface(model, {
+    wear: +(params.get('wear') || 1), melee: id === 'knife', premium, lite: false, world: false,   // preview the first-person look
+    finish: fin ? { id: fin, seed: +(params.get('seed') || 0), float: fl === null ? undefined : +fl, sfx } : undefined,
+    counter: params.get('counter') !== null ? { kills: +params.get('counter'), boss: +(params.get('boss') || 0) } : undefined,
+  });
+  const st = model.userData.premiumState;
+  if (st) {
+    if (params.get('charge') !== null) st.setMeter(+params.get('charge'));
+    if (params.get('ready')) st.setReady(true);
+    if (params.get('dissolve')) st.setDissolve(+params.get('dissolve'));
+    if (params.get('core')) st.setCoreMode(+params.get('core'));
+    for (let i = 0; i < 40; i++) tickPremium(0.05);
+  }
+  if (params.get('t')) materialUniforms.time.value = +params.get('t');
   // centre on bounds
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
@@ -49,6 +81,7 @@ export async function runViewer(renderer, params) {
   const views = params.get('grid')
     ? [[90, 6], [-90, 6], [35, 18], [150, 35]]
     : params.get('fp') ? [['fp', 0]]
+    : params.get('side') === 'play' ? [[-90, 0]]
     : [[+(params.get('yaw') || 90), +(params.get('pitch') || 8)]];
   const dist = +(params.get('dist') || 0) || (params.get('fp') ? radius * 1.5 : (radius / Math.tan((15 * Math.PI) / 180)) * 1.02);
   const look = params.get('fp') ? new THREE.Vector3(0, 0, -radius * 0.5) : new THREE.Vector3();
@@ -88,11 +121,11 @@ export async function runViewer(renderer, params) {
   document.body.appendChild(out);
   document.getElementById('boot')?.remove();
   draw();
-  window.__viewer = { scene, model, cam, draw, info };
+  window.__viewer = { scene, model, cam, draw, info, renderer, apply: (o) => applyHardSurface(model, o), premium: st, counter: model.userData.killCounter, tick: tickPremium, time: materialUniforms.time };
   window.__shotReady = true;
   if (params.get('spin')) {
     let a = 0;
-    const loop = () => { a += 0.5; materialUniforms.time.value += 1 / 60; draw(a); requestAnimationFrame(loop); };
+    const loop = () => { a += 0.5; materialUniforms.time.value += 1 / 60; tickPremium(1 / 60); draw(a); requestAnimationFrame(loop); };
     loop();
   }
 }

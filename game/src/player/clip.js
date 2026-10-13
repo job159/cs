@@ -1,7 +1,9 @@
 // Tiny keyframe clip system for first-person actions (reloads, draws, inspects, melee swings).
-// A clip is { duration, tracks, events }:
+// A clip is { duration, tracks, events, loop? }:
 //   tracks[name] = [[t, value, ease?], ...]   t in 0..1 (normalised), value number or array
-//   events = [[t, name, arg?], ...]           fired once when playback crosses t
+//   events = [[t, name, arg?], ...]           fired once when playback crosses t (sorted on first play)
+//   loop = [a, b]                             hold-to-loop segment (inspect fidget): while player.hold is
+//                                             true playback wraps from b back to a, re-firing its events
 // Tracks are sampled with per-key easing (the ease of the key being approached).
 import { ease } from '../engine/util.js';
 
@@ -48,23 +50,38 @@ export function sampleStep(keys, t) {
 }
 
 export class ClipPlayer {
-  constructor() { this.clip = null; this.t = 0; this.time = 0; this.speed = 1; this.onEvent = null; this.done = true; }
+  constructor() { this.clip = null; this.t = 0; this.time = 0; this.speed = 1; this.onEvent = null; this.done = true; this.hold = false; this.loops = 0; }
   play(clip, { duration, onEvent, speed = 1 } = {}) {
+    // out-of-order events would fire late (the cursor only moves forward)
+    if (clip.events && !clip._sorted) { clip.events.sort((a, b) => a[0] - b[0]); clip._sorted = true; }
     this.clip = clip;
-    this.duration = duration ?? clip.duration;
+    this.duration = Math.max(1e-3, duration ?? clip.duration ?? 1);
     this.time = 0; this.t = 0; this.speed = speed;
     this.onEvent = onEvent;
     this.done = false;
+    this.hold = false; this.loops = 0;
     this._fired = 0;
     this._fire(0);
   }
-  stop() { this.clip = null; this.done = true; }
+  stop() { this.clip = null; this.done = true; this.hold = false; }
   update(dt) {
     if (!this.clip || this.done) return;
-    const prev = this.t;
     this.time += dt * this.speed;
-    this.t = Math.min(1, this.time / this.duration);
-    this._fire(this.t, prev);
+    let t = this.time / this.duration;
+    const lp = this.clip.loop;
+    if (lp && this.hold && t >= lp[1] && lp[1] > lp[0]) {
+      // fire what lies before the loop end, then wrap and re-arm the segment's events
+      this._fire(lp[1]);
+      t = lp[0] + ((t - lp[1]) % (lp[1] - lp[0]));
+      this.time = t * this.duration;
+      const ev = this.clip.events || [];
+      let i = 0;
+      while (i < ev.length && ev[i][0] < lp[0]) i++;
+      this._fired = i;
+      this.loops++;
+    }
+    this.t = Math.min(1, t);
+    this._fire(this.t);
     if (this.t >= 1) { this.done = true; }
   }
   _fire(t) {
