@@ -1,0 +1,542 @@
+{
+  "sounds": {
+    "armor_hit": {
+      "files": [
+        "impacts/armor_hit_1.ogg",
+        "impacts/armor_hit_2.ogg",
+        "impacts/armor_hit_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "blood_splat": {
+      "files": [
+        "impacts/blood_splat_1.ogg",
+        "impacts/blood_splat_2.ogg",
+        "impacts/blood_splat_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.9,
+        1.1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        25
+      ],
+      "loop": false
+    },
+    "body_fall": {
+      "files": [
+        "impacts/body_fall_1.ogg",
+        "impacts/body_fall_2.ogg",
+        "impacts/body_fall_3.ogg",
+        "impacts/body_fall_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.06
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        40
+      ],
+      "loop": false
+    },
+    "bone_crunch": {
+      "files": [
+        "impacts/bone_crunch_1.ogg",
+        "impacts/bone_crunch_2.ogg",
+        "impacts/bone_crunch_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "bullet_whiz": {
+      "files": [
+        "impacts/bullet_whiz_1.ogg",
+        "impacts/bullet_whiz_2.ogg",
+        "impacts/bullet_whiz_3.ogg",
+        "impacts/bullet_whiz_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.9,
+        1.1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "debris_fall": {
+      "files": [
+        "impacts/debris_fall_1.ogg",
+        "impacts/debris_fall_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false
+    },
+    "explosion_far": {
+      "files": [
+        "impacts/explosion_far_1.ogg",
+        "impacts/explosion_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        600
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "explosion_large": {
+      "files": [
+        "impacts/explosion_large_1.ogg",
+        "impacts/explosion_large_2.ogg",
+        "impacts/explosion_large_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        18,
+        300
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "explosion_small": {
+      "files": [
+        "impacts/explosion_small_1.ogg",
+        "impacts/explosion_small_2.ogg",
+        "impacts/explosion_small_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        220
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "fire_burst": {
+      "files": [
+        "impacts/fire_burst_1.ogg",
+        "impacts/fire_burst_2.ogg",
+        "impacts/fire_burst_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        70
+      ],
+      "loop": false
+    },
+    "gib": {
+      "files": [
+        "impacts/gib_1.ogg",
+        "impacts/gib_2.ogg",
+        "impacts/gib_3.ogg",
+        "impacts/gib_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        45
+      ],
+      "loop": false,
+      "priority": 1.5
+    },
+    "grenade_bounce": {
+      "files": [
+        "impacts/grenade_bounce_1.ogg",
+        "impacts/grenade_bounce_2.ogg",
+        "impacts/grenade_bounce_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "headshot": {
+      "files": [
+        "impacts/headshot_1.ogg",
+        "impacts/headshot_2.ogg",
+        "impacts/headshot_3.ogg",
+        "impacts/headshot_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "impact_concrete": {
+      "files": [
+        "impacts/impact_concrete_1.ogg",
+        "impacts/impact_concrete_2.ogg",
+        "impacts/impact_concrete_3.ogg",
+        "impacts/impact_concrete_4.ogg",
+        "impacts/impact_concrete_5.ogg",
+        "impacts/impact_concrete_6.ogg",
+        "impacts/impact_concrete_7.ogg",
+        "impacts/impact_concrete_8.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 8,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        45
+      ],
+      "loop": false
+    },
+    "impact_dirt": {
+      "files": [
+        "impacts/impact_dirt_1.ogg",
+        "impacts/impact_dirt_2.ogg",
+        "impacts/impact_dirt_3.ogg",
+        "impacts/impact_dirt_4.ogg",
+        "impacts/impact_dirt_5.ogg",
+        "impacts/impact_dirt_6.ogg",
+        "impacts/impact_dirt_7.ogg",
+        "impacts/impact_dirt_8.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        40
+      ],
+      "loop": false
+    },
+    "impact_flesh": {
+      "files": [
+        "impacts/impact_flesh_1.ogg",
+        "impacts/impact_flesh_2.ogg",
+        "impacts/impact_flesh_3.ogg",
+        "impacts/impact_flesh_4.ogg",
+        "impacts/impact_flesh_5.ogg",
+        "impacts/impact_flesh_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 8,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false,
+      "priority": 1.5
+    },
+    "impact_glass": {
+      "files": [
+        "impacts/impact_glass_1.ogg",
+        "impacts/impact_glass_2.ogg",
+        "impacts/impact_glass_3.ogg",
+        "impacts/impact_glass_4.ogg",
+        "impacts/impact_glass_5.ogg",
+        "impacts/impact_glass_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        50
+      ],
+      "loop": false
+    },
+    "impact_metal": {
+      "files": [
+        "impacts/impact_metal_1.ogg",
+        "impacts/impact_metal_2.ogg",
+        "impacts/impact_metal_3.ogg",
+        "impacts/impact_metal_4.ogg",
+        "impacts/impact_metal_5.ogg",
+        "impacts/impact_metal_6.ogg",
+        "impacts/impact_metal_7.ogg",
+        "impacts/impact_metal_8.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 8,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        55
+      ],
+      "loop": false
+    },
+    "impact_water": {
+      "files": [
+        "impacts/impact_water_1.ogg",
+        "impacts/impact_water_2.ogg",
+        "impacts/impact_water_3.ogg",
+        "impacts/impact_water_4.ogg",
+        "impacts/impact_water_5.ogg",
+        "impacts/impact_water_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        40
+      ],
+      "loop": false
+    },
+    "impact_wood": {
+      "files": [
+        "impacts/impact_wood_1.ogg",
+        "impacts/impact_wood_2.ogg",
+        "impacts/impact_wood_3.ogg",
+        "impacts/impact_wood_4.ogg",
+        "impacts/impact_wood_5.ogg",
+        "impacts/impact_wood_6.ogg",
+        "impacts/impact_wood_7.ogg",
+        "impacts/impact_wood_8.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        45
+      ],
+      "loop": false
+    },
+    "kill_confirm_thud": {
+      "files": [
+        "impacts/kill_confirm_thud_1.ogg",
+        "impacts/kill_confirm_thud_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "knife_hit_flesh": {
+      "files": [
+        "impacts/knife_hit_flesh_1.ogg",
+        "impacts/knife_hit_flesh_2.ogg",
+        "impacts/knife_hit_flesh_3.ogg",
+        "impacts/knife_hit_flesh_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "knife_hit_wall": {
+      "files": [
+        "impacts/knife_hit_wall_1.ogg",
+        "impacts/knife_hit_wall_2.ogg",
+        "impacts/knife_hit_wall_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "melee_heavy_hit": {
+      "files": [
+        "impacts/melee_heavy_hit_1.ogg",
+        "impacts/melee_heavy_hit_2.ogg",
+        "impacts/melee_heavy_hit_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        40
+      ],
+      "loop": false
+    },
+    "ricochet": {
+      "files": [
+        "impacts/ricochet_1.ogg",
+        "impacts/ricochet_2.ogg",
+        "impacts/ricochet_3.ogg",
+        "impacts/ricochet_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        60
+      ],
+      "loop": false
+    }
+  }
+}

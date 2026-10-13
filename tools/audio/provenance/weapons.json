@@ -1,0 +1,683 @@
+{
+  "category": "weapons",
+  "producer": "weapons",
+  "sounds": {
+    "beltIn": [
+      "fs:363168",
+      "fs:855580",
+      "fs:263513"
+    ],
+    "boltBack": [
+      "fs:815879",
+      "fs:725397",
+      "fs:802673",
+      "fs:675008"
+    ],
+    "boltDown": [
+      "fs:802673",
+      "fs:370345",
+      "fs:620928"
+    ],
+    "boltForward": [
+      "fs:815879",
+      "fs:725397",
+      "fs:802673",
+      "fs:675008"
+    ],
+    "boltUp": [
+      "fs:802673",
+      "fs:370345",
+      "fs:620928"
+    ],
+    "breakClose": [
+      "fs:802673",
+      "kenney_impact/Audio/impactPlate_heavy_000",
+      "fs:675008",
+      "kenney_impact/Audio/impactPlate_heavy_002",
+      "fs:153560",
+      "kenney_impact/Audio/impactPlate_heavy_003"
+    ],
+    "breakOpen": [
+      "fs:153560",
+      "kenney_impact/Audio/impactMetal_heavy_000",
+      "kenney_impact/Audio/impactMetal_heavy_002",
+      "fs:240698",
+      "kenney_impact/Audio/impactMetal_heavy_001"
+    ],
+    "cloth": [
+      "fs:19291",
+      "fs:163164",
+      "fs:494797",
+      "fs:789038",
+      "fs:334219"
+    ],
+    "coverClose": [
+      "fs:363168",
+      "fs:263513",
+      "fs:674742"
+    ],
+    "coverOpen": [
+      "fs:363168",
+      "fs:263513",
+      "fs:677160"
+    ],
+    "craneClose": [
+      "fs:677159",
+      "fs:240698",
+      "fs:177863"
+    ],
+    "craneOpen": [
+      "fs:177863",
+      "fs:240698",
+      "fs:677159"
+    ],
+    "draw": [
+      "fs:377145",
+      "fs:688765",
+      "fs:388819"
+    ],
+    "drawHeavy": [
+      "fs:163164",
+      "fs:263513",
+      "fs:19291",
+      "fs:363168",
+      "fs:494797",
+      "fs:674742"
+    ],
+    "dryfire": [
+      "fs:501562",
+      "fs:393732"
+    ],
+    "knife_close": [
+      "fs:389690",
+      "fs:60024",
+      "fs:507466",
+      "fs:268227"
+    ],
+    "knife_far": [
+      "fs:389690",
+      "fs:60024",
+      "fs:507466",
+      "fs:268227"
+    ],
+    "knife_tail": [
+      "fs:389690",
+      "fs:60024",
+      "fs:507466",
+      "fs:268227"
+    ],
+    "lowAmmo": [],
+    "magDrop": [
+      "kenney_impact/Audio/impactPlate_light_000",
+      "kenney_impact/Audio/impactGeneric_light_001",
+      "kenney_impact/Audio/impactPlate_light_002",
+      "kenney_impact/Audio/impactPlate_light_003",
+      "kenney_impact/Audio/impactMetal_light_001",
+      "kenney_impact/Audio/impactGeneric_light_003",
+      "kenney_impact/Audio/impactPlate_medium_001",
+      "kenney_impact/Audio/impactPlate_light_004"
+    ],
+    "magIn": [
+      "fs:725397",
+      "fs:815879",
+      "fs:674742",
+      "oga_gun_reload/assaultriflereload1_0"
+    ],
+    "magOut": [
+      "fs:725397",
+      "fs:815879",
+      "fs:674742",
+      "fs:677160"
+    ],
+    "magRelease": [
+      "fs:393732",
+      "fs:393734"
+    ],
+    "magnum_close": [
+      "ffsl/Smith & Wesson 642/V_27P",
+      "fs:712310",
+      "ffsl/1911/A_42P",
+      "ffsl/Smith & Wesson 642/V_22P",
+      "ffsl/1911/A_34P"
+    ],
+    "magnum_far": [
+      "ffsl/Smith & Wesson 642/V_27P",
+      "fs:712310",
+      "ffsl/1911/A_42P",
+      "ffsl/Smith & Wesson 642/V_22P",
+      "ffsl/1911/A_34P"
+    ],
+    "magnum_tail": [
+      "ffsl/Smith & Wesson 642/V_27P",
+      "fs:712310",
+      "ffsl/1911/A_42P",
+      "ffsl/Smith & Wesson 642/V_22P",
+      "ffsl/1911/A_34P"
+    ],
+    "mg556_close": [
+      "ffsl/SKS/U_14P",
+      "ffsl/SKS/U_19P"
+    ],
+    "mg556_far": [
+      "ffsl/SKS/U_14P",
+      "ffsl/SKS/U_19P"
+    ],
+    "mg556_mech": [
+      "fs:363168",
+      "fs:675008"
+    ],
+    "mg556_tail": [
+      "ffsl/SKS/U_14P",
+      "ffsl/SKS/U_19P"
+    ],
+    "mg762_close": [
+      "ffsl/Arisaka/E_25P",
+      "ffsl/Marlin 336/I_22P",
+      "ffsl/Model 1894/L_23P",
+      "ffsl/Arisaka/E_18P",
+      "ffsl/Marlin 336/I_17P"
+    ],
+    "mg762_far": [
+      "ffsl/Arisaka/E_25P",
+      "ffsl/Marlin 336/I_22P",
+      "ffsl/Model 1894/L_23P",
+      "ffsl/Arisaka/E_18P",
+      "ffsl/Marlin 336/I_17P"
+    ],
+    "mg762_mech": [
+      "fs:363168",
+      "fs:263513"
+    ],
+    "mg762_tail": [
+      "ffsl/Arisaka/E_25P",
+      "ffsl/Marlin 336/I_22P",
+      "ffsl/Model 1894/L_23P",
+      "ffsl/Arisaka/E_18P",
+      "ffsl/Marlin 336/I_17P"
+    ],
+    "minigun_close": [
+      "ffsl/AR-15/D_32P",
+      "ffsl/SKS/U_14P",
+      "ffsl/Carl Gustav M45/G_31P",
+      "ffsl/AK-47/C_28P",
+      "ffsl/AR-15/D_24P",
+      "ffsl/SKS/U_19P"
+    ],
+    "minigun_far": [
+      "ffsl/AR-15/D_32P",
+      "ffsl/SKS/U_14P",
+      "ffsl/Carl Gustav M45/G_31P",
+      "ffsl/AK-47/C_28P",
+      "ffsl/AR-15/D_24P",
+      "ffsl/SKS/U_19P"
+    ],
+    "minigun_fire": [],
+    "minigun_spin": [
+      "fs:125401"
+    ],
+    "minigun_spindown": [
+      "fs:125401",
+      "fs:363168"
+    ],
+    "minigun_tail": [
+      "ffsl/AR-15/D_32P",
+      "ffsl/SKS/U_14P",
+      "ffsl/Carl Gustav M45/G_31P",
+      "ffsl/AK-47/C_28P",
+      "ffsl/AR-15/D_24P",
+      "ffsl/SKS/U_19P"
+    ],
+    "pistol45_close": [
+      "ffsl/1911/A_42P",
+      "ffsl/Bersa/F_47P",
+      "ffsl/Walther PPQ/X_39P",
+      "ffsl/1911/A_34P"
+    ],
+    "pistol45_far": [
+      "ffsl/1911/A_42P",
+      "ffsl/Bersa/F_47P",
+      "ffsl/Walther PPQ/X_39P",
+      "ffsl/1911/A_34P"
+    ],
+    "pistol45_mech": [
+      "fs:674744",
+      "fs:396331"
+    ],
+    "pistol45_tail": [
+      "ffsl/1911/A_42P",
+      "ffsl/Bersa/F_47P",
+      "ffsl/Walther PPQ/X_39P",
+      "ffsl/1911/A_34P"
+    ],
+    "pistol_close": [
+      "ffsl/Walther PPQ/X_39P",
+      "ffsl/Bersa/F_47P",
+      "ffsl/Walther PPQ/X_31P"
+    ],
+    "pistol_far": [
+      "ffsl/Walther PPQ/X_39P",
+      "ffsl/Bersa/F_47P",
+      "ffsl/Walther PPQ/X_31P"
+    ],
+    "pistol_mech": [
+      "fs:393734"
+    ],
+    "pistol_tail": [
+      "ffsl/Walther PPQ/X_39P",
+      "ffsl/Bersa/F_47P",
+      "ffsl/Walther PPQ/X_31P"
+    ],
+    "pouch": [
+      "fs:789038",
+      "kenney_impact/Audio/impactSoft_medium_000",
+      "fs:494797",
+      "kenney_impact/Audio/impactSoft_medium_002",
+      "fs:19291",
+      "kenney_impact/Audio/impactSoft_medium_003"
+    ],
+    "pumpBack": [
+      "oga_shotgun_reload/ShotgunSounds/Rack",
+      "oga_gun_reload/shotguncock_0",
+      "ffsl/Model 12/K_22P"
+    ],
+    "pumpForward": [
+      "oga_shotgun_reload/ShotgunSounds/Rack",
+      "oga_gun_reload/shotguncock_0",
+      "ffsl/Model 12/K_22P"
+    ],
+    "rifle556_close": [
+      "ffsl/AR-15/D_32P",
+      "fs:238916",
+      "ffsl/AR-15/D_24P",
+      "ffsl/Savage 10 .300 Blackout/T_27P",
+      "fs:427597"
+    ],
+    "rifle556_far": [
+      "ffsl/AR-15/D_32P",
+      "fs:238916",
+      "ffsl/AR-15/D_24P",
+      "ffsl/Savage 10 .300 Blackout/T_27P",
+      "fs:427597"
+    ],
+    "rifle556_mech": [
+      "fs:815879",
+      "fs:263513",
+      "fs:725397"
+    ],
+    "rifle556_tail": [
+      "ffsl/AR-15/D_32P",
+      "fs:238916",
+      "ffsl/AR-15/D_24P",
+      "ffsl/Savage 10 .300 Blackout/T_27P",
+      "fs:427597"
+    ],
+    "rifle762_close": [
+      "ffsl/AK-47/C_28P",
+      "ffsl/AK-47/C_29P",
+      "ffsl/AK-47/C_31P",
+      "ffsl/AK-47/C_34P"
+    ],
+    "rifle762_far": [
+      "ffsl/AK-47/C_28P",
+      "ffsl/AK-47/C_29P",
+      "ffsl/AK-47/C_31P",
+      "ffsl/AK-47/C_34P"
+    ],
+    "rifle762_mech": [
+      "fs:675008"
+    ],
+    "rifle762_tail": [
+      "ffsl/AK-47/C_28P",
+      "ffsl/AK-47/C_29P",
+      "ffsl/AK-47/C_31P",
+      "ffsl/AK-47/C_34P"
+    ],
+    "rifleBolt_close": [
+      "ffsl/Mosin Nagant/M_21P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "rifleBolt_far": [
+      "ffsl/Mosin Nagant/M_21P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "rifleBolt_tail": [
+      "ffsl/Mosin Nagant/M_21P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "rocketIn": [
+      "kenney_impact/Audio/impactPlate_heavy_001",
+      "kenney_impact/Audio/impactMetal_heavy_003",
+      "kenney_impact/Audio/impactPlate_heavy_004",
+      "fs:363168",
+      "kenney_impact/Audio/impactPlate_heavy_002",
+      "kenney_impact/Audio/impactMetal_heavy_004"
+    ],
+    "rocket_close": [
+      "fs:521377",
+      "fs:200459",
+      "fs:184274"
+    ],
+    "rocket_far": [
+      "fs:521377",
+      "fs:200459",
+      "fs:184274"
+    ],
+    "rocket_fly": [
+      "fs:184274"
+    ],
+    "rocket_tail": [
+      "fs:521377",
+      "fs:200459",
+      "fs:184274"
+    ],
+    "shellIn": [
+      "oga_shotgun_reload/ShotgunSounds/4 Shell Reload",
+      "oga_shotgun_reload/ShotgunSounds/5 Shell Reload",
+      "oga_shotgun_reload/ShotgunSounds/First Shell"
+    ],
+    "shell_brass": [
+      "fs:205126",
+      "fs:318964",
+      "fs:210102"
+    ],
+    "shell_link": [
+      "fs:318964"
+    ],
+    "shell_shotgun": [
+      "fs:147261",
+      "fs:620929"
+    ],
+    "shellsDrop": [
+      "fs:693125",
+      "fs:318964",
+      "fs:205126"
+    ],
+    "shotgunAuto_close": [
+      "ffsl/Mossberg/N_30P",
+      "ffsl/CD/H_21P",
+      "ffsl/Mossberg/N_26P"
+    ],
+    "shotgunAuto_far": [
+      "ffsl/Mossberg/N_30P",
+      "ffsl/CD/H_21P",
+      "ffsl/Mossberg/N_26P"
+    ],
+    "shotgunAuto_mech": [
+      "fs:675008",
+      "fs:677160"
+    ],
+    "shotgunAuto_tail": [
+      "ffsl/Mossberg/N_30P",
+      "ffsl/CD/H_21P",
+      "ffsl/Mossberg/N_26P"
+    ],
+    "shotgunHeavy_close": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P"
+    ],
+    "shotgunHeavy_far": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P"
+    ],
+    "shotgunHeavy_tail": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P"
+    ],
+    "shotgun_close": [
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_22P",
+      "ffsl/Nova/O_17P",
+      "ffsl/Model 12/K_17P"
+    ],
+    "shotgun_far": [
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_22P",
+      "ffsl/Nova/O_17P",
+      "ffsl/Model 12/K_17P"
+    ],
+    "shotgun_tail": [
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_22P",
+      "ffsl/Nova/O_17P",
+      "ffsl/Model 12/K_17P"
+    ],
+    "slideRelease": [
+      "fs:393734",
+      "fs:674744"
+    ],
+    "smg45_close": [
+      "ffsl/PPSh/P_30P",
+      "ffsl/PPSh/P_16P"
+    ],
+    "smg45_far": [
+      "ffsl/PPSh/P_30P",
+      "ffsl/PPSh/P_16P"
+    ],
+    "smg45_mech": [
+      "fs:263513",
+      "fs:677160"
+    ],
+    "smg45_tail": [
+      "ffsl/PPSh/P_30P",
+      "ffsl/PPSh/P_16P"
+    ],
+    "smg9_close": [
+      "ffsl/Carl Gustav M45/G_31P",
+      "ffsl/Carl Gustav M45/G_33P",
+      "ffsl/Carl Gustav M45/G_35P",
+      "ffsl/Carl Gustav M45/G_20P"
+    ],
+    "smg9_far": [
+      "ffsl/Carl Gustav M45/G_31P",
+      "ffsl/Carl Gustav M45/G_33P",
+      "ffsl/Carl Gustav M45/G_35P",
+      "ffsl/Carl Gustav M45/G_20P"
+    ],
+    "smg9_mech": [
+      "fs:677160",
+      "fs:263513"
+    ],
+    "smg9_tail": [
+      "ffsl/Carl Gustav M45/G_31P",
+      "ffsl/Carl Gustav M45/G_33P",
+      "ffsl/Carl Gustav M45/G_35P",
+      "ffsl/Carl Gustav M45/G_20P"
+    ],
+    "sniper338_close": [
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "ffsl/Savage 10 .300 Blackout/T_27P",
+      "ffsl/Tikka/W_24P",
+      "ffsl/1917/B_16P"
+    ],
+    "sniper338_far": [
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "ffsl/Savage 10 .300 Blackout/T_27P",
+      "ffsl/Tikka/W_24P",
+      "ffsl/1917/B_16P"
+    ],
+    "sniper338_tail": [
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "ffsl/Savage 10 .300 Blackout/T_27P",
+      "ffsl/Tikka/W_24P",
+      "ffsl/1917/B_16P"
+    ],
+    "sniper50_close": [
+      "fs:668071",
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "fs:239138",
+      "ffsl/Tikka/W_24P",
+      "ffsl/1917/B_16P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "sniper50_far": [
+      "fs:668071",
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "fs:239138",
+      "ffsl/Tikka/W_24P",
+      "ffsl/1917/B_16P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "sniper50_mech": [
+      "fs:802673",
+      "fs:363168",
+      "fs:675008"
+    ],
+    "sniper50_tail": [
+      "fs:668071",
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "fs:239138",
+      "ffsl/Tikka/W_24P",
+      "ffsl/1917/B_16P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "speedloader": [
+      "fs:177863",
+      "fs:677159"
+    ],
+    "swing": [
+      "fs:268227",
+      "fs:507466",
+      "fs:60024"
+    ],
+    "swingHeavy": [
+      "fs:268226",
+      "fs:268227",
+      "fs:263595"
+    ]
+  },
+  "loaded": [
+    "ffsl/1911/A_34P",
+    "ffsl/1911/A_42P",
+    "ffsl/1917/B_16P",
+    "ffsl/1917/B_24P",
+    "ffsl/AK-47/C_28P",
+    "ffsl/AK-47/C_29P",
+    "ffsl/AK-47/C_31P",
+    "ffsl/AK-47/C_34P",
+    "ffsl/AR-15/D_24P",
+    "ffsl/AR-15/D_32P",
+    "ffsl/Arisaka/E_18P",
+    "ffsl/Arisaka/E_25P",
+    "ffsl/Bersa/F_47P",
+    "ffsl/CD/H_16P",
+    "ffsl/CD/H_21P",
+    "ffsl/Carl Gustav M45/G_20P",
+    "ffsl/Carl Gustav M45/G_31P",
+    "ffsl/Carl Gustav M45/G_33P",
+    "ffsl/Carl Gustav M45/G_35P",
+    "ffsl/Marlin 336/I_17P",
+    "ffsl/Marlin 336/I_22P",
+    "ffsl/Model 12/K_17P",
+    "ffsl/Model 12/K_22P",
+    "ffsl/Model 1894/L_23P",
+    "ffsl/Mosin Nagant/M_21P",
+    "ffsl/Mosin Nagant/M_26P",
+    "ffsl/Mossberg/N_26P",
+    "ffsl/Mossberg/N_30P",
+    "ffsl/Nova/O_17P",
+    "ffsl/Nova/O_21P",
+    "ffsl/PPSh/P_16P",
+    "ffsl/PPSh/P_30P",
+    "ffsl/SKS/U_14P",
+    "ffsl/SKS/U_19P",
+    "ffsl/Savage 10 .300 Blackout/T_27P",
+    "ffsl/Smith & Wesson 642/V_22P",
+    "ffsl/Smith & Wesson 642/V_27P",
+    "ffsl/Tikka/W_24P",
+    "ffsl/Tikka/W_29P",
+    "ffsl/Walther PPQ/X_31P",
+    "ffsl/Walther PPQ/X_39P",
+    "fs:125401",
+    "fs:147261",
+    "fs:153560",
+    "fs:163164",
+    "fs:177863",
+    "fs:184274",
+    "fs:19291",
+    "fs:200459",
+    "fs:205126",
+    "fs:210102",
+    "fs:238916",
+    "fs:239138",
+    "fs:240698",
+    "fs:263513",
+    "fs:263595",
+    "fs:268226",
+    "fs:268227",
+    "fs:318964",
+    "fs:334219",
+    "fs:363168",
+    "fs:370345",
+    "fs:377145",
+    "fs:388819",
+    "fs:389690",
+    "fs:393732",
+    "fs:393734",
+    "fs:396331",
+    "fs:427597",
+    "fs:494797",
+    "fs:501562",
+    "fs:507466",
+    "fs:521377",
+    "fs:60024",
+    "fs:620928",
+    "fs:620929",
+    "fs:668071",
+    "fs:674742",
+    "fs:674744",
+    "fs:675008",
+    "fs:677159",
+    "fs:677160",
+    "fs:688765",
+    "fs:693125",
+    "fs:712310",
+    "fs:725397",
+    "fs:789038",
+    "fs:802673",
+    "fs:815879",
+    "fs:855580",
+    "kenney_impact/Audio/impactGeneric_light_001",
+    "kenney_impact/Audio/impactGeneric_light_003",
+    "kenney_impact/Audio/impactMetal_heavy_000",
+    "kenney_impact/Audio/impactMetal_heavy_001",
+    "kenney_impact/Audio/impactMetal_heavy_002",
+    "kenney_impact/Audio/impactMetal_heavy_003",
+    "kenney_impact/Audio/impactMetal_heavy_004",
+    "kenney_impact/Audio/impactMetal_light_001",
+    "kenney_impact/Audio/impactPlate_heavy_000",
+    "kenney_impact/Audio/impactPlate_heavy_001",
+    "kenney_impact/Audio/impactPlate_heavy_002",
+    "kenney_impact/Audio/impactPlate_heavy_003",
+    "kenney_impact/Audio/impactPlate_heavy_004",
+    "kenney_impact/Audio/impactPlate_light_000",
+    "kenney_impact/Audio/impactPlate_light_002",
+    "kenney_impact/Audio/impactPlate_light_003",
+    "kenney_impact/Audio/impactPlate_light_004",
+    "kenney_impact/Audio/impactPlate_medium_001",
+    "kenney_impact/Audio/impactSoft_medium_000",
+    "kenney_impact/Audio/impactSoft_medium_002",
+    "kenney_impact/Audio/impactSoft_medium_003",
+    "oga_gun_reload/assaultriflereload1_0",
+    "oga_gun_reload/shotguncock_0",
+    "oga_shotgun_reload/ShotgunSounds/4 Shell Reload",
+    "oga_shotgun_reload/ShotgunSounds/5 Shell Reload",
+    "oga_shotgun_reload/ShotgunSounds/First Shell",
+    "oga_shotgun_reload/ShotgunSounds/Rack"
+  ],
+  "original": false
+}

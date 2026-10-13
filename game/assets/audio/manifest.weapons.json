@@ -1,0 +1,2090 @@
+{
+  "sounds": {
+    "beltIn": {
+      "files": [
+        "weapons/beltIn_1.ogg",
+        "weapons/beltIn_2.ogg",
+        "weapons/beltIn_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "boltBack": {
+      "files": [
+        "weapons/boltBack_1.ogg",
+        "weapons/boltBack_2.ogg",
+        "weapons/boltBack_3.ogg",
+        "weapons/boltBack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "boltDown": {
+      "files": [
+        "weapons/boltDown_1.ogg",
+        "weapons/boltDown_2.ogg",
+        "weapons/boltDown_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "boltForward": {
+      "files": [
+        "weapons/boltForward_1.ogg",
+        "weapons/boltForward_2.ogg",
+        "weapons/boltForward_3.ogg",
+        "weapons/boltForward_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "boltUp": {
+      "files": [
+        "weapons/boltUp_1.ogg",
+        "weapons/boltUp_2.ogg",
+        "weapons/boltUp_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "breakClose": {
+      "files": [
+        "weapons/breakClose_1.ogg",
+        "weapons/breakClose_2.ogg",
+        "weapons/breakClose_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "breakOpen": {
+      "files": [
+        "weapons/breakOpen_1.ogg",
+        "weapons/breakOpen_2.ogg",
+        "weapons/breakOpen_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "cloth": {
+      "files": [
+        "weapons/cloth_1.ogg",
+        "weapons/cloth_2.ogg",
+        "weapons/cloth_3.ogg",
+        "weapons/cloth_4.ogg",
+        "weapons/cloth_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "coverClose": {
+      "files": [
+        "weapons/coverClose_1.ogg",
+        "weapons/coverClose_2.ogg",
+        "weapons/coverClose_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "coverOpen": {
+      "files": [
+        "weapons/coverOpen_1.ogg",
+        "weapons/coverOpen_2.ogg",
+        "weapons/coverOpen_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "craneClose": {
+      "files": [
+        "weapons/craneClose_1.ogg",
+        "weapons/craneClose_2.ogg",
+        "weapons/craneClose_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "craneOpen": {
+      "files": [
+        "weapons/craneOpen_1.ogg",
+        "weapons/craneOpen_2.ogg",
+        "weapons/craneOpen_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "draw": {
+      "files": [
+        "weapons/draw_1.ogg",
+        "weapons/draw_2.ogg",
+        "weapons/draw_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "drawHeavy": {
+      "files": [
+        "weapons/drawHeavy_1.ogg",
+        "weapons/drawHeavy_2.ogg",
+        "weapons/drawHeavy_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "dryfire": {
+      "files": [
+        "weapons/dryfire_1.ogg",
+        "weapons/dryfire_2.ogg",
+        "weapons/dryfire_3.ogg",
+        "weapons/dryfire_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "knife_close": {
+      "files": [
+        "weapons/knife_close_1.ogg",
+        "weapons/knife_close_2.ogg",
+        "weapons/knife_close_3.ogg",
+        "weapons/knife_close_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "knife_far": {
+      "files": [
+        "weapons/knife_far_1.ogg",
+        "weapons/knife_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        40
+      ],
+      "loop": false
+    },
+    "knife_tail": {
+      "files": [
+        "weapons/knife_tail_1.ogg",
+        "weapons/knife_tail_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "lowAmmo": {
+      "files": [
+        "weapons/lowAmmo_1.ogg",
+        "weapons/lowAmmo_2.ogg",
+        "weapons/lowAmmo_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "magDrop": {
+      "files": [
+        "weapons/magDrop_1.ogg",
+        "weapons/magDrop_2.ogg",
+        "weapons/magDrop_3.ogg",
+        "weapons/magDrop_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1.5,
+        25
+      ],
+      "loop": false
+    },
+    "magIn": {
+      "files": [
+        "weapons/magIn_1.ogg",
+        "weapons/magIn_2.ogg",
+        "weapons/magIn_3.ogg",
+        "weapons/magIn_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "magOut": {
+      "files": [
+        "weapons/magOut_1.ogg",
+        "weapons/magOut_2.ogg",
+        "weapons/magOut_3.ogg",
+        "weapons/magOut_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "magRelease": {
+      "files": [
+        "weapons/magRelease_1.ogg",
+        "weapons/magRelease_2.ogg",
+        "weapons/magRelease_3.ogg",
+        "weapons/magRelease_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "magnum_close": {
+      "files": [
+        "weapons/magnum_close_1.ogg",
+        "weapons/magnum_close_2.ogg",
+        "weapons/magnum_close_3.ogg",
+        "weapons/magnum_close_4.ogg",
+        "weapons/magnum_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "magnum_far": {
+      "files": [
+        "weapons/magnum_far_1.ogg",
+        "weapons/magnum_far_2.ogg",
+        "weapons/magnum_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        420
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "magnum_tail": {
+      "files": [
+        "weapons/magnum_tail_1.ogg",
+        "weapons/magnum_tail_2.ogg",
+        "weapons/magnum_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "mg556_close": {
+      "files": [
+        "weapons/mg556_close_1.ogg",
+        "weapons/mg556_close_2.ogg",
+        "weapons/mg556_close_3.ogg",
+        "weapons/mg556_close_4.ogg",
+        "weapons/mg556_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "mg556_far": {
+      "files": [
+        "weapons/mg556_far_1.ogg",
+        "weapons/mg556_far_2.ogg",
+        "weapons/mg556_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        480
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "mg556_mech": {
+      "files": [
+        "weapons/mg556_mech_1.ogg",
+        "weapons/mg556_mech_2.ogg",
+        "weapons/mg556_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "mg556_tail": {
+      "files": [
+        "weapons/mg556_tail_1.ogg",
+        "weapons/mg556_tail_2.ogg",
+        "weapons/mg556_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "mg762_close": {
+      "files": [
+        "weapons/mg762_close_1.ogg",
+        "weapons/mg762_close_2.ogg",
+        "weapons/mg762_close_3.ogg",
+        "weapons/mg762_close_4.ogg",
+        "weapons/mg762_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 7,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "mg762_far": {
+      "files": [
+        "weapons/mg762_far_1.ogg",
+        "weapons/mg762_far_2.ogg",
+        "weapons/mg762_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        480
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "mg762_mech": {
+      "files": [
+        "weapons/mg762_mech_1.ogg",
+        "weapons/mg762_mech_2.ogg",
+        "weapons/mg762_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "mg762_tail": {
+      "files": [
+        "weapons/mg762_tail_1.ogg",
+        "weapons/mg762_tail_2.ogg",
+        "weapons/mg762_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "minigun_close": {
+      "files": [
+        "weapons/minigun_close_1.ogg",
+        "weapons/minigun_close_2.ogg",
+        "weapons/minigun_close_3.ogg",
+        "weapons/minigun_close_4.ogg",
+        "weapons/minigun_close_5.ogg",
+        "weapons/minigun_close_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 10,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "minigun_far": {
+      "files": [
+        "weapons/minigun_far_1.ogg",
+        "weapons/minigun_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        480
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "minigun_fire": {
+      "files": [
+        "weapons/minigun_fire.ogg"
+      ],
+      "vol": 0.8,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "minigun_spin": {
+      "files": [
+        "weapons/minigun_spin.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "minigun_spindown": {
+      "files": [
+        "weapons/minigun_spindown.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "minigun_tail": {
+      "files": [
+        "weapons/minigun_tail_1.ogg",
+        "weapons/minigun_tail_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pistol45_close": {
+      "files": [
+        "weapons/pistol45_close_1.ogg",
+        "weapons/pistol45_close_2.ogg",
+        "weapons/pistol45_close_3.ogg",
+        "weapons/pistol45_close_4.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pistol45_far": {
+      "files": [
+        "weapons/pistol45_far_1.ogg",
+        "weapons/pistol45_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        30,
+        320
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pistol45_mech": {
+      "files": [
+        "weapons/pistol45_mech_1.ogg",
+        "weapons/pistol45_mech_2.ogg",
+        "weapons/pistol45_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pistol45_tail": {
+      "files": [
+        "weapons/pistol45_tail_1.ogg",
+        "weapons/pistol45_tail_2.ogg",
+        "weapons/pistol45_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pistol_close": {
+      "files": [
+        "weapons/pistol_close_1.ogg",
+        "weapons/pistol_close_2.ogg",
+        "weapons/pistol_close_3.ogg",
+        "weapons/pistol_close_4.ogg",
+        "weapons/pistol_close_5.ogg"
+      ],
+      "vol": 0.85,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pistol_far": {
+      "files": [
+        "weapons/pistol_far_1.ogg",
+        "weapons/pistol_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        30,
+        320
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pistol_mech": {
+      "files": [
+        "weapons/pistol_mech_1.ogg",
+        "weapons/pistol_mech_2.ogg",
+        "weapons/pistol_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pistol_tail": {
+      "files": [
+        "weapons/pistol_tail_1.ogg",
+        "weapons/pistol_tail_2.ogg",
+        "weapons/pistol_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pouch": {
+      "files": [
+        "weapons/pouch_1.ogg",
+        "weapons/pouch_2.ogg",
+        "weapons/pouch_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "pumpBack": {
+      "files": [
+        "weapons/pumpBack_1.ogg",
+        "weapons/pumpBack_2.ogg",
+        "weapons/pumpBack_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "pumpForward": {
+      "files": [
+        "weapons/pumpForward_1.ogg",
+        "weapons/pumpForward_2.ogg",
+        "weapons/pumpForward_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "rifle556_close": {
+      "files": [
+        "weapons/rifle556_close_1.ogg",
+        "weapons/rifle556_close_2.ogg",
+        "weapons/rifle556_close_3.ogg",
+        "weapons/rifle556_close_4.ogg",
+        "weapons/rifle556_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "rifle556_far": {
+      "files": [
+        "weapons/rifle556_far_1.ogg",
+        "weapons/rifle556_far_2.ogg",
+        "weapons/rifle556_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        450
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "rifle556_mech": {
+      "files": [
+        "weapons/rifle556_mech_1.ogg",
+        "weapons/rifle556_mech_2.ogg",
+        "weapons/rifle556_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "rifle556_tail": {
+      "files": [
+        "weapons/rifle556_tail_1.ogg",
+        "weapons/rifle556_tail_2.ogg",
+        "weapons/rifle556_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "rifle762_close": {
+      "files": [
+        "weapons/rifle762_close_1.ogg",
+        "weapons/rifle762_close_2.ogg",
+        "weapons/rifle762_close_3.ogg",
+        "weapons/rifle762_close_4.ogg",
+        "weapons/rifle762_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "rifle762_far": {
+      "files": [
+        "weapons/rifle762_far_1.ogg",
+        "weapons/rifle762_far_2.ogg",
+        "weapons/rifle762_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        450
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "rifle762_mech": {
+      "files": [
+        "weapons/rifle762_mech_1.ogg",
+        "weapons/rifle762_mech_2.ogg",
+        "weapons/rifle762_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "rifle762_tail": {
+      "files": [
+        "weapons/rifle762_tail_1.ogg",
+        "weapons/rifle762_tail_2.ogg",
+        "weapons/rifle762_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "rifleBolt_close": {
+      "files": [
+        "weapons/rifleBolt_close_1.ogg",
+        "weapons/rifleBolt_close_2.ogg",
+        "weapons/rifleBolt_close_3.ogg",
+        "weapons/rifleBolt_close_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "rifleBolt_far": {
+      "files": [
+        "weapons/rifleBolt_far_1.ogg",
+        "weapons/rifleBolt_far_2.ogg",
+        "weapons/rifleBolt_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        50,
+        600
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "rifleBolt_tail": {
+      "files": [
+        "weapons/rifleBolt_tail_1.ogg",
+        "weapons/rifleBolt_tail_2.ogg",
+        "weapons/rifleBolt_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "rocketIn": {
+      "files": [
+        "weapons/rocketIn_1.ogg",
+        "weapons/rocketIn_2.ogg",
+        "weapons/rocketIn_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "rocket_close": {
+      "files": [
+        "weapons/rocket_close_1.ogg",
+        "weapons/rocket_close_2.ogg",
+        "weapons/rocket_close_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "rocket_far": {
+      "files": [
+        "weapons/rocket_far_1.ogg",
+        "weapons/rocket_far_2.ogg",
+        "weapons/rocket_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        500
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "rocket_fly": {
+      "files": [
+        "weapons/rocket_fly.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        140
+      ],
+      "loop": true
+    },
+    "rocket_tail": {
+      "files": [
+        "weapons/rocket_tail_1.ogg",
+        "weapons/rocket_tail_2.ogg",
+        "weapons/rocket_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "shellIn": {
+      "files": [
+        "weapons/shellIn_1.ogg",
+        "weapons/shellIn_2.ogg",
+        "weapons/shellIn_3.ogg",
+        "weapons/shellIn_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "shell_brass": {
+      "files": [
+        "weapons/shell_brass_1.ogg",
+        "weapons/shell_brass_2.ogg",
+        "weapons/shell_brass_3.ogg",
+        "weapons/shell_brass_4.ogg",
+        "weapons/shell_brass_5.ogg",
+        "weapons/shell_brass_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.9,
+        1.1
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        14
+      ],
+      "loop": false
+    },
+    "shell_link": {
+      "files": [
+        "weapons/shell_link_1.ogg",
+        "weapons/shell_link_2.ogg",
+        "weapons/shell_link_3.ogg",
+        "weapons/shell_link_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.9,
+        1.12
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        12
+      ],
+      "loop": false
+    },
+    "shell_shotgun": {
+      "files": [
+        "weapons/shell_shotgun_1.ogg",
+        "weapons/shell_shotgun_2.ogg",
+        "weapons/shell_shotgun_3.ogg",
+        "weapons/shell_shotgun_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        14
+      ],
+      "loop": false
+    },
+    "shellsDrop": {
+      "files": [
+        "weapons/shellsDrop_1.ogg",
+        "weapons/shellsDrop_2.ogg",
+        "weapons/shellsDrop_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "shotgunAuto_close": {
+      "files": [
+        "weapons/shotgunAuto_close_1.ogg",
+        "weapons/shotgunAuto_close_2.ogg",
+        "weapons/shotgunAuto_close_3.ogg",
+        "weapons/shotgunAuto_close_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "shotgunAuto_far": {
+      "files": [
+        "weapons/shotgunAuto_far_1.ogg",
+        "weapons/shotgunAuto_far_2.ogg",
+        "weapons/shotgunAuto_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        420
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "shotgunAuto_mech": {
+      "files": [
+        "weapons/shotgunAuto_mech_1.ogg",
+        "weapons/shotgunAuto_mech_2.ogg",
+        "weapons/shotgunAuto_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "shotgunAuto_tail": {
+      "files": [
+        "weapons/shotgunAuto_tail_1.ogg",
+        "weapons/shotgunAuto_tail_2.ogg",
+        "weapons/shotgunAuto_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "shotgunHeavy_close": {
+      "files": [
+        "weapons/shotgunHeavy_close_1.ogg",
+        "weapons/shotgunHeavy_close_2.ogg",
+        "weapons/shotgunHeavy_close_3.ogg",
+        "weapons/shotgunHeavy_close_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "shotgunHeavy_far": {
+      "files": [
+        "weapons/shotgunHeavy_far_1.ogg",
+        "weapons/shotgunHeavy_far_2.ogg",
+        "weapons/shotgunHeavy_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        450
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "shotgunHeavy_tail": {
+      "files": [
+        "weapons/shotgunHeavy_tail_1.ogg",
+        "weapons/shotgunHeavy_tail_2.ogg",
+        "weapons/shotgunHeavy_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "shotgun_close": {
+      "files": [
+        "weapons/shotgun_close_1.ogg",
+        "weapons/shotgun_close_2.ogg",
+        "weapons/shotgun_close_3.ogg",
+        "weapons/shotgun_close_4.ogg",
+        "weapons/shotgun_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "shotgun_far": {
+      "files": [
+        "weapons/shotgun_far_1.ogg",
+        "weapons/shotgun_far_2.ogg",
+        "weapons/shotgun_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        420
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "shotgun_tail": {
+      "files": [
+        "weapons/shotgun_tail_1.ogg",
+        "weapons/shotgun_tail_2.ogg",
+        "weapons/shotgun_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "slideRelease": {
+      "files": [
+        "weapons/slideRelease_1.ogg",
+        "weapons/slideRelease_2.ogg",
+        "weapons/slideRelease_3.ogg",
+        "weapons/slideRelease_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "smg45_close": {
+      "files": [
+        "weapons/smg45_close_1.ogg",
+        "weapons/smg45_close_2.ogg",
+        "weapons/smg45_close_3.ogg",
+        "weapons/smg45_close_4.ogg",
+        "weapons/smg45_close_5.ogg"
+      ],
+      "vol": 0.85,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "smg45_far": {
+      "files": [
+        "weapons/smg45_far_1.ogg",
+        "weapons/smg45_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        30,
+        320
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "smg45_mech": {
+      "files": [
+        "weapons/smg45_mech_1.ogg",
+        "weapons/smg45_mech_2.ogg",
+        "weapons/smg45_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "smg45_tail": {
+      "files": [
+        "weapons/smg45_tail_1.ogg",
+        "weapons/smg45_tail_2.ogg",
+        "weapons/smg45_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "smg9_close": {
+      "files": [
+        "weapons/smg9_close_1.ogg",
+        "weapons/smg9_close_2.ogg",
+        "weapons/smg9_close_3.ogg",
+        "weapons/smg9_close_4.ogg",
+        "weapons/smg9_close_5.ogg"
+      ],
+      "vol": 0.85,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "smg9_far": {
+      "files": [
+        "weapons/smg9_far_1.ogg",
+        "weapons/smg9_far_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        30,
+        320
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "smg9_mech": {
+      "files": [
+        "weapons/smg9_mech_1.ogg",
+        "weapons/smg9_mech_2.ogg",
+        "weapons/smg9_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "smg9_tail": {
+      "files": [
+        "weapons/smg9_tail_1.ogg",
+        "weapons/smg9_tail_2.ogg",
+        "weapons/smg9_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sniper338_close": {
+      "files": [
+        "weapons/sniper338_close_1.ogg",
+        "weapons/sniper338_close_2.ogg",
+        "weapons/sniper338_close_3.ogg",
+        "weapons/sniper338_close_4.ogg",
+        "weapons/sniper338_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sniper338_far": {
+      "files": [
+        "weapons/sniper338_far_1.ogg",
+        "weapons/sniper338_far_2.ogg",
+        "weapons/sniper338_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        50,
+        700
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "sniper338_tail": {
+      "files": [
+        "weapons/sniper338_tail_1.ogg",
+        "weapons/sniper338_tail_2.ogg",
+        "weapons/sniper338_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sniper50_close": {
+      "files": [
+        "weapons/sniper50_close_1.ogg",
+        "weapons/sniper50_close_2.ogg",
+        "weapons/sniper50_close_3.ogg",
+        "weapons/sniper50_close_4.ogg",
+        "weapons/sniper50_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sniper50_far": {
+      "files": [
+        "weapons/sniper50_far_1.ogg",
+        "weapons/sniper50_far_2.ogg",
+        "weapons/sniper50_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        50,
+        800
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "sniper50_mech": {
+      "files": [
+        "weapons/sniper50_mech_1.ogg",
+        "weapons/sniper50_mech_2.ogg",
+        "weapons/sniper50_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sniper50_tail": {
+      "files": [
+        "weapons/sniper50_tail_1.ogg",
+        "weapons/sniper50_tail_2.ogg",
+        "weapons/sniper50_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "speedloader": {
+      "files": [
+        "weapons/speedloader_1.ogg",
+        "weapons/speedloader_2.ogg",
+        "weapons/speedloader_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "swing": {
+      "files": [
+        "weapons/swing_1.ogg",
+        "weapons/swing_2.ogg",
+        "weapons/swing_3.ogg",
+        "weapons/swing_4.ogg",
+        "weapons/swing_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "swingHeavy": {
+      "files": [
+        "weapons/swingHeavy_1.ogg",
+        "weapons/swingHeavy_2.ogg",
+        "weapons/swingHeavy_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        40
+      ],
+      "loop": false
+    }
+  }
+}

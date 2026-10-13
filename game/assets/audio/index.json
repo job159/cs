@@ -1,0 +1,6 @@
+{
+  "manifests": [
+    "manifest.impacts.json",
+    "manifest.weapons.json"
+  ]
+}

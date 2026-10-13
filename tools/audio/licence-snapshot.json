@@ -1,0 +1,17 @@
+{
+  "_note": "Recorded licence checks of the pack pages (what the page's License field showed). fetch.mjs re-checks the live page every run and only falls back to this snapshot when the page is unreachable (network error / HTTP 5xx). A reachable page that does not show CC0 always fails the fetch.",
+  "pack:ffsl": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/the-free-firearm-sound-library", "verified": "2026-10-12" },
+  "pack:oga_zombies": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/zombies-sound-pack", "verified": "2026-10-12" },
+  "pack:oga_voicefx": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/zombie-skeleton-monster-voice-effects", "verified": "2026-10-12" },
+  "pack:oga_undead_moans": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/undead-moans", "verified": "2026-10-12" },
+  "pack:oga_zombie_moans": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/zombie-moans", "verified": "2026-10-12" },
+  "pack:oga_hungry_ghoul": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/hungry-ghoul", "verified": "2026-10-12" },
+  "pack:oga_zombie_pain": { "licence": "CC0-1.0", "shown": "CC-BY 3.0 / CC0", "page": "https://opengameart.org/content/zombie-pain", "verified": "2026-10-12" },
+  "pack:oga_gun_reload": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/gun-reload-sounds", "verified": "2026-10-12" },
+  "pack:oga_shotgun_reload": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/shotgun-reload-sound-effects", "verified": "2026-10-12" },
+  "pack:oga_distant_explosion": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/muffled-distant-explosion", "verified": "2026-10-12" },
+  "pack:oga_snow_gravel_steps": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/42-snow-and-gravel-footsteps", "verified": "2026-10-12" },
+  "pack:oga_metal_steps": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/metal-footsteps-on-concrete", "verified": "2026-10-12" },
+  "pack:oga_fire": { "licence": "CC0-1.0", "shown": "CC0", "page": "https://opengameart.org/content/fire-crackling", "verified": "2026-10-12" },
+  "pack:kenney_impact": { "licence": "CC0-1.0", "shown": "Creative Commons CC0", "page": "https://kenney.nl/assets/impact-sounds", "verified": "2026-10-12", "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip" }
+}
