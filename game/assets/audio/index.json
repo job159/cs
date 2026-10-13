@@ -3,6 +3,7 @@
     "manifest.antical.json",
     "manifest.creatures.json",
     "manifest.impacts.json",
+    "manifest.music.json",
     "manifest.ui_amb.json",
     "manifest.weapons.json"
   ]

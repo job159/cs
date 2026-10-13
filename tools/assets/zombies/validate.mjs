@@ -28,9 +28,10 @@ for (const file of process.argv.slice(2)) {
     const mat = json.materials?.[p.material];
     if (!mat || !ROLES.has(mat.name)) problems.push(`${m.name}: material name '${mat?.name}' is not a role`);
   }
-  const limit = lod1 ? 2500 : 9000;
-  if (tris > limit) problems.push(`${tris} tris > ${limit}`);
   const ex = json.scenes[0].extras || {};
+  // bosses may declare their own budget in the scene extras: triBudget { lod0, lod1 }
+  const limit = (lod1 ? ex.triBudget?.lod1 : ex.triBudget?.lod0) || (lod1 ? 2500 : 9000);
+  if (tris > limit) problems.push(`${tris} tris > ${limit}`);
   for (const k of ['type', 'height', 'hitboxes']) if (ex[k] === undefined) problems.push('scene extras missing ' + k);
   for (const [k, v] of Object.entries(ex.hitboxes || {})) if (!joints.includes(v[0]) || !(v[1] > 0)) problems.push(`hitbox ${k} invalid`);
   // ground / facing sanity: Root at origin, head above pelvis, face (nose) towards +Z

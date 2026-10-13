@@ -1,0 +1,206 @@
+{
+  "sounds": {
+    "boss": {
+      "files": [
+        "music/boss.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10,
+      "bpm": 140,
+      "beatsPerBar": 4,
+      "bars": 32,
+      "key": "D minor",
+      "loopStart": 0,
+      "loopEnd": 54.857143,
+      "intensity": 3
+    },
+    "calm": {
+      "files": [
+        "music/calm.ogg"
+      ],
+      "vol": 0.8,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10,
+      "bpm": 140,
+      "beatsPerBar": 4,
+      "bars": 32,
+      "key": "D minor",
+      "loopStart": 0,
+      "loopEnd": 54.857143,
+      "intensity": 0,
+      "sync": "d140"
+    },
+    "combat_high": {
+      "files": [
+        "music/combat_high.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10,
+      "bpm": 140,
+      "beatsPerBar": 4,
+      "bars": 32,
+      "key": "D minor",
+      "loopStart": 0,
+      "loopEnd": 54.857143,
+      "intensity": 2,
+      "sync": "d140"
+    },
+    "combat_low": {
+      "files": [
+        "music/combat_low.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10,
+      "bpm": 140,
+      "beatsPerBar": 4,
+      "bars": 32,
+      "key": "D minor",
+      "loopStart": 0,
+      "loopEnd": 54.857143,
+      "intensity": 1,
+      "sync": "d140"
+    },
+    "defeat": {
+      "files": [
+        "music/defeat.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 6,
+      "bpm": 60,
+      "beatsPerBar": 4,
+      "bars": 2,
+      "key": "D minor"
+    },
+    "menu_theme": {
+      "files": [
+        "music/menu_theme.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10,
+      "bpm": 80,
+      "beatsPerBar": 4,
+      "bars": 24,
+      "key": "D minor",
+      "loopStart": 0,
+      "loopEnd": 72,
+      "intensity": 1
+    },
+    "victory": {
+      "files": [
+        "music/victory.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 6,
+      "bpm": 100,
+      "beatsPerBar": 4,
+      "bars": 3,
+      "key": "D minor"
+    },
+    "wave_start": {
+      "files": [
+        "music/wave_start.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "music",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 6,
+      "bpm": 140,
+      "beatsPerBar": 4,
+      "bars": 2,
+      "key": "D minor"
+    }
+  }
+}

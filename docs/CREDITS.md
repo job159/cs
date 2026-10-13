@@ -210,7 +210,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 35213 | slashkut.wav | Abyssmal | [link](https://freesound.org/people/Abyssmal/sounds/35213/) | CC0-1.0 | - |
 | 35716 | scream.wav | analogchill | [link](https://freesound.org/people/analogchill/sounds/35716/) | CC0-1.0 | creatures/screamer_scream |
 | 42201 | snarl.wav | SmallQuadruped | [link](https://freesound.org/people/SmallQuadruped/sounds/42201/) | CC0-1.0 | - |
-| 45664 | Zildjian A Custom Hi-Hat Cymbals Closed Hit.WAV | pjcohen | [link](https://freesound.org/people/pjcohen/sounds/45664/) | CC0-1.0 | - |
+| 45664 | Zildjian A Custom Hi-Hat Cymbals Closed Hit.WAV | pjcohen | [link](https://freesound.org/people/pjcohen/sounds/45664/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low |
 | 50723 | Footsteps Metallic Muffled.wav | RutgerMuller | [link](https://freesound.org/people/RutgerMuller/sounds/50723/) | CC0-1.0 | - |
 | 50724 | Footsteps Metallic Muffled Louder.wav | RutgerMuller | [link](https://freesound.org/people/RutgerMuller/sounds/50724/) | CC0-1.0 | - |
 | 54545 | distant_dog.wav | Heigh-hoo | [link](https://freesound.org/people/Heigh-hoo/sounds/54545/) | CC0-1.0 | - |
@@ -296,7 +296,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 195876 | 130723_Brela_HarborJump_R_4824.wav | blaukreuz | [link](https://freesound.org/people/blaukreuz/sounds/195876/) | CC0-1.0 | - |
 | 200273 | Rain light 2 (rural) | jmbphilmes | [link](https://freesound.org/people/jmbphilmes/sounds/200273/) | CC0-1.0 | ui_amb/amb_rain |
 | 200459 | Missile / Rocket firing | wubitog | [link](https://freesound.org/people/wubitog/sounds/200459/) | CC0-1.0 | weapons/rocket_close, weapons/rocket_far, weapons/rocket_tail |
-| 201094 | Deep metal clang | BlenderDiplom | [link](https://freesound.org/people/BlenderDiplom/sounds/201094/) | CC0-1.0 | ui_amb/boss_warning, ui_amb/round_start |
+| 201094 | Deep metal clang | BlenderDiplom | [link](https://freesound.org/people/BlenderDiplom/sounds/201094/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, ui_amb/boss_warning, ui_amb/round_start |
 | 202093 | Bottle Shattering.wav | spookymodem | [link](https://freesound.org/people/spookymodem/sounds/202093/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass |
 | 202094 | Acid Bubbling.wav | spookymodem | [link](https://freesound.org/people/spookymodem/sounds/202094/) | CC0-1.0 | creatures/acid_splash |
 | 203381 | glass_shard_bounce_4.ogg | C_Rogers | [link](https://freesound.org/people/C_Rogers/sounds/203381/) | CC0-1.0 | impacts/impact_glass |
@@ -434,147 +434,147 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 370345 | Mosin Nagant Bolt Action Cycle | Zott820 | [link](https://freesound.org/people/Zott820/sounds/370345/) | CC0-1.0 | weapons/boltDown, weapons/boltUp |
 | 370710 | Vomiting on the ground - Remixed | Podsburgh | [link](https://freesound.org/people/Podsburgh/sounds/370710/) | CC0-1.0 | creatures/bloater_death, creatures/spitter_death, creatures/spitter_spit |
 | 372086 | Distant Explosion | Mr_KeybOred | [link](https://freesound.org/people/Mr_KeybOred/sounds/372086/) | CC0-1.0 | - |
-| 372765 | Cello Section - spiccato - C2 (spic_C1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372765/) | CC0-1.0 | - |
-| 372766 | Cello Section - spiccato - C4 (spic_C3_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372766/) | CC0-1.0 | - |
-| 372767 | Cello Section - spiccato - D3 (spic_D2_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372767/) | CC0-1.0 | - |
-| 372769 | Cello Section - spiccato - E2 (spic_E1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372769/) | CC0-1.0 | - |
-| 372771 | Cello Section - spiccato - E#3 (spic_F2_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372771/) | CC0-1.0 | - |
-| 372773 | Cello Section - spiccato - F#2 (spic_G1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372773/) | CC0-1.0 | - |
-| 372775 | Cello Section - spiccato - A3 (spic_A2_v2_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372775/) | CC0-1.0 | - |
-| 372776 | Cello Section - spiccato - B2 (spic_B1_v2_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372776/) | CC0-1.0 | - |
-| 372793 | Cello Section - spiccato - D3 (spic_D2_v1_RR2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372793/) | CC0-1.0 | - |
-| 372828 | Cello Section - vibrato sustain - A3 (susvib_A2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372828/) | CC0-1.0 | - |
-| 372829 | Cello Section - vibrato sustain - B2 (susvib_B1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372829/) | CC0-1.0 | - |
-| 372831 | Cello Section - vibrato sustain - C2 (susvib_C1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372831/) | CC0-1.0 | - |
-| 372832 | Cello Section - vibrato sustain - C4 (susvib_C3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372832/) | CC0-1.0 | - |
-| 372833 | Cello Section - vibrato sustain - D3 (susvib_D2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372833/) | CC0-1.0 | - |
-| 372835 | Cello Section - vibrato sustain - E2 (susvib_E1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372835/) | CC0-1.0 | - |
-| 372836 | Cello Section - vibrato sustain - E4 (susvib_E3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372836/) | CC0-1.0 | - |
-| 372837 | Cello Section - vibrato sustain - E#3 (susvib_F2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372837/) | CC0-1.0 | - |
-| 372839 | Cello Section - vibrato sustain - F#2 (susvib_G1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372839/) | CC0-1.0 | - |
-| 372840 | Cello Section - vibrato sustain - F#4 (susvib_G3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372840/) | CC0-1.0 | - |
-| 372841 | Cello Section - tremolo - A3 (trem_A2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372841/) | CC0-1.0 | - |
-| 372845 | Cello Section - tremolo - D3 (trem_D2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372845/) | CC0-1.0 | - |
-| 372847 | Cello Section - tremolo - E2 (trem_E1_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372847/) | CC0-1.0 | - |
-| 372849 | Cello Section - tremolo - E#3 (trem_F2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372849/) | CC0-1.0 | - |
-| 372856 | Cello Section - tremolo - C2 (trem_C1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372856/) | CC0-1.0 | - |
-| 373080 | Solo Contrabass - spiccato - A2 (BKCtbss_Spic_A1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373080/) | CC0-1.0 | - |
-| 373083 | Solo Contrabass - spiccato - C2 (BKCtbss_Spic_C1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373083/) | CC0-1.0 | - |
-| 373084 | Solo Contrabass - spiccato - D2 (BKCtbss_Spic_D1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373084/) | CC0-1.0 | - |
-| 373085 | Solo Contrabass - spiccato - E1 (BKCtbss_Spic_E0_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373085/) | CC0-1.0 | - |
-| 373088 | Solo Contrabass - spiccato - F1 (BKCtbss_Spic_F#0_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373088/) | CC0-1.0 | - |
-| 373093 | Solo Contrabass - spiccato - A#1 (BKCtbss_Spic_A#0_v3_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373093/) | CC0-1.0 | - |
-| 373095 | Solo Contrabass - spiccato - D2 (BKCtbss_Spic_D1_v3_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373095/) | CC0-1.0 | - |
-| 373129 | Solo Contrabass - vibrato sustain - A2 (BKCtbss_SusVib_A1_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373129/) | CC0-1.0 | - |
-| 373133 | Solo Contrabass - vibrato sustain - D2 (BKCtbss_SusVib_D1_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373133/) | CC0-1.0 | - |
-| 373136 | Solo Contrabass - vibrato sustain - F1 (BKCtbss_SusVib_F#0_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373136/) | CC0-1.0 | - |
-| 373141 | Solo Contrabass - vibrato sustain - A#1 (BKCtbss_SusVib_A#0_v3_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373141/) | CC0-1.0 | - |
-| 373225 | F Horn - staccato - A#2 (MOHorn_stac_A#1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373225/) | CC0-1.0 | - |
-| 373226 | F Horn - staccato - A3 (MOHorn_stac_A2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373226/) | CC0-1.0 | - |
-| 373228 | F Horn - staccato - C4 (MOHorn_stac_C3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373228/) | CC0-1.0 | - |
-| 373230 | F Horn - staccato - D3 (MOHorn_stac_D2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373230/) | CC0-1.0 | - |
-| 373231 | F Horn - staccato - D5 (MOHorn_stac_D4_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373231/) | CC0-1.0 | - |
-| 373232 | F Horn - staccato - E#3 (MOHorn_stac_F2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373232/) | CC0-1.0 | - |
-| 373234 | F Horn - staccato - F#2 (MOHorn_stac_G1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373234/) | CC0-1.0 | - |
-| 373248 | F Horn - sustain - D5 (MOHorn_sus_D4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373248/) | CC0-1.0 | - |
-| 373250 | F Horn - sustain - E#5 (MOHorn_sus_F4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373250/) | CC0-1.0 | - |
-| 373252 | F Horn - sustain - A#2 (MOHorn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373252/) | CC0-1.0 | - |
-| 373253 | F Horn - sustain - A3 (MOHorn_sus_A2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373253/) | CC0-1.0 | - |
-| 373255 | F Horn - sustain - C4 (MOHorn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373255/) | CC0-1.0 | - |
-| 373256 | F Horn - sustain - D#2 (MOHorn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373256/) | CC0-1.0 | - |
-| 373257 | F Horn - sustain - D3 (MOHorn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373257/) | CC0-1.0 | - |
-| 373258 | F Horn - sustain - E#3 (MOHorn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373258/) | CC0-1.0 | - |
-| 373259 | F Horn - sustain - F#2 (MOHorn_sus_G1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373259/) | CC0-1.0 | - |
-| 373910 | Timpani - A#2 (Timpani2_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373910/) | CC0-1.0 | - |
-| 373911 | Timpani - C#3 (Timpani3_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373911/) | CC0-1.0 | - |
-| 373919 | Timpani - A#2 (Timpani2_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373919/) | CC0-1.0 | - |
-| 373920 | Timpani - C#3 (Timpani3_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373920/) | CC0-1.0 | - |
-| 373921 | Timpani - E3 (Timpani4_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373921/) | CC0-1.0 | - |
-| 373922 | Timpani - F3 (Timpani5_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373922/) | CC0-1.0 | - |
-| 373928 | Timpani - F2 (Timpani1_Hit_v3_rr2_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373928/) | CC0-1.0 | - |
-| 373943 | Timpani - rolls - F2 (Timpani1_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373943/) | CC0-1.0 | - |
-| 373944 | Timpani - rolls - A#2 (Timpani2_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373944/) | CC0-1.0 | - |
-| 374013 | Tenor Trombone - sustain - A#1 (tenortbn_sus_A#0_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374013/) | CC0-1.0 | - |
-| 374014 | Tenor Trombone - sustain - A#2 (tenortbn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374014/) | CC0-1.0 | - |
-| 374017 | Tenor Trombone - sustain - C4 (tenortbn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374017/) | CC0-1.0 | - |
-| 374018 | Tenor Trombone - sustain - D#2 (tenortbn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374018/) | CC0-1.0 | - |
-| 374020 | Tenor Trombone - sustain - D3 (tenortbn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374020/) | CC0-1.0 | - |
-| 374021 | Tenor Trombone - sustain - E#2 (tenortbn_sus_F1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374021/) | CC0-1.0 | - |
-| 374022 | Tenor Trombone - sustain - E#3 (tenortbn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374022/) | CC0-1.0 | - |
+| 372765 | Cello Section - spiccato - C2 (spic_C1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372765/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372766 | Cello Section - spiccato - C4 (spic_C3_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372766/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372767 | Cello Section - spiccato - D3 (spic_D2_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372767/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372769 | Cello Section - spiccato - E2 (spic_E1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372769/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372771 | Cello Section - spiccato - E#3 (spic_F2_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372771/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372773 | Cello Section - spiccato - F#2 (spic_G1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372773/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372775 | Cello Section - spiccato - A3 (spic_A2_v2_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372775/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372776 | Cello Section - spiccato - B2 (spic_B1_v2_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372776/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372793 | Cello Section - spiccato - D3 (spic_D2_v1_RR2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372793/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 372828 | Cello Section - vibrato sustain - A3 (susvib_A2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372828/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372829 | Cello Section - vibrato sustain - B2 (susvib_B1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372829/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372831 | Cello Section - vibrato sustain - C2 (susvib_C1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372831/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372832 | Cello Section - vibrato sustain - C4 (susvib_C3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372832/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372833 | Cello Section - vibrato sustain - D3 (susvib_D2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372833/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372835 | Cello Section - vibrato sustain - E2 (susvib_E1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372835/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372836 | Cello Section - vibrato sustain - E4 (susvib_E3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372836/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372837 | Cello Section - vibrato sustain - E#3 (susvib_F2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372837/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372839 | Cello Section - vibrato sustain - F#2 (susvib_G1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372839/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372840 | Cello Section - vibrato sustain - F#4 (susvib_G3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372840/) | CC0-1.0 | music/calm, music/combat_low, music/menu_theme, music/victory |
+| 372841 | Cello Section - tremolo - A3 (trem_A2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372841/) | CC0-1.0 | music/defeat, music/wave_start |
+| 372845 | Cello Section - tremolo - D3 (trem_D2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372845/) | CC0-1.0 | music/defeat, music/wave_start |
+| 372847 | Cello Section - tremolo - E2 (trem_E1_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372847/) | CC0-1.0 | music/defeat, music/wave_start |
+| 372849 | Cello Section - tremolo - E#3 (trem_F2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372849/) | CC0-1.0 | music/defeat, music/wave_start |
+| 372856 | Cello Section - tremolo - C2 (trem_C1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372856/) | CC0-1.0 | music/defeat, music/wave_start |
+| 373080 | Solo Contrabass - spiccato - A2 (BKCtbss_Spic_A1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373080/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373083 | Solo Contrabass - spiccato - C2 (BKCtbss_Spic_C1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373083/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373084 | Solo Contrabass - spiccato - D2 (BKCtbss_Spic_D1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373084/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373085 | Solo Contrabass - spiccato - E1 (BKCtbss_Spic_E0_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373085/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373088 | Solo Contrabass - spiccato - F1 (BKCtbss_Spic_F#0_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373088/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373093 | Solo Contrabass - spiccato - A#1 (BKCtbss_Spic_A#0_v3_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373093/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373095 | Solo Contrabass - spiccato - D2 (BKCtbss_Spic_D1_v3_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373095/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 373129 | Solo Contrabass - vibrato sustain - A2 (BKCtbss_SusVib_A1_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373129/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 373133 | Solo Contrabass - vibrato sustain - D2 (BKCtbss_SusVib_D1_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373133/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 373136 | Solo Contrabass - vibrato sustain - F1 (BKCtbss_SusVib_F#0_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373136/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 373141 | Solo Contrabass - vibrato sustain - A#1 (BKCtbss_SusVib_A#0_v3_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373141/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 373225 | F Horn - staccato - A#2 (MOHorn_stac_A#1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373225/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373226 | F Horn - staccato - A3 (MOHorn_stac_A2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373226/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373228 | F Horn - staccato - C4 (MOHorn_stac_C3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373228/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373230 | F Horn - staccato - D3 (MOHorn_stac_D2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373230/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373231 | F Horn - staccato - D5 (MOHorn_stac_D4_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373231/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373232 | F Horn - staccato - E#3 (MOHorn_stac_F2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373232/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373234 | F Horn - staccato - F#2 (MOHorn_stac_G1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373234/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373248 | F Horn - sustain - D5 (MOHorn_sus_D4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373248/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373250 | F Horn - sustain - E#5 (MOHorn_sus_F4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373250/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373252 | F Horn - sustain - A#2 (MOHorn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373252/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373253 | F Horn - sustain - A3 (MOHorn_sus_A2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373253/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373255 | F Horn - sustain - C4 (MOHorn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373255/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373256 | F Horn - sustain - D#2 (MOHorn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373256/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373257 | F Horn - sustain - D3 (MOHorn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373257/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373258 | F Horn - sustain - E#3 (MOHorn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373258/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373259 | F Horn - sustain - F#2 (MOHorn_sus_G1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373259/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373910 | Timpani - A#2 (Timpani2_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373910/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373911 | Timpani - C#3 (Timpani3_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373911/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373919 | Timpani - A#2 (Timpani2_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373919/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373920 | Timpani - C#3 (Timpani3_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373920/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373921 | Timpani - E3 (Timpani4_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373921/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373922 | Timpani - F3 (Timpani5_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373922/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373928 | Timpani - F2 (Timpani1_Hit_v3_rr2_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373928/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373943 | Timpani - rolls - F2 (Timpani1_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373943/) | CC0-1.0 | music/menu_theme, music/victory |
+| 373944 | Timpani - rolls - A#2 (Timpani2_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373944/) | CC0-1.0 | music/menu_theme, music/victory |
+| 374013 | Tenor Trombone - sustain - A#1 (tenortbn_sus_A#0_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374013/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374014 | Tenor Trombone - sustain - A#2 (tenortbn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374014/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374017 | Tenor Trombone - sustain - C4 (tenortbn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374017/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374018 | Tenor Trombone - sustain - D#2 (tenortbn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374018/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374020 | Tenor Trombone - sustain - D3 (tenortbn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374020/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374021 | Tenor Trombone - sustain - E#2 (tenortbn_sus_F1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374021/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374022 | Tenor Trombone - sustain - E#3 (tenortbn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374022/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
 | 374225 | Tuba - staccato - A#1 (Tuba3_stac_A#0_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374225/) | CC0-1.0 | - |
-| 374226 | Tuba - staccato - A#2 (Tuba3_stac_A#1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374226/) | CC0-1.0 | - |
-| 374228 | Tuba - staccato - D#2 (Tuba3_stac_D#1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374228/) | CC0-1.0 | - |
-| 374229 | Tuba - staccato - D3 (Tuba3_stac_D2_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374229/) | CC0-1.0 | - |
-| 374231 | Tuba - staccato - E#2 (Tuba3_stac_F1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374231/) | CC0-1.0 | - |
-| 374255 | Tuba - sustain - E#1 (Tuba3_sus_F0_v1_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374255/) | CC0-1.0 | - |
-| 374258 | Tuba - sustain - A#1 (Tuba3_sus_A#0_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374258/) | CC0-1.0 | - |
-| 374259 | Tuba - sustain - A#2 (Tuba3_sus_A#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374259/) | CC0-1.0 | - |
-| 374261 | Tuba - sustain - D#2 (Tuba3_sus_D#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374261/) | CC0-1.0 | - |
-| 374262 | Tuba - sustain - D3 (Tuba3_sus_D2_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374262/) | CC0-1.0 | - |
-| 374263 | Tuba - sustain - E#2 (Tuba3_sus_F1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374263/) | CC0-1.0 | - |
-| 374273 | Tubular Bells - C4 (TB_hit_C4_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374273/) | CC0-1.0 | - |
-| 374274 | Tubular Bells - C5 (TB_hit_C5_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374274/) | CC0-1.0 | - |
-| 374325 | Upright Piano - A1 (Player_dyn3_rr1_006.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374325/) | CC0-1.0 | - |
-| 374326 | Upright Piano - C#2 (Player_dyn3_rr1_008.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374326/) | CC0-1.0 | - |
-| 374327 | Upright Piano - E#2 (Player_dyn3_rr1_010.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374327/) | CC0-1.0 | - |
-| 374328 | Upright Piano - A2 (Player_dyn3_rr1_012.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374328/) | CC0-1.0 | - |
-| 374329 | Upright Piano - C#3 (Player_dyn3_rr1_014.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374329/) | CC0-1.0 | - |
-| 374330 | Upright Piano - E#3 (Player_dyn3_rr1_016.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374330/) | CC0-1.0 | - |
-| 374333 | Upright Piano - E#4 (Player_dyn3_rr1_022.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374333/) | CC0-1.0 | - |
-| 374335 | Upright Piano - C#5 (Player_dyn3_rr1_026.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374335/) | CC0-1.0 | - |
-| 374336 | Upright Piano - E#5 (Player_dyn3_rr1_028.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374336/) | CC0-1.0 | - |
-| 374337 | Upright Piano - A5 (Player_dyn3_rr1_030.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374337/) | CC0-1.0 | - |
-| 374419 | Viola Section - spiccato - C5 (Violas_spic_C4_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374419/) | CC0-1.0 | - |
-| 374420 | Viola Section - spiccato - D4 (Violas_spic_D3_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374420/) | CC0-1.0 | - |
-| 374422 | Viola Section - spiccato - E3 (Violas_spic_E2_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374422/) | CC0-1.0 | - |
-| 374424 | Viola Section - spiccato - E#4 (Violas_spic_F3_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374424/) | CC0-1.0 | - |
-| 374425 | Viola Section - spiccato - F#3 (Violas_spic_G2_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374425/) | CC0-1.0 | - |
-| 374427 | Viola Section - spiccato - A4 (Violas_spic_A3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374427/) | CC0-1.0 | - |
-| 374428 | Viola Section - spiccato - B3 (Violas_spic_B2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374428/) | CC0-1.0 | - |
-| 374430 | Viola Section - spiccato - C3 (Violas_spic_C2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374430/) | CC0-1.0 | - |
-| 374432 | Viola Section - spiccato - D4 (Violas_spic_D3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374432/) | CC0-1.0 | - |
-| 374534 | Violin Section - spiccato - A4 (VlnEns_Spic_A3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374534/) | CC0-1.0 | - |
-| 374537 | Violin Section - spiccato - C5 (VlnEns_Spic_C4_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374537/) | CC0-1.0 | - |
-| 374538 | Violin Section - spiccato - D4 (VlnEns_Spic_D3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374538/) | CC0-1.0 | - |
-| 374539 | Violin Section - spiccato - D6 (VlnEns_Spic_D5_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374539/) | CC0-1.0 | - |
-| 374540 | Violin Section - spiccato - E5 (VlnEns_Spic_E4_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374540/) | CC0-1.0 | - |
-| 374541 | Violin Section - spiccato - F4 (VlnEns_Spic_F#3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374541/) | CC0-1.0 | - |
-| 374549 | Violin Section - spiccato - D4 (VlnEns_Spic_D3_v2_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374549/) | CC0-1.0 | - |
-| 374579 | Violin Section - vibrato sustain - B3 (VlnEns_susVib_B2_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374579/) | CC0-1.0 | - |
-| 374581 | Violin Section - vibrato sustain - C5 (VlnEns_susVib_C4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374581/) | CC0-1.0 | - |
-| 374582 | Violin Section - vibrato sustain - D4 (VlnEns_susVib_D3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374582/) | CC0-1.0 | - |
-| 374583 | Violin Section - vibrato sustain - D6 (VlnEns_susVib_D5_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374583/) | CC0-1.0 | - |
-| 374600 | Violin Section - tremolo - A4 (VlnEns_Trem_A3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374600/) | CC0-1.0 | - |
-| 374601 | Violin Section - tremolo - B3 (VlnEns_Trem_B2_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374601/) | CC0-1.0 | - |
-| 374603 | Violin Section - tremolo - C5 (VlnEns_Trem_C4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374603/) | CC0-1.0 | - |
-| 374604 | Violin Section - tremolo - D4 (VlnEns_Trem_D3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374604/) | CC0-1.0 | - |
-| 374605 | Violin Section - tremolo - D6 (VlnEns_Trem_D5_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374605/) | CC0-1.0 | - |
-| 374606 | Violin Section - tremolo - E5 (VlnEns_Trem_E4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374606/) | CC0-1.0 | - |
-| 374607 | Violin Section - tremolo - F4 (VlnEns_Trem_F#3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374607/) | CC0-1.0 | - |
-| 374731 | OldTrombone - G2 (Trombone_Buzz_G2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374731/) | CC0-1.0 | - |
-| 374752 | OldTrombone - G1 (Trombone_Fall_G1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374752/) | CC0-1.0 | - |
-| 375259 | Bass drum (bdrum_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375259/) | CC0-1.0 | - |
-| 375260 | Bass drum (bdrum_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375260/) | CC0-1.0 | - |
-| 375261 | Bass drum (bdrum_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375261/) | CC0-1.0 | - |
-| 375264 | Bass drum (bdrum_muted_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375264/) | CC0-1.0 | - |
-| 375265 | Bass drum (bdrum_muted_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375265/) | CC0-1.0 | - |
-| 375266 | Bass drum (bdrum_muted_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375266/) | CC0-1.0 | - |
-| 375282 | Bass drum (bdrum_roll1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375282/) | CC0-1.0 | - |
-| 375368 | Snare (snare1_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375368/) | CC0-1.0 | - |
-| 375369 | Snare (snare1_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375369/) | CC0-1.0 | - |
+| 374226 | Tuba - staccato - A#2 (Tuba3_stac_A#1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374226/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/victory, music/wave_start |
+| 374228 | Tuba - staccato - D#2 (Tuba3_stac_D#1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374228/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/victory, music/wave_start |
+| 374229 | Tuba - staccato - D3 (Tuba3_stac_D2_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374229/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/victory, music/wave_start |
+| 374231 | Tuba - staccato - E#2 (Tuba3_stac_F1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374231/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/victory, music/wave_start |
+| 374255 | Tuba - sustain - E#1 (Tuba3_sus_F0_v1_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374255/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374258 | Tuba - sustain - A#1 (Tuba3_sus_A#0_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374258/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374259 | Tuba - sustain - A#2 (Tuba3_sus_A#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374259/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374261 | Tuba - sustain - D#2 (Tuba3_sus_D#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374261/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374262 | Tuba - sustain - D3 (Tuba3_sus_D2_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374262/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374263 | Tuba - sustain - E#2 (Tuba3_sus_F1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374263/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
+| 374273 | Tubular Bells - C4 (TB_hit_C4_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374273/) | CC0-1.0 | music/calm, music/menu_theme |
+| 374274 | Tubular Bells - C5 (TB_hit_C5_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374274/) | CC0-1.0 | music/calm, music/menu_theme |
+| 374325 | Upright Piano - A1 (Player_dyn3_rr1_006.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374325/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374326 | Upright Piano - C#2 (Player_dyn3_rr1_008.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374326/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374327 | Upright Piano - E#2 (Player_dyn3_rr1_010.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374327/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374328 | Upright Piano - A2 (Player_dyn3_rr1_012.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374328/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374329 | Upright Piano - C#3 (Player_dyn3_rr1_014.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374329/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374330 | Upright Piano - E#3 (Player_dyn3_rr1_016.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374330/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374333 | Upright Piano - E#4 (Player_dyn3_rr1_022.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374333/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374335 | Upright Piano - C#5 (Player_dyn3_rr1_026.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374335/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374336 | Upright Piano - E#5 (Player_dyn3_rr1_028.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374336/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374337 | Upright Piano - A5 (Player_dyn3_rr1_030.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374337/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
+| 374419 | Viola Section - spiccato - C5 (Violas_spic_C4_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374419/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374420 | Viola Section - spiccato - D4 (Violas_spic_D3_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374420/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374422 | Viola Section - spiccato - E3 (Violas_spic_E2_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374422/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374424 | Viola Section - spiccato - E#4 (Violas_spic_F3_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374424/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374425 | Viola Section - spiccato - F#3 (Violas_spic_G2_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374425/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374427 | Viola Section - spiccato - A4 (Violas_spic_A3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374427/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374428 | Viola Section - spiccato - B3 (Violas_spic_B2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374428/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374430 | Viola Section - spiccato - C3 (Violas_spic_C2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374430/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374432 | Viola Section - spiccato - D4 (Violas_spic_D3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374432/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 374534 | Violin Section - spiccato - A4 (VlnEns_Spic_A3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374534/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374537 | Violin Section - spiccato - C5 (VlnEns_Spic_C4_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374537/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374538 | Violin Section - spiccato - D4 (VlnEns_Spic_D3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374538/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374539 | Violin Section - spiccato - D6 (VlnEns_Spic_D5_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374539/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374540 | Violin Section - spiccato - E5 (VlnEns_Spic_E4_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374540/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374541 | Violin Section - spiccato - F4 (VlnEns_Spic_F#3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374541/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374549 | Violin Section - spiccato - D4 (VlnEns_Spic_D3_v2_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374549/) | CC0-1.0 | music/combat_high, music/victory, music/wave_start |
+| 374579 | Violin Section - vibrato sustain - B3 (VlnEns_susVib_B2_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374579/) | CC0-1.0 | music/menu_theme |
+| 374581 | Violin Section - vibrato sustain - C5 (VlnEns_susVib_C4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374581/) | CC0-1.0 | music/menu_theme |
+| 374582 | Violin Section - vibrato sustain - D4 (VlnEns_susVib_D3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374582/) | CC0-1.0 | music/menu_theme |
+| 374583 | Violin Section - vibrato sustain - D6 (VlnEns_susVib_D5_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374583/) | CC0-1.0 | music/menu_theme |
+| 374600 | Violin Section - tremolo - A4 (VlnEns_Trem_A3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374600/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374601 | Violin Section - tremolo - B3 (VlnEns_Trem_B2_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374601/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374603 | Violin Section - tremolo - C5 (VlnEns_Trem_C4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374603/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374604 | Violin Section - tremolo - D4 (VlnEns_Trem_D3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374604/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374605 | Violin Section - tremolo - D6 (VlnEns_Trem_D5_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374605/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374606 | Violin Section - tremolo - E5 (VlnEns_Trem_E4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374606/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374607 | Violin Section - tremolo - F4 (VlnEns_Trem_F#3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374607/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 374731 | OldTrombone - G2 (Trombone_Buzz_G2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374731/) | CC0-1.0 | music/boss, music/defeat |
+| 374752 | OldTrombone - G1 (Trombone_Fall_G1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374752/) | CC0-1.0 | music/boss, music/defeat |
+| 375259 | Bass drum (bdrum_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375259/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 375260 | Bass drum (bdrum_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375260/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 375261 | Bass drum (bdrum_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375261/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 375264 | Bass drum (bdrum_muted_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375264/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat |
+| 375265 | Bass drum (bdrum_muted_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375265/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat |
+| 375266 | Bass drum (bdrum_muted_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375266/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat |
+| 375282 | Bass drum (bdrum_roll1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375282/) | CC0-1.0 | music/boss |
+| 375368 | Snare (snare1_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375368/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low |
+| 375369 | Snare (snare1_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375369/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low |
 | 375378 | Snare (snare1_nosnare_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375378/) | CC0-1.0 | - |
-| 375404 | Snare (snare2_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375404/) | CC0-1.0 | - |
+| 375404 | Snare (snare2_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375404/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low |
 | 375433 | Snare (snare2_rimshot_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375433/) | CC0-1.0 | - |
-| 375497 | Cymbals (crash_hit_fff_loose_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375497/) | CC0-1.0 | - |
+| 375497 | Cymbals (crash_hit_fff_loose_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375497/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 375498 | Cymbals (crash_hit_mp_loose.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375498/) | CC0-1.0 | - |
-| 375506 | Cymbals (susp_hit_hardmall_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375506/) | CC0-1.0 | - |
-| 375512 | Cymbals (susp_hit_metal_2_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375512/) | CC0-1.0 | - |
-| 375519 | Cymbals (susp_hit_softmall_roll2_cresc.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375519/) | CC0-1.0 | - |
+| 375506 | Cymbals (susp_hit_hardmall_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375506/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 375512 | Cymbals (susp_hit_metal_2_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375512/) | CC0-1.0 | music/boss, music/combat_high |
+| 375519 | Cymbals (susp_hit_softmall_roll2_cresc.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375519/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
 | 375521 | Cymbals (susp_hit_softmall_roll4_fff_long.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375521/) | CC0-1.0 | - |
-| 375531 | Gong (gong_hit_ff_hard.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375531/) | CC0-1.0 | - |
-| 375532 | Gong (gong_hit_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375532/) | CC0-1.0 | - |
-| 375550 | Gong (gong_scrape_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375550/) | CC0-1.0 | - |
-| 375553 | Gong (gong_smack_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375553/) | CC0-1.0 | - |
+| 375531 | Gong (gong_hit_ff_hard.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375531/) | CC0-1.0 | music/boss, music/defeat, music/menu_theme, music/victory |
+| 375532 | Gong (gong_hit_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375532/) | CC0-1.0 | music/boss, music/defeat, music/menu_theme, music/victory |
+| 375550 | Gong (gong_scrape_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375550/) | CC0-1.0 | music/calm |
+| 375553 | Gong (gong_smack_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375553/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
 | 376809 | MUDDY AND WET FOOTSTEPS.wav | Alex_hears_things | [link](https://freesound.org/people/Alex_hears_things/sounds/376809/) | CC0-1.0 | - |
 | 377145 | Pistol Draw Unholster | nioczkus | [link](https://freesound.org/people/nioczkus/sounds/377145/) | CC0-1.0 | weapons/draw |
 | 380769 | BS _Swarm of roaches.wav | szczur_banshee | [link](https://freesound.org/people/szczur_banshee/sounds/380769/) | CC0-1.0 | creatures/crawler_skitter |
@@ -607,7 +607,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 404920 | Dog Growl - Beast / Creature | coldvet | [link](https://freesound.org/people/coldvet/sounds/404920/) | CC0-1.0 | creatures/brute_roar |
 | 405538 | Pistol Cock.wav | nebulasnails | [link](https://freesound.org/people/nebulasnails/sounds/405538/) | CC0-1.0 | - |
 | 405601 | Howling Wind Ambience | DBlover | [link](https://freesound.org/people/DBlover/sounds/405601/) | CC0-1.0 | - |
-| 406562 | hit - metallic 01.wav | Anthousai | [link](https://freesound.org/people/Anthousai/sounds/406562/) | CC0-1.0 | - |
+| 406562 | hit - metallic 01.wav | Anthousai | [link](https://freesound.org/people/Anthousai/sounds/406562/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low |
 | 410442 | EnfieldRifle.wav | SuperPhat | [link](https://freesound.org/people/SuperPhat/sounds/410442/) | CC0-1.0 | - |
 | 411671 | BloodSquish.wav | deoking | [link](https://freesound.org/people/deoking/sounds/411671/) | CC0-1.0 | creatures/bloater_pop, impacts/impact_flesh |
 | 411742 | Knife Stab Pull.wav | neilsher | [link](https://freesound.org/people/neilsher/sounds/411742/) | CC0-1.0 | impacts/knife_hit_flesh |
@@ -676,8 +676,8 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 483176 | Aggressive Barking Dog - 1.wav | SpaceJoe | [link](https://freesound.org/people/SpaceJoe/sounds/483176/) | CC0-1.0 | creatures/hound_bark |
 | 483190 | Growling Dog 2.wav | SpaceJoe | [link](https://freesound.org/people/SpaceJoe/sounds/483190/) | CC0-1.0 | creatures/hound_growl |
 | 485421 | Footsteps on wood floor | IENBA | [link](https://freesound.org/people/IENBA/sounds/485421/) | CC0-1.0 | creatures/footstep_wood |
-| 486140 | taiko.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486140/) | CC0-1.0 | - |
-| 486141 | taiko2.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486141/) | CC0-1.0 | - |
+| 486140 | taiko.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486140/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 486141 | taiko2.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486141/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
 | 488659 | Bone Fracture | Fission9 | [link](https://freesound.org/people/Fission9/sounds/488659/) | CC0-1.0 | impacts/headshot |
 | 494797 | Jacket/Cloth Rustle 9 | brandondelehoy | [link](https://freesound.org/people/brandondelehoy/sounds/494797/) | CC0-1.0 | ui_amb/ui_equip, weapons/cloth, weapons/drawHeavy, weapons/pouch |
 | 495117 | Wet Splat 2.mp3 | nebulasnails | [link](https://freesound.org/people/nebulasnails/sounds/495117/) | CC0-1.0 | creatures/acid_splash, impacts/blood_splat, impacts/impact_flesh |
@@ -764,7 +764,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 641046 | Gore Impact - "LOT OF HEART" | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/641046/) | CC0-1.0 | creatures/bloater_pop, impacts/gib, impacts/headshot |
 | 668071 | 50 cal shot.wav | ajhartman42295 | [link](https://freesound.org/people/ajhartman42295/sounds/668071/) | CC0-1.0 | weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
 | 672574 | Water Bullet 2.wav | Teaganbear | [link](https://freesound.org/people/Teaganbear/sounds/672574/) | CC0-1.0 | impacts/impact_water |
-| 674296 | Hi-Hat Closed Hit - Clean | TheEndOfACycle | [link](https://freesound.org/people/TheEndOfACycle/sounds/674296/) | CC0-1.0 | - |
+| 674296 | Hi-Hat Closed Hit - Clean | TheEndOfACycle | [link](https://freesound.org/people/TheEndOfACycle/sounds/674296/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low |
 | 674742 | AK-47 Assault Rifle being unloaded and reloaded | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674742/) | CC0-1.0 | weapons/coverClose, weapons/drawHeavy, weapons/magIn, weapons/magOut |
 | 674744 | Browning Hi-Power handgun being cocked 5x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674744/) | CC0-1.0 | weapons/pistol45_mech, weapons/slideRelease |
 | 675008 | AK-47 assault rifle being cocked 3x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/675008/) | CC0-1.0 | weapons/boltBack, weapons/boltForward, weapons/breakClose, weapons/mg556_mech, weapons/rifle762_mech, weapons/shotgunAuto_mech, weapons/sniper50_mech |
@@ -793,11 +793,11 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 737232 | Short Water Squish | qubodup | [link](https://freesound.org/people/qubodup/sounds/737232/) | CC0-1.0 | creatures/acid_splash, creatures/spitter_spit, impacts/impact_water |
 | 740037 | chainmail on metal | itinerantmonk108 | [link](https://freesound.org/people/itinerantmonk108/sounds/740037/) | CC0-1.0 | - |
 | 758580 | Rubble Trouble | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/758580/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/debris_fall |
-| 764329 | CRWDSing_Ahh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764329/) | CC0-1.0 | - |
-| 764330 | CRWDSing_Ahh Vowel Sung Near F 02_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764330/) | CC0-1.0 | - |
-| 764339 | CRWDSing_O Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764339/) | CC0-1.0 | - |
-| 764341 | CRWDSing_U Ooh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764341/) | CC0-1.0 | - |
-| 764343 | CRWDSing_Uh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764343/) | CC0-1.0 | - |
+| 764329 | CRWDSing_Ahh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764329/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
+| 764330 | CRWDSing_Ahh Vowel Sung Near F 02_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764330/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
+| 764339 | CRWDSing_O Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764339/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
+| 764341 | CRWDSing_U Ooh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764341/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
+| 764343 | CRWDSing_Uh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764343/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
 | 770124 | Big Character Grunts | IENBA | [link](https://freesound.org/people/IENBA/sounds/770124/) | CC0-1.0 | creatures/brute_pain, creatures/player_pain |
 | 779805 | Meaty Damage Impact | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/779805/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit |
 | 786977 | Metal Grate Running | Oilcan03 | [link](https://freesound.org/people/Oilcan03/sounds/786977/) | CC0-1.0 | creatures/footstep_grate |
