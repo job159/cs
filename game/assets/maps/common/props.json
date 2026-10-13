@@ -11,12 +11,12 @@
   "bbox": [
    [
     -0.2815,
-    -0.0066,
+    0,
     -0.2815
    ],
    [
     0.2815,
-    0.8734,
+    0.88,
     0.2815
    ]
   ],
@@ -48,7 +48,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "red oil drum"
@@ -102,7 +118,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "blue fuel drum"
@@ -119,13 +151,13 @@
   "bbox": [
    [
     -0.2646,
-    -0.0098,
-    -0.5803
+    0,
+    -0.5785
    ],
    [
     0.2646,
-    0.4541,
-    0.5766
+    0.464,
+    0.5785
    ]
   ],
   "size": [
@@ -156,7 +188,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "wooden crate"
@@ -172,14 +220,14 @@
   "maxTris": 1500,
   "bbox": [
    [
-    -0.1909,
-    -0.0068,
-    -0.2251
+    -0.1926,
+    0,
+    -0.2579
    ],
    [
-    0.1942,
-    0.335,
-    0.2908
+    0.1926,
+    0.3418,
+    0.2579
    ]
   ],
   "size": [
@@ -210,7 +258,23 @@
      1
     ],
     "rough": 1,
-    "metal": 0
+    "metal": 0,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "cardboard box"
@@ -264,7 +328,23 @@
      0
     ],
     "rough": 1,
-    "metal": 0
+    "metal": 0,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "plastic crate"
@@ -281,13 +361,13 @@
   "bbox": [
    [
     -0.3,
-    -0.3,
-    -0.0828
+    0,
+    -0.0825
    ],
    [
     0.3,
-    0.3,
-    0.0822
+    0.6,
+    0.0825
    ]
   ],
   "size": [
@@ -318,7 +398,23 @@
      1
     ],
     "rough": 1,
-    "metal": 0
+    "metal": 0,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "old tyre"
@@ -329,40 +425,40 @@
   "source": "polyhaven",
   "license": "CC0",
   "url": "https://polyhaven.com/a/metal_trash_can",
-  "srcTris": 13960,
-  "tris": 2997,
-  "maxTris": 3000,
+  "srcTris": 7532,
+  "tris": 2398,
+  "maxTris": 2400,
   "bbox": [
    [
-    -0.9527,
-    0.0001,
-    -0.2771
+    -0.385,
+    0,
+    -0.2742
    ],
    [
-    0.8244,
-    0.9062,
-    0.2781
+    0.385,
+    0.9061,
+    0.2742
    ]
   ],
   "size": [
-   1.777,
+   0.77,
    0.906,
-   0.555
+   0.548
   ],
   "surf": "metal",
   "collide": "box",
   "materials": [
    {
-    "name": "metal_trash_can",
+    "name": "metal_trash_can_rust",
     "maps": {
      "diff": "props/metal_trash_can_0_diff.jpg",
      "nor": "props/metal_trash_can_0_nor.jpg",
      "arm": "props/metal_trash_can_0_arm.jpg"
     },
     "avg": [
-     0.1509,
-     0.1351,
-     0.1166
+     0.0988,
+     0.0725,
+     0.0538
     ],
     "alpha": false,
     "doubleSided": true,
@@ -372,7 +468,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "metal_trash_can_rust",
@@ -394,32 +506,26 @@
      1
     ],
     "rough": 1,
-    "metal": 1
-   },
-   {
-    "name": "metal_trash_can_rust",
-    "maps": {
-     "diff": "props/metal_trash_can_2_diff.jpg",
-     "nor": "props/metal_trash_can_2_nor.jpg",
-     "arm": "props/metal_trash_can_2_arm.jpg"
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
     },
-    "avg": [
-     0.0988,
-     0.0725,
-     0.0538
-    ],
-    "alpha": false,
-    "doubleSided": true,
-    "color": [
-     1,
-     1,
-     1
-    ],
-    "rough": 1,
-    "metal": 1
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
-  "note": "dumpster"
+  "note": "metal street trash bin (rusty variant)"
  },
  "trashbag": {
   "id": "trashbag",
@@ -432,14 +538,14 @@
   "maxTris": 1200,
   "bbox": [
    [
-    -0.2605,
-    -0.0014,
-    -0.2398
+    -0.2618,
+    0,
+    -0.2314
    ],
    [
-    0.2631,
-    0.5716,
-    0.2231
+    0.2618,
+    0.5731,
+    0.2314
    ]
   ],
   "size": [
@@ -470,7 +576,23 @@
      1
     ],
     "rough": 1,
-    "metal": 0
+    "metal": 0,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "trash bag"
@@ -481,23 +603,23 @@
   "source": "polyhaven",
   "license": "CC0",
   "url": "https://polyhaven.com/a/fire_hydrant",
-  "srcTris": 86316,
-  "tris": 4930,
-  "maxTris": 2500,
+  "srcTris": 43158,
+  "tris": 2480,
+  "maxTris": 2000,
   "bbox": [
    [
-    -0.44,
+    -0.1364,
     0,
-    -0.1265
+    -0.1588
    ],
    [
-    0.4328,
+    0.1364,
     0.7992,
-    0.191
+    0.1588
    ]
   ],
   "size": [
-   0.873,
+   0.273,
    0.799,
    0.318
   ],
@@ -505,33 +627,11 @@
   "collide": "cyl",
   "materials": [
    {
-    "name": "fire_hydrant",
+    "name": "fire_hydrant_aged",
     "maps": {
      "diff": "props/fire_hydrant_0_diff.jpg",
      "nor": "props/fire_hydrant_0_nor.jpg",
      "arm": "props/fire_hydrant_0_arm.jpg"
-    },
-    "avg": [
-     0.2667,
-     0.0675,
-     0.045
-    ],
-    "alpha": false,
-    "doubleSided": true,
-    "color": [
-     1,
-     1,
-     1
-    ],
-    "rough": 1,
-    "metal": 1
-   },
-   {
-    "name": "fire_hydrant_aged",
-    "maps": {
-     "diff": "props/fire_hydrant_1_diff.jpg",
-     "nor": "props/fire_hydrant_1_nor.jpg",
-     "arm": "props/fire_hydrant_1_arm.jpg"
     },
     "avg": [
      0.2775,
@@ -546,10 +646,26 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
-  "note": "fire hydrant"
+  "note": "fire hydrant (aged variant)"
  },
  "street_lamp_01": {
   "id": "street_lamp_01",
@@ -562,12 +678,12 @@
   "maxTris": 3500,
   "bbox": [
    [
-    -0.3516,
+    -0.3504,
     0,
     -0.1932
    ],
    [
-    0.3492,
+    0.3504,
     3.8699,
     0.1932
    ]
@@ -600,7 +716,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "street_lamp_01_glass",
@@ -622,7 +754,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "street_lamp_01_bulb",
@@ -644,7 +792,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "street lamp"
@@ -660,14 +824,14 @@
   "maxTris": 1500,
   "bbox": [
    [
-    -0.7762,
-    -0.0005,
-    -0.2531
+    -0.7819,
+    0,
+    -0.2184
    ],
    [
-    0.7876,
-    1.1048,
-    0.1837
+    0.7819,
+    1.1053,
+    0.2184
    ]
   ],
   "size": [
@@ -698,7 +862,23 @@
      1
     ],
     "rough": 1,
-    "metal": 0
+    "metal": 0,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "jersey barrier"
@@ -714,14 +894,14 @@
   "maxTris": 2500,
   "bbox": [
    [
-    -0.8914,
-    -0.3201,
-    -0.216
+    -0.8983,
+    0,
+    -0.1871
    ],
    [
-    0.9051,
-    0.6078,
-    0.1582
+    0.8983,
+    0.9279,
+    0.1871
    ]
   ],
   "size": [
@@ -752,7 +932,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "exterior_aircon_unit_02",
@@ -774,7 +970,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "exterior_aircon_unit_rusted_01",
@@ -796,7 +1008,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "exterior_aircon_unit_rusted_02",
@@ -818,7 +1046,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "wall AC unit"
@@ -836,12 +1080,12 @@
    [
     -0.46,
     0,
-    -0.21
+    -0.216
    ],
    [
     0.46,
     1.1203,
-    0.222
+    0.216
    ]
   ],
   "size": [
@@ -872,7 +1116,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "electrical utility box"
@@ -888,14 +1148,14 @@
   "maxTris": 700,
   "bbox": [
    [
-    -0.5761,
-    -0.0005,
-    -0.2537
+    -0.5825,
+    0,
+    -0.2483
    ],
    [
-    0.5889,
-    0.8888,
-    0.2428
+    0.5825,
+    0.8893,
+    0.2483
    ]
   ],
   "size": [
@@ -926,7 +1186,23 @@
      1
     ],
     "rough": 1,
-    "metal": 0
+    "metal": 0,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "bench"
@@ -943,12 +1219,12 @@
   "bbox": [
    [
     -0.3454,
-    -0.0288,
+    0,
     -0.3454
    ],
    [
     0.3454,
-    0.0389,
+    0.0676,
     0.3454
    ]
   ],
@@ -980,7 +1256,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "manhole cover"
@@ -996,14 +1288,14 @@
   "maxTris": 5000,
   "bbox": [
    [
-    -0.8406,
-    0.0022,
-    -2.1663
+    -0.8912,
+    0,
+    -2.1901
    ],
    [
-    0.9417,
-    1.3996,
-    2.2139
+    0.8912,
+    1.3974,
+    2.1901
    ]
   ],
   "size": [
@@ -1034,7 +1326,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "covered_car",
@@ -1056,7 +1364,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "car under a tarp"
@@ -1072,14 +1396,14 @@
   "maxTris": 1500,
   "bbox": [
    [
-    -0.162,
-    -0.3593,
-    -0.0286
+    -0.1616,
+    0,
+    -0.2073
    ],
    [
-    0.1612,
-    0.1716,
-    0.386
+    0.1616,
+    0.531,
+    0.2073
    ]
   ],
   "size": [
@@ -1110,7 +1434,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "security_light_bulb",
@@ -1132,7 +1472,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    },
    {
     "name": "security_light_glass",
@@ -1154,7 +1510,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "wall flood light"
@@ -1208,7 +1580,23 @@
      1
     ],
     "rough": 1,
-    "metal": 1
+    "metal": 1,
+    "sizes": {
+     "diff": 1024,
+     "nor": 1024,
+     "arm": 1024
+    },
+    "variants": {
+     "diff": [
+      512
+     ],
+     "nor": [
+      512
+     ],
+     "arm": [
+      512
+     ]
+    }
    }
   ],
   "note": "propane tank"

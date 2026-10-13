@@ -10,7 +10,8 @@
 //   normal     normal map strength (default 1)
 //   surf       impact surface for kit-generated colliders (SURF names of game/src/world/collision.js)
 //   lm         lightmap texel-density scale (1 = map resolution, 0 = not lightmapped: lit by env + sun only)
-//   alphaTest, opacity (+ transparent), side ('double'), emissive (sRGB) + emissiveIntensity (HDR),
+//   alphaTest, opacity (+ transparent), blend (alpha-blended with the texture alpha), side ('double'),
+//   emissive (sRGB) + emissiveIntensity (HDR),
 //   env        environment (IBL) specular intensity multiplier
 //   decal      true: drawn with polygon offset, never casts shadows (road paint, patches, stains)
 //   cast       false: does not occlude in the lightmap bake / realtime shadows
@@ -30,6 +31,12 @@ export const MATERIALS = {
   dirt: { set: 'dirt', surf: 'dirt', lm: 0.5 },
   grass: { set: 'grass', surf: 'dirt', lm: 0.5 },
   rubble: { set: 'rubble', surf: 'concrete', lm: 0.8 },
+  // decals (UV 0..1 per quad, alpha-blended, placed with kit.decal / kit.scatterDecals)
+  decal_stain: { set: 'decal_stain', surf: 'concrete', blend: true, decal: true, metric: false, lm: 0.5, cast: false },
+  decal_puddle: { set: 'decal_puddle', surf: 'water', blend: true, decal: true, metric: false, lm: 0.5, cast: false, env: 2.6 },
+  decal_cracks: { set: 'decal_cracks', surf: 'concrete', blend: true, decal: true, metric: false, lm: 0.5, cast: false },
+  decal_dirt: { set: 'decal_dirt', surf: 'dirt', blend: true, decal: true, metric: false, lm: 0.5, cast: false },
+  decal_streak: { set: 'decal_streak', surf: 'concrete', blend: true, decal: true, metric: false, lm: 0.5, cast: false },
   // road paint (worn alpha), stains
   paint_white: { set: 'road_paint', surf: 'concrete', color: '#ece8dc', alphaTest: 0.32, decal: true, lm: 0.5, cast: false, tile: [2, 2] },
   paint_yellow: { set: 'road_paint', surf: 'concrete', color: '#e2b23a', alphaTest: 0.32, decal: true, lm: 0.5, cast: false, tile: [2, 2] },
@@ -65,15 +72,19 @@ export const MATERIALS = {
   steel_dark: { set: 'metal_rusty', surf: 'metal', tile: 1.2, color: '#5d5a57', rough: 0.9, lm: 1 },
   awning_fabric: { set: 'canvas', surf: 'wood', tile: 1.5, color: '#7c2a24', lm: 1, side: 'double' },
   // ---------------------------------------------------------------- interiors
-  interior_wall: { set: 'plaster_worn', surf: 'concrete', color: '#a59d90', lm: 0.45 },
-  interior_floor: { set: 'tiles', surf: 'tile', lm: 0.45 },
-  interior_ceiling: { set: 'plaster_worn', surf: 'concrete', color: '#c6c0b4', lm: 0.35 },
-  interior_hidden: { set: 'plaster_worn', surf: 'concrete', color: '#7a746b', lm: 0.2 }, // unreachable rooms behind windows
+  // (photoscan albedos are dark: plaster_worn ~0.16, garage_floor ~0.15, tiles_worn ~0.065; keep tints light so
+  //  enterable rooms stay readable - there is no auto exposure in game)
+  interior_wall: { set: 'plaster_worn', surf: 'concrete', color: '#ebe5d9', lm: 0.4 },
+  interior_floor: { set: 'garage_floor', surf: 'concrete', lm: 0.5 },          // stained concrete (garages, warehouses, default)
+  interior_tiles: { set: 'tiles_worn', surf: 'tile', lm: 0.5 },                // grimy shop-floor tiles
+  interior_quarry: { set: 'tiles', surf: 'tile', lm: 0.5 },                    // dark red quarry tiles (kitchens, back rooms)
+  interior_ceiling: { set: 'plaster_worn', surf: 'concrete', color: '#f4f0e8', lm: 0.4 },
+  interior_hidden: { set: 'plaster_worn', surf: 'concrete', color: '#7a746b', lm: 0.4 }, // unreachable rooms behind windows
 
   // ---------------------------------------------------------------- glass, lights
   glass: { set: null, surf: 'glass', color: '#1c262d', rough: 0.06, metal: 0, opacity: 0.38, lm: 0, env: 1.3, cast: false },
   glass_dirty: { set: null, surf: 'glass', color: '#3a3a33', rough: 0.25, metal: 0, opacity: 0.6, lm: 0, env: 0.9, cast: false },
-  glass_shop: { set: null, surf: 'glass', color: '#0f1418', rough: 0.04, metal: 0, opacity: 0.3, lm: 0, env: 1.5, cast: false },
+  glass_shop: { set: null, surf: 'glass', color: '#0f1418', rough: 0.06, metal: 0, opacity: 0.38, lm: 0, env: 1.3, cast: false },
   lamp_warm: { set: null, surf: 'glass', color: '#fff3dc', emissive: '#ffc77a', emissiveIntensity: 14, lm: 0, cast: false },
   lamp_cold: { set: null, surf: 'glass', color: '#eef6ff', emissive: '#d8ecff', emissiveIntensity: 12, lm: 0, cast: false },
   lamp_red: { set: null, surf: 'glass', color: '#ff4030', emissive: '#ff2a18', emissiveIntensity: 8, lm: 0, cast: false },
@@ -83,30 +94,31 @@ export const MATERIALS = {
 
   // ---------------------------------------------------------------- street furniture
   chainlink: { set: 'chainlink', surf: 'metal', alphaTest: 0.45, side: 'double', lm: 0.5, metal: 1 },
+  grate: { set: 'grate', surf: 'grate', alphaTest: 0.5, side: 'double', lm: 0.6, metal: 1, tile: 1 },
   pole_wood: { set: 'wood_planks', surf: 'wood', tile: [0.6, 3], color: '#6e5a45', lm: 1 },
   wire: { set: null, surf: 'metal', color: '#141414', rough: 0.7, lm: 0, cast: false },
-  rubber: { set: null, surf: 'dirt', color: '#1b1b1b', rough: 0.92, lm: 1 },
+  rubber: { set: null, surf: 'dirt', color: '#1b1b1b', rough: 0.8, lm: 1 },
   sandbag: { set: 'canvas', surf: 'sand', tile: 0.8, color: '#a39272', lm: 1 },
   tape_police: { set: null, surf: 'wood', color: '#e8c21a', rough: 0.6, lm: 0, cast: false, side: 'double' },
-  cone_orange: { set: null, surf: 'wood', color: '#d4501c', rough: 0.55, lm: 1 },
-  reflective_white: { set: null, surf: 'wood', color: '#d8d8d2', rough: 0.4, lm: 1 },
-  sign_white: { set: 'paint_metal', surf: 'metal', tile: 1.5, color: '#e6e3dc', lm: 1 },
-  sign_red: { set: 'paint_metal', surf: 'metal', tile: 1.5, color: '#a32722', lm: 1 },
-  sign_green: { set: 'paint_metal', surf: 'metal', tile: 1.5, color: '#2e6a3c', lm: 1 },
-  sign_blue: { set: 'paint_metal', surf: 'metal', tile: 1.5, color: '#284f86', lm: 1 },
-  sign_yellow: { set: 'paint_metal', surf: 'metal', tile: 1.5, color: '#d6a822', lm: 1 },
+  cone_orange: { set: null, surf: 'wood', color: '#d4501c', rough: 0.5, lm: 1 },
+  reflective_white: { set: null, surf: 'wood', color: '#d8d8d2', rough: 0.5, lm: 1 },
+  sign_white: { set: 'paint_metal', surf: 'metal', tile: 3.5, color: '#e6e3dc', lm: 1 },
+  sign_red: { set: 'paint_metal', surf: 'metal', tile: 3.5, color: '#a32722', lm: 1 },
+  sign_green: { set: 'paint_metal', surf: 'metal', tile: 3.5, color: '#2e6a3c', lm: 1 },
+  sign_blue: { set: 'paint_metal', surf: 'metal', tile: 3.5, color: '#284f86', lm: 1 },
+  sign_yellow: { set: 'paint_metal', surf: 'metal', tile: 3.5, color: '#d6a822', lm: 1 },
   billboard: { set: 'paint_metal', surf: 'metal', tile: 3, color: '#b9b2a2', lm: 1 },
 
   // ---------------------------------------------------------------- vehicles (tinted per vehicle with vertex colour)
-  car_paint: { set: 'paint_metal', surf: 'metal', tile: 2.2, rough: 0.55, metal: 0.4, lm: 1, env: 1.1 },
+  car_paint: { set: null, surf: 'metal', rough: 0.42, metal: 0.3, lm: 1, env: 1.0 },
   car_paint_worn: { set: 'metal_worn', surf: 'metal', tile: 2.4, rough: 0.8, lm: 1, env: 0.8 },
   car_burnt: { set: 'metal_rusty', surf: 'metal', tile: 1.4, color: '#6b625c', lm: 1 },
   car_chrome: { set: null, surf: 'metal', color: '#b8bcc0', rough: 0.25, metal: 1, lm: 1, env: 1.5 },
-  car_plastic: { set: null, surf: 'metal', color: '#1e1f20', rough: 0.7, lm: 1 },
-  car_glass: { set: null, surf: 'glass', color: '#121a20', rough: 0.05, opacity: 0.55, lm: 0, env: 1.6, cast: false },
-  car_interior: { set: null, surf: 'wood', color: '#242322', rough: 0.85, lm: 0.6 },
-  car_light: { set: null, surf: 'glass', color: '#d8d4c8', rough: 0.1, lm: 1 },
-  car_taillight: { set: null, surf: 'glass', color: '#7a1410', rough: 0.15, lm: 1 },
+  car_plastic: { set: null, surf: 'metal', color: '#1e1f20', rough: 0.8, lm: 1 },
+  car_glass: { set: null, surf: 'glass', color: '#121a20', rough: 0.05, opacity: 0.45, lm: 0, env: 2.2, cast: false },
+  car_interior: { set: null, surf: 'wood', color: '#242322', rough: 0.8, lm: 1 },
+  car_light: { set: null, surf: 'glass', color: '#d8d4c8', rough: 0.12, lm: 1 },
+  car_taillight: { set: null, surf: 'glass', color: '#7a1410', rough: 0.12, lm: 1 },
 };
 
 /** Resolves a palette entry against the texture manifest: adds tileU/tileV (metres), avg albedo, file names. */

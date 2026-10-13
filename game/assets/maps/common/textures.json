@@ -21,7 +21,25 @@
     0.2258,
     0.2142
    ],
-   "note": "worn street asphalt"
+   "note": "worn street asphalt",
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "asphalt_cracked": {
    "id": "asphalt_cracked",
@@ -44,7 +62,25 @@
     0.1129,
     0.1013
    ],
-   "note": "cracked asphalt"
+   "note": "cracked asphalt",
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "concrete_wall": {
    "id": "concrete_wall",
@@ -67,7 +103,23 @@
     0.234,
     0.1592
    ],
-   "note": "concrete walls, barriers"
+   "note": "concrete walls, barriers",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "concrete_floor": {
    "id": "concrete_floor",
@@ -90,7 +142,25 @@
     0.0946,
     0.0892
    ],
-   "note": "yards, floors, curbs"
+   "note": "yards, floors, curbs",
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "brick_red": {
    "id": "brick_red",
@@ -113,7 +183,25 @@
     0.1374,
     0.0851
    ],
-   "note": "red brick facades"
+   "note": "red brick facades",
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "brick_painted": {
    "id": "brick_painted",
@@ -136,7 +224,23 @@
     0.3391,
     0.1882
    ],
-   "note": "painted brick (tinted per building)"
+   "note": "painted brick (tinted per building)",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "plaster": {
    "id": "plaster",
@@ -159,7 +263,23 @@
     0.3896,
     0.3314
    ],
-   "note": "stucco / plaster (tinted per building)"
+   "note": "stucco / plaster (tinted per building)",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "roof_tiles": {
    "id": "roof_tiles",
@@ -174,7 +294,23 @@
     "nor": "roof_tiles_nor.jpg",
     "arm": "roof_tiles_arm.jpg"
    },
-   "ms": 6028
+   "ms": 6028,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "corrugated": {
    "id": "corrugated",
@@ -197,7 +333,23 @@
     0.0969,
     0.0825
    ],
-   "note": "galvanised corrugated sheet"
+   "note": "galvanised corrugated sheet",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "metal_painted": {
    "id": "metal_painted",
@@ -220,7 +372,23 @@
     0.0456,
     0.0254
    ],
-   "note": "painted metal with rust"
+   "note": "painted metal with rust",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "metal_rusty": {
    "id": "metal_rusty",
@@ -243,7 +411,23 @@
     0.0429,
     0.015
    ],
-   "note": "burnt / rusted metal"
+   "note": "burnt / rusted metal",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "wood_planks": {
    "id": "wood_planks",
@@ -266,7 +450,23 @@
     0.0576,
     0.0437
    ],
-   "note": "boards, barricades"
+   "note": "boards, barricades",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "tiles": {
    "id": "tiles",
@@ -289,7 +489,23 @@
     0.0163,
     0.0053
    ],
-   "note": "interior floor tiles"
+   "note": "interior floor tiles",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "gravel": {
    "id": "gravel",
@@ -312,7 +528,23 @@
     0.3991,
     0.3455
    ],
-   "note": "gravel yards, rail beds"
+   "note": "gravel yards, rail beds",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "dirt": {
    "id": "dirt",
@@ -335,7 +567,23 @@
     0.0846,
     0.0484
    ],
-   "note": "dirt patches"
+   "note": "dirt patches",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "sand": {
    "id": "sand",
@@ -350,14 +598,30 @@
     "nor": "sand_nor.jpg",
     "arm": "sand_arm.jpg"
    },
-   "ms": 2718
+   "ms": 2718,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "grass": {
    "id": "grass",
    "source": "polyhaven",
-   "srcId": "sparse_grass",
+   "srcId": "leafy_grass",
    "license": "CC0",
-   "url": "https://polyhaven.com/a/sparse_grass",
+   "url": "https://polyhaven.com/a/leafy_grass",
    "resName": "1k",
    "res": 1024,
    "tile": 2,
@@ -369,11 +633,28 @@
     "arm": "grass_arm.jpg"
    },
    "avg": [
-    0.0813,
-    0.0485,
-    0.0085
+    0.3194,
+    0.2341,
+    0.1058
    ],
-   "note": "weedy grass patches"
+   "note": "unkempt lawn / weedy grass patches",
+   "grey": false,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "chainlink": {
    "id": "chainlink",
@@ -396,7 +677,23 @@
     0.1107,
     0.0808
    ],
-   "note": "chain-link mesh with opacity"
+   "note": "chain-link mesh with opacity",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "tread_plate": {
    "id": "tread_plate",
@@ -411,7 +708,17 @@
     "nor": "tread_plate_nor.jpg",
     "arm": "tread_plate_arm.jpg"
    },
-   "ms": 1833
+   "ms": 1833,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
   },
   "grate": {
    "id": "grate",
@@ -426,7 +733,17 @@
     "nor": "grate_nor.jpg",
     "arm": "grate_arm.jpg"
    },
-   "ms": 2830
+   "ms": 2830,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
   },
   "canvas": {
    "id": "canvas",
@@ -441,7 +758,17 @@
     "nor": "canvas_nor.jpg",
     "arm": "canvas_arm.jpg"
    },
-   "ms": 1359
+   "ms": 1359,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
   },
   "road_paint": {
    "id": "road_paint",
@@ -456,7 +783,17 @@
     "nor": "road_paint_nor.jpg",
     "arm": "road_paint_arm.jpg"
    },
-   "ms": 14254
+   "ms": 14254,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
   },
   "water": {
    "id": "water",
@@ -471,7 +808,17 @@
     "nor": "water_nor.jpg",
     "arm": "water_arm.jpg"
    },
-   "ms": 10992
+   "ms": 10992,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
   },
   "asphalt_dark": {
    "id": "asphalt_dark",
@@ -494,7 +841,23 @@
     0.0609,
     0.0617
    ],
-   "note": "fresh patches / repairs (decal pieces), parking lots"
+   "note": "fresh patches / repairs (decal pieces), parking lots",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "sidewalk": {
    "id": "sidewalk",
@@ -517,7 +880,25 @@
     0.1784,
     0.1358
    ],
-   "note": "sidewalk slabs"
+   "note": "sidewalk slabs",
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "concrete_cracked": {
    "id": "concrete_cracked",
@@ -540,7 +921,23 @@
     0.093,
     0.0689
    ],
-   "note": "damaged concrete ground"
+   "note": "damaged concrete ground",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "brick_dark": {
    "id": "brick_dark",
@@ -563,7 +960,23 @@
     0.0763,
     0.0508
    ],
-   "note": "darker mixed brick"
+   "note": "darker mixed brick",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "plaster_worn": {
    "id": "plaster_worn",
@@ -586,7 +999,23 @@
     0.1547,
     0.1118
    ],
-   "note": "interior plaster"
+   "note": "interior plaster",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "corrugated_rusty": {
    "id": "corrugated_rusty",
@@ -609,7 +1038,23 @@
     0.0242,
     0.01
    ],
-   "note": "rusty corrugated sheet"
+   "note": "rusty corrugated sheet",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "metal_container": {
    "id": "metal_container",
@@ -628,11 +1073,28 @@
     "arm": "metal_container_arm.jpg"
    },
    "avg": [
-    0.1078,
-    0.2476,
-    0.08
+    0.4289,
+    0.4289,
+    0.4289
    ],
-   "note": "shipping container sides"
+   "note": "shipping container sides (desaturated: tinted per container)",
+   "grey": true,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "metal_shutter": {
    "id": "metal_shutter",
@@ -655,7 +1117,23 @@
     0.1873,
     0.1224
    ],
-   "note": "roller shutters, garage doors"
+   "note": "roller shutters, garage doors",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "metal_worn": {
    "id": "metal_worn",
@@ -678,7 +1156,23 @@
     0.2866,
     0.136
    ],
-   "note": "white paint over rust (vehicles, signs; tinted)"
+   "note": "white paint over rust (vehicles, signs; tinted)",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "wood_siding": {
    "id": "wood_siding",
@@ -701,7 +1195,23 @@
     0.3829,
     0.3387
    ],
-   "note": "painted clapboard siding (tinted; boards run vertically in the image)"
+   "note": "painted clapboard siding (tinted; boards run vertically in the image)",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "roof_tar": {
    "id": "roof_tar",
@@ -724,7 +1234,23 @@
     0.0451,
     0.0373
    ],
-   "note": "flat roofs"
+   "note": "flat roofs",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "roof_shingles": {
    "id": "roof_shingles",
@@ -747,7 +1273,23 @@
     0.2498,
     0.1912
    ],
-   "note": "pitched roofs"
+   "note": "pitched roofs",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "rubble": {
    "id": "rubble",
@@ -770,7 +1312,23 @@
     0.2396,
     0.1902
    ],
-   "note": "debris / rubble ground"
+   "note": "debris / rubble ground",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "concrete_dirty": {
    "id": "concrete_dirty",
@@ -793,7 +1351,23 @@
     0.0827,
     0.0612
    ],
-   "note": "stained industrial concrete"
+   "note": "stained industrial concrete",
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   },
   "paint_metal": {
    "id": "paint_metal",
@@ -808,7 +1382,235 @@
     "nor": "paint_metal_nor.jpg",
     "arm": "paint_metal_arm.jpg"
    },
-   "ms": 10675
+   "ms": 5562,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
+  },
+  "decal_stain": {
+   "id": "decal_stain",
+   "source": "procedural",
+   "license": "CC0 (original, generated by tools/map/lib/proctex.mjs)",
+   "version": 3,
+   "res": 512,
+   "tile": 2,
+   "alpha": true,
+   "maps": {
+    "diff": "decal_stain_diff.png",
+    "nor": "decal_stain_nor.jpg",
+    "arm": "decal_stain_arm.jpg"
+   },
+   "ms": 2686,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
+  },
+  "decal_puddle": {
+   "id": "decal_puddle",
+   "source": "procedural",
+   "license": "CC0 (original, generated by tools/map/lib/proctex.mjs)",
+   "version": 3,
+   "res": 512,
+   "tile": 2,
+   "alpha": true,
+   "maps": {
+    "diff": "decal_puddle_diff.png",
+    "nor": "decal_puddle_nor.jpg",
+    "arm": "decal_puddle_arm.jpg"
+   },
+   "ms": 2264,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
+  },
+  "decal_cracks": {
+   "id": "decal_cracks",
+   "source": "procedural",
+   "license": "CC0 (original, generated by tools/map/lib/proctex.mjs)",
+   "version": 3,
+   "res": 1024,
+   "tile": 2,
+   "alpha": true,
+   "maps": {
+    "diff": "decal_cracks_diff.png",
+    "nor": "decal_cracks_nor.jpg",
+    "arm": "decal_cracks_arm.jpg"
+   },
+   "ms": 58436,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
+  },
+  "decal_dirt": {
+   "id": "decal_dirt",
+   "source": "procedural",
+   "license": "CC0 (original, generated by tools/map/lib/proctex.mjs)",
+   "version": 3,
+   "res": 512,
+   "tile": 2,
+   "alpha": true,
+   "maps": {
+    "diff": "decal_dirt_diff.png",
+    "nor": "decal_dirt_nor.jpg",
+    "arm": "decal_dirt_arm.jpg"
+   },
+   "ms": 22697,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
+  },
+  "decal_streak": {
+   "id": "decal_streak",
+   "source": "procedural",
+   "license": "CC0 (original, generated by tools/map/lib/proctex.mjs)",
+   "version": 3,
+   "res": 512,
+   "tile": 2,
+   "alpha": true,
+   "maps": {
+    "diff": "decal_streak_diff.png",
+    "nor": "decal_streak_nor.jpg",
+    "arm": "decal_streak_arm.jpg"
+   },
+   "ms": 956,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "variants": {
+    "diff": [],
+    "nor": [],
+    "arm": []
+   }
+  },
+  "tiles_worn": {
+   "id": "tiles_worn",
+   "source": "polyhaven",
+   "srcId": "worn_tile_floor",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/worn_tile_floor",
+   "resName": "1k",
+   "res": 1024,
+   "tile": 2,
+   "tileV": 2,
+   "alpha": false,
+   "maps": {
+    "diff": "tiles_worn_diff.jpg",
+    "nor": "tiles_worn_nor.jpg",
+    "arm": "tiles_worn_arm.jpg"
+   },
+   "avg": [
+    0.1613,
+    0.1369,
+    0.0987
+   ],
+   "note": "grimy shop-floor tiles (albedo x2.2: the scan reads black indoors)",
+   "grey": false,
+   "gain": 2.2,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
+  },
+  "garage_floor": {
+   "id": "garage_floor",
+   "source": "polyhaven",
+   "srcId": "garage_floor",
+   "license": "CC0",
+   "url": "https://polyhaven.com/a/garage_floor",
+   "resName": "1k",
+   "res": 1024,
+   "tile": 1.886,
+   "tileV": 1.886,
+   "alpha": false,
+   "maps": {
+    "diff": "garage_floor_diff.jpg",
+    "nor": "garage_floor_nor.jpg",
+    "arm": "garage_floor_arm.jpg"
+   },
+   "avg": [
+    0.2017,
+    0.1529,
+    0.0948
+   ],
+   "note": "stained garage / warehouse concrete floor",
+   "grey": false,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   }
   }
  },
  "hdri": {

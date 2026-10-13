@@ -1,6 +1,6 @@
 // Ground surfaces: flat / sloped areas split on the chunk grid, raised sidewalks with curbs, road markings,
 // asphalt patches, manholes and drains.
-import { ShapeUtils, Vector2 } from 'three';
+import { ShapeUtils, Vector2, Matrix4 } from 'three';
 import { Kit, ensureCCW, V } from './core.mjs';
 
 /** Clips a convex polygon [[x, z]] to the axis rectangle [x0, z0, x1, z1] (Sutherland-Hodgman). */
@@ -75,18 +75,67 @@ Object.assign(Kit.prototype, {
       }
     }
     const hy = o.heightAt || (() => y);
+    // pieces are stored in world space and emitted by finalize(), after every building footprint is known,
+    // so ground hidden under buildings is cut away (no wasted lightmap texels / overdraw)
+    this._pendingGround ||= [];
+    const { collide, heightAt, holes, ...fo } = o;
+    void collide; void heightAt; void holes;
     for (const pieces of byCell.values()) {
       for (const piece of pieces) {
-        // emit each convex piece as one face (shared plane per cell -> one lightmap chart per cell)
-        const pts = ensureCCW(piece).map((p) => [p[0], hy(p[0], p[1]), p[1]]).reverse();
-        // ensureCCW gives CCW seen from above in (x, -z); reversing makes the face normal +Y in (x, y, z)
-        this.face(fixUpFacing(pts), o.mat, { ...o, collide: false });
+        const pts = ensureCCW(piece).map((p) => this.W([p[0], hy(p[0], p[1]), p[1]]));
+        this._pendingGround.push({ pts, mat: o.mat, o: { ...fo, collide: false }, keep: !!o.keep });
       }
     }
     if (o.collide !== false) {
       const surf = typeof o.collide === 'string' ? o.collide : this.material(o.mat).surf;
       for (const t of tris) this.colPoly(t.map((p) => [p[0], hy(p[0], p[1]), p[1]]), surf);
     }
+  },
+
+  /** Registers a solid footprint (world [[x, z]], base y0, top y1): ground under it is removed by finalize(). */
+  solid(poly, y0, y1) {
+    const w = poly.map((p) => { const q = this.W([p[0], y0, p[1]]); return [q[0], q[2]]; });
+    const by = this.W([poly[0][0], y0, poly[0][1]])[1];
+    (this.solids ||= []).push({ poly: w, y0: by, y1: by + (y1 - y0) });
+  },
+
+  /** Emits the deferred ground pieces minus solid footprints (called by the compiler after build()). */
+  finalize() {
+    const pending = this._pendingGround || [];
+    this._pendingGround = [];
+    const solids = (this.solids || []).map((sd) => ({ ...sd, tris: triangulate2(sd.poly).map((t) => ccwXZ(t)), bb: bbox2(sd.poly) }));
+    this.push(new Matrix4()); // pieces are already in world space
+    const saved = this.stack;
+    this.stack = [new Matrix4()];
+    // ground layers stacked within a few cm (gravel lot laid over a sidewalk slab ...) hide the lower one
+    for (const g of pending) { g.xz = ccwXZ(g.pts.map((p) => [p[0], p[2]])); g.bb = bbox2(g.xz); g.y = g.pts.reduce((a, p) => a + p[1], 0) / g.pts.length; }
+    try {
+      for (const g of pending) {
+        let polys = [g.xz];
+        const plane = planeOf(g.pts);
+        const gy = g.y;
+        if (!g.keep) {
+          const pb = g.bb;
+          for (const sd of solids) {
+            if (gy < sd.y0 - 0.35 || gy > sd.y0 + 0.6) continue;
+            if (pb[2] < sd.bb[0] || pb[0] > sd.bb[2] || pb[3] < sd.bb[1] || pb[1] > sd.bb[3]) continue;
+            for (const tri of sd.tris) polys = polys.flatMap((pp) => subtractConvex(pp, tri));
+            if (!polys.length) break;
+          }
+          for (const c of pending) {
+            if (!polys.length) break;
+            if (c === g || c.y - gy <= 0.004 || c.y - gy > 0.06) continue;
+            if (pb[2] < c.bb[0] || pb[0] > c.bb[2] || pb[3] < c.bb[1] || pb[1] > c.bb[3]) continue;
+            polys = polys.flatMap((pp) => subtractConvex(pp, c.xz));
+          }
+        }
+        for (const pp of polys) {
+          if (Math.abs(area2xz(pp)) < 1e-4) continue;
+          const pts3 = pp.map(([x, z]) => [x, plane(x, z), z]);
+          this.face(fixUpFacing(pts3), g.mat, g.o);
+        }
+      }
+    } finally { this.stack = saved; this.pop(); }
   },
 
   /**
@@ -175,6 +224,40 @@ Object.assign(Kit.prototype, {
     this.face(fixUpFacing(ensureCCW(poly).map((p) => [p[0], y, p[1]]).reverse()), o.mat || 'asphalt_patch', { uvOffset: [this.rnd(0, 10), this.rnd(0, 10)], uvRot: this.rnd(0, 6.28) });
   },
 
+  /**
+   * Ground decal (stain, puddle, cracks, dirt): at [x, z], size (m, or [w, d]), rot, mat ('decal_stain'), y.
+   * Decal materials use UV 0..1 over the quad and alpha-blend over the surface below.
+   */
+  decal(o) {
+    const [w, d] = Array.isArray(o.size) ? o.size : [o.size ?? 2, o.size ?? 2];
+    const y = (o.y || 0) + (o.lift ?? 0.012);
+    const c = Math.cos(o.rot || 0), s = Math.sin(o.rot || 0);
+    const P = [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(([px, pz]) => [o.at[0] + px * c + pz * s, y, o.at[1] - px * s + pz * c]);
+    this.upFace(P, o.mat || 'decal_stain', [[0, 0], [1, 0], [1, 1], [0, 1]], { tint: o.tint });
+  },
+
+  /**
+   * Scatters ground decals inside a polygon: count, mats (array or { mat: weight }), size [min, max], y,
+   * avoid: [[x, z, r]...] keep-out circles.
+   */
+  scatterDecals(poly, o = {}) {
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const p of poly) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+    const mats = Array.isArray(o.mats) ? Object.fromEntries(o.mats.map((m) => [m, 1])) : o.mats || { decal_stain: 3, decal_cracks: 2, decal_dirt: 2, decal_puddle: 1 };
+    const tot = Object.values(mats).reduce((a, b) => a + b, 0);
+    const [s0, s1] = o.size || [1.2, 3.5];
+    let placed = 0;
+    for (let k = 0; k < (o.count ?? 8) * 6 && placed < (o.count ?? 8); k++) {
+      const p = [this.rnd(x0, x1), this.rnd(z0, z1)];
+      if (!inPoly(p, poly) || (o.avoid || []).some(([ax, az, r]) => Math.hypot(ax - p[0], az - p[1]) < r)) continue;
+      let r = this.rnd(0, tot), mat = Object.keys(mats)[0];
+      for (const [m, wgt] of Object.entries(mats)) { r -= wgt; if (r <= 0) { mat = m; break; } }
+      const sz = this.rnd(s0, s1);
+      this.decal({ at: p, size: [sz, sz * this.rnd(0.7, 1.3)], rot: this.rnd(0, 6.28), mat, y: o.y, lift: 0.01 + placed * 0.0004 });
+      placed++;
+    }
+  },
+
   /** Round manhole cover (procedural iron disc) at [x, z]; r (0.32). */
   manhole(at, o = {}) {
     const r = o.r ?? 0.32, y = (o.y || 0) + 0.004, seg = 16;
@@ -190,6 +273,60 @@ Object.assign(Kit.prototype, {
     });
   },
 });
+
+const area2xz = (p) => { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[i], r = p[(i + 1) % p.length]; a += q[0] * r[1] - r[0] * q[1]; } return a / 2; };
+/** Counter-clockwise in the (x, z) plane (math convention: interior on the left of each edge). */
+function ccwXZ(p) { return area2xz(p) >= 0 ? p.slice() : p.slice().reverse(); }
+function bbox2(p) { let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity; for (const q of p) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); z0 = Math.min(z0, q[1]); z1 = Math.max(z1, q[1]); } return [x0, z0, x1, z1]; }
+/** Height function of the plane through a planar polygon (falls back to the mean height). */
+function planeOf(pts) {
+  const a = pts[0];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const b = pts[i], c = pts[i + 1];
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    if (Math.abs(n[1]) > 1e-9) return (x, z) => a[1] - (n[0] * (x - a[0]) + n[2] * (z - a[2])) / n[1];
+  }
+  const m = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  return () => m;
+}
+/** Splits a convex polygon by the line a->b: [left (inside of a CCW clip edge), right]. */
+function splitLine(poly, a, b) {
+  const L = [], R = [];
+  const side = (p) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    const sp = side(p), sq = side(q);
+    if (sp >= 0) L.push(p);
+    if (sp <= 0) R.push(p);
+    if ((sp > 0 && sq < 0) || (sp < 0 && sq > 0)) {
+      const t = sp / (sp - sq);
+      const x = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+      L.push(x); R.push(x);
+    }
+  }
+  return [L, R];
+}
+/** Convex polygon P minus convex polygon C (both CCW in x,z): list of convex pieces outside C. */
+function subtractConvex(P, C) {
+  const out = [];
+  let rest = P;
+  for (let i = 0; i < C.length && rest.length >= 3; i++) {
+    const [inside, outside] = splitLine(rest, C[i], C[(i + 1) % C.length]);
+    if (outside.length >= 3 && Math.abs(area2xz(outside)) > 1e-6) out.push(outside);
+    rest = inside;
+  }
+  return out;
+}
+
+function inPoly(p, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
 
 /** Makes sure a horizontal face list is wound so its normal points up. */
 export function fixUpFacing(pts) {

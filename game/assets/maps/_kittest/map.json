@@ -3,7 +3,7 @@
  "name": "套件測試街角",
  "nameEn": "Kit Test Corner",
  "version": 1,
- "built": "2026-10-12T09:45:02.601Z",
+ "built": "2026-10-12T13:16:29.498Z",
  "bounds": [
   -34,
   -2,
@@ -39,11 +39,12 @@
   "backgroundBlur": 0
  },
  "fog": {
-  "color": "#8c8883",
+  "color": "auto",
   "density": 0.009
  },
  "exposure": 1,
  "grade": null,
+ "preview": null,
  "playerSpawns": [
   [
    0,
@@ -199,6 +200,125 @@
   {
    "type": "point",
    "pos": [
+    12.233,
+    3.15,
+    -14.925
+   ],
+   "color": "#ffb76b",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.04
+  },
+  {
+   "type": "point",
+   "pos": [
+    18,
+    3.15,
+    -21.075
+   ],
+   "color": "#ffb76b",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.04
+  },
+  {
+   "type": "point",
+   "pos": [
+    12.233,
+    2.24,
+    -21.075
+   ],
+   "color": "#c9d2dc",
+   "intensity": 3,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    12.233,
+    2.24,
+    -14.925
+   ],
+   "color": "#c9d2dc",
+   "intensity": 3,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    18,
+    2.24,
+    -21.075
+   ],
+   "color": "#c9d2dc",
+   "intensity": 3,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    18,
+    2.24,
+    -14.925
+   ],
+   "color": "#c9d2dc",
+   "intensity": 3,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    23.767,
+    2.24,
+    -21.075
+   ],
+   "color": "#c9d2dc",
+   "intensity": 3,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    23.767,
+    2.24,
+    -14.925
+   ],
+   "color": "#c9d2dc",
+   "intensity": 3,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    23,
+    5.55,
+    -10.4
+   ],
+   "color": "#ffbf80",
+   "intensity": 5,
+   "range": 6
+  },
+  {
+   "type": "point",
+   "pos": [
     3.85,
     7.8,
     -6.3
@@ -317,36 +437,41 @@
  },
  "lightmap": {
   "encoding": "rgbm-sqrt",
-  "range": 32,
+  "range": 8,
   "mode": "indirect+mask",
   "uv": "uv1",
   "atlases": [
    {
     "rgbm": "lm_0.png",
     "sun": "lm_0_sun.png",
-    "width": 1024,
+    "width": 2048,
     "height": 1024
    }
   ]
  },
  "materials": {
-  "asphalt": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/asphalt_diff.jpg",
-    "nor": "../common/asphalt_nor.jpg",
-    "arm": "../common/asphalt_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 0.55,
-   "res": "2k"
-  },
   "asphalt_patch": {
-   "color": "#c8c8c8",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/asphalt_dark_diff.jpg",
     "nor": "../common/asphalt_dark_nor.jpg",
     "arm": "../common/asphalt_dark_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "decal": true,
    "surf": "concrete",
@@ -355,98 +480,172 @@
    "res": "1k"
   },
   "paint_yellow": {
-   "color": "#e2b23a",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/road_paint_diff.png",
     "nor": "../common/road_paint_nor.jpg",
     "arm": "../common/road_paint_arm.jpg"
    },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
    "alphaTest": 0.32,
+   "decal": true,
+   "surf": "concrete",
+   "members": [
+    "paint_yellow",
+    "paint_white",
+    "paint_red"
+   ],
+   "lm": 0.5,
+   "cast": false
+  },
+  "decal_cracks": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_cracks_diff.png",
+    "nor": "../common/decal_cracks_nor.jpg",
+    "arm": "../common/decal_cracks_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "blend": true,
    "decal": true,
    "surf": "concrete",
    "lm": 0.5,
    "cast": false
   },
-  "paint_white": {
-   "color": "#ece8dc",
+  "decal_dirt": {
+   "color": "#ffffff",
    "maps": {
-    "diff": "../common/road_paint_diff.png",
-    "nor": "../common/road_paint_nor.jpg",
-    "arm": "../common/road_paint_arm.jpg"
+    "diff": "../common/decal_dirt_diff.png",
+    "nor": "../common/decal_dirt_nor.jpg",
+    "arm": "../common/decal_dirt_arm.jpg"
    },
-   "alphaTest": 0.32,
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "decal": true,
+   "surf": "dirt",
+   "lm": 0.5,
+   "cast": false
+  },
+  "decal_puddle": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_puddle_diff.png",
+    "nor": "../common/decal_puddle_nor.jpg",
+    "arm": "../common/decal_puddle_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "env": 2.6,
+   "decal": true,
+   "surf": "water",
+   "lm": 0.5,
+   "cast": false
+  },
+  "decal_stain": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_stain_diff.png",
+    "nor": "../common/decal_stain_nor.jpg",
+    "arm": "../common/decal_stain_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
    "decal": true,
    "surf": "concrete",
    "lm": 0.5,
    "cast": false
   },
   "steel_dark": {
-   "color": "#5d5a57",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/metal_rusty_diff.jpg",
     "nor": "../common/metal_rusty_nor.jpg",
     "arm": "../common/metal_rusty_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 0.9,
    "surf": "metal",
    "lm": 1,
    "res": "1k"
   },
-  "sidewalk": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/sidewalk_diff.jpg",
-    "nor": "../common/sidewalk_nor.jpg",
-    "arm": "../common/sidewalk_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 0.7,
-   "res": "2k"
-  },
   "curb": {
-   "color": "#cfcac0",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/concrete_floor_diff.jpg",
     "nor": "../common/concrete_floor_nor.jpg",
     "arm": "../common/concrete_floor_arm.jpg"
    },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "concrete",
+   "members": [
+    "curb",
+    "trim_concrete"
+   ],
    "lm": 1,
    "res": "2k"
-  },
-  "gravel": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/gravel_diff.jpg",
-    "nor": "../common/gravel_nor.jpg",
-    "arm": "../common/gravel_arm.jpg"
-   },
-   "rough": 1,
-   "surf": "dirt",
-   "lm": 0.5,
-   "res": "1k"
-  },
-  "grass": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/grass_diff.jpg",
-    "nor": "../common/grass_nor.jpg",
-    "arm": "../common/grass_arm.jpg"
-   },
-   "surf": "dirt",
-   "lm": 0.5,
-   "res": "1k"
-  },
-  "concrete_cracked": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/concrete_cracked_diff.jpg",
-    "nor": "../common/concrete_cracked_nor.jpg",
-    "arm": "../common/concrete_cracked_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 0.7,
-   "res": "1k"
   },
   "brick_red": {
    "color": "#ffffff",
@@ -455,34 +654,103 @@
     "nor": "../common/brick_red_nor.jpg",
     "arm": "../common/brick_red_arm.jpg"
    },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "concrete",
    "lm": 1,
    "res": "2k"
   },
   "interior_wall": {
-   "color": "#a59d90",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/plaster_worn_diff.jpg",
     "nor": "../common/plaster_worn_nor.jpg",
     "arm": "../common/plaster_worn_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "concrete",
-   "lm": 0.45,
+   "members": [
+    "interior_wall",
+    "interior_ceiling",
+    "interior_hidden"
+   ],
+   "lm": 0.4,
    "res": "1k"
   },
   "frame_dark": {
-   "color": "#2d2f31",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/paint_metal_diff.jpg",
     "nor": "../common/paint_metal_nor.jpg",
     "arm": "../common/paint_metal_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 0.85,
    "surf": "metal",
    "lm": 1
   },
+  "glass_shop": {
+   "color": "#ffffff",
+   "rough": 0.06,
+   "metal": 0,
+   "opacity": 0.38,
+   "env": 1.3,
+   "surf": "glass",
+   "members": [
+    "glass_shop",
+    "glass"
+   ],
+   "lm": 0,
+   "cast": false
+  },
   "glass_dirty": {
-   "color": "#3a3a33",
+   "color": "#ffffff",
    "rough": 0.25,
    "metal": 0,
    "opacity": 0.6,
@@ -491,76 +759,104 @@
    "lm": 0,
    "cast": false
   },
-  "glass_shop": {
-   "color": "#0f1418",
-   "rough": 0.04,
-   "metal": 0,
-   "opacity": 0.3,
-   "env": 1.5,
-   "surf": "glass",
-   "lm": 0,
-   "cast": false
-  },
-  "glass": {
-   "color": "#1c262d",
-   "rough": 0.06,
-   "metal": 0,
-   "opacity": 0.38,
-   "env": 1.3,
-   "surf": "glass",
-   "lm": 0,
-   "cast": false
-  },
-  "interior_hidden": {
-   "color": "#7a746b",
-   "maps": {
-    "diff": "../common/plaster_worn_diff.jpg",
-    "nor": "../common/plaster_worn_nor.jpg",
-    "arm": "../common/plaster_worn_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 0.2,
-   "res": "1k"
-  },
-  "interior_ceiling": {
-   "color": "#c6c0b4",
-   "maps": {
-    "diff": "../common/plaster_worn_diff.jpg",
-    "nor": "../common/plaster_worn_nor.jpg",
-    "arm": "../common/plaster_worn_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 0.35,
-   "res": "1k"
-  },
   "interior_floor": {
    "color": "#ffffff",
    "maps": {
-    "diff": "../common/tiles_diff.jpg",
-    "nor": "../common/tiles_nor.jpg",
-    "arm": "../common/tiles_arm.jpg"
+    "diff": "../common/garage_floor_diff.jpg",
+    "nor": "../common/garage_floor_nor.jpg",
+    "arm": "../common/garage_floor_arm.jpg"
    },
-   "surf": "tile",
-   "lm": 0.45,
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.5,
    "res": "1k"
   },
   "trim_stone": {
-   "color": "#d6d0c4",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/concrete_wall_diff.jpg",
     "nor": "../common/concrete_wall_nor.jpg",
     "arm": "../common/concrete_wall_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "concrete",
+   "members": [
+    "trim_stone",
+    "concrete_wall"
+   ],
    "lm": 1,
    "res": "1k"
   },
+  "decal_streak": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_streak_diff.png",
+    "nor": "../common/decal_streak_nor.jpg",
+    "arm": "../common/decal_streak_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "decal": true,
+   "surf": "concrete",
+   "lm": 0.5,
+   "cast": false
+  },
   "steel": {
-   "color": "#8d9094",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/paint_metal_diff.jpg",
     "nor": "../common/paint_metal_nor.jpg",
     "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 0.75,
    "metal": 0.8,
@@ -574,91 +870,116 @@
     "nor": "../common/wood_planks_nor.jpg",
     "arm": "../common/wood_planks_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "wood",
+   "members": [
+    "wood_planks",
+    "trim_wood",
+    "pole_wood"
+   ],
    "lm": 1,
    "res": "1k"
   },
-  "trim_concrete": {
-   "color": "#bdb8ae",
-   "maps": {
-    "diff": "../common/concrete_floor_diff.jpg",
-    "nor": "../common/concrete_floor_nor.jpg",
-    "arm": "../common/concrete_floor_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 1,
-   "res": "2k"
-  },
   "awning_fabric": {
-   "color": "#7c2a24",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/canvas_diff.jpg",
     "nor": "../common/canvas_nor.jpg",
     "arm": "../common/canvas_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
    },
    "side": "double",
    "surf": "wood",
    "lm": 1
   },
   "sign_green": {
-   "color": "#2e6a3c",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/paint_metal_diff.jpg",
     "nor": "../common/paint_metal_nor.jpg",
     "arm": "../common/paint_metal_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "metal",
+   "members": [
+    "sign_green",
+    "sign_red",
+    "sign_blue",
+    "billboard",
+    "sign_white",
+    "paint_metal",
+    "sign_yellow"
+   ],
    "lm": 1
   },
   "frame_white": {
-   "color": "#d9d6cf",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/paint_metal_diff.jpg",
     "nor": "../common/paint_metal_nor.jpg",
     "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 0.9,
    "surf": "metal",
    "lm": 1
   },
-  "sign_red": {
-   "color": "#a32722",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "surf": "metal",
-   "lm": 1
-  },
   "lamp_warm": {
-   "color": "#fff3dc",
+   "color": "#ffffff",
    "emissive": "#ffc77a",
    "emissiveIntensity": 14,
    "surf": "glass",
    "lm": 0,
    "cast": false
-  },
-  "sign_blue": {
-   "color": "#284f86",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "surf": "metal",
-   "lm": 1
-  },
-  "roof_tar": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/roof_tar_diff.jpg",
-    "nor": "../common/roof_tar_nor.jpg",
-    "arm": "../common/roof_tar_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 0.5,
-   "res": "1k"
   },
   "corrugated": {
    "color": "#ffffff",
@@ -666,6 +987,22 @@
     "diff": "../common/corrugated_diff.jpg",
     "nor": "../common/corrugated_nor.jpg",
     "arm": "../common/corrugated_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "metal": 1,
    "surf": "metal",
@@ -679,9 +1016,57 @@
     "nor": "../common/metal_painted_nor.jpg",
     "arm": "../common/metal_painted_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "metal",
    "lm": 1,
    "res": "1k"
+  },
+  "wire": {
+   "color": "#ffffff",
+   "rough": 0.7,
+   "surf": "metal",
+   "lm": 0,
+   "cast": false
+  },
+  "lamp_off": {
+   "color": "#ffffff",
+   "rough": 0.2,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "grate": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/grate_diff.png",
+    "nor": "../common/grate_nor.jpg",
+    "arm": "../common/grate_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "metal": 1,
+   "alphaTest": 0.5,
+   "side": "double",
+   "surf": "grate",
+   "lm": 0.6
   },
   "wood_siding": {
    "color": "#ffffff",
@@ -689,6 +1074,22 @@
     "diff": "../common/wood_siding_diff.jpg",
     "nor": "../common/wood_siding_nor.jpg",
     "arm": "../common/wood_siding_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "surf": "wood",
    "lm": 1,
@@ -701,19 +1102,24 @@
     "nor": "../common/roof_shingles_nor.jpg",
     "arm": "../common/roof_shingles_arm.jpg"
    },
-   "surf": "wood",
-   "lm": 0.6,
-   "res": "1k"
-  },
-  "trim_wood": {
-   "color": "#d8d4cc",
-   "maps": {
-    "diff": "../common/wood_planks_diff.jpg",
-    "nor": "../common/wood_planks_nor.jpg",
-    "arm": "../common/wood_planks_arm.jpg"
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "surf": "wood",
-   "lm": 1,
+   "lm": 0.6,
    "res": "1k"
   },
   "concrete_floor": {
@@ -723,20 +1129,27 @@
     "nor": "../common/concrete_floor_nor.jpg",
     "arm": "../common/concrete_floor_arm.jpg"
    },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "concrete",
    "lm": 0.7,
    "res": "2k"
-  },
-  "concrete_wall": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/concrete_wall_diff.jpg",
-    "nor": "../common/concrete_wall_nor.jpg",
-    "arm": "../common/concrete_wall_arm.jpg"
-   },
-   "surf": "concrete",
-   "lm": 1,
-   "res": "1k"
   },
   "corrugated_rusty": {
    "color": "#ffffff",
@@ -744,6 +1157,22 @@
     "diff": "../common/corrugated_rusty_diff.jpg",
     "nor": "../common/corrugated_rusty_nor.jpg",
     "arm": "../common/corrugated_rusty_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "surf": "metal",
    "lm": 1,
@@ -756,6 +1185,22 @@
     "nor": "../common/metal_shutter_nor.jpg",
     "arm": "../common/metal_shutter_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "metal",
    "lm": 1,
    "res": "1k"
@@ -767,6 +1212,22 @@
     "nor": "../common/chainlink_nor.jpg",
     "arm": "../common/chainlink_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "metal": 1,
    "alphaTest": 0.45,
    "side": "double",
@@ -774,19 +1235,28 @@
    "lm": 0.5,
    "res": "1k"
   },
-  "wire": {
-   "color": "#141414",
-   "rough": 0.7,
-   "surf": "metal",
-   "lm": 0,
-   "cast": false
-  },
   "metal_container": {
    "color": "#ffffff",
    "maps": {
     "diff": "../common/metal_container_diff.jpg",
     "nor": "../common/metal_container_nor.jpg",
     "arm": "../common/metal_container_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "surf": "metal",
    "lm": 0.8,
@@ -798,6 +1268,22 @@
     "diff": "../common/props/Barrel_01_0_diff.jpg",
     "nor": "../common/props/Barrel_01_0_nor.jpg",
     "arm": "../common/props/Barrel_01_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 1,
    "metal": 1,
@@ -813,6 +1299,22 @@
     "nor": "../common/props/barrel_03_0_nor.jpg",
     "arm": "../common/props/barrel_03_0_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 1,
    "metal": 1,
    "side": "double",
@@ -826,6 +1328,22 @@
     "diff": "../common/props/wooden_crate_02_0_diff.jpg",
     "nor": "../common/props/wooden_crate_02_0_nor.jpg",
     "arm": "../common/props/wooden_crate_02_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 1,
    "metal": 1,
@@ -841,6 +1359,22 @@
     "nor": "../common/props/old_tyre_0_nor.jpg",
     "arm": "../common/props/old_tyre_0_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 1,
    "metal": 0,
    "side": "double",
@@ -855,19 +1389,25 @@
     "nor": "../common/rubble_nor.jpg",
     "arm": "../common/rubble_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "concrete",
    "lm": 0.8,
    "res": "1k"
-  },
-  "sign_white": {
-   "color": "#e6e3dc",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "surf": "metal",
-   "lm": 1
   },
   "car_paint_worn": {
    "color": "#ffffff",
@@ -876,44 +1416,51 @@
     "nor": "../common/metal_worn_nor.jpg",
     "arm": "../common/metal_worn_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 0.8,
    "env": 0.8,
    "surf": "metal",
    "lm": 1,
    "res": "1k"
   },
-  "car_interior": {
-   "color": "#242322",
-   "rough": 0.85,
-   "surf": "wood",
-   "lm": 0.6
-  },
   "car_plastic": {
-   "color": "#1e1f20",
-   "rough": 0.7,
+   "color": "#ffffff",
+   "rough": 0.8,
    "surf": "metal",
+   "members": [
+    "car_plastic",
+    "car_interior",
+    "rubber"
+   ],
    "lm": 1
   },
   "car_light": {
-   "color": "#d8d4c8",
-   "rough": 0.1,
+   "color": "#ffffff",
+   "rough": 0.12,
    "surf": "glass",
-   "lm": 1
-  },
-  "car_taillight": {
-   "color": "#7a1410",
-   "rough": 0.15,
-   "surf": "glass",
-   "lm": 1
-  },
-  "rubber": {
-   "color": "#1b1b1b",
-   "rough": 0.92,
-   "surf": "dirt",
+   "members": [
+    "car_light",
+    "car_taillight"
+   ],
    "lm": 1
   },
   "car_chrome": {
-   "color": "#b8bcc0",
+   "color": "#ffffff",
    "rough": 0.25,
    "metal": 1,
    "env": 1.5,
@@ -921,101 +1468,68 @@
    "lm": 1
   },
   "car_burnt": {
-   "color": "#6b625c",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/metal_rusty_diff.jpg",
     "nor": "../common/metal_rusty_nor.jpg",
     "arm": "../common/metal_rusty_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "surf": "metal",
+   "members": [
+    "car_burnt",
+    "metal_rusty"
+   ],
    "lm": 1,
    "res": "1k"
   },
   "car_paint": {
    "color": "#ffffff",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "rough": 0.55,
-   "metal": 0.4,
-   "env": 1.1,
+   "rough": 0.42,
+   "metal": 0.3,
+   "env": 1,
    "surf": "metal",
    "lm": 1
   },
   "car_glass": {
-   "color": "#121a20",
+   "color": "#ffffff",
    "rough": 0.05,
-   "opacity": 0.55,
-   "env": 1.6,
-   "surf": "glass",
-   "lm": 0,
-   "cast": false
-  },
-  "lamp_off": {
-   "color": "#2a2a28",
-   "rough": 0.2,
+   "opacity": 0.45,
+   "env": 2.2,
    "surf": "glass",
    "lm": 0,
    "cast": false
   },
   "lamp_red": {
-   "color": "#ff4030",
+   "color": "#ffffff",
    "emissive": "#ff2a18",
    "emissiveIntensity": 8,
    "surf": "glass",
    "lm": 0,
    "cast": false
   },
-  "paint_metal": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "surf": "metal",
-   "lm": 1
-  },
   "lamp_amber": {
-   "color": "#ffb040",
+   "color": "#ffffff",
    "emissive": "#ff9a1a",
    "emissiveIntensity": 8,
    "surf": "glass",
    "lm": 0,
    "cast": false
-  },
-  "pole_wood": {
-   "color": "#6e5a45",
-   "maps": {
-    "diff": "../common/wood_planks_diff.jpg",
-    "nor": "../common/wood_planks_nor.jpg",
-    "arm": "../common/wood_planks_arm.jpg"
-   },
-   "surf": "wood",
-   "lm": 1,
-   "res": "1k"
-  },
-  "sign_yellow": {
-   "color": "#d6a822",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "surf": "metal",
-   "lm": 1
-  },
-  "billboard": {
-   "color": "#b9b2a2",
-   "maps": {
-    "diff": "../common/paint_metal_diff.jpg",
-    "nor": "../common/paint_metal_nor.jpg",
-    "arm": "../common/paint_metal_arm.jpg"
-   },
-   "surf": "metal",
-   "lm": 1
   },
   "metal_worn": {
    "color": "#ffffff",
@@ -1024,16 +1538,21 @@
     "nor": "../common/metal_worn_nor.jpg",
     "arm": "../common/metal_worn_arm.jpg"
    },
-   "surf": "metal",
-   "lm": 1,
-   "res": "1k"
-  },
-  "metal_rusty": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/metal_rusty_diff.jpg",
-    "nor": "../common/metal_rusty_nor.jpg",
-    "arm": "../common/metal_rusty_arm.jpg"
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "surf": "metal",
    "lm": 1,
@@ -1046,19 +1565,21 @@
     "nor": "../common/props/fire_hydrant_0_nor.jpg",
     "arm": "../common/props/fire_hydrant_0_arm.jpg"
    },
-   "rough": 1,
-   "metal": 1,
-   "side": "double",
-   "surf": "metal",
-   "lm": 1,
-   "prop": "fire_hydrant"
-  },
-  "prop_fire_hydrant_1": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/props/fire_hydrant_1_diff.jpg",
-    "nor": "../common/props/fire_hydrant_1_nor.jpg",
-    "arm": "../common/props/fire_hydrant_1_arm.jpg"
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 1,
    "metal": 1,
@@ -1074,6 +1595,22 @@
     "nor": "../common/props/metal_trash_can_0_nor.jpg",
     "arm": "../common/props/metal_trash_can_0_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 1,
    "metal": 1,
    "side": "double",
@@ -1088,19 +1625,21 @@
     "nor": "../common/props/metal_trash_can_1_nor.jpg",
     "arm": "../common/props/metal_trash_can_1_arm.jpg"
    },
-   "rough": 1,
-   "metal": 1,
-   "side": "double",
-   "surf": "metal",
-   "lm": 1,
-   "prop": "metal_trash_can"
-  },
-  "prop_metal_trash_can_2": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/props/metal_trash_can_2_diff.jpg",
-    "nor": "../common/props/metal_trash_can_2_nor.jpg",
-    "arm": "../common/props/metal_trash_can_2_arm.jpg"
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
    },
    "rough": 1,
    "metal": 1,
@@ -1116,6 +1655,22 @@
     "nor": "../common/props/painted_wooden_bench_0_nor.jpg",
     "arm": "../common/props/painted_wooden_bench_0_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 1,
    "metal": 0,
    "side": "double",
@@ -1130,26 +1685,28 @@
     "nor": "../common/props/utility_box_02_0_nor.jpg",
     "arm": "../common/props/utility_box_02_0_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 1,
    "metal": 1,
    "side": "double",
    "surf": "metal",
    "lm": 1,
    "prop": "utility_box_02"
-  },
-  "prop_trashbag_0": {
-   "color": "#ffffff",
-   "maps": {
-    "diff": "../common/props/trashbag_0_diff.jpg",
-    "nor": "../common/props/trashbag_0_nor.jpg",
-    "arm": "../common/props/trashbag_0_arm.jpg"
-   },
-   "rough": 1,
-   "metal": 0,
-   "side": "double",
-   "surf": "dirt",
-   "lm": 1,
-   "prop": "trashbag"
   },
   "prop_cardboard_box_01_0": {
    "color": "#ffffff",
@@ -1158,6 +1715,22 @@
     "nor": "../common/props/cardboard_box_01_0_nor.jpg",
     "arm": "../common/props/cardboard_box_01_0_arm.jpg"
    },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
    "rough": 1,
    "metal": 0,
    "side": "double",
@@ -1165,65 +1738,279 @@
    "lm": 1,
    "prop": "cardboard_box_01"
   },
-  "paint_red": {
-   "color": "#a8302a",
+  "prop_trashbag_0": {
+   "color": "#ffffff",
    "maps": {
-    "diff": "../common/road_paint_diff.png",
-    "nor": "../common/road_paint_nor.jpg",
-    "arm": "../common/road_paint_arm.jpg"
+    "diff": "../common/props/trashbag_0_diff.jpg",
+    "nor": "../common/props/trashbag_0_nor.jpg",
+    "arm": "../common/props/trashbag_0_arm.jpg"
    },
-   "alphaTest": 0.32,
-   "decal": true,
-   "surf": "concrete",
-   "lm": 0.5,
-   "cast": false
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "side": "double",
+   "surf": "dirt",
+   "lm": 1,
+   "prop": "trashbag"
   },
   "sandbag": {
-   "color": "#a39272",
+   "color": "#ffffff",
    "maps": {
     "diff": "../common/canvas_diff.jpg",
     "nor": "../common/canvas_nor.jpg",
     "arm": "../common/canvas_arm.jpg"
    },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
    "surf": "sand",
    "lm": 1
   },
   "reflective_white": {
-   "color": "#d8d8d2",
-   "rough": 0.4,
+   "color": "#ffffff",
+   "rough": 0.5,
    "surf": "wood",
+   "members": [
+    "reflective_white",
+    "cone_orange"
+   ],
    "lm": 1
   },
   "tape_police": {
-   "color": "#e8c21a",
+   "color": "#ffffff",
    "rough": 0.6,
    "side": "double",
    "surf": "wood",
    "lm": 0,
    "cast": false
   },
-  "cone_orange": {
-   "color": "#d4501c",
-   "rough": 0.55,
-   "surf": "wood",
-   "lm": 1
+  "asphalt": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/asphalt_diff.jpg",
+    "nor": "../common/asphalt_nor.jpg",
+    "arm": "../common/asphalt_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.55,
+   "res": "2k"
+  },
+  "sidewalk": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/sidewalk_diff.jpg",
+    "nor": "../common/sidewalk_nor.jpg",
+    "arm": "../common/sidewalk_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.7,
+   "res": "2k"
+  },
+  "gravel": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/gravel_diff.jpg",
+    "nor": "../common/gravel_nor.jpg",
+    "arm": "../common/gravel_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "surf": "dirt",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "grass": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/grass_diff.jpg",
+    "nor": "../common/grass_nor.jpg",
+    "arm": "../common/grass_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "dirt",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "concrete_cracked": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_cracked_diff.jpg",
+    "nor": "../common/concrete_cracked_nor.jpg",
+    "arm": "../common/concrete_cracked_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.7,
+   "res": "1k"
+  },
+  "roof_tar": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/roof_tar_diff.jpg",
+    "nor": "../common/roof_tar_nor.jpg",
+    "arm": "../common/roof_tar_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "interior_tiles": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/tiles_worn_diff.jpg",
+    "nor": "../common/tiles_worn_nor.jpg",
+    "arm": "../common/tiles_worn_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "tile",
+   "lm": 0.5,
+   "res": "1k"
   }
  },
  "stats": {
-  "meshes": 165,
-  "triangles": 48068,
-  "collisionTriangles": 1685,
+  "meshes": 67,
+  "triangles": 47403,
+  "collisionTriangles": 1769,
   "chunks": 4,
-  "maxDrawCalls": 165,
-  "maxTriangles": 48068,
+  "maxDrawCalls": 67,
+  "maxTriangles": 47403,
   "viewRadius": 100,
   "zones": [
    "corner"
   ],
   "lightmap": {
-   "texels": 285778,
+   "texels": 718653,
    "atlases": 1,
-   "seconds": 31
+   "seconds": 37
   }
  }
 }

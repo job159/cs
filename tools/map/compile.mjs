@@ -26,6 +26,7 @@ import { readManifest, ensureSets, ROOT } from './lib/texlib.mjs';
 import { MATERIALS } from './lib/materials.mjs';
 import { writeGLB } from './lib/glb.mjs';
 import { bakeNav } from './lib/navbake.mjs';
+import { MeshBVH } from 'three-mesh-bvh';
 
 const args = process.argv.slice(2);
 const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 && args[i + 1] !== undefined && !args[i + 1].startsWith('--') ? args[i + 1] : d; };
@@ -69,6 +70,7 @@ async function main() {
     const kit = createKit({ zone: z.id, layout, chunk, log });
     const t = performance.now();
     const res = (await mod.build(kit, layout)) || {};
+    kit.finalize?.();
     kits.push(kit);
     for (const k of Object.keys(extra)) {
       if (!res[k]) continue;
@@ -78,26 +80,71 @@ async function main() {
     log(`  zone ${z.id.padEnd(12)} ${s.tris.toLocaleString()} tris in ${s.buckets} buckets, ${s.colTris.toLocaleString()} collision tris, ${s.lights} lights, ${s.spawners} spawners (${((performance.now() - t) / 1000).toFixed(1)} s)`);
   }
   // global data from the layout (zones may also add their own)
-  const gather = (k, layoutKey) => [...(layout[layoutKey] || []), ...extra[k], ...kits.flatMap((kit) => kit[k === 'buy' ? 'buyZones' : k === 'supply' ? 'supplies' : k] || [])];
-  const playerSpawns = gather('playerSpawns', 'PLAYER_SPAWNS');
-  const spawners = gather('spawners', 'SPAWNERS');
-  const lights = gather('lights', 'LIGHTS');
-  const buy = gather('buy', 'BUY');
-  const supply = gather('supply', 'SUPPLY');
-  const zoneDefs = [...(layout.ZONES || []).map((z) => ({ id: z.id, name: z.name, nameEn: z.nameEn, polygon: z.polygon, ...(z.floorY !== undefined ? { floorY: z.floorY } : {}) })), ...extra.zones, ...kits.flatMap((k) => k.zones)];
-  const bossArenas = { ...(layout.BOSS_ARENAS || {}), ...extra.bossArenas };
+  // gameplay data: layout.toMapJson() (contract fields) or the raw layout exports, plus what zones added via the kit
+  const base = typeof layout.toMapJson === 'function' ? layout.toMapJson() : {};
+  const fromKits = (k) => [...extra[k], ...kits.flatMap((kit) => kit[k === 'buy' ? 'buyZones' : k === 'supply' ? 'supplies' : k] || [])];
+  const pos3 = (p) => (Array.isArray(p) ? p : p?.pos);
+  const playerSpawns = [...(base.playerSpawns || layout.PLAYER_SPAWNS || []), ...fromKits('playerSpawns')];
+  const spawners = [...(base.spawners || layout.SPAWNERS || []).map((sp) => ({ ...sp })), ...fromKits('spawners')];
+  const buy = [...(base.buy || layout.BUY || []), ...fromKits('buy')];
+  const supply = [...(base.supply || layout.SUPPLY || []).map(pos3).filter(Boolean), ...fromKits('supply')];
+  // lights: every layout light that has a position (realtime ones run in the pool, the rest are baked), + kit lights
+  const lights = [...(layout.LIGHTS || []).filter((l) => Array.isArray(l.pos)).map((l) => {
+    const o = { ...l, type: l.type === 'spot' ? 'spot' : 'point' };
+    if (l.type === 'area') { o.radius = Math.max(...(l.size || [1])) / 2; o.range = l.range ?? 14; }
+    if (!o.realtime && o.bake === undefined) o.bake = true;
+    delete o.note;
+    return o;
+  }), ...fromKits('lights')];
+  const zoneDefs = [...(base.zones || layout.ZONES || []).map((z) => ({ id: z.id, name: z.name, nameEn: z.nameEn, polygon: z.polygon, ...(z.floorY !== undefined ? { floorY: z.floorY } : {}) })), ...extra.zones, ...kits.flatMap((k) => k.zones)];
+  const bossArenas = { ...(base.bossArenas || layout.BOSS_ARENAS || {}), ...extra.bossArenas };
   for (const k of kits) Object.assign(bossArenas, k.bossArenas);
-  const objectives = [...(layout.OBJECTIVES || []), ...extra.objectives, ...kits.flatMap((k) => k.objectives)];
+  const objectives = [...(base.objectives || layout.OBJECTIVES || []), ...extra.objectives, ...kits.flatMap((k) => k.objectives)];
   const navAreas = kits.flatMap((k) => k.navAreas);
   lap('zones built');
 
   // ---------------------------------------------------------------- merge buckets -> meshes
-  const mats = new Map(); // name -> resolved def
-  for (const k of kits) for (const [n, m] of k.mats) mats.set(n, m);
-  const merged = new Map();
-  for (const k of kits) for (const [key, b] of k.buckets) {
-    if (!merged.has(key)) merged.set(key, []);
-    merged.get(key).push(b);
+  // 1. material folding: materials that differ only in colour / tile / surf share one GPU material; their
+  //    colour moves into the vertex tint (UV tiling is already baked into the UVs).
+  // 2. adaptive chunks: sparse materials are merged over coarser cells (2x, 4x ... the chunk size) until each
+  //    mesh carries enough triangles, which keeps the draw calls of props / signs / lamps low.
+  const srcMats = new Map(); // name -> resolved def
+  for (const k of kits) for (const [n, m] of k.mats) srcMats.set(n, m);
+  const VIS_KEYS = ['set', 'rough', 'metal', 'normal', 'alphaTest', 'opacity', 'blend', 'side', 'emissive', 'emissiveIntensity', 'env', 'decal', 'cast', 'lm', 'lmBump', 'metric', 'prop'];
+  const fold = new Map(); // visual key -> canonical name
+  const canonOf = new Map(); // material name -> canonical name
+  const mats = new Map(); // canonical name -> def
+  for (const [n, d] of srcMats) {
+    const key = JSON.stringify(VIS_KEYS.map((k) => d[k] ?? null).concat([d.maps ? JSON.stringify(d.maps) : null]));
+    let c = fold.get(key);
+    if (!c) { c = n; fold.set(key, c); mats.set(c, { ...d, color: '#ffffff', members: [n] }); } else mats.get(c).members.push(n);
+    canonOf.set(n, c);
+  }
+  const colorOf = (n) => { const c = new THREE.Color(srcMats.get(n).color || '#ffffff'); return [c.r, c.g, c.b]; };
+  const perMat = new Map();
+  for (const k of kits) for (const b of k.buckets.values()) {
+    const c = canonOf.get(b.mat);
+    if (!perMat.has(c)) perMat.set(c, []);
+    perMat.get(c).push(b);
+  }
+  const MIN_TRIS = +opt('minTris', META.minTrisPerMesh || 2500);
+  const merged = new Map(); // key -> { mat, cell, f, list }
+  for (const [c, list] of perMat) {
+    let f = 1;
+    const total = list.reduce((s, b) => s + b.tris, 0);
+    const ci0 = Math.min(...list.map((b) => b.chunk[0])), cj0 = Math.min(...list.map((b) => b.chunk[1]));
+    const cellOf = (b) => [Math.floor((b.chunk[0] - ci0) / f), Math.floor((b.chunk[1] - cj0) / f)];
+    for (;;) {
+      const cells = new Set(list.map((b) => cellOf(b).join(',')));
+      if (total / cells.size >= MIN_TRIS || cells.size <= 1 || f >= 16) break;
+      f *= 2;
+    }
+    for (const b of list) {
+      const cell = cellOf(b);
+      const key = c + '@' + f + ':' + cell.join(',');
+      if (!merged.has(key)) merged.set(key, { mat: c, cell, f, list: [] });
+      merged.get(key).list.push(b);
+    }
   }
   const textures = readManifest();
   const meshes = [];
@@ -105,18 +152,20 @@ async function main() {
   const matFor = (name) => {
     if (threeMats.has(name)) return threeMats.get(name);
     const d = mats.get(name);
-    const col = new THREE.Color(d.color || '#ffffff');
-    const m = new THREE.MeshStandardMaterial({ name, color: col, roughness: d.rough ?? 0.85, metalness: d.metal ?? 0 });
+    const m = new THREE.MeshStandardMaterial({ name, color: 0xffffff, roughness: d.rough ?? 0.85, metalness: d.metal ?? 0 });
+    // bounce albedo: texture average x the mean member colour
     const avg = d.avg || [0.5, 0.5, 0.5];
-    m.userData.lightmap = { albedo: [avg[0] * col.r, avg[1] * col.g, avg[2] * col.b] };
+    const mc = d.members.map(colorOf).reduce((s, c) => [s[0] + c[0], s[1] + c[1], s[2] + c[2]], [0, 0, 0]).map((v) => v / d.members.length);
+    m.userData.lightmap = { albedo: [avg[0] * mc[0], avg[1] * mc[1], avg[2] * mc[2]] };
     if (d.opacity !== undefined && d.opacity < 1) { m.transparent = true; m.opacity = d.opacity; }
     if (d.alphaTest) { m.alphaTest = d.alphaTest; m.userData.lightmap.transmission = 0.5; }
+    if (d.blend) m.transparent = true;
     if (d.side === 'double') m.side = THREE.DoubleSide;
     if (d.emissive) { m.emissive = new THREE.Color(d.emissive); m.emissiveIntensity = d.emissiveIntensity ?? 1; }
     threeMats.set(name, m);
     return m;
   };
-  for (const [key, list] of merged) {
+  for (const [key, { mat: matName, cell, f, list }] of merged) {
     let nv = 0, ni = 0;
     for (const b of list) { nv += b.verts; ni += b.idx.n; }
     if (!ni) continue;
@@ -124,7 +173,12 @@ async function main() {
     const idx = new Uint32Array(ni);
     let vo = 0, io = 0;
     for (const b of list) {
-      pos.set(b.pos.view(), vo * 3); nrm.set(b.nrm.view(), vo * 3); uv.set(b.uv.view(), vo * 2); col.set(b.col.view(), vo * 4);
+      pos.set(b.pos.view(), vo * 3); nrm.set(b.nrm.view(), vo * 3); uv.set(b.uv.view(), vo * 2);
+      const C = b.col.view(), mc = colorOf(b.mat);
+      for (let i = 0; i < b.verts; i++) {
+        col[(vo + i) * 4] = Math.round(C[i * 4] * mc[0]); col[(vo + i) * 4 + 1] = Math.round(C[i * 4 + 1] * mc[1]);
+        col[(vo + i) * 4 + 2] = Math.round(C[i * 4 + 2] * mc[2]); col[(vo + i) * 4 + 3] = 255;
+      }
       const I = b.idx.view();
       for (let i = 0; i < I.length; i++) idx[io + i] = I[i] + vo;
       vo += b.verts; io += I.length;
@@ -135,16 +189,16 @@ async function main() {
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     g.setAttribute('color', new THREE.BufferAttribute(col, 4, true));
     g.setIndex(new THREE.BufferAttribute(idx, 1));
-    const matName = list[0].mat;
     const d = mats.get(matName);
     const mesh = new THREE.Mesh(g, matFor(matName));
-    mesh.name = key.replace(/[@,]/g, '_');
+    mesh.name = key.replace(/[@,:]/g, '_');
     mesh.userData.kitMat = matName;
-    mesh.userData.chunk = list[0].chunk;
+    mesh.userData.chunk = [cell[0], cell[1], f];
     if (!d.lm) mesh.userData.lightmap = { receive: false, castShadow: d.cast !== false };
     else mesh.userData.lightmap = { scale: d.lm, castShadow: d.cast !== false };
     meshes.push(mesh);
   }
+  dropHiddenBottoms(meshes);
   const scene = new THREE.Group();
   for (const m of meshes) scene.add(m);
   scene.updateMatrixWorld(true);
@@ -159,7 +213,7 @@ async function main() {
   let lightmap = null;
   const receivers = meshes.filter((m) => m.userData.lightmap.receive !== false);
   const occluders = meshes.filter((m) => m.userData.lightmap.receive === false && m.userData.lightmap.castShadow !== false);
-  const bakedLights = lights.filter((l) => l.bake !== false && !l.realtime);
+  const bakedLights = lights.filter((l) => l.bake !== false && !l.realtime && Array.isArray(l.pos));
   // remove stale atlases
   for (const f of fs.readdirSync(OUT)) if (/^lm_\d+(_sun)?\.png$/.test(f)) fs.unlinkSync(path.join(OUT, f));
   if (!flag('nobake') && receivers.length) {
@@ -193,7 +247,7 @@ async function main() {
     if (d.maps?.diff) gm.pbrMetallicRoughness.baseColorTexture = { index: imageRef(commonPath(d.maps.diff)) };
     if (d.maps?.arm) { gm.pbrMetallicRoughness.metallicRoughnessTexture = { index: imageRef(commonPath(d.maps.arm)) }; gm.occlusionTexture = { index: imageRef(commonPath(d.maps.arm)) }; }
     if (d.maps?.nor) gm.normalTexture = { index: imageRef(commonPath(d.maps.nor)) };
-    if (d.alphaTest) { gm.alphaMode = 'MASK'; gm.alphaCutoff = d.alphaTest; } else if (d.opacity !== undefined && d.opacity < 1) gm.alphaMode = 'BLEND';
+    if (d.alphaTest) { gm.alphaMode = 'MASK'; gm.alphaCutoff = d.alphaTest; } else if ((d.opacity !== undefined && d.opacity < 1) || d.blend) gm.alphaMode = 'BLEND';
     if (d.side === 'double') gm.doubleSided = true;
     if (d.emissive) { const e = new THREE.Color(d.emissive); gm.emissiveFactor = [e.r, e.g, e.b]; }
     gm.extras = { kit: n };
@@ -250,12 +304,25 @@ async function main() {
   lap(`nav ${nav.json.w} x ${nav.json.h} cells, ${nav.json.walkable.toLocaleString()} walkable`);
 
   // ---------------------------------------------------------------- map.json
+  // smaller size variants of each image (tools/map/lib/imgio.mjs): the runtime fetches the smallest file that
+  // still covers its quality's texture limit
+  const fileInfo = new Map(); // common-relative file -> { size, variants }
+  const addInfo = (e) => { for (const [k, file] of Object.entries(e?.maps || {})) if (e.sizes?.[k]) fileInfo.set(file, { size: e.sizes[k], variants: e.variants?.[k] || [] }); };
+  for (const e of Object.values(textures.sets || {})) addInfo(e);
+  for (const p of Object.values(readPropsManifest())) for (const m of p.materials || []) addInfo(m);
   const matJson = {};
   for (const n of matList) {
     const d = mats.get(n);
     const e = { color: d.color || '#ffffff' };
-    if (d.maps) e.maps = Object.fromEntries(Object.entries(d.maps).map(([k, f]) => [k, commonPath(f)]));
-    for (const k of ['rough', 'metal', 'normal', 'alphaTest', 'opacity', 'side', 'emissive', 'emissiveIntensity', 'env', 'decal', 'lmBump', 'surf']) if (d[k] !== undefined) e[k] = d[k];
+    if (d.maps) {
+      e.maps = Object.fromEntries(Object.entries(d.maps).map(([k, f]) => [k, commonPath(f)]));
+      const sizes = {}, variants = {};
+      for (const [k, file] of Object.entries(d.maps)) { const i = fileInfo.get(file); if (i) { sizes[k] = i.size; if (i.variants.length) variants[k] = i.variants; } }
+      if (Object.keys(sizes).length) e.sizes = sizes;
+      if (Object.keys(variants).length) e.variants = variants;
+    }
+    for (const k of ['rough', 'metal', 'normal', 'alphaTest', 'opacity', 'blend', 'side', 'emissive', 'emissiveIntensity', 'env', 'decal', 'lmBump', 'surf']) if (d[k] !== undefined) e[k] = d[k];
+    if (d.members.length > 1) e.members = d.members;
     e.lm = d.lm || 0;
     if (d.cast === false) e.cast = false;
     if (d.prop) e.prop = d.prop;
@@ -268,8 +335,8 @@ async function main() {
     id: mapId, name: META.name || mapId, nameEn: META.nameEn, version: 1, built: new Date().toISOString(),
     bounds, killY: META.killY ?? bounds[1] - 5, chunk,
     sun: { dir: ENV.sun.dir, color: ENV.sun.color, intensity: ENV.sun.intensity, shadow: ENV.sun.shadow || { mapSize: 2048, extent: 45 } },
-    env: { hdri: ENV.sky.hdri, files: hdriFiles, rotation: ((ENV.sky.rotationDeg || 0) * Math.PI) / 180, intensity: ENV.sky.envIntensity ?? 1, backgroundIntensity: ENV.sky.backgroundIntensity ?? 1, backgroundBlur: ENV.sky.backgroundBlur ?? 0 },
-    fog: ENV.fog, exposure: ENV.exposure ?? 1, grade: ENV.grade || null,
+    env: { hdri: ENV.sky.hdri, files: hdriFiles, rotation: ((ENV.sky.rotationDeg || 0) * Math.PI) / 180, intensity: ENV.sky.envIntensity ?? 1, backgroundIntensity: ENV.sky.backgroundIntensity ?? 1, backgroundBlur: ENV.sky.backgroundBlur ?? 0, ...(ENV.sky.tint ? { tint: ENV.sky.tint } : {}) },
+    fog: { color: ENV.fog.color, density: ENV.fog.density }, exposure: ENV.exposure ?? 1, grade: ENV.grade || null, preview: META.preview || null,
     playerSpawns, zones: zoneDefs, spawners, buy, supply, bossArenas, lights, objectives,
     static: { file: 'static.glb', meshopt: flag('meshopt') },
     collision: { file: 'collision.glb' },
@@ -281,7 +348,54 @@ async function main() {
   fs.writeFileSync(path.join(OUT, 'map.json'), JSON.stringify(def, null, 1));
   log(`  worst view estimate: ${stats.maxDrawCalls} draw calls, ${stats.maxTriangles.toLocaleString()} triangles (chunks within ${stats.viewRadius} m)`);
   lap(`done -> ${path.relative(ROOT, OUT)}`);
-  void readPropsManifest;
+  log(`  peak memory ${(process.resourceUsage().maxRSS / 1024).toFixed(0)} MB (main process; bake workers share its buffers)`);
+}
+
+/**
+ * Removes downward-facing triangles that rest on an upward-facing surface (bottoms of boxes, props, sandbags,
+ * containers standing on the ground): invisible, but they would cost lightmap texels and shadow-map fill.
+ */
+function dropHiddenBottoms(meshes) {
+  const up = [];
+  for (const m of meshes) {
+    const g = m.geometry, P = g.attributes.position.array, I = g.index.array;
+    for (let t = 0; t < I.length; t += 3) {
+      const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      const ny = uz * vx - ux * vz, l = Math.hypot(uy * vz - uz * vy, ny, ux * vy - uy * vx);
+      if (l > 1e-9 && ny / l > 0.95) up.push(P[a], P[a + 1], P[a + 2], P[b], P[b + 1], P[b + 2], P[c], P[c + 1], P[c + 2]);
+    }
+  }
+  if (!up.length) return;
+  const ug = new THREE.BufferGeometry();
+  ug.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(up), 3));
+  const bvh = new MeshBVH(ug);
+  const ray = new THREE.Ray(), dir = new THREE.Vector3(0, -1, 0);
+  let dropped = 0;
+  for (const m of meshes) {
+    const g = m.geometry, P = g.attributes.position.array, I = g.index.array;
+    const keep = [];
+    for (let t = 0; t < I.length; t += 3) {
+      const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      const ny = uz * vx - ux * vz, l = Math.hypot(uy * vz - uz * vy, ny, ux * vy - uy * vx);
+      let hidden = false;
+      if (l > 1e-9 && ny / l < -0.95) {
+        hidden = true;
+        // centroid and the three corners pulled 10 % towards it must all sit on an up-facing surface within 3 cm
+        const cx = (P[a] + P[b] + P[c]) / 3, cy = (P[a + 1] + P[b + 1] + P[c + 1]) / 3, cz = (P[a + 2] + P[b + 2] + P[c + 2]) / 3;
+        for (const k of [-1, a, b, c]) {
+          const x = k < 0 ? cx : P[k] * 0.9 + cx * 0.1, y = k < 0 ? cy : P[k + 1] * 0.9 + cy * 0.1, z = k < 0 ? cz : P[k + 2] * 0.9 + cz * 0.1;
+          ray.origin.set(x, y + 0.005, z); ray.direction.copy(dir);
+          const hit = bvh.raycastFirst(ray, THREE.DoubleSide, 0, 0.04);
+          if (!hit) { hidden = false; break; }
+        }
+      }
+      if (hidden) dropped++; else keep.push(I[t], I[t + 1], I[t + 2]);
+    }
+    if (keep.length !== I.length) g.setIndex(new THREE.BufferAttribute(Uint32Array.from(keep), 1));
+  }
+  if (dropped) console.log(`  dropped ${dropped.toLocaleString()} hidden bottom triangles`);
 }
 
 function commonPath(f) { return '../common/' + f.replace(/\\/g, '/'); }
@@ -312,25 +426,23 @@ function weld(pos, surf) {
   for (let t = 0; t < I.length; t += 3) if (I[t] !== I[t + 1] && I[t + 1] !== I[t + 2] && I[t] !== I[t + 2]) out.push(I[t], I[t + 1], I[t + 2]);
   return { pos: Float32Array.from(P), surf: Uint8Array.from(S), idx: Uint32Array.from(out) };
 }
-/** Worst-case draw calls / triangles of the chunks around any chunk (no frustum culling: upper bound). */
+/** Worst-case draw calls / triangles: meshes whose bounds reach within R of any chunk centre (no frustum culling). */
 function chunkStats(meshes, chunk) {
   const R = 100;
-  const byChunk = new Map();
-  for (const m of meshes) {
-    const c = m.userData.chunk || [0, 0];
-    const k = c.join(',');
-    if (!byChunk.has(k)) byChunk.set(k, { c, calls: 0, tris: 0 });
-    const e = byChunk.get(k);
-    e.calls++; e.tris += m.geometry.index.count / 3;
-  }
+  const boxes = meshes.map((m) => { m.geometry.computeBoundingBox(); return { b: m.geometry.boundingBox, tris: m.geometry.index.count / 3 }; });
+  const centres = new Set();
+  for (const { b } of boxes) for (let x = Math.floor(b.min.x / chunk); x <= Math.floor(b.max.x / chunk); x++) for (let z = Math.floor(b.min.z / chunk); z <= Math.floor(b.max.z / chunk); z++) centres.add(x + ',' + z);
   let maxCalls = 0, maxTris = 0;
-  const list = [...byChunk.values()];
-  for (const a of list) {
+  for (const c of centres) {
+    const [cx, cz] = c.split(',').map((v) => (+v + 0.5) * chunk);
     let calls = 0, tris = 0;
-    for (const b of list) if (Math.hypot(a.c[0] - b.c[0], a.c[1] - b.c[1]) * chunk <= R) { calls += b.calls; tris += b.tris; }
+    for (const { b, tris: t } of boxes) {
+      const dx = Math.max(b.min.x - cx, 0, cx - b.max.x), dz = Math.max(b.min.z - cz, 0, cz - b.max.z);
+      if (dx * dx + dz * dz <= R * R) { calls++; tris += t; }
+    }
     maxCalls = Math.max(maxCalls, calls); maxTris = Math.max(maxTris, tris);
   }
-  return { chunks: list.length, maxDrawCalls: maxCalls, maxTriangles: maxTris, viewRadius: R };
+  return { chunks: centres.size, maxDrawCalls: maxCalls, maxTriangles: maxTris, viewRadius: R };
 }
 function mergeDeep(a, b) {
   const out = { ...a };

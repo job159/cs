@@ -4,6 +4,7 @@
 //   node tools/map/fetch.mjs --textures      # only texture sets   (--hdris, --props likewise; combinable)
 //   node tools/map/fetch.mjs --only brick_red,Barrel_01 [--force]
 //   node tools/map/fetch.mjs --list          # print the catalogue
+//   node tools/map/fetch.mjs --variants      # (re)write the @1k / @512 size variants of everything in common/
 //
 // Sources (all CC0, see docs/research/04-asset-sources.md): Poly Haven API (https://api.polyhaven.com, custom
 // User-Agent as its ToS asks) and ambientCG (chain-link with opacity). Raw downloads go to tools/map/src/
@@ -16,11 +17,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import jpeg from 'jpeg-js';
-import { PNG } from 'pngjs';
 import { unzipSync } from 'fflate';
 import { MeshoptSimplifier } from 'meshoptimizer';
-import { encodeJPEG } from './lib/jpeg.mjs';
+import { decodeImage, downsize, writeJPEG, writePNG, addVariants as addVariantsIn, variantsOk } from './lib/imgio.mjs';
 import { ROOT, COMMON_DIR, readManifest, writeManifest } from './lib/texlib.mjs';
 import { writeGLB } from './lib/glb.mjs';
 import { readScene } from '../../game/src/world/glb.js';
@@ -51,7 +50,7 @@ export const TEXTURES = [
   { id: 'plaster_worn', ph: 'worn_plaster_wall', note: 'interior plaster' },
   { id: 'corrugated', ph: 'corrugated_iron_02', note: 'galvanised corrugated sheet' },
   { id: 'corrugated_rusty', ph: 'rusty_corrugated_iron', note: 'rusty corrugated sheet' },
-  { id: 'metal_container', ph: 'container_side', note: 'shipping container sides' },
+  { id: 'metal_container', ph: 'container_side', grey: true, note: 'shipping container sides (desaturated: tinted per container)' },
   { id: 'metal_painted', ph: 'rusty_painted_metal', note: 'painted metal with rust' },
   { id: 'metal_shutter', ph: 'rusty_metal_shutter', note: 'roller shutters, garage doors' },
   { id: 'metal_rusty', ph: 'rust_coarse_01', note: 'burnt / rusted metal' },
@@ -60,10 +59,12 @@ export const TEXTURES = [
   { id: 'wood_siding', ph: 'white_planks_clean', note: 'painted clapboard siding (tinted; boards run vertically in the image)' },
   { id: 'roof_tar', ph: 'tarred_gravel', note: 'flat roofs' },
   { id: 'roof_shingles', ph: 'roof_slates_02', note: 'pitched roofs' },
-  { id: 'tiles', ph: 'dirty_tiles', note: 'interior floor tiles' },
+  { id: 'tiles', ph: 'dirty_tiles', note: 'dark red quarry tiles (back rooms, kitchens)' },
+  { id: 'tiles_worn', ph: 'worn_tile_floor', gain: 2.2, note: 'grimy shop-floor tiles (albedo x2.2: the scan reads black indoors)' },
+  { id: 'garage_floor', ph: 'garage_floor', note: 'stained garage / warehouse concrete floor' },
   { id: 'gravel', ph: 'gravel_floor_02', note: 'gravel yards, rail beds' },
   { id: 'dirt', ph: 'dirt', note: 'dirt patches' },
-  { id: 'grass', ph: 'sparse_grass', note: 'weedy grass patches' },
+  { id: 'grass', ph: 'leafy_grass', note: 'unkempt lawn / weedy grass patches' },
   { id: 'rubble', ph: 'concrete_debris', note: 'debris / rubble ground' },
   { id: 'chainlink', acg: 'Fence006', alpha: true, tile: 1.0, note: 'chain-link mesh with opacity' },
 ];
@@ -83,9 +84,9 @@ export const PROPS = [
   { id: 'cardboard_box_01', maxTris: 1500, surf: 'wood', collide: 'box', note: 'cardboard box' },
   { id: 'plastic_crate_02', maxTris: 1500, surf: 'wood', collide: 'box', note: 'plastic crate' },
   { id: 'old_tyre', maxTris: 1600, surf: 'dirt', collide: 'cyl', note: 'old tyre' },
-  { id: 'metal_trash_can', maxTris: 3000, surf: 'metal', collide: 'box', note: 'dumpster' },
+  { id: 'metal_trash_can', maxTris: 2400, surf: 'metal', collide: 'box', nodes: /rust/, note: 'metal street trash bin (rusty variant)' },
   { id: 'trashbag', maxTris: 1200, surf: 'dirt', collide: 'none', note: 'trash bag' },
-  { id: 'fire_hydrant', maxTris: 2500, surf: 'metal', collide: 'cyl', note: 'fire hydrant' },
+  { id: 'fire_hydrant', maxTris: 2000, surf: 'metal', collide: 'cyl', nodes: /aged/, note: 'fire hydrant (aged variant)' },
   { id: 'street_lamp_01', maxTris: 3500, surf: 'metal', collide: 'pole', note: 'street lamp' },
   { id: 'concrete_road_barrier_02', maxTris: 1500, surf: 'concrete', collide: 'box', note: 'jersey barrier' },
   { id: 'exterior_aircon_unit', maxTris: 2500, surf: 'metal', collide: 'box', note: 'wall AC unit' },
@@ -138,37 +139,6 @@ async function download(url, file, { md5: want, size } = {}) {
   return b;
 }
 
-/** Decodes a JPEG/PNG into { width, height, data: RGBA Uint8Array }. */
-function decodeImage(buf) {
-  if (buf[0] === 0x89 && buf[1] === 0x50) { const p = PNG.sync.read(buf); return { width: p.width, height: p.height, data: p.data }; }
-  const d = jpeg.decode(buf, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 1024, maxResolutionInMP: 100 });
-  return { width: d.width, height: d.height, data: d.data };
-}
-/** Halves an RGBA image until it is <= maxSize (box filter; normal maps are renormalised). */
-function downsize(img, maxSize, isNormal = false) {
-  let { width: w, height: h, data } = img;
-  while (Math.max(w, h) > maxSize) {
-    const W = Math.max(1, w >> 1), H = Math.max(1, h >> 1);
-    const out = new Uint8Array(W * H * 4);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const acc = [0, 0, 0, 0];
-      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
-        const k = (Math.min(h - 1, y * 2 + dy) * w + Math.min(w - 1, x * 2 + dx)) * 4;
-        for (let c = 0; c < 4; c++) acc[c] += data[k + c];
-      }
-      const o = (y * W + x) * 4;
-      if (isNormal) {
-        let nx = acc[0] / 510 - 1, ny = acc[1] / 510 - 1, nz = acc[2] / 510 - 1;
-        const l = Math.hypot(nx, ny, nz) || 1;
-        nx /= l; ny /= l; nz /= l;
-        out[o] = Math.round((nx * 0.5 + 0.5) * 255); out[o + 1] = Math.round((ny * 0.5 + 0.5) * 255); out[o + 2] = Math.round((nz * 0.5 + 0.5) * 255);
-        out[o + 3] = 255;
-      } else for (let c = 0; c < 4; c++) out[o + c] = Math.round(acc[c] / 4);
-    }
-    w = W; h = H; data = out;
-  }
-  return { width: w, height: h, data };
-}
 const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 /** Average linear albedo of an RGBA image (alpha-weighted). */
 function averageLinear(img) {
@@ -182,9 +152,31 @@ function averageLinear(img) {
   }
   return [r / wsum, g / wsum, b / wsum].map((v) => +v.toFixed(4));
 }
-const writeJPEG = (file, img, quality, subsample) => fs.writeFileSync(file, encodeJPEG({ width: img.width, height: img.height, data: img.data, channels: 4 }, { quality, subsample }));
-const writePNG = (file, img) => { const p = new PNG({ width: img.width, height: img.height, colorType: 6 }); p.data = Buffer.from(img.data); fs.writeFileSync(file, PNG.sync.write(p, { deflateLevel: 9 })); };
+/** In-place albedo gain in linear space (very dark photoscans, e.g. grimy floor tiles, read black in game). */
+function brighten(img, gain) {
+  const lut = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) {
+    const c = i / 255, lin = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    const o = Math.min(1, lin * gain);
+    lut[i] = Math.round((o <= 0.0031308 ? o * 12.92 : 1.055 * Math.pow(o, 1 / 2.4) - 0.055) * 255);
+  }
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) { d[i] = lut[d[i]]; d[i + 1] = lut[d[i + 1]]; d[i + 2] = lut[d[i + 2]]; }
+}
+/** In-place desaturation (keeps luminance, lifts it towards a light neutral so per-object tints read). */
+function greyscale(img) {
+  const d = img.data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+  const mean = sum / (d.length / 4), gain = 175 / Math.max(1, mean);
+  for (let i = 0; i < d.length; i += 4) {
+    const l = Math.min(255, (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) * gain);
+    d[i] = d[i + 1] = d[i + 2] = Math.round(l);
+  }
+}
+const addVariants = (entry) => addVariantsIn(entry, COMMON_DIR);
 const rel = (f) => path.relative(COMMON_DIR, f).replace(/\\/g, '/');
+
 const want = (id) => !only || only.has(id);
 
 // ------------------------------------------------------------------------------------------- textures
@@ -194,14 +186,14 @@ async function fetchTextures(manifest) {
     if (!want(t.id) && !want(t.ph || t.acg)) continue;
     const cur = manifest.sets[t.id];
     const res = t.hero ? '2k' : '1k';
-    const upToDate = cur && cur.source !== 'procedural' && cur.srcId === (t.ph || t.acg) && cur.resName === res
-      && Object.values(cur.maps).every((f) => fs.existsSync(path.join(COMMON_DIR, f)));
+    const upToDate = cur && cur.source !== 'procedural' && cur.srcId === (t.ph || t.acg) && cur.resName === res && !!cur.grey === !!t.grey && (cur.gain || 1) === (t.gain || 1)
+      && Object.values(cur.maps).every((f) => fs.existsSync(path.join(COMMON_DIR, f))) && variantsOk(cur, COMMON_DIR);
     if (upToDate && !force) { log(`  tex ${t.id.padEnd(18)} ok`); continue; }
     log(`  tex ${t.id.padEnd(18)} <- ${t.ph ? 'polyhaven ' + t.ph : 'ambientCG ' + t.acg} (${res})`);
     let entry;
     if (t.ph) entry = await polyhavenTexture(t, res, phList);
     else entry = await ambientcgTexture(t, res);
-    manifest.sets[t.id] = entry;
+    manifest.sets[t.id] = addVariants(entry);
     writeManifest(manifest); // incremental: an interrupted run keeps what it finished
   }
 }
@@ -230,6 +222,8 @@ async function polyhavenTexture(t, res, phList) {
       }
     }
     if (k === 'arm') img = downsize(img, 1024); // AO / rough / metal carry little high-frequency detail
+    if (k === 'diff' && t.grey) greyscale(img);
+    if (k === 'diff' && t.gain) brighten(img, t.gain);
     if (k === 'diff') { size = img.width; avg = averageLinear(img); }
     const file = path.join(COMMON_DIR, `${t.id}_${k}.jpg`);
     const big = img.width > 1024;
@@ -242,7 +236,7 @@ async function polyhavenTexture(t, res, phList) {
   const dims = info.dimensions ? info.dimensions.map((d) => +(d / 1000).toFixed(3)) : [2, 2];
   return {
     id: t.id, source: 'polyhaven', srcId: t.ph, license: 'CC0', url: `https://polyhaven.com/a/${t.ph}`,
-    resName: res, res: size, tile: t.tile ?? dims[0], tileV: t.tile ?? (dims[1] > 0.01 ? dims[1] : dims[0]), alpha: false, maps: out, avg, note: t.note,
+    resName: res, res: size, tile: t.tile ?? dims[0], tileV: t.tile ?? (dims[1] > 0.01 ? dims[1] : dims[0]), alpha: false, maps: out, avg, note: t.note, grey: !!t.grey, ...(t.gain ? { gain: t.gain } : {}),
   };
 }
 
@@ -304,7 +298,10 @@ async function fetchProps() {
   for (const p of PROPS) {
     if (!want(p.id)) continue;
     const cur = manifest[p.id];
-    if (cur && cur.maxTris === p.maxTris && fs.existsSync(path.join(COMMON_DIR, cur.file)) && !force) { log(`  prop ${p.id.padEnd(26)} ok`); continue; }
+    if (cur && cur.maxTris === p.maxTris && fs.existsSync(path.join(COMMON_DIR, cur.file)) && !force) {
+      if (!cur.materials.every((m) => variantsOk(m, COMMON_DIR))) { for (const m of cur.materials) addVariants(m); fs.writeFileSync(PROPS_MANIFEST, JSON.stringify(manifest, null, 1)); }
+      log(`  prop ${p.id.padEnd(26)} ok`); continue;
+    }
     const files = await api('/files/' + p.id);
     const g = files.gltf?.['1k']?.gltf;
     if (!g) { log(`  ! prop ${p.id}: no 1k glTF`); continue; }
@@ -315,6 +312,7 @@ async function fetchProps() {
     const buffers = (json.buffers || []).map((b) => { const bb = fs.readFileSync(path.join(dir, decodeURIComponent(b.uri))); return new Uint8Array(bb.buffer, bb.byteOffset, bb.byteLength); });
     const doc = { json, buffers };
     const entry = await processProp(p, doc, dir);
+    for (const m of entry.materials) addVariants(m);
     manifest[p.id] = entry;
     fs.writeFileSync(PROPS_MANIFEST, JSON.stringify(manifest, null, 1));
     log(`  prop ${p.id.padEnd(26)} ${entry.srcTris} -> ${entry.tris} tris, ${entry.materials.length} material(s), ${entry.size.map((v) => v.toFixed(2)).join(' x ')} m`);
@@ -332,7 +330,8 @@ function transformDir(m, x, y, z) { // assumes uniform-ish scale; renormalised
 }
 
 async function processProp(p, doc, dir) {
-  const inst = readScene(doc);
+  // optional node filter (models that ship several variants side by side keep one)
+  const inst = readScene(doc).filter((m) => !p.nodes || p.nodes.test(m.name));
   // gather per material
   const groups = new Map();
   let srcTris = 0;
@@ -434,6 +433,12 @@ async function processProp(p, doc, dir) {
     meshes.push({ name: `${p.id}_${mi}`, attributes: { POSITION: { array: Float32Array.from(P), itemSize: 3 }, NORMAL: { array: Float32Array.from(N), itemSize: 3 }, TEXCOORD_0: { array: Float32Array.from(U), itemSize: 2 } }, indices: I, material: mi });
     mi++;
   }
+  // recentre: bbox centre (x, z) at the origin, base at y = 0, so kit.prop({ at }) places the footprint centre
+  if (p.center !== false) {
+    const off = [(bbMin[0] + bbMax[0]) / 2, bbMin[1], (bbMin[2] + bbMax[2]) / 2];
+    for (const m of meshes) { const P = m.attributes.POSITION.array; for (let i = 0; i < P.length; i++) P[i] -= off[i % 3]; }
+    for (let c = 0; c < 3; c++) { bbMin[c] -= off[c]; bbMax[c] -= off[c]; }
+  }
   const glb = await writeGLB({ meshes, materials, extras: { id: p.id, source: 'polyhaven', license: 'CC0' } });
   const file = path.join(PROPS_DIR, `${p.id}.glb`);
   fs.writeFileSync(file, glb);
@@ -476,6 +481,25 @@ async function main() {
     for (const t of TEXTURES) log(`tex   ${t.id.padEnd(18)} ${t.ph ? 'ph:' + t.ph : 'acg:' + t.acg}${t.hero ? ' (2k)' : ''}  ${t.note}`);
     for (const h of HDRIS) log(`hdri  ${h.id.padEnd(28)} ${h.res.join(',')}  ${h.note}`);
     for (const p of PROPS) log(`prop  ${p.id.padEnd(26)} <= ${p.maxTris} tris  ${p.note}`);
+    return;
+  }
+  if (flag('variants')) {
+    const manifest = readManifest();
+    for (const [id, e] of Object.entries(manifest.sets || {})) {
+      if (only && !only.has(id)) continue;
+      if (variantsOk(e, COMMON_DIR) && !force) continue;
+      addVariants(e); writeManifest(manifest);
+      log(`  variants ${id.padEnd(18)} ${JSON.stringify(e.variants)}`);
+    }
+    const props = fs.existsSync(PROPS_MANIFEST) ? JSON.parse(fs.readFileSync(PROPS_MANIFEST, 'utf8')) : {};
+    for (const [id, p] of Object.entries(props)) {
+      if (only && !only.has(id)) continue;
+      if (p.materials.every((m) => variantsOk(m, COMMON_DIR)) && !force) continue;
+      for (const m of p.materials) addVariants(m);
+      fs.writeFileSync(PROPS_MANIFEST, JSON.stringify(props, null, 1));
+      log(`  variants ${id.padEnd(26)} ${p.materials.map((m) => JSON.stringify(m.variants)).join(' ')}`);
+    }
+    writeCredits(manifest);
     return;
   }
   const all = !flag('textures') && !flag('hdris') && !flag('props');

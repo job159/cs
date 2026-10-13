@@ -1,7 +1,7 @@
 {
  "encoding": "rgbm-sqrt",
  "decode": "E = range * (rgb * a)^2",
- "range": 8,
+ "range": 4,
  "mode": "indirect+mask",
  "uv": "uv1",
  "flipY": false,
@@ -30,8 +30,8 @@
     2.6,
     -1.2
    ],
-   "color": "#ffb36b",
-   "intensity": 6,
+   "color": "#ffd2a0",
+   "intensity": 3,
    "range": 7,
    "radius": 0.08
   }
@@ -57,21 +57,22 @@
   "triangles": 1560,
   "receivers": 27,
   "atlases": 1,
-  "rays": 9977842,
-  "seconds": 17.0327439,
+  "rays": 9925137,
+  "seconds": 15.552020500000001,
+  "cpuSeconds": 32.532,
   "timings": {
-   "collect": 543,
-   "charts": 199,
-   "pack": 32,
-   "bvh": 98,
-   "raster": 631,
-   "passA": 5274,
-   "passB": 5876,
-   "post": 4354,
-   "apply": 25
+   "collect": 463,
+   "charts": 89,
+   "pack": 16,
+   "bvh": 55,
+   "raster": 610,
+   "passA": 3605,
+   "passB": 7021,
+   "post": 3661,
+   "apply": 31
   },
   "densityScale": 1,
-  "maxIrradiance": 36.23389434814453,
+  "maxIrradiance": 18.128141403198242,
   "clipped": 92,
   "threads": 6
  },

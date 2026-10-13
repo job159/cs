@@ -22,8 +22,10 @@ import { NavGrid } from './nav.js';
 
 const BASE = 'assets/maps/';
 
-// Max texture edge per quality (diffuse, normal, arm). Files ship at 1k (2k hero sets); the browser
-// downsizes while decoding (createImageBitmap) so GPU memory follows the quality setting.
+// Max texture edge per quality (diffuse, normal, arm). Files ship at 1k (2k hero sets) plus smaller size variants
+// (x_diff@1k.jpg, x_diff@512.jpg; map.json materials[].variants): the loader fetches the smallest file that covers
+// the limit, and the browser downsizes the rest while decoding, so download, decode time and GPU memory all
+// follow the quality setting.
 export const TEX_LIMITS = {
   low: { diff: 512, nor: 256, arm: 256, prop: 256, aniso: 2 },
   medium: { diff: 1024, nor: 512, arm: 512, prop: 512, aniso: 4 },
@@ -54,14 +56,12 @@ async function decodeImage(url, maxSize, flip) {
     let bmp;
     try { bmp = await createImageBitmap(blob, opts); } catch { bmp = await createImageBitmap(blob, { ...opts, imageOrientation: flip ? 'flipY' : 'none' }); }
     if (maxSize && Math.max(bmp.width, bmp.height) > maxSize) {
+      // downsize the decoded bitmap (no second JPEG decode); orientation is already applied
       const s = maxSize / Math.max(bmp.width, bmp.height);
       const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
-      bmp.close?.();
-      try {
-        bmp = await createImageBitmap(blob, { ...opts, resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-      } catch {
-        bmp = await createImageBitmap(blob, { ...opts, imageOrientation: flip ? 'flipY' : 'none', resizeWidth: w, resizeHeight: h, resizeQuality: 'high' });
-      }
+      let small;
+      try { small = await createImageBitmap(bmp, { premultiplyAlpha: 'none', resizeWidth: w, resizeHeight: h, resizeQuality: 'high' }); } catch { small = null; }
+      if (small) { bmp.close?.(); bmp = small; }
     }
     return { image: bmp, preFlipped: true };
   }
@@ -145,6 +145,16 @@ function patchLightmapped(material) {
 // ------------------------------------------------------------------------------------------ materials
 function srgb(hex) { return new THREE.Color(hex || '#ffffff'); }
 
+/**
+ * File of a material map for a texture limit: the smallest shipped size variant that is still >= maxSize
+ * ("a/x_diff.jpg" + 1024 -> "a/x_diff@1k.jpg"), else the full-size file. Same naming as tools/map/lib/imgio.mjs.
+ */
+export function variantFile(file, sizes, maxSize) {
+  if (!maxSize || !sizes?.length) return file;
+  const fit = sizes.filter((v) => v >= maxSize).sort((a, b) => a - b)[0];
+  return fit ? file.replace(/(\.\w+)$/, `@${fit >= 1024 ? fit / 1024 + 'k' : fit}$1`) : file;
+}
+
 /** Builds the base (atlas-independent) material of a map.json material entry. */
 async function makeMaterial(name, d, mapDir, q) {
   const lim = TEX_LIMITS[q] || TEX_LIMITS.high;
@@ -154,15 +164,22 @@ async function makeMaterial(name, d, mapDir, q) {
     roughness: d.rough ?? 1, metalness: d.metal ?? (d.maps?.arm ? 1 : 0),
   };
   const jobs = [];
-  if (d.maps?.diff) jobs.push(loadMapTexture(mapDir + d.maps.diff, { kind: 'color', maxSize: isProp ? lim.prop : lim.diff, aniso: lim.aniso }).then((t) => { p.map = t; }));
-  if (d.maps?.nor) jobs.push(loadMapTexture(mapDir + d.maps.nor, { kind: 'data', maxSize: isProp ? lim.prop : lim.nor, aniso: lim.aniso }).then((t) => { p.normalMap = t; }));
-  if (d.maps?.arm) jobs.push(loadMapTexture(mapDir + d.maps.arm, { kind: 'data', maxSize: isProp ? Math.min(lim.prop, lim.arm * 2) : lim.arm, aniso: lim.aniso }).then((t) => { p.aoMap = t; p.roughnessMap = t; p.metalnessMap = t; }));
+  const tex = (k, kind, maxSize, apply) => {
+    if (!d.maps?.[k]) return;
+    // a file at or below the limit is used as is (maxSize 0 = no resize step)
+    const file = variantFile(d.maps[k], d.variants?.[k], maxSize);
+    jobs.push(loadMapTexture(mapDir + file, { kind, maxSize, aniso: lim.aniso }).then(apply));
+  };
+  tex('diff', 'color', isProp ? lim.prop : lim.diff, (t) => { p.map = t; });
+  tex('nor', 'data', isProp ? lim.prop : lim.nor, (t) => { p.normalMap = t; });
+  tex('arm', 'data', isProp ? Math.min(lim.prop, lim.arm * 2) : lim.arm, (t) => { p.aoMap = t; p.roughnessMap = t; p.metalnessMap = t; });
   await Promise.all(jobs);
   if (!d.maps?.arm && d.metal === undefined) p.metalness = 0;
   const m = new THREE.MeshStandardMaterial(p);
   if (m.normalMap && d.normal !== undefined) m.normalScale.set(d.normal, d.normal);
   if (d.alphaTest) { m.alphaTest = d.alphaTest; m.alphaToCoverage = false; }
   if (d.opacity !== undefined && d.opacity < 1) { m.transparent = true; m.opacity = d.opacity; m.depthWrite = false; }
+  if (d.blend) { m.transparent = true; m.depthWrite = false; }
   if (d.side === 'double') m.side = THREE.DoubleSide;
   if (d.emissive) { m.emissive = srgb(d.emissive); m.emissiveIntensity = d.emissiveIntensity ?? 1; }
   if (d.env !== undefined) m.envMapIntensity = d.env;
@@ -204,6 +221,9 @@ export async function buildPackageMap(id, ctx) {
   const q = renderer?.qualityName || 'high';
   const scene = ctx.scene || game?.scene;
   const progress = ctx.onProgress || (() => {});
+  const T0 = performance.now();
+  const marks = [];
+  const mark = (k) => marks.push(k + ' ' + ((performance.now() - T0) / 1000).toFixed(2));
   const def = await fetchJSON(mapDir + 'map.json');
   const root = new THREE.Group();
   root.name = 'map:' + id;
@@ -225,7 +245,8 @@ export async function buildPackageMap(id, ctx) {
   const matsP = Promise.all(matEntries.map(async ([name, d]) => baseMats.set(name, await makeMaterial(name, d, mapDir, q))));
 
   // ---- environment
-  const [envTex, bgTex] = await Promise.all([envP, bgP]);
+  let [envTex, bgTex] = await Promise.all([envP, bgP]);
+  mark('hdr');
   let skyRef = 1;
   if (envTex && renderer && scene) {
     envTex.mapping = THREE.EquirectangularReflectionMapping;
@@ -236,6 +257,7 @@ export async function buildPackageMap(id, ctx) {
     scene.environmentIntensity = def.env.intensity ?? 1;
     const rot = def.env.rotation || 0;
     scene.environmentRotation.set(0, rot, 0);
+    if (bgTex && def.env.tint) tintHDR(bgTex === envTex ? (bgTex = cloneHDR(bgTex)) : bgTex, srgb(def.env.tint));
     if (bgTex) {
       bgTex.mapping = THREE.EquirectangularReflectionMapping;
       scene.background = bgTex;
@@ -245,9 +267,14 @@ export async function buildPackageMap(id, ctx) {
     }
     skyRef = skyIrradiance(envTex) * (def.env.intensity ?? 1);
   }
-  if (scene && def.fog) scene.fog = new THREE.FogExp2(srgb(def.fog.color), def.fog.density);
+  if (scene && def.fog) {
+    // fog colour 'auto' = the sky's horizon colour (x background intensity) so distant geometry melts into the sky
+    const fc = def.fog.color === 'auto' && envTex ? horizonColor(envTex).multiplyScalar(def.env.backgroundIntensity ?? 1) : srgb(def.fog.color === 'auto' ? '#8f8b86' : def.fog.color);
+    scene.fog = new THREE.FogExp2(fc, def.fog.density);
+  }
   if (renderer && def.exposure !== undefined) renderer.post.exposure = def.exposure;
   progress(0.25);
+  mark('env');
 
   // ---- sun
   const sunDir = new THREE.Vector3(...(def.sun?.dir || [0.4, 0.8, 0.3])).normalize();
@@ -268,6 +295,7 @@ export async function buildPackageMap(id, ctx) {
 
   // ---- static meshes
   const [doc, lmTex] = await Promise.all([staticP, lmP, matsP]);
+  mark('glb+textures');
   progress(0.7);
   const range = def.lightmap?.range ?? 8;
   const lmMats = new Map(); // name|atlas -> material
@@ -303,7 +331,7 @@ export async function buildPackageMap(id, ctx) {
       const mesh = new THREE.Mesh(g, matForMesh(ex.mat, ex.lm ?? -1));
       mesh.name = inst.name;
       mesh.matrixAutoUpdate = false;
-      mesh.castShadow = md.cast !== false && !md.decal && !(md.opacity < 1);
+      mesh.castShadow = md.cast !== false && !md.decal && !md.blend && !(md.opacity < 1);
       mesh.receiveShadow = true;
       mesh.userData.static = true;
       mesh.userData.surf = md.surf;
@@ -329,9 +357,11 @@ export async function buildPackageMap(id, ctx) {
     if (ctx.world) ctx.world.nav = nav;
   }
   progress(0.9);
+  mark('collision+nav');
 
   // ---- realtime point lights (pool of <= 6, nearest realtime lights to the camera)
-  const rtLights = (def.lights || []).filter((l) => l.realtime || (!def.lightmap && l.bake !== false));
+  // without a bake (--nobake previews) the baked lamps join the pool too, except soft interior fills (IBL is unoccluded there)
+  const rtLights = (def.lights || []).filter((l) => l.realtime || (!def.lightmap && l.bake !== false && l.name !== 'fill'));
   const poolN = Math.min(MAX_POINT_LIGHTS[q] ?? 4, rtLights.length);
   const pool = [];
   for (let i = 0; i < poolN; i++) {
@@ -377,6 +407,7 @@ export async function buildPackageMap(id, ctx) {
       pl.position.copy(s.pos);
       pl.color.copy(s.color);
       pl.distance = s.l.range || 10;
+      pl.decay = s.l.decay ?? 2;
       pl.intensity = (s.l.intensity ?? 10) * flicker(s.l.flicker, t, s.seed);
     }
   };
@@ -385,6 +416,7 @@ export async function buildPackageMap(id, ctx) {
   const playerSpawns = (def.playerSpawns?.length ? def.playerSpawns : [[0, 0.05, 0, 0]]).map((p) => new THREE.Vector3(p[0], p[1], p[2]));
   const zombieSpawns = (def.spawners || []).map((s) => new THREE.Vector3(...s.pos));
   progress(1);
+  console.info(`[map] ${id} loaded: ${marks.join(', ')} s; ${staticMeshes.length} meshes, ${baseMats.size} materials, quality ${q}`);
   return {
     ...def, def,
     root, collisionGeometry, playerSpawns, playerSpawnYaws: (def.playerSpawns || []).map((p) => p[3] || 0), zombieSpawns,
@@ -393,15 +425,61 @@ export async function buildPackageMap(id, ctx) {
   };
 }
 
-/** Flicker multiplier (1 = steady) for light patterns. */
-function flicker(kind, t, seed) {
-  if (!kind) return 1;
+/**
+ * Flicker multiplier (1 = steady). spec: 'fire' | { kind, speed (x), amount (0..1 depth) }.
+ * kinds: fire, buzz / fluorescent (dropouts), sodium (slow failing), strobe, pulse, rotate (beacon sweep), scroll (LED)
+ */
+function flicker(spec, t, seed) {
+  if (!spec) return 1;
+  const kind = typeof spec === 'string' ? spec : spec.kind;
+  const sp = (typeof spec === 'object' && spec.speed) || 1, amt = typeof spec === 'object' && spec.amount !== undefined ? spec.amount : 1;
   const n = (x) => { const s = Math.sin(x * 12.9898 + seed * 78.233) * 43758.5453; return s - Math.floor(s); };
-  if (kind === 'fire') return 0.75 + 0.18 * Math.sin(t * 9.1 + seed) + 0.12 * Math.sin(t * 23.7 + seed * 2.1) + 0.1 * (n(Math.floor(t * 15)) - 0.5);
-  if (kind === 'buzz') { const k = Math.floor(t * 12); return n(k) > 0.93 ? 0.08 : n(k * 0.37) > 0.97 ? 0.5 : 1; }
-  if (kind === 'strobe') return Math.sin(t * 14 + seed) > 0.6 ? 1 : 0.05;
-  if (kind === 'pulse') return 0.55 + 0.45 * Math.sin(t * 3 + seed);
-  return 1;
+  const T = t * sp;
+  let v = 1;
+  if (kind === 'fire') v = 0.75 + 0.18 * Math.sin(T * 9.1 + seed) + 0.12 * Math.sin(T * 23.7 + seed * 2.1) + 0.1 * (n(Math.floor(T * 15)) - 0.5);
+  else if (kind === 'buzz' || kind === 'fluorescent') { const k = Math.floor(T * 12); v = n(k) > 0.9 ? 0.06 : n(k * 0.37) > 0.96 ? 0.45 : 1; }
+  else if (kind === 'sodium') { const k = Math.floor(T * 2); v = n(k) > 0.8 ? 0.15 + 0.3 * n(k * 1.7) : 1; }
+  else if (kind === 'strobe') v = Math.sin(T * 14 + seed) > 0.6 ? 1 : 0.05;
+  else if (kind === 'pulse') v = 0.55 + 0.45 * Math.sin(T * 3 + seed);
+  else if (kind === 'rotate') v = Math.pow(Math.max(0, Math.sin(T * Math.PI * 2 + seed)), 6) * 1.6 + 0.08;
+  else if (kind === 'scroll') v = 0.85 + 0.15 * Math.sin(T * 6.3 + seed) * Math.sin(T * 2.1);
+  return 1 + (v - 1) * Math.min(1, Math.max(0, amt));
+}
+
+/** Multiplies an HDR DataTexture by a colour in place (background tint, e.g. green-grey storm clouds). */
+function tintHDR(tex, c) {
+  const d = tex.image?.data;
+  if (!d) return;
+  const ch = d.length / (tex.image.width * tex.image.height);
+  const half = tex.type === THREE.HalfFloatType;
+  const k = [c.r, c.g, c.b];
+  for (let i = 0; i < d.length; i += ch) for (let j = 0; j < 3; j++) {
+    d[i + j] = half ? THREE.DataUtils.toHalfFloat(THREE.DataUtils.fromHalfFloat(d[i + j]) * k[j]) : d[i + j] * k[j];
+  }
+  tex.needsUpdate = true;
+}
+function cloneHDR(tex) {
+  const t = tex.clone();
+  t.image = { ...tex.image, data: tex.image.data.slice() };
+  t.needsUpdate = true;
+  return t;
+}
+
+/** Average linear colour of the HDRI band 0..6 degrees above the horizon. */
+function horizonColor(tex) {
+  const img = tex.image;
+  const c = new THREE.Color(0.55, 0.55, 0.55);
+  if (!img?.data) return c;
+  const { width: w, height: h, data } = img;
+  const ch = data.length / (w * h);
+  const f = tex.type === THREE.HalfFloatType ? (v) => THREE.DataUtils.fromHalfFloat(v) : (v) => v;
+  let r = 0, g = 0, b = 0, n = 0;
+  const y0 = Math.floor(h / 2 - (6 / 180) * h), y1 = Math.floor(h / 2);
+  for (let y = y0; y < y1; y++) for (let x = 0; x < w; x += 2) {
+    const i = (y * w + x) * ch;
+    r += f(data[i]); g += f(data[i + 1]); b += f(data[i + 2]); n++;
+  }
+  return n ? c.setRGB(r / n, g / n, b / n) : c;
 }
 
 /** Cosine-weighted irradiance of the upper hemisphere of an equirect HDR texture (for spec occlusion). */

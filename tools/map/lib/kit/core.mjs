@@ -639,6 +639,7 @@ export class Kit {
     const pos = this.W(l.pos);
     const out = { type: l.type || 'point', pos: pos.map((v) => +v.toFixed(3)), color: l.color || '#ffd2a0', intensity: l.intensity ?? 10, range: l.range ?? 12 };
     if (l.radius !== undefined) out.radius = l.radius;
+    if (l.decay !== undefined) out.decay = l.decay;
     if (l.dir) out.dir = this.WD(l.dir).map((v) => +v.toFixed(4));
     if (l.type === 'spot') { out.angle = l.angle ?? Math.PI / 4; out.penumbra = l.penumbra ?? 0.5; if (!out.dir) out.dir = [0, -1, 0]; }
     if (l.flicker) out.flicker = l.flicker;

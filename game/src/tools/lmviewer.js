@@ -1,5 +1,5 @@
 // Lightmap QA viewer (dev): index.html?view=lightmap[&src=maps/_test/lm][&cam=0][&lm=1][&show=lit|lm|mask|albedo]
-//   [&pos=x,y,z&look=x,y,z][&fov=70][&shadows=1][&exp=1]
+//   [&pos=x,y,z&look=x,y,z][&fov=70][&shadows=1][&exp=1][&near=30 (realtime shadows replace the baked mask within 30 m)]
 // Loads <src>/scene.glb + lightmap.json + atlases (written by tools/map/test-lightmap.mjs or any bakeLightmaps()
 // result), lights it with the same sun / sky as the bake and renders through the game's post chain.
 //   lm=0      realtime only (sun + shadow map + environment IBL) - the "without lightmap" reference
@@ -63,6 +63,9 @@ function lightmappedMaterial(source, atlas, o) {
     lmSunMode: { value: full ? 0 : atlas.sun ? 1 : 2 }, // 0: sun baked, 1: mask, 2: no mask (sun unshadowed)
     lmSkyRef: { value: o.skyRef ?? 1 },
     lmSpecOcc: { value: o.specOcclusion ?? 1 },
+    // near the camera the realtime shadow map (sharp, includes static casters) replaces the baked mask:
+    // mask weight 0 below x metres, 1 beyond y (x = y = 0: mask everywhere)
+    lmNearFade: { value: new THREE.Vector2(...(o.nearFade || [0, 0])) },
   };
   m.userData.lightmap = { uniforms, atlas };
   const prevCompile = source.onBeforeCompile;
@@ -83,6 +86,7 @@ uniform sampler2D lmSun;
 uniform int lmSunMode;
 uniform float lmSkyRef;
 uniform float lmSpecOcc;
+uniform vec2 lmNearFade;
 `;
   fs = fs.replace('#include <lightmap_pars_fragment>', '#include <lightmap_pars_fragment>\n' + decl);
   const begin = THREE.ShaderChunk.lights_fragment_begin.replace(
@@ -95,6 +99,7 @@ uniform float lmSpecOcc;
 	vec3 lmRgb = lmTexel.rgb * lmTexel.a;
 	vec3 lmE = lmRange * lmRgb * lmRgb * lightMapIntensity;
 	float lmSunVis = lmSunMode == 0 ? 0.0 : lmSunMode == 1 ? texture2D( lmSun, vLightMapUv ).r : 1.0;
+	if ( lmSunMode == 1 && lmNearFade.y > 0.0 ) lmSunVis = mix( 1.0, lmSunVis, smoothstep( lmNearFade.x, lmNearFade.y, length( vViewPosition ) ) );
 	float lmSpec = mix( 1.0, clamp( dot( lmE, vec3( ${LUM.x}, ${LUM.y}, ${LUM.z} ) ) / max( lmSkyRef, 1e-4 ), 0.0, 1.0 ), lmSpecOcc );
 #else
 	vec3 lmE = vec3( 0.0 );
@@ -122,7 +127,7 @@ uniform float lmSpecOcc;
  * Applies atlases to every mesh under `root` that carries userData.lightmapAtlas (set by the baker and kept in the
  * GLB extras). Materials are cloned once per (material, atlas). Returns the number of lightmapped meshes.
  */
-function applyLightmaps(root, atlases, meta, { skyRef, specOcclusion, intensity } = {}) {
+function applyLightmaps(root, atlases, meta, { skyRef, specOcclusion, intensity, nearFade } = {}) {
   const cache = new Map();
   let n = 0;
   if (skyRef === undefined) {
@@ -136,7 +141,7 @@ function applyLightmaps(root, atlases, meta, { skyRef, specOcclusion, intensity 
     if (!atlas || !o.geometry.attributes.uv1) return;
     const swap = (mat) => {
       const key = mat.uuid + ':' + ai;
-      if (!cache.has(key)) cache.set(key, lightmappedMaterial(mat, atlas, { range: meta.range, mode: meta.mode, skyRef, specOcclusion, intensity }));
+      if (!cache.has(key)) cache.set(key, lightmappedMaterial(mat, atlas, { range: meta.range, mode: meta.mode, skyRef, specOcclusion, intensity, nearFade }));
       return cache.get(key);
     };
     o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
@@ -182,8 +187,18 @@ const TEST_CAMS = [
 export async function runLightmapViewer(renderer, params) {
   const src = (params.get('src') || 'maps/_test/lm').replace(/\/$/, '');
   const base = 'assets/' + src + '/';
-  const meta = await (await fetch(base + 'lightmap.json')).json();
-  const gltf = await new GLTFLoader().loadAsync(base + 'scene.glb');
+  // a bake test folder (scene.glb + lightmap.json) or a compiled map package (static.glb + map.json, see MAP_KIT.md)
+  let meta, glbName = 'scene.glb';
+  const r = await fetch(base + 'lightmap.json');
+  if (r.ok) meta = await r.json();
+  else {
+    const def = await (await fetch(base + 'map.json')).json();
+    if (!def.lightmap) throw new Error(src + ': package has no lightmap (compiled with --nobake?)');
+    meta = { ...def.lightmap, sun: def.sun, lights: (def.lights || []).filter((l) => !l.realtime), sky: def.lightmap.sky,
+      cameras: (def.playerSpawns || []).slice(0, 4).map((p) => ({ pos: [p[0], p[1] + 1.64, p[2]], look: [p[0] - Math.sin(p[3] || 0) * 10, p[1] + 1.2, p[2] - Math.cos(p[3] || 0) * 10] })) };
+    glbName = def.static?.file || def.static || 'static.glb';
+  }
+  const gltf = await new GLTFLoader().loadAsync(base + glbName);
   const scene = new THREE.Scene();
   const model = gltf.scene;
   scene.add(model);
@@ -221,7 +236,7 @@ export async function runLightmapViewer(renderer, params) {
     o.castShadow = o.receiveShadow = true;
     if (show === 'lm' || show === 'mask') {
       const m = o.material.clone();
-      m.color.set(0xb4b4b4); m.map = null; m.metalness = 0; m.roughness = 1;
+      m.color.set(0xb4b4b4); m.map = null; m.vertexColors = false; m.metalness = 0; m.roughness = 1;
       if (show === 'mask') m.envMapIntensity = 0;
       o.material = m;
     } else if (show === 'albedo') {
@@ -231,7 +246,8 @@ export async function runLightmapViewer(renderer, params) {
   let nLm = 0;
   if (useLm && show !== 'albedo') {
     const atlases = await loadLightmapAtlases(base, meta);
-    nLm = applyLightmaps(model, atlases, meta);
+    const near = +(params.get('near') || 0); // e.g. &near=30: realtime shadows only within ~30 m (shadow map range)
+    nLm = applyLightmaps(model, atlases, meta, { nearFade: near > 0 && sun.castShadow ? [near * 0.8, near] : null });
     if (show === 'mask') model.traverse((o) => { if (o.isMesh && o.material.userData.lightmap) o.material.userData.lightmap.uniforms.lmRange.value = 0; });
   }
   if (show === 'mask') { scene.environment = null; sun.castShadow = false; }

@@ -159,6 +159,12 @@ Object.assign(Kit.prototype, {
         this.box({ x: (x0 + x1) / 2, y: y0 - 0.06, z: 0.025, w: W + 0.12, h: 0.06, d: 0.1, mat: op.sillMat || 'trim_stone', tint: op.trimTint });
       }
       if (op.lintel) this.box({ x: (x0 + x1) / 2, y: y1, z: 0.01, w: W + 0.16, h: 0.14, d: 0.04, mat: op.lintel === true ? 'trim_stone' : op.lintel, tint: op.trimTint });
+      if (op.streak) { // soot / rain streaks running down from the sill
+        const len = this.rnd(0.8, 2.2), sw = W + this.rnd(0.1, 0.4), sx = (x0 + x1) / 2 + this.rnd(-0.1, 0.1);
+        const top = y0 - 0.07, bot = Math.max(0.1, top - len);
+        const u0 = this.pick([0, 0.5]);
+        this.face([[sx - sw / 2, bot, 0.004], [sx + sw / 2, bot, 0.004], [sx + sw / 2, top, 0.004], [sx - sw / 2, top, 0.004]], 'decal_streak', { uvs: [[u0, 0], [u0 + 0.5, 0], [u0 + 0.5, 1], [u0, 1]] });
+      }
       if (op.ac) this.windowAC((x0 + x1) / 2 + this.rnd(-W / 4, W / 4), y0 + 0.02);
     } else if (type === 'door') {
       // frame around (3 sides)
@@ -217,8 +223,11 @@ Object.assign(Kit.prototype, {
       poly = [[-w / 2, d / 2], [w / 2, d / 2], [w / 2, -d / 2], [-w / 2, -d / 2]].map(([px, pz]) => [x + px * c + pz * s, z - px * s + pz * c]);
     }
     poly = ensureCCW(poly);
-    const floors = o.floors ?? 3, floorH = o.floorH ?? 3.1, groundH = o.groundH ?? Math.max(floorH, 3.6);
-    const height = groundH + (floors - 1) * floorH;
+    // storeys: floors = count (groundH + uniform floorH) or an array of storey heights bottom-up
+    const fl = Array.isArray(o.floors) ? o.floors.slice() : (() => { const fh = o.floorH ?? 3.1; const n0 = o.floors ?? 3; return [o.groundH ?? Math.max(fh, 3.6), ...Array(Math.max(0, n0 - 1)).fill(fh)]; })();
+    const floors = fl.length, groundH = fl[0], floorH = fl[1] ?? fl[0];
+    const bases = fl.map((_, i) => fl.slice(0, i).reduce((a, b) => a + b, 0));
+    const height = bases[floors - 1] + fl[floors - 1];
     const mat = o.mat || 'brick_red', trim = o.trim || 'trim_stone';
     const t = o.wallT ?? 0.35;
     const roof = { type: 'flat', parapet: 0.9, mat: 'roof_tar', coping: 'trim_concrete', clutter: true, ...(o.roof || {}) };
@@ -227,9 +236,10 @@ Object.assign(Kit.prototype, {
     const plinth = o.plinth === false ? null : { h: 0.45, mat: 'trim_concrete', ...(o.plinth || {}) };
     const grime = o.grime === undefined ? { y: 0, h: 1.6, k: 0.35 } : o.grime;
     const info = { height, roofY: height, edges: [], doors: [], windows: [], poly };
+    this.solid(poly, 0, height); // ground under the building is cut away (the interior floor is kept)
     const n = poly.length;
     const bands = [];
-    for (let f = 1; f < floors; f++) bands.push(groundH + (f - 1) * floorH);
+    for (let f = 1; f < floors; f++) bands.push(bases[f]);
     for (let i = 0; i < n; i++) {
       const a = poly[i], b = poly[(i + 1) % n];
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -243,8 +253,8 @@ Object.assign(Kit.prototype, {
         const nb = Math.max(1, Math.floor((L - 0.8) / win.bay));
         const bw = L / nb;
         for (let f = 0; f < floors; f++) {
-          const fy = f === 0 ? 0 : groundH + (f - 1) * floorH;
-          const fh = f === 0 ? groundH : floorH;
+          const fy = bases[f];
+          const fh = fl[f];
           for (let k = 0; k < nb; k++) {
             const cx = bw * (k + 0.5);
             if (f === 0) {
@@ -262,7 +272,7 @@ Object.assign(Kit.prototype, {
               }
             } else {
               if (side.blankFloors?.includes(f)) continue;
-              openings.push({ cx, w: win.w, y: fy + win.sill, h: Math.min(win.h, fh - win.sill - 0.3), type: 'window', state: pickWeighted(this, win.states), lintel: win.lintel && trim, trimTint: o.trimTint, ac: this.chance(win.ac) });
+              openings.push({ cx, w: win.w, y: fy + win.sill, h: Math.min(win.h, fh - win.sill - 0.3), type: 'window', state: pickWeighted(this, win.states), lintel: win.lintel && trim, trimTint: o.trimTint, ac: this.chance(win.ac), streak: this.chance(o.streaks ?? 0.45) });
             }
           }
         }
@@ -307,7 +317,7 @@ Object.assign(Kit.prototype, {
           const nb = Math.max(1, Math.floor((L - 0.8) / win.bay));
           const bw = L / nb;
           const k = Math.min(nb - 1, side.fireEscape | 0);
-          this.fireEscape({ x: bw * (k + 0.5), floors, groundH, floorH, width: Math.min(bw * 2 - 0.4, 4.2), rows: side.fireEscapeRows });
+          this.fireEscape({ x: bw * (k + 0.5), floors, groundH, floorH, bases, width: Math.min(bw * 2 - 0.4, 4.2), rows: side.fireEscapeRows });
         }
         if (side.pipes !== false && this.chance(0.5) && side.type === 'facade') this.downpipe(this.chance(0.5) ? 0.25 : L - 0.25, height);
       });
@@ -446,9 +456,33 @@ Object.assign(Kit.prototype, {
   /** Enterable ground floor: interior faces, floor, ceiling, real collision with door gaps. */
   _groundInterior(poly, groundH, t, o, info) {
     const inner = insetPoly(poly, t);
-    this.ground(inner, { y: 0.02, mat: o.interiorFloor || 'interior_floor', collide: 'tile' });
+    // floor: interiorFloor, else grimy tiles behind shop fronts, else stained concrete
+    const floorMat = o.interiorFloor || ((o.sides || []).some((s) => s?.ground === 'shop') ? 'interior_tiles' : 'interior_floor');
+    this.ground(inner, { y: 0.02, mat: floorMat, keep: true });
     const ceil = inner.map((p) => [p[0], groundH - 0.02, p[1]]);
     this.face(fixUpFacing(ceil).reverse(), 'interior_ceiling');
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const p of inner) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+    // ceiling bulbs every ~6 m (some dead) so interiors read in-game; baked
+    if (o.interiorLights !== false) {
+      const nx = Math.max(1, Math.round((x1 - x0) / 6)), nz = Math.max(1, Math.round((z1 - z0) / 6));
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        const p = [x0 + ((x1 - x0) * (i + 0.5)) / nx, z0 + ((z1 - z0) * (j + 0.5)) / nz];
+        if (!pointInPoly(p, inner)) continue;
+        this.bulb([p[0], groundH - 0.7, p[1]], { cord: 0.66, on: this.chance(0.7), intensity: 9, range: 9 });
+      }
+    }
+    // daylight fill: a one-bounce bake leaves rooms lit only through small windows near-black (no auto exposure
+    // in game), so soft, cool, low baked lights stand in for the missing inter-reflections. interiorFill: 0..2
+    const fill = o.interiorFill ?? 1;
+    if (fill > 0) {
+      const nx = Math.max(1, Math.round((x1 - x0) / 6)), nz = Math.max(1, Math.round((z1 - z0) / 6));
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        const p = [x0 + ((x1 - x0) * (i + 0.5)) / nx, z0 + ((z1 - z0) * (j + 0.5)) / nz];
+        if (!pointInPoly(p, inner)) continue;
+        this.light({ pos: [p[0], groundH * 0.55, p[1]], color: '#c9d2dc', intensity: 3.0 * fill, decay: 1, range: 11, radius: 1.2, name: 'fill' });
+      }
+    }
     void info;
   },
 
@@ -509,8 +543,9 @@ Object.assign(Kit.prototype, {
     const { x, floors, groundH, floorH } = f;
     const W = f.width ?? 3.8, D = 1.25, mat = 'steel_dark';
     const tint = '#5d5853';
+    const B = f.bases || Array.from({ length: floors }, (_, k) => (k === 0 ? 0 : groundH + (k - 1) * floorH));
     for (let k = 1; k < floors; k++) {
-      const y = groundH + (k - 1) * floorH - 0.05;
+      const y = B[k] - 0.05;
       // platform grate + frame
       this.box({ x, y, z: D / 2 + 0.02, w: W, h: 0.06, d: D, mat: 'steel_dark', tint: '#4a4642', collide: 'grate' });
       // railings: posts + top rail + mid rail (front + sides)
@@ -528,7 +563,7 @@ Object.assign(Kit.prototype, {
       for (const s of [-1, 1]) this.at({ x: x + s * (W / 2 - 0.1), y: y - 0.02, z: 0.02 }, () => this.sweep([[-0.02, -0.02], [0.02, -0.02], [0.02, 0.02], [-0.02, 0.02]], [[0, 0, 0], [0, 0, D - 0.05], [0, -0.7, 0.02]], mat, { tint }));
       // stairs from this platform up to the next one
       if (k < floors - 1) {
-        const y2 = y + floorH, run = W - 0.9;
+        const y2 = B[k + 1] - 0.05, run = W - 0.9;
         const steps = Math.round(floorH / 0.2);
         const sx0 = x - W / 2 + 0.3, sw = 0.6, zc = D * 0.5;
         for (let s = 0; s < steps; s++) {
@@ -543,6 +578,37 @@ Object.assign(Kit.prototype, {
     const lx = x + W / 2 - 0.45;
     for (const s of [-0.22, 0.22]) this.box({ x: lx + s, y: y1 - 2.4, z: D - 0.15, w: 0.04, h: 2.4, d: 0.04, mat, tint });
     for (let r = 0; r < 7; r++) this.box({ x: lx, y: y1 - 2.3 + r * 0.32, z: D - 0.15, w: 0.44, h: 0.025, d: 0.025, mat, tint });
+  },
+
+  /** Projecting blade sign (wall-local frame): x along the wall, y bottom, w (out from the wall), h; lit adds a light. */
+  bladeSign(s) {
+    const w = s.w ?? 1.0, h = s.h ?? 2.2, mat = s.mat || this.pick(['sign_white', 'sign_red', 'sign_blue', 'sign_yellow']);
+    for (const yy of [s.y + 0.15, s.y + h - 0.15]) this.box({ x: s.x, y: yy - 0.03, z: (w + 0.3) / 2, w: 0.05, h: 0.06, d: w + 0.3, mat: 'steel_dark' });
+    this.bbox({ x: s.x, y: s.y, z: 0.25 + w / 2, w: 0.16, h, d: w, bevel: 0.02, mat, tint: s.tint });
+    const n = Math.max(2, Math.floor(h / 0.42));
+    for (let i = 0; i < n; i++) for (const side of [-1, 1]) {
+      if (this.chance(0.15)) continue;
+      this.box({ x: s.x + side * 0.081, y: s.y + 0.15 + ((h - 0.3) * (i + 0.1)) / n, z: 0.25 + w / 2, w: 0.004, h: ((h - 0.3) / n) * 0.75, d: w * 0.7, mat: this.pick(['frame_dark', 'frame_white', 'sign_red']) });
+    }
+    if (s.lit) {
+      for (const side of [-1, 1]) this.box({ x: s.x + side * 0.09, y: s.y + 0.06, z: 0.25 + w / 2, w: 0.01, h: h - 0.12, d: 0.05, mat: s.lamp || 'lamp_warm' });
+      this.light({ pos: [s.x, s.y + h / 2, 0.25 + w / 2 + 0.4], color: s.color || '#ffbf80', intensity: 5, range: 6 });
+    }
+  },
+
+  /**
+   * Structural steel member between two local points: kind 'I' (default) | 'box' | 'L' | 'C', h (depth), w (flange),
+   * t (thickness), mat ('steel_dark'), up (profile up vector). Used for bridges, gantries, catwalk frames.
+   */
+  beam(a, b, o = {}) {
+    const h = o.h ?? 0.4, w = o.w ?? 0.2, t = o.t ?? 0.025, k = o.kind || 'I';
+    const P = {
+      I: [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, -h / 2 + t], [t / 2, -h / 2 + t], [t / 2, h / 2 - t], [w / 2, h / 2 - t], [w / 2, h / 2], [-w / 2, h / 2], [-w / 2, h / 2 - t], [-t / 2, h / 2 - t], [-t / 2, -h / 2 + t], [-w / 2, -h / 2 + t]],
+      box: [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]],
+      L: [[0, 0], [w, 0], [w, t], [t, t], [t, h], [0, h]],
+      C: [[0, -h / 2], [w, -h / 2], [w, -h / 2 + t], [t, -h / 2 + t], [t, h / 2 - t], [w, h / 2 - t], [w, h / 2], [0, h / 2]],
+    }[k];
+    this.sweep(P, [a, b], o.mat || 'steel_dark', { caps: true, tint: o.tint, up: o.up, collide: o.collide });
   },
 
   /**

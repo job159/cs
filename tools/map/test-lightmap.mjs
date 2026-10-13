@@ -22,7 +22,7 @@ const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 && args[
 const flag = (n) => args.includes('--' + n);
 
 const SUN = { dir: [0.38, 0.72, 0.58], color: '#ffe6c8', intensity: 3.2, angle: 0.8 };
-const LAMP = { pos: [-1.6, 2.6, -1.2], color: '#ffb36b', intensity: 6, range: 7, radius: 0.08 };
+const LAMP = { pos: [-1.6, 2.6, -1.2], color: '#ffd2a0', intensity: 3, range: 7, radius: 0.08 };
 
 function mat(name, color, extra = {}) {
   return new THREE.MeshStandardMaterial({ name, color: new THREE.Color(color), roughness: 0.85, metalness: 0, ...extra });

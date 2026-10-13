@@ -49,26 +49,51 @@ Object.assign(Kit.prototype, {
     this.at({ x: v.at[0], y: v.y || 0, z: v.at[1], rot: v.rot || 0, rz: v.tilt || 0, rx: v.roll || 0 }, () => {
       const W = spec.w;
       // ---- lower body
-      for (const f of profileHull(spec.lower, W, 0.07, 0.96)) this.face(f, paint, { tint: color, uvLocal: true });
+      const grime = { y: 0, h: 1.1, k: burnt ? 0.2 : 0.45 };
+      for (const f of profileHull(spec.lower, W, 0.07, 0.96)) this.face(f, paint, { tint: color, uvLocal: true, grime });
       // ---- cabin / cargo
       const glassMat = state === 'intact' ? 'car_glass' : null;
       for (const part of spec.upper) {
-        const faces = profileHull(part.profile, part.w ?? W * 0.94, 0.05, part.tuck ?? 0.82);
+        const pw = part.w ?? W * 0.94, tuck = part.tuck ?? 0.82, frame = part.frame ?? 0.07;
+        const faces = profileHull(part.profile, pw, 0.05, tuck);
+        const pm = part.mat === 'paint' || !part.mat ? paint : part.mat;
+        const pt = part.mat && part.mat !== 'paint' ? part.tint : type === 'police' && !burnt ? '#e8e6e0' : color;
+        let glazed = 0;
         for (const f of faces) {
           const n = faceNormal(f);
-          this.face(f, part.mat === 'paint' ? paint : part.mat || paint, { tint: part.mat && part.mat !== 'paint' ? part.tint : color, uvLocal: true });
-          if (!part.glass) continue;
-          // glass panes on side / front / rear faces (not the roof, not the bottom)
-          if (n[1] > 0.75 || n[1] < -0.3) continue;
-          if (Math.abs(n[2]) > 0.5 && part.sideGlass === false) continue;
-          const area = polyArea(f);
-          if (area < 0.12) continue;
-          const pane = insetFace(f, n, part.frame ?? 0.07, 0.006);
-          if (!pane) continue;
-          if (glassMat) this.face(pane, glassMat, {});
-          else if (!burnt && this.chance(0.5)) this.face(shrinkTri(pane), 'glass_dirty', {});
-          // interior darkness behind (visible through glass / empty frames)
-          this.face(insetFace(f, n, (part.frame ?? 0.07) + 0.01, -0.05) || pane, 'car_interior', { shade: 0.4 });
+          // glass openings on side / front / rear faces (not the roof, not the bottom): the paint face gets a hole,
+          // the pane sits slightly recessed in it and the dark cabin interior shows through
+          const eligible = part.glass && n[1] <= 0.75 && n[1] >= -0.3 && !(Math.abs(n[2]) > 0.5 && part.sideGlass === false) && polyArea(f) >= 0.12;
+          const pane = eligible ? insetFace(f, n, frame, 0) : null;
+          if (!pane) { this.face(f, pm, { tint: pt, uvLocal: true }); continue; }
+          glazed++;
+          this.face(f, pm, { tint: pt, uvLocal: true, holes: [pane] });
+          const rec = pane.map((p) => V.sub(p, V.scale(n, 0.012)));
+          // reveal of the opening (frame depth)
+          for (let i = 0; i < pane.length; i++) {
+            const p = pane[i], q = pane[(i + 1) % pane.length], q2 = rec[(i + 1) % pane.length], p2 = rec[i];
+            this.face([p, p2, q2, q], 'car_plastic', { tint: '#151515' });
+          }
+          if (glassMat) this.face(rec, glassMat, {});
+          else if (!burnt && this.chance(0.5)) this.face(shrinkTri(rec), 'glass_dirty', {});
+          // side windows: B / C pillars
+          if (Math.abs(n[2]) > 0.5 && part.pillars) {
+            for (const px of part.pillars) {
+              const ys = pane.map((p) => p[1]);
+              const y0 = Math.min(...ys), y1 = Math.max(...ys);
+              const zc = pane.reduce((s2, p) => s2 + p[2], 0) / pane.length;
+              this.box({ x: px, y: y0 - 0.01, z: zc - n[2] * 0.004, w: 0.09, h: y1 - y0 + 0.02, d: 0.02, mat: pm, tint: pt });
+            }
+          }
+        }
+        if (glazed) {
+          // inside-out shell of the cabin: dark interior seen through the windows, plus seat backs
+          const cx = part.profile.reduce((s2, p) => s2 + p[0], 0) / part.profile.length, cy = part.profile.reduce((s2, p) => s2 + p[1], 0) / part.profile.length;
+          const inner = part.profile.map(([x, y]) => [cx + (x - cx) * 0.94, cy + (y - cy) * 0.9]);
+          for (const f of profileHull(inner, pw * 0.92, 0.0, tuck)) this.face(f.slice().reverse(), burnt ? 'car_burnt' : 'car_interior', { tint: burnt ? '#3a3633' : undefined, shade: 0.55 });
+          if (part.seats !== false) for (const sx of part.seats || []) for (const sz of [-1, 1]) {
+            this.bbox({ x: sx, y: Math.min(...part.profile.map((p) => p[1])) + 0.05, z: sz * pw * 0.22, w: 0.18, h: 0.62, d: pw * 0.34, bevel: 0.04, mat: burnt ? 'car_burnt' : 'car_interior', tint: burnt ? '#2f2b28' : '#3b3632', rz: -0.18 });
+          }
         }
       }
       // ---- details
@@ -129,15 +154,15 @@ Object.assign(Kit.prototype, {
 const SPECS = {
   sedan: {
     l: 4.7, w: 1.8, lowerTop: 0.95, lightY: 0.72, bumperY: 0.3, tyreR: 0.33, tyreW: 0.22,
-    lower: [[-2.35, 0.3], [2.35, 0.3], [2.38, 0.62], [2.3, 0.8], [1.2, 0.95], [-1.8, 0.98], [-2.32, 0.92], [-2.38, 0.62]],
-    upper: [{ profile: [[1.15, 0.92], [-1.75, 0.95], [-1.35, 1.42], [0.35, 1.44]], glass: true, tuck: 0.8 }],
+    lower: [[-2.35, 0.3], [2.35, 0.3], [2.41, 0.45], [2.39, 0.68], [2.26, 0.8], [1.6, 0.86], [1.15, 0.92], [-1.75, 0.96], [-2.24, 0.91], [-2.38, 0.76], [-2.41, 0.45]],
+    upper: [{ profile: [[1.15, 0.92], [-1.72, 0.95], [-1.28, 1.41], [0.32, 1.44]], glass: true, tuck: 0.8, pillars: [-0.38], seats: [0.05, -0.85] }],
     wheels: [[1.45, 0], [-1.4, 0]], mirrors: [0.95, 1.0], roofX: -0.5, roofY: 1.43,
   },
   van: {
     l: 5.3, w: 2.0, lowerTop: 1.05, lightY: 0.85, bumperY: 0.35, tyreR: 0.37, tyreW: 0.24, chrome: false,
     lower: [[-2.65, 0.35], [2.65, 0.35], [2.68, 0.75], [2.55, 1.05], [-2.62, 1.08], [-2.68, 0.7]],
     upper: [
-      { profile: [[2.5, 1.02], [1.25, 1.02], [1.15, 2.2], [1.75, 2.15]], glass: true, tuck: 0.88, w: 1.94 },
+      { profile: [[2.5, 1.02], [1.25, 1.02], [1.15, 2.2], [1.75, 2.15]], glass: true, tuck: 0.88, w: 1.94, seats: [1.45] },
       { profile: [[1.3, 1.02], [-2.62, 1.05], [-2.62, 2.25], [1.2, 2.25]], glass: false, mat: 'paint', tuck: 0.95, w: 1.98 },
     ],
     wheels: [[1.75, 0], [-1.7, 0]], mirrors: [1.6, 1.4], roofX: 0, roofY: 2.24,
@@ -146,7 +171,7 @@ const SPECS = {
     l: 5.5, w: 2.0, lowerTop: 1.05, lightY: 0.9, bumperY: 0.4, tyreR: 0.4, tyreW: 0.26, chrome: true,
     lower: [[-2.75, 0.4], [2.75, 0.4], [2.78, 0.8], [2.65, 1.1], [1.0, 1.15], [-2.72, 1.12], [-2.78, 0.75]],
     upper: [
-      { profile: [[1.05, 1.1], [-0.7, 1.12], [-0.6, 1.88], [0.45, 1.88]], glass: true, tuck: 0.86 },
+      { profile: [[1.05, 1.1], [-0.7, 1.12], [-0.6, 1.88], [0.45, 1.88]], glass: true, tuck: 0.86, seats: [-0.25] },
       { profile: [[-0.75, 1.1], [-2.72, 1.1], [-2.72, 1.55], [-0.75, 1.55]], glass: false, mat: 'paint', tuck: 1.0, w: 1.98 },
     ],
     wheels: [[1.75, 0], [-1.75, 0]], mirrors: [0.95, 1.3], roofX: -0.1, roofY: 1.87,
@@ -155,7 +180,7 @@ const SPECS = {
     l: 7.6, w: 2.45, lowerTop: 1.1, lightY: 0.95, bumperY: 0.45, tyreR: 0.48, tyreW: 0.3, chrome: false,
     lower: [[-3.8, 0.55], [3.8, 0.55], [3.82, 0.95], [3.7, 1.15], [-3.8, 1.15]],
     upper: [
-      { profile: [[3.75, 1.1], [2.0, 1.1], [2.0, 2.75], [3.45, 2.7]], glass: true, tuck: 0.95, w: 2.35 },
+      { profile: [[3.75, 1.1], [2.0, 1.1], [2.0, 2.75], [3.45, 2.7]], glass: true, tuck: 0.95, w: 2.35, seats: [2.4] },
       { profile: [[1.8, 1.1], [-3.8, 1.1], [-3.8, 3.55], [1.8, 3.55]], glass: false, mat: 'paint_metal', tint: '#d9d6cc', tuck: 1.0, w: 2.45 },
     ],
     wheels: [[2.7, 0], [-2.2, 0], [-3.0, 0]], mirrors: [3.4, 2.1], roofX: 2.8, roofY: 2.74,
@@ -163,7 +188,7 @@ const SPECS = {
   bus: {
     l: 11.5, w: 2.55, lowerTop: 1.1, lightY: 0.9, bumperY: 0.4, tyreR: 0.5, tyreW: 0.3, chrome: false,
     lower: [[-5.75, 0.4], [5.75, 0.4], [5.78, 0.95], [5.7, 1.15], [-5.75, 1.15]],
-    upper: [{ profile: [[5.72, 1.1], [-5.72, 1.1], [-5.7, 3.05], [5.55, 3.05]], glass: true, tuck: 0.96, frame: 0.22, w: 2.5 }],
+    upper: [{ profile: [[5.72, 1.1], [-5.72, 1.1], [-5.7, 3.05], [5.55, 3.05]], glass: true, tuck: 0.96, frame: 0.22, w: 2.5, pillars: [-4.2, -2.7, -1.2, 0.3, 1.8, 3.3], seats: [] }],
     wheels: [[3.9, 0], [-3.2, 0]], mirrors: [5.6, 2.2], roofX: 0, roofY: 3.05,
   },
 };

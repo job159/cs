@@ -25,7 +25,7 @@ let O_VIS, O_SKY1, O_LIGHTS, O_BACK, O_IND, O_VAR, VALID;
 let SKY, SKY_W, SKY_H, IRR, IRR_W, IRR_H;
 let P;                         // params
 let LIGHTS, NLIGHTS;
-let ATLAS = [];                // [{ w, h, E: Float32Array rgb }]
+let ATLAS = [];                // bounce source per atlas: { hw, hh, E: Uint32Array RGB9E5 at half resolution }
 let HAMX, HAMY;                // hemisphere point sets (pass A / pass B)
 let HAMX2, HAMY2;
 let TRANS_ANY = false;
@@ -98,7 +98,20 @@ export function init(S) {
 }
 
 export function setAtlases(list) {
-  ATLAS = list.map((a) => ({ w: a.w, h: a.h, E: new Float32Array(a.E) }));
+  ATLAS = list.map((a) => ({ hw: a.hw, hh: a.hh, E: new Uint32Array(a.E) }));
+}
+
+// Shared-exponent RGB (RGB9E5, like GL_RGB9_E5): 9-bit mantissas, 5-bit exponent (bias 15). 4 bytes per texel keeps
+// the bounce source of a whole town (half resolution) inside the CPU caches.
+const E5 = Float64Array.from({ length: 32 }, (_, i) => Math.pow(2, i - 24));
+export function packRGB9E5(r, g, b) {
+  const m = Math.max(r, g, b);
+  if (!(m > 1.5e-8)) return 0;
+  let e = Math.max(0, Math.min(31, Math.floor(Math.log2(Math.min(m, 65000))) + 16));
+  let sc = E5[e];
+  if (Math.round(m / sc) > 511 && e < 31) { e++; sc = E5[e]; }
+  const q = (v) => Math.min(511, Math.max(0, Math.round(v / sc)));
+  return (q(r) | (q(g) << 9) | (q(b) << 18) | (e << 27)) >>> 0;
 }
 
 // Branchless ONB (Duff et al. 2017). Returns [tx,ty,tz,bx,by,bz].
@@ -319,7 +332,7 @@ const CAND = [0.45, 0, -0.45, 0, 0, 0.45, 0, -0.45, 0.4, 0.4, -0.4, 0.4, 0.4, -0
 export function passDirect(i0, i1) {
   const S1 = P.skySamples1, eps = P.eps, far = P.far;
   const sunOn = P.sunColor[0] + P.sunColor[1] + P.sunColor[2] > 0;
-  const sunCos = P.sunCos, SS = P.sunSamples, jitter = P.jitter;
+  const sunCos = P.sunCos, SS = P.sunSamples, jitter = P.jitter, sunF = P.sunFilter ?? 1;
   const LS = P.lightSamples;
   const L = sunL, sT = sunT, sB = sunB;
   const thr = P.invalidThreshold;
@@ -339,8 +352,9 @@ export function passDirect(i0, i1) {
       jitterSetup();
       if (jOk) {
         const t9 = curTri * 9, bu0 = curBu, bv0 = curBv;
-        let bestS = Infinity, bu = 0, bv = 0;
+        let bestS = Infinity, bu = 0, bv = 0, anyOut = false;
         for (let c = 0; c < CAND.length; c += 2) {
+          if (c === 16 && !anyOut) break; // all 8 outer points buried: the whole footprint is inside geometry
           let u = bu0 + jA * CAND[c] + jB * CAND[c + 1], v = bv0 + jC * CAND[c] + jD * CAND[c + 1];
           if (u < 0) u = 0; if (v < 0) v = 0;
           const s = u + v; if (s > 1) { u /= s; v /= s; }
@@ -350,6 +364,7 @@ export function passDirect(i0, i1) {
           // quick reject: a point inside geometry sees a back face straight up its normal
           const qh = intersect(px + gx * eps, py + gy * eps, pz + gz * eps, nx, ny, nz, far);
           if (qh >= 0 && HIT[3] < 0 && MATS[TMAT[qh] * 8 + 7] === 0) continue;
+          anyOut = true;
           const nb = hemiProbe(px + gx * eps, py + gy * eps, pz + gz * eps, nProbe, r1, r2, false);
           if (nb / nProbe > thr * 0.5) continue;
           const score = hemiEsc / nProbe + 0.02 * (CAND[c] * CAND[c] + CAND[c + 1] * CAND[c + 1]);
@@ -366,6 +381,11 @@ export function passDirect(i0, i1) {
     const ks = PI / S1;
     O_SKY1[i * 3] = hemiSky[0] * ks; O_SKY1[i * 3 + 1] = hemiSky[1] * ks; O_SKY1[i * 3 + 2] = hemiSky[2] * ks;
     O_BACK[i] = Math.round((back / S1) * 255);
+    if (back / S1 > thr) { // still inside geometry: filled from neighbours later, no direct light needed
+      O_VIS[i] = 0;
+      if (NLIGHTS) { O_LIGHTS[i * 3] = O_LIGHTS[i * 3 + 1] = O_LIGHTS[i * 3 + 2] = 0; }
+      continue;
+    }
 
     // --- sun: jittered over the texel footprint (clamped to the triangle) and the sun disc
     let vis = 0;
@@ -378,10 +398,18 @@ export function passDirect(i0, i1) {
       const b9 = curTri * 9;
       for (let k = 0; k < SS; k++) {
         let qx = px, qy = py, qz = pz;
-        if (jitter && jOk && k > 0) {
-          let ja = 0.5 + k * 0.7548776662466927 + sx; ja -= Math.floor(ja);
-          let jb = 0.5 + k * 0.5698402909980532 + sy; jb -= Math.floor(jb);
-          ja -= 0.5; jb -= 0.5;
+        if (jitter && jOk) {
+          // first 4 samples at the footprint corners (decide "uniform" early), then an R2 sequence over the
+          // footprint: the stored visibility is the texel's coverage, so diagonal shadow edges come out anti-aliased
+          // tent filter of radius sunFilter texels: neighbouring texels overlap, so bilinear filtering of the mask
+          // reconstructs diagonal shadow edges smoothly instead of as a staircase
+          let ja, jb;
+          if (k < 4) { ja = (k & 1 ? 0.45 : -0.45) * sunF; jb = (k & 2 ? 0.45 : -0.45) * sunF; } else {
+            let a = 0.5 + k * 0.7548776662466927 + sx; a -= Math.floor(a);
+            let b2 = 0.5 + k * 0.5698402909980532 + sy; b2 -= Math.floor(b2);
+            ja = (a < 0.5 ? Math.sqrt(2 * a) - 1 : 1 - Math.sqrt(2 - 2 * a)) * sunF;
+            jb = (b2 < 0.5 ? Math.sqrt(2 * b2) - 1 : 1 - Math.sqrt(2 - 2 * b2)) * sunF;
+          }
           let u = curBu + jA * ja + jB * jb, v = curBv + jC * ja + jD * jb;
           // clamp into the triangle (keeps samples on this surface; footprint beyond its edges is handled
           // by the neighbouring triangles' own texels)
@@ -400,12 +428,13 @@ export function passDirect(i0, i1) {
         const dz = L[2] * ct + sT[2] * c1 + sB[2] * c2;
         if (dx * gx + dy * gy + dz * gz <= 0) { cnt++; continue; }
         const occ = occluded(qx + gx * eps, qy + gy * eps, qz + gz * eps, dx, dy, dz, far);
-        if (occ === 2 && k > 0) continue; // jittered point under other geometry: discard the sample
+        if (occ === 2 && jitter && jOk) continue; // jittered point under other geometry: discard the sample
         cnt++;
         if (occ === 0) sum++;
         if (cnt === 4 && k < SS - 1 && (sum === 0 || sum === 4)) break; // adaptive: uniform texel
       }
-      vis = cnt > 0 ? sum / cnt : 0;
+      if (cnt === 0) vis = occluded(ox, oy, oz, L[0], L[1], L[2], far) === 0 ? 1 : 0; // every jittered point buried
+      else vis = sum / cnt;
     }
     O_VIS[i] = vis;
 
@@ -452,24 +481,19 @@ export function passDirect(i0, i1) {
       const e = fall * cn * v;
       lr += LIGHTS[o + 3] * e; lg += LIGHTS[o + 4] * e; lb += LIGHTS[o + 5] * e;
     }
-    O_LIGHTS[i * 3] = lr; O_LIGHTS[i * 3 + 1] = lg; O_LIGHTS[i * 3 + 2] = lb;
+    if (NLIGHTS) { O_LIGHTS[i * 3] = lr; O_LIGHTS[i * 3 + 1] = lg; O_LIGHTS[i * 3 + 2] = lb; }
   }
 }
 
 // ---------------------------------------------------------------- pass B: sky + one bounce from the atlases
+/** Bounce source lookup: nearest texel of the half-resolution RGB9E5 atlas (x, y in full-resolution pixels). */
 function atlasLookup(a, x, y, out, o) {
   const A = ATLAS[a];
-  const W = A.w, H = A.h, E = A.E;
-  let fx = x - 0.5, fy = y - 0.5;
-  if (fx < 0) fx = 0; if (fy < 0) fy = 0;
-  if (fx > W - 1.001) fx = W - 1.001; if (fy > H - 1.001) fy = H - 1.001;
-  const x0 = fx | 0, y0 = fy | 0;
-  const ax = fx - x0, ay = fy - y0;
-  const k00 = (y0 * W + x0) * 3, k10 = k00 + 3, k01 = k00 + W * 3, k11 = k01 + 3;
-  const w00 = (1 - ax) * (1 - ay), w10 = ax * (1 - ay), w01 = (1 - ax) * ay, w11 = ax * ay;
-  out[o] = E[k00] * w00 + E[k10] * w10 + E[k01] * w01 + E[k11] * w11;
-  out[o + 1] = E[k00 + 1] * w00 + E[k10 + 1] * w10 + E[k01 + 1] * w01 + E[k11 + 1] * w11;
-  out[o + 2] = E[k00 + 2] * w00 + E[k10 + 2] * w10 + E[k01 + 2] * w01 + E[k11 + 2] * w11;
+  let hx = (x * 0.5) | 0, hy = (y * 0.5) | 0;
+  if (hx < 0) hx = 0; else if (hx >= A.hw) hx = A.hw - 1;
+  if (hy < 0) hy = 0; else if (hy >= A.hh) hy = A.hh - 1;
+  const v = A.E[hy * A.hw + hx], sc = E5[v >>> 27];
+  out[o] = (v & 511) * sc; out[o + 1] = ((v >>> 9) & 511) * sc; out[o + 2] = ((v >>> 18) & 511) * sc;
 }
 
 const eq = new Float64Array(3);

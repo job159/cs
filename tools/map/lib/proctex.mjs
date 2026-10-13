@@ -610,9 +610,112 @@ export const SETS = {
   } },
 };
 
-// Tintable clean painted metal (vehicles, signs, truck boxes): same generator as the stand-in 'metal_painted'
-// (which is replaced by a Poly Haven photoscan) under its own id so both can coexist.
-SETS.paint_metal = SETS.metal_painted;
+// Tintable clean painted metal (vehicles, signs, truck boxes, frames): light neutral paint, soft mottling,
+// fine scratches, a few small chips (primer / rust) and faint grime. Tinted per object with vertex colours.
+SETS.paint_metal = { tile: 2, N: 1024, gen(N) {
+  const albedo = new RGB(N), height = plane(N), rough = plane(N), metal = plane(N);
+  const mottle = fbm(N, 3, 4, 301), fine = fbm(N, 120, 2, 302), grime = fbm(N, 6, 4, 303), dent = fbm(N, 4, 3, 304);
+  const chipN = fbm(N, 14, 4, 305, { gain: 0.6 });
+  const scratch = plane(N);
+  const rnd = mulberry(306);
+  for (let k = 0; k < 140; k++) {
+    let x = rnd() * N, y = rnd() * N;
+    const a = (rnd() - 0.5) * 0.5 + (rnd() < 0.5 ? 0 : Math.PI / 2), len = 15 + rnd() * 90;
+    for (let s = 0; s < len; s++) {
+      x += Math.cos(a); y += Math.sin(a);
+      const i = ((Math.floor(y) % N + N) % N) * N + ((Math.floor(x) % N + N) % N);
+      scratch[i] = Math.max(scratch[i], 0.4 + rnd() * 0.6);
+    }
+  }
+  for (let i = 0; i < N * N; i++) {
+    const chip = smoothstep(0.78, 0.8, chipN[i]);
+    const g = smoothstep(0.55, 0.85, grime[i]);
+    let c = mix3(hex('#c9c8c2'), hex('#d8d7d1'), mottle[i] * 0.7 + fine[i] * 0.3);
+    c = mix3(c, hex('#8d887d'), g * 0.35);
+    c = mix3(c, hex('#e4e3de'), scratch[i] * (1 - chip) * 0.5);
+    c = mix3(c, mix3(hex('#5a5149'), hex('#7a4528'), fine[i]), chip);
+    albedo.set(i, c);
+    height[i] = dent[i] * 0.0012 + fine[i] * 0.00015 - chip * 0.0004 - scratch[i] * 0.00012;
+    rough[i] = 0.42 + g * 0.3 + chip * 0.35 + scratch[i] * 0.08 + fine[i] * 0.05;
+    metal[i] = chip * 0.3;
+  }
+  return { albedo, height, rough, metal, normalStrength: 0.8 };
+} };
+
+// ---------------------------------------------------------------- decals (one blob per texture, UV 0..1, alpha)
+// Placed with kit.decal(): oil / water stains, puddles (glossy), crack networks, dirt / grime patches.
+function blobMask(N, seed, { edge = 0.35, wobble = 0.55, aspect = 1 } = {}) {
+  const n1 = fbm(N, 3, 5, seed, { gain: 0.55 }), n2 = fbm(N, 12, 3, seed + 1);
+  const m = plane(N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    const dx = (x + 0.5) / N - 0.5, dy = ((y + 0.5) / N - 0.5) * aspect;
+    const r = Math.hypot(dx, dy) * 2 + (n1[i] - 0.5) * wobble + (n2[i] - 0.5) * 0.12;
+    m[i] = smoothstep(1.0, 1.0 - edge, r) * smoothstep(0.5, 0.42, Math.max(Math.abs(dx), Math.abs(dy))); // fade at the quad border
+  }
+  return m;
+}
+SETS.decal_stain = { tile: 2, N: 512, alpha: true, gen(N) {
+  const albedo = new RGB(N), height = plane(N), rough = plane(N), alpha = plane(N);
+  const m = blobMask(N, 901, { edge: 0.6, wobble: 0.7 }), tone = fbm(N, 20, 3, 903), rings = fbm(N, 6, 3, 904);
+  for (let i = 0; i < N * N; i++) {
+    const core = smoothstep(0.2, 0.9, m[i]);
+    alpha[i] = clamp01(m[i] * (0.25 + 0.35 * tone[i]) + smoothstep(0.45, 0.5, rings[i]) * m[i] * 0.12);
+    albedo.set(i, mix3(hex('#4a4338'), hex('#24211c'), core * 0.7 + tone[i] * 0.3));
+    rough[i] = lerp(0.85, 0.45, core);
+  }
+  return { albedo, height, rough, alpha, normalStrength: 0.3, noAO: true };
+} };
+SETS.decal_puddle = { tile: 2, N: 512, alpha: true, gen(N) {
+  const albedo = new RGB(N), height = plane(N), rough = plane(N), alpha = plane(N);
+  const m = blobMask(N, 911, { edge: 0.18, wobble: 0.9, aspect: 1.3 }), grit = fbm(N, 40, 3, 913);
+  for (let i = 0; i < N * N; i++) {
+    const wet = smoothstep(0.0, 0.35, m[i]), deep = smoothstep(0.35, 0.9, m[i]);
+    alpha[i] = clamp01(wet * 0.9);
+    albedo.set(i, mix3(hex('#34312b'), hex('#1c1d1e'), deep));
+    rough[i] = lerp(0.35, 0.03, deep) + grit[i] * 0.04 * (1 - deep);
+    height[i] = -deep * 0.0005;
+  }
+  return { albedo, height, rough, alpha, normalStrength: 0.4, noAO: true };
+} };
+SETS.decal_cracks = { tile: 2, N: 1024, alpha: true, gen(N) {
+  const albedo = new RGB(N), height = plane(N), rough = plane(N, 0.9), alpha = plane(N);
+  const c = cracks(N, 5, 921, 2.6, { warpPx: 40, density: 0.75, fineCells: 11 });
+  const m = blobMask(N, 922, { edge: 0.5, wobble: 0.6 });
+  for (let i = 0; i < N * N; i++) {
+    alpha[i] = clamp01(c[i] * m[i] * 1.2);
+    albedo.set(i, hex('#141311'));
+    height[i] = -c[i] * 0.002;
+  }
+  return { albedo, height, rough, alpha, normalStrength: 1.2, noAO: true };
+} };
+SETS.decal_streak = { tile: 2, N: 512, alpha: true, gen(N) {
+  // two variants side by side (u 0..0.5, 0.5..1): vertical soot / rain streaks, strongest at the top (v = 1 = row 0)
+  const albedo = new RGB(N), height = plane(N), rough = plane(N, 0.9), alpha = plane(N);
+  const cols = fbm(N, 24, 3, 941), wob = fbm(N, 6, 3, 942), fine = fbm(N, 80, 2, 943);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    const v = 1 - y / N; // 1 at the top row
+    const lx = (x % (N / 2)) / (N / 2);
+    const edge = smoothstep(0, 0.12, lx) * smoothstep(1, 0.88, lx);
+    const k = (y * N + Math.floor((x + (wob[i] - 0.5) * 18 + N) % N));
+    const streak = smoothstep(0.45, 0.75, cols[k % (N * N)]);
+    const fade = Math.pow(v, 1.6) * (0.6 + 0.4 * fine[i]);
+    alpha[i] = clamp01((0.25 + streak * 0.75) * fade * edge * 0.85);
+    albedo.set(i, mix3(hex('#3d362d'), hex('#1d1a16'), streak));
+  }
+  return { albedo, height, rough, alpha, normalStrength: 0.2, noAO: true };
+} };
+SETS.decal_dirt = { tile: 2, N: 512, alpha: true, gen(N) {
+  const albedo = new RGB(N), height = plane(N), rough = plane(N, 0.95), alpha = plane(N);
+  const m = blobMask(N, 931, { edge: 0.7, wobble: 0.8 }), speck = fbm(N, 60, 2, 932), tone = fbm(N, 8, 3, 933);
+  for (let i = 0; i < N * N; i++) {
+    alpha[i] = clamp01(m[i] * (0.35 + 0.65 * smoothstep(0.3, 0.7, tone[i])) * (0.75 + 0.25 * speck[i]));
+    albedo.set(i, mix3(hex('#5a4b38'), hex('#3b3226'), speck[i]));
+    height[i] = speck[i] * 0.0008 * m[i];
+  }
+  return { albedo, height, rough, alpha, normalStrength: 0.8, noAO: true };
+} };
 
 // ---------------------------------------------------------------- output
 

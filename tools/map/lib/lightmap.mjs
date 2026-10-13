@@ -1,8 +1,9 @@
-// LIGHTMAP BAKER (Node, pure JS + three-mesh-bvh, parallel over worker_threads).
+// LIGHTMAP BAKER (Node, pure JS + three-mesh-bvh, parallel over worker_threads). Usage: docs/MAP_KIT.md section 8.
 //
 //   import { bakeLightmaps } from './lib/lightmap.mjs';
-//   const res = await bakeLightmaps(staticMeshes, { sun, skyHdr, resolution: 8, samples: 64, lights });
-//   await res.write('game/assets/maps/sector7', 'lm');   // lm_0.png (RGBM) + lm_0_sun.png (sun mask) ...
+//   const res = await bakeLightmaps(staticMeshes, { sun, skyHdr, skyIntensity, resolution: 8, samples: 64, lights, workers: 6 });
+//   const meta = res.write('game/assets/maps/<map>', 'lm');   // lm_0.png (RGBM) + lm_0_sun.png (sun mask) ...
+//   test: node tools/map/test-lightmap.mjs   (scene + regression checks; --town 200 = performance benchmark)
 //
 // 1. UV2: per-face planar charts (connected faces within `chartAngle` of the seed normal, projected on
 //    their mean plane, minimum-area rectangle), sized by world area x texels/m, padded and packed into
@@ -10,13 +11,17 @@
 //    for one atlas is split into several meshes). Written as attribute `uv1` (glTF TEXCOORD_1; three.js
 //    material.lightMap.channel = 1). v = 0 is the first PNG row (load with flipY = false).
 // 2. Path tracing per texel (conservative rasterisation, texel centres clamped into the triangle):
-//    pass A - sun with soft shadows (cone of `sun.angle` + jitter over the texel footprint), sky from the
-//             HDRI (cosine-weighted, stratified), static point/spot lights, back-face test (texels inside
-//             geometry are marked invalid and later filled from valid neighbours - no leaks at junctions).
-//    pass B - sky again + one bounce: hits look up the pass-A irradiance in the atlas and reflect it with
-//             the material albedo. `bounces` > 1 repeats pass B with the previous result.
-// 3. Invalid fill, edge-aware a-trous denoise (chart / normal / variance-scaled luminance stopping),
-//    dilation into the chart padding, RGBM encode (sqrt space, see decode below) + 8-bit sun mask.
+//    pass A - sun with soft shadows (cone of `sun.angle` x coverage of the texel footprint), static point /
+//             spot lights, a short sky estimate and the inside-geometry test: a texel whose centre is buried
+//             (wall foot, under a crate) is moved to the visible point of its footprint that sees the LEAST sky
+//             (a texel straddling a wall represents the room side - no light leaks), fully buried texels are
+//             filled later from their darkest neighbour.
+//    pass B - sky (HDRI, cosine-weighted, progressive Halton, adaptive sample count) + one bounce: hits look up
+//             the pass-A irradiance (half-resolution RGB9E5 copy of the atlases) and reflect it with the material
+//             albedo, plus emissive surfaces. `bounces` > 1 repeats pass B with the previous result.
+// 3. Invalid fill, edge-aware a-trous denoise (chart / normal / variance-scaled luminance stopping; row-parallel
+//    in the workers), dilation into the chart padding, seam stitching (smooth edges split between charts),
+//    RGBM encode (sqrt space, see decode below) + 8-bit sun mask.
 //
 // Output irradiance E (three.js units: sun intensity * cos + sky radiance integrated over the hemisphere);
 // three.js shades lightmaps as albedo / PI * E, the same as its direct lights, so baked and realtime
@@ -46,7 +51,7 @@ export const LIGHTMAP_DEFAULTS = {
   adaptiveError: 0.03,    // ... then stop once the relative standard error of the estimate is below this (0 = off)
   adaptiveFloor: 0.003,   //     (+ this absolute irradiance, so dark texels stop too)
   directSamples: 0,       // pass-A sky rays (bounce source + inside-geometry test); 0 = clamp(samples / 8, 8, 24)
-  sunSamples: 16,         // adaptive: 4 when the texel is uniformly lit / shadowed
+  sunSamples: 32,         // adaptive: 4 when the texel is uniformly lit / shadowed (only edge texels take all)
   lightSamples: 8,
   bounces: 1,
   denoise: true,
@@ -61,7 +66,8 @@ export const LIGHTMAP_DEFAULTS = {
   leafSize: 4,            // BVH leaf size
   eps: 0.002,             // ray origin offset along the geometric normal (m)
   far: 5000,
-  jitter: true,           // sun samples spread over the texel footprint (anti-aliased shadow edges)
+  jitter: true,           // sun samples spread over the texel footprint (anti-aliased shadow edges) ...
+  sunFilter: 1,           // ... with a tent filter of this radius in texels (1 = smooth edges after bilinear filtering)
   invalidThreshold: 0.2,  // fraction of back-face hits that marks a texel as inside geometry
   adjustSamples: true,    // texel centre inside geometry: move the sample to a visible point of its footprint
   uvAttribute: 'uv1',
@@ -453,7 +459,7 @@ function tryPackGroup(sky, charts) {
 
 // ------------------------------------------------------------------------------------------ main
 export async function bakeLightmaps(input, options = {}) {
-  const T0 = performance.now();
+  const T0 = performance.now(), CPU0 = process.cpuUsage();
   const o = { ...LIGHTMAP_DEFAULTS, ...options };
   const log = o.log === false ? () => {} : (o.log || ((...a) => console.log('[lightmap]', ...a)));
   const timings = {};
@@ -818,13 +824,13 @@ export async function bakeLightmaps(input, options = {}) {
   const shared = {
     nodes, tri: TRI.buffer, triN: TN.buffer, triUV: TUVB.buffer, triMat: TMAT.buffer, triAtlas: TATL.buffer,
     mats: toShared(mats.pack()), texTri: texTri.buffer, texBary: texBary.buffer,
-    outVis: sab(nTex, Float32Array).buffer, outSky1: sab(nTex * 3, Float32Array).buffer, outLights: sab(nTex * 3, Float32Array).buffer,
+    outVis: sab(nTex, Float32Array).buffer, outSky1: sab(nTex * 3, Float32Array).buffer, outLights: sab(lights.length ? nTex * 3 : 1, Float32Array).buffer,
     outBack: sab(nTex, Uint8Array).buffer, outInd: sab(nTex * 3, Float32Array).buffer,
     outVar: sab(nTex, Float32Array).buffer, valid: sab(nTex, Uint8Array).buffer,
     sky: toShared(sky.data), skyW: sky.w, skyH: sky.h, irr: toShared(sky.irr), irrW: sky.irrW, irrH: sky.irrH,
     lights: toShared(L),
     params: {
-      sunDir, sunColor: sunColor.map((c) => c * sunIntensity), sunCos: Math.cos(sunAngle), sunSamples: o.sunSamples,
+      sunDir, sunColor: sunColor.map((c) => c * sunIntensity), sunCos: Math.cos(sunAngle), sunSamples: o.sunSamples, sunFilter: o.sunFilter,
       skySamples1: S1, skySamples2: S2, eps: o.eps, far: o.far, jitter: !!o.jitter, lightSamples: o.lightSamples, nLights: lights.length,
       invalidThreshold: o.invalidThreshold, adjust: o.adjustSamples !== false,
       minSamples: o.minSamples || Math.max(16, Math.ceil(o.samples / 4)), adaptiveError: o.adaptiveError, adaptiveFloor: o.adaptiveFloor,
@@ -835,7 +841,7 @@ export async function bakeLightmaps(input, options = {}) {
   const pool = nThreads > 1 && nTex > 4096 ? await makePool(nThreads, shared) : null;
   let totalRays = 0;
   const run = async (kernel, label, arg = 0) => {
-    const t = performance.now();
+    const t = performance.now(), c0 = process.cpuUsage();
     let rays = 0;
     if (pool) rays = await pool.run(kernel, nTex, arg, (f) => log(`  ${label} ${(f * 100).toFixed(0)} %`));
     else {
@@ -850,33 +856,48 @@ export async function bakeLightmaps(input, options = {}) {
     }
     totalRays += rays;
     const sec = (performance.now() - t) / 1000;
-    log(`${label}: ${sec.toFixed(1)} s, ${(rays / 1e6).toFixed(1)} M rays (${(rays / 1e6 / Math.max(sec, 1e-3)).toFixed(2)} M rays/s on ${pool ? nThreads : 1} thread(s))`);
+    const cpu = cpuSec(c0);
+    log(`${label}: ${sec.toFixed(1)} s, ${(rays / 1e6).toFixed(1)} M rays (${(rays / 1e6 / Math.max(sec, 1e-3)).toFixed(2)} M rays/s on ${pool ? nThreads : 1} thread(s); ${cpu.toFixed(0)} CPU s, ${(rays / 1e6 / Math.max(cpu, 1e-3)).toFixed(2)} M rays per CPU s)`);
   };
 
   const O_VIS = new Float32Array(shared.outVis), O_SKY1 = new Float32Array(shared.outSky1), O_LIGHTS = new Float32Array(shared.outLights);
   const O_BACK = new Uint8Array(shared.outBack), O_IND = new Float32Array(shared.outInd);
   const O_VAR = new Float32Array(shared.outVar), VALID = new Uint8Array(shared.valid);
+  const hasL = lights.length > 0;
   const sc = sunColor.map((c) => c * sunIntensity);
   const frame = new Float64Array(6);
-  const chartRect = (ai) => {
-    const A = atlases[ai], rect = sab(A.w * A.h, Int32Array).fill(-1);
-    for (const ch of atlasCharts[ai]) for (let y = ch.y; y < ch.y + ch.h; y++) rect.fill(ch.id, y * A.w + ch.x, y * A.w + ch.x + ch.w);
-    return rect;
+  // Per-atlas work buffers, allocated once at the largest atlas size and reused (SharedArrayBuffers handed to
+  // workers are only reclaimed when every isolate collects them - reuse keeps the peak memory flat).
+  const maxN = atlases.reduce((m, A) => Math.max(m, A.w * A.h), 1);
+  const B = {
+    E: sab(maxN * 3, Float32Array), M: sab(maxN, Float32Array), V: sab(maxN, Float32Array), MV: sab(maxN, Float32Array),
+    nrm: sab(maxN * 3, Float32Array), st: sab(maxN, Uint8Array), rect: sab(maxN, Int32Array),
+  };
+  const D = o.denoise ? {
+    lum: sab(maxN, Float32Array), sd: sab(maxN, Float32Array), ping: sab(maxN * 3, Float32Array), pong: sab(maxN * 3, Float32Array),
+    vping: sab(maxN, Float32Array), vpong: sab(maxN, Float32Array),
+  } : null;
+  const prepAtlas = (ai) => {
+    const A = atlases[ai], n = A.w * A.h;
+    const view = (b, ch = 1) => b.subarray(0, n * ch);
+    const v = { E: view(B.E, 3), M: view(B.M), V: view(B.V), MV: view(B.MV), nrm: view(B.nrm, 3), st: view(B.st), rect: view(B.rect) };
+    v.E.fill(0); v.M.fill(0); v.V.fill(0); v.MV.fill(0); v.nrm.fill(0); v.st.fill(0); v.rect.fill(-1);
+    for (const ch of atlasCharts[ai]) for (let y = ch.y; y < ch.y + ch.h; y++) v.rect.fill(ch.id, y * A.w + ch.x, y * A.w + ch.x + ch.w);
+    return v;
   };
 
-  // edge-avoiding a-trous denoiser, rows split over the workers (buffers must be SharedArrayBuffer-backed)
-  const denoise = async (W, H, val, ch, vari, st, rect, nrm, iterations, sigma, skipFlat) => {
-    const n = W * H, SB = (bytes) => new SharedArrayBuffer(Math.max(4, bytes));
-    const job = { W, H, ch, sigma, skipFlat, st: st.buffer, rect: rect.buffer, nrm: nrm.buffer, lum: SB(n * 4), sd: SB(n * 4),
-      val: [val.buffer, SB(n * ch * 4), SB(iterations > 1 ? n * ch * 4 : 4)], vari: [vari.buffer, SB(n * 4), SB(iterations > 1 ? n * 4 : 4)] };
+  // edge-avoiding a-trous denoiser, rows split over the workers
+  const denoise = async (W, H, buf, ch, vbuf, iterations, sigma, skipFlat) => {
+    const job = { W, H, ch, sigma, skipFlat, st: B.st.buffer, rect: B.rect.buffer, nrm: B.nrm.buffer, lum: D.lum.buffer, sd: D.sd.buffer,
+      val: [buf.buffer, D.ping.buffer, D.pong.buffer], vari: [vbuf.buffer, D.vping.buffer, D.vpong.buffer] };
     if (pool) await pool.post(job); else K.setPost(job);
     for (let it = 0; it < iterations; it++) {
       for (const kern of ['atrousPrep', 'atrousFilter']) {
         if (pool) await pool.run(kern, H, it, () => {}); else K.kernels[kern](0, H, it);
       }
     }
-    const res = new Float32Array(job.val[(iterations - 1) % 2 === 0 ? 1 : 2]);
-    for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) for (let c = 0; c < ch; c++) val[k * ch + c] = res[k * ch + c];
+    const res = (iterations - 1) % 2 === 0 ? D.ping : D.pong, st = B.st, n = W * H;
+    for (let k = 0; k < n; k++) if (st[k] === 1 || st[k] === 3) for (let c = 0; c < ch; c++) buf[k * ch + c] = res[k * ch + c];
     if (pool) await pool.post(null); else K.setPost(null);
   };
 
@@ -886,51 +907,71 @@ export async function bakeLightmaps(input, options = {}) {
     let nInvalid = 0;
     const thr = Math.round(o.invalidThreshold * 255);
     for (let i = 0; i < nTex; i++) { VALID[i] = O_BACK[i] <= thr ? 1 : 0; if (!VALID[i]) nInvalid++; }
-    log(`${nInvalid} texels inside geometry (${(100 * nInvalid / nTex).toFixed(1)} %) -> filled from neighbours`);
+    log(`${nInvalid} texels inside geometry (${(100 * nInvalid / nTex).toFixed(1)} %) -> filled from neighbours${nInvalid > nTex * 0.15 ? ' - remove hidden faces (object bottoms, ground under buildings) to save atlas space and bake time' : ''}`);
 
-    // irradiance source for the bounce: direct sun + sky + lights (pass 2+: + previous sky/bounce)
-    const sourceAtlases = (withInd) => atlases.map((A, ai) => {
-      const E = new Float32Array(new SharedArrayBuffer(A.w * A.h * 3 * 4));
-      const st = new Uint8Array(A.w * A.h);
+    // bounce source: direct sun + sky + lights (pass 2+: + previous sky / bounce), filled, at half resolution in RGB9E5
+    const srcs = atlases.map((A) => {
+      const hw = (A.w + 1) >> 1, hh = (A.h + 1) >> 1;
+      return { hw, hh, E: new SharedArrayBuffer(hw * hh * 4) };
+    });
+    const buildSources = (withInd) => atlases.forEach((A, ai) => {
+      const v = prepAtlas(ai), E = v.E, st = v.st, W = A.w;
+      const ind = withInd ? O_IND : O_SKY1;
       for (let i = A.t0; i < A.t1; i++) {
         const k = texPix[i];
         st[k] = VALID[i] ? 1 : 2;
         K.texelFrame(i, frame);
         const ndl = Math.max(0, frame[3] * sunDir[0] + frame[4] * sunDir[1] + frame[5] * sunDir[2]) * O_VIS[i];
-        const ind = withInd ? O_IND : O_SKY1;
-        for (let c = 0; c < 3; c++) E[k * 3 + c] = sc[c] * ndl + ind[i * 3 + c] + O_LIGHTS[i * 3 + c];
+        for (let c = 0; c < 3; c++) E[k * 3 + c] = sc[c] * ndl + ind[i * 3 + c] + (hasL ? O_LIGHTS[i * 3 + c] : 0);
       }
-      const rect = chartRect(ai);
-      const key = lumKey(E, null, st, 0);
-      fillPixels(A.w, A.h, st, rect, [E], [3], 2, 64, key);
-      fillPixels(A.w, A.h, st, rect, [E], [3], 0, pad + 1, null);
-      return { w: A.w, h: A.h, E: E.buffer };
+      fillPixels(A.w, A.h, st, v.rect, [E], [3], 2, 64, lumKey(E, null, st, 0));
+      fillPixels(A.w, A.h, st, v.rect, [E], [3], 0, pad + 1, null);
+      const S = srcs[ai], out = new Uint32Array(S.E);
+      for (let y = 0; y < S.hh; y++) for (let x = 0; x < S.hw; x++) {
+        let r = 0, g = 0, b = 0, c = 0;
+        for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+          const xx = x * 2 + dx, yy = y * 2 + dy;
+          if (xx >= W || yy >= A.h) continue;
+          const k = yy * W + xx;
+          if (st[k] !== 1 && st[k] !== 3) continue;
+          r += E[k * 3]; g += E[k * 3 + 1]; b += E[k * 3 + 2]; c++;
+        }
+        out[y * S.hw + x] = c ? K.packRGB9E5(r / c, g / c, b / c) : 0;
+      }
     });
     for (let b = 0; b < Math.max(1, o.bounces); b++) {
-      let src = sourceAtlases(b > 0);
-      if (pool) await pool.atlases(src); else K.setAtlases(src);
-      src = null;
+      buildSources(b > 0);
+      if (pool) await pool.atlases(srcs); else K.setAtlases(srcs);
       await run('passBounce', `pass B${o.bounces > 1 ? ' #' + (b + 1) : ''} (sky + bounce)`, b);
     }
     if (pool) await pool.atlases([]); else K.setAtlases([]);
     stage('passB');
 
-    // ---- per atlas: compose, fill, denoise, dilate, stitch seams, encode
+    // ---- RGBM range from the traced texels (99.9th percentile, power of two)
     const full = o.mode === 'full';
-    const seams = o.stitch ? findSeams(recv, P, NRM, triChart, allCharts, TUV, atlases.length) : atlases.map(() => []);
-    const finals = [];
-    let maxE = 0, nSeam = 0;
     const hist = [];
+    for (let i = 0; i < nTex; i += 7) {
+      if (!VALID[i]) continue;
+      let m = 0;
+      for (let c = 0; c < 3; c++) m = Math.max(m, O_IND[i * 3 + c] + (hasL ? O_LIGHTS[i * 3 + c] : 0) + (full ? sc[c] * O_VIS[i] : 0));
+      hist.push(m);
+    }
+    hist.sort((a, b) => a - b);
+    const p999 = hist.length ? hist[Math.min(hist.length - 1, Math.floor(hist.length * 0.999))] : 1;
+    hist.length = 0;
+    const range = o.range && o.range !== 'auto' ? o.range : Math.min(64, Math.max(4, 2 ** Math.ceil(Math.log2(Math.max(1e-3, p999 * 1.05)))));
+
+    // ---- per atlas: compose, fill, denoise, dilate, stitch seams, encode
+    const seams = o.stitch ? findSeams(recv, P, NRM, triChart, allCharts, TUV, atlases.length) : atlases.map(() => []);
+    const out = [];
+    let maxE = 0, nSeam = 0, clipped = 0;
     for (let ai = 0; ai < atlases.length; ai++) {
       const A = atlases[ai], W = A.w, H = A.h, n = W * H;
-      const rect = chartRect(ai);
-      const E = sab(n * 3, Float32Array), M = sab(n, Float32Array), V = sab(n, Float32Array), MV = sab(n, Float32Array);
-      const nrm = sab(n * 3, Float32Array);
-      const st = sab(n, Uint8Array);
+      const { E, M, V, MV, nrm, st, rect } = prepAtlas(ai);
       for (let i = A.t0; i < A.t1; i++) {
         const k = texPix[i];
         st[k] = VALID[i] ? 1 : 2;
-        for (let c = 0; c < 3; c++) E[k * 3 + c] = O_IND[i * 3 + c] + O_LIGHTS[i * 3 + c];
+        for (let c = 0; c < 3; c++) E[k * 3 + c] = O_IND[i * 3 + c] + (hasL ? O_LIGHTS[i * 3 + c] : 0);
         M[k] = O_VIS[i];
         V[k] = O_VAR[i];
         MV[k] = (M[k] * (1 - M[k])) / o.sunSamples;
@@ -939,12 +980,11 @@ export async function bakeLightmaps(input, options = {}) {
       }
       // texels inside geometry: take the darkest plausible neighbour (light never leaks into a room through a wall;
       // the worst case is a thin contact-shadow line on the outside)
-      const key = lumKey(E, M, st, lum(sc[0], sc[1], sc[2]) * 0.5);
-      fillPixels(W, H, st, rect, [E, M, V, MV, nrm], [3, 1, 1, 1, 3], 2, 128, key);
+      fillPixels(W, H, st, rect, [E, M, V, MV, nrm], [3, 1, 1, 1, 3], 2, 128, lumKey(E, M, st, lum(sc[0], sc[1], sc[2]) * 0.5));
       for (let k = 0; k < n; k++) if (st[k] === 3) { const l = Math.hypot(nrm[k * 3], nrm[k * 3 + 1], nrm[k * 3 + 2]) || 1; nrm[k * 3] /= l; nrm[k * 3 + 1] /= l; nrm[k * 3 + 2] /= l; }
       if (o.denoise) {
-        await denoise(W, H, E, 3, V, st, rect, nrm, o.denoiseIterations, o.denoiseSigma, false);
-        if (o.jitter && o.sunSamples > 1) await denoise(W, H, M, 1, MV, st, rect, nrm, 2, 3, true);
+        await denoise(W, H, B.E, 3, B.V, o.denoiseIterations, o.denoiseSigma, false);
+        if (o.jitter && o.sunSamples > 1) await denoise(W, H, B.M, 1, B.MV, 2, 3, true);
       }
       if (full) {
         for (let k = 0; k < n; k++) {
@@ -955,27 +995,14 @@ export async function bakeLightmaps(input, options = {}) {
       }
       fillPixels(W, H, st, rect, [E, M], [3, 1], 0, pad + 1, null);
       if (seams[ai].length) { nSeam += seams[ai].length / 4; stitchSeams(W, H, [E, M], [3, 1], rect, seams[ai], o.stitchIterations); }
-      for (let k = 0; k < n; k++) {
-        if (!st[k] && rect[k] < 0) continue;
-        const m = Math.max(E[k * 3], E[k * 3 + 1], E[k * 3 + 2]);
-        if (m > maxE) maxE = m;
-        if (st[k] === 1 && (k & 7) === 0) hist.push(m);
-      }
-      finals.push({ W, H, E, M, st, rect });
-    }
-    if (nSeam) log(`stitched ${nSeam} seam samples`);
-    hist.sort((a, b) => a - b);
-    const p999 = hist.length ? hist[Math.min(hist.length - 1, Math.floor(hist.length * 0.999))] : 1;
-    const range = o.range && o.range !== 'auto' ? o.range : Math.min(64, Math.max(4, 2 ** Math.ceil(Math.log2(Math.max(1e-3, p999 * 1.05)))));
-    const out = [];
-    let clipped = 0;
-    for (let ai = 0; ai < finals.length; ai++) {
-      const { W, H, E, M } = finals[ai];
-      const n = W * H;
+      seams[ai] = null;
+      // encode: RGBM in sqrt space + 8-bit sun mask
       const rgbm = Buffer.alloc(n * 4), mask = Buffer.alloc(n);
       for (let k = 0; k < n; k++) {
         let r = E[k * 3], g = E[k * 3 + 1], b = E[k * 3 + 2];
-        if (Math.max(r, g, b) > range) clipped++;
+        const mx = Math.max(r, g, b);
+        if (mx > maxE) maxE = mx;
+        if (mx > range) clipped++;
         r = Math.sqrt(Math.max(0, r) / range); g = Math.sqrt(Math.max(0, g) / range); b = Math.sqrt(Math.max(0, b) / range);
         let m = Math.min(1, Math.max(r, g, b, 1e-6));
         m = Math.ceil(m * 255) / 255;
@@ -987,9 +1014,10 @@ export async function bakeLightmaps(input, options = {}) {
       }
       const rgbmPng = PNG.sync.write({ width: W, height: H, data: rgbm }, { colorType: 6, inputColorType: 6, deflateLevel: 6 });
       const maskPng = PNG.sync.write({ width: W, height: H, data: mask }, { colorType: 0, inputColorType: 0, deflateLevel: 6 });
-      out.push({ index: ai, width: W, height: H, rgbm: rgbmPng, png: rgbmPng, sun: maskPng, ...(o.keepFloat ? { E, mask: M, state: finals[ai].st } : {}) });
-      finals[ai] = null;
+      out.push({ index: ai, width: W, height: H, rgbm: rgbmPng, png: rgbmPng, sun: maskPng,
+        ...(o.keepFloat ? { E: Float32Array.from(E), mask: Float32Array.from(M), state: Uint8Array.from(st) } : {}) });
     }
+    if (nSeam) log(`stitched ${nSeam} seam samples`);
     log(`RGBM range ${range} (99.9 % of texels <= ${p999.toFixed(2)}, max ${maxE.toFixed(2)}${clipped ? `, ${clipped} texels clipped` : ''})`);
     stage('post');
 
@@ -1018,8 +1046,8 @@ export async function bakeLightmaps(input, options = {}) {
     }
     stage('apply');
     const stats = { texels: nTex, invalid: nInvalid, charts: allCharts.length, triangles: nAll, receivers: receivers.length, atlases: atlases.length,
-      rays: totalRays, seconds: (performance.now() - T0) / 1000, timings, densityScale: densScale, maxIrradiance: maxE, clipped, threads: pool ? nThreads : 1 };
-    log(`done in ${stats.seconds.toFixed(1)} s, ${(totalRays / 1e6).toFixed(0)} M rays`, JSON.stringify(timings));
+      rays: totalRays, seconds: (performance.now() - T0) / 1000, cpuSeconds: cpuSec(CPU0), timings, densityScale: densScale, maxIrradiance: maxE, clipped, threads: pool ? nThreads : 1 };
+    log(`done in ${stats.seconds.toFixed(1)} s (${stats.cpuSeconds.toFixed(0)} CPU s = ${(stats.cpuSeconds / stats.threads).toFixed(0)} s on ${stats.threads} free cores), ${(totalRays / 1e6).toFixed(0)} M rays`, JSON.stringify(timings));
     const res = {
       atlases: out, meshes: result, range, mode: o.mode, encoding: 'rgbm-sqrt', uv: o.uvAttribute,
       sun: { dir: sunDir, color: sunColor, intensity: sunIntensity }, sky: { sunDir: sky.sunDir, sunIrradiance: sky.sunIrradiance, clamp: sky.clampValue, upIrradiance: sky.skyUpIrradiance },
@@ -1043,6 +1071,8 @@ export async function bakeLightmaps(input, options = {}) {
     if (pool) await pool.close();
   }
 }
+
+const cpuSec = (c0) => { const c = process.cpuUsage(c0); return (c.user + c.system) / 1e6; };
 
 function toShared(arr) {
   const s = new SharedArrayBuffer(Math.max(4, arr.byteLength));

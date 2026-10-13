@@ -23,6 +23,12 @@ export function build(kit) {
   kit.crosswalk({ at: [0, -7], dir: Math.PI / 2, across: 9.6, length: 2.4 });
   kit.crosswalk({ at: [0, 7], dir: Math.PI / 2, across: 9.6, length: 2.4 });
   for (const seg of [[[-34, 4.6], [-9, 4.6]], [[9, -4.6], [34, -4.6]], [[-34, -4.6], [-9, -4.6]], [[9, 4.6], [34, 4.6]]]) kit.markLine(seg, { width: 0.1, dash: [3, 3] });
+  // ground grime: stains, cracks, dirt and a few glossy puddles
+  kit.scatterDecals([[-34, -5], [34, -5], [34, 5], [-34, 5]], { count: 26, avoid: [[0, 0, 3]] });
+  kit.scatterDecals([[-5, -34], [5, -34], [5, 34], [-5, 34]], { count: 18 });
+  kit.decal({ at: [3.2, -2.5], size: [3.5, 2.4], rot: 0.4, mat: 'decal_puddle' });
+  kit.decal({ at: [-12, 3.6], size: [2.6, 1.8], rot: 1.2, mat: 'decal_puddle' });
+  kit.scatterDecals([[5, -34], [34, -34], [34, -5], [5, -5]], { count: 10, y: S, mats: { decal_stain: 2, decal_dirt: 3 }, size: [0.8, 2] });
   kit.manhole([-2.2, -20]);
   kit.manhole([12, 1.8]);
   kit.drain([-5.15, 14], Math.PI / 2);
@@ -50,6 +56,13 @@ export function build(kit) {
     windows: { ac: 0.15 }, enter: { ground: true },
   }));
   void b1;
+
+  // blade sign + a steel gantry with a grated catwalk over street A (beams, grate)
+  kit.at({ x: 27, y: S, z: -11.5, rot: 0 }, () => kit.bladeSign({ x: -4, y: 4.2, w: 0.9, h: 2.4, lit: true, mat: 'sign_red' }));
+  for (const x of [-16.5, -12.5]) for (const z of [-5.6, 5.6]) kit.beam([x, 0, z], [x, 5.4, z], { kind: 'box', h: 0.3, w: 0.3, up: [1, 0, 0], collide: true });
+  for (const x of [-16.5, -12.5]) kit.beam([x, 5.4, -5.8], [x, 5.4, 5.8], { kind: 'I', h: 0.45, w: 0.22 });
+  kit.box({ x: -14.5, y: 5.62, z: 0, w: 4.4, h: 0.04, d: 11.6, mat: 'grate', collide: 'grate' });
+  kit.box({ x: -14.5, y: 6.0, z: 0, w: 3.6, h: 1.6, d: 0.12, mat: 'billboard', tint: '#c9a23f' });
 
   // ---------------------------------------------------------------- building 2: clapboard house with gable roof (SW)
   kit.at({ y: S }, () => kit.building({
