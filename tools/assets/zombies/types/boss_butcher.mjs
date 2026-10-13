@@ -1,5 +1,5 @@
 // boss_butcher — 屠宰者 THE BUTCHER, round-5 mid-boss (game/src/zombies/brains/butcher.js), 4 m tall.
-// WIP geometry stage (flat colours).
+// Fat, hunched, sack-hooded giant; right forearm grown into a bone cleaver; chains and meat hooks; glowing back tumour.
 import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { boneSegment, buildSkeleton } from '../lib/rig.mjs';
@@ -59,6 +59,19 @@ function downField(f, S, D, ch = 1) {
   return out;
 }
 
+/** Crops a UV rect [u0, v0, u1, v1] (OBJ convention, v up) out of an image and resamples it to size x size. */
+function cropUV(img, r, size, resize) {
+  const W = img.width, H = img.height;
+  const x0 = Math.round(r[0] * W), x1 = Math.round(r[2] * W), y0 = Math.round((1 - r[3]) * H), y1 = Math.round((1 - r[1]) * H);
+  const w = Math.max(1, x1 - x0), hh = Math.max(1, y1 - y0);
+  const out = createImage(w, hh, [0, 0, 0, 255]);
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
+    const si = ((y0 + y) * W + x0 + x) * 4, di = (y * w + x) * 4;
+    out.data[di] = img.data[si]; out.data[di + 1] = img.data[si + 1]; out.data[di + 2] = img.data[si + 2]; out.data[di + 3] = img.data[si + 3];
+  }
+  return resize(out, size, size);
+}
+
 /** Closest-point parameter t (0 head .. 1 tail, unclamped) and distance from P to a bone's head->tail segment. */
 function boneSeg(bone) {
   const a = [bone.head.x, bone.head.y, bone.head.z], b = [bone.tail.x, bone.tail.y, bone.tail.z];
@@ -105,7 +118,8 @@ function paintPart(part, o, fn) {
   for (let i = 0; i < S * S; i++) {
     if (!texelSurface(r, tris, part.pos, nrm, i, P, Nn)) continue;
     st.c[0] = st.c[1] = st.c[2] = 0.5; st.h = 0; st.ro = o.rough ?? 0.8; st.me = 0; st.a = 1; st.e[0] = st.e[1] = st.e[2] = 0; st.ao = 1;
-    fn(P, Nn, st, ((i % S) + 0.5) / S, (((i / S) | 0) + 0.5) / S, i);
+    // u, v in the parts' own (OBJ, v up) uv convention: texel row 0 is v = 1
+    fn(P, Nn, st, ((i % S) + 0.5) / S, 1 - (((i / S) | 0) + 0.5) / S, i);
     const d = i * 4;
     albedo.data[d] = toByte(st.c[0]); albedo.data[d + 1] = toByte(st.c[1]); albedo.data[d + 2] = toByte(st.c[2]);
     if (st.a < 0.5) { albedo.data[d + 3] = 0; anyCut = true; }
@@ -224,7 +238,7 @@ class Geo {
  * Tube along a polyline: radius(t) and `sides` around, parallel-transport frames. uv rect [u0,v0,u1,v1]
  * (u along the tube, v around). Returns the vertex range.
  */
-function tube(g, pts, radius, sides, uvr, w = null, { capEnd = false, ref = [0, 1, 0] } = {}) {
+function tube(g, pts, radius, sides, uvr, w = null, { capEnd = false, ref = [0, 1, 0], swapUV = false } = {}) {
   const n = pts.length;
   const T = pts.map((p, i) => norm(sub(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)])));
   let N0 = norm(cross(T[0], Math.abs(dot(T[0], ref)) > 0.9 ? [1, 0, 0] : ref));
@@ -240,7 +254,8 @@ function tube(g, pts, radius, sides, uvr, w = null, { capEnd = false, ref = [0, 
     for (let k = 0; k <= sides; k++) {
       const a = (k / sides) * Math.PI * 2;
       const d = add(scl(frames[i][0], Math.cos(a)), scl(frames[i][1], Math.sin(a)));
-      g.v(madd(pts[i], d, r), [lerp(uvr[0], uvr[2], i / (n - 1)), lerp(uvr[1], uvr[3], k / sides)], typeof w === 'function' ? w(i / (n - 1), pts[i]) : w);
+      const uv = swapUV ? [lerp(uvr[0], uvr[2], k / sides), lerp(uvr[1], uvr[3], i / (n - 1))] : [lerp(uvr[0], uvr[2], i / (n - 1)), lerp(uvr[1], uvr[3], k / sides)];
+      g.v(madd(pts[i], d, r), uv, typeof w === 'function' ? w(i / (n - 1), pts[i]) : w);
     }
   }
   for (let i = 0; i + 1 < n; i++) for (let k = 0; k < sides; k++) {
@@ -264,7 +279,9 @@ function toPart(lib, h, g, name, role, skinFn) {
   part.seg = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     let list = g.W[i] || skinFn([g.P[i * 3], g.P[i * 3 + 1], g.P[i * 3 + 2]], i);
+    const raw0 = list;
     list = list.map(([b, w]) => [typeof b === 'string' ? h.skeleton.byName[b].index : b, w]).filter(([, w]) => w > 1e-4);
+    if (!list.length) { if (!toPart.warned?.[name]) { (toPart.warned ||= {})[name] = 1; console.warn(`  ${name}: vertex ${i} got no skin weights`, g.W[i] ? 'explicit' : 'skinFn', JSON.stringify(raw0), [g.P[i * 3], g.P[i * 3 + 1], g.P[i * 3 + 2]].map((x) => x.toFixed(3)).join(',')); } list = [[h.skeleton.byName.spine_03.index, 1]]; }
     // merge duplicates, top 4, normalise
     const m = new Map();
     for (const [b, w] of list) m.set(b, (m.get(b) || 0) + w);
@@ -323,8 +340,12 @@ function makeBVH(list) {
   g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
   const bvh = new MeshBVH(g);
   const ray = new THREE.Ray();
+  // MeshBVH re-orders the (generated) index buffer: a hit's faceIndex addresses that index, so map it back to
+  // the source triangle (vertices k*3.. of the non-indexed soup) before reading positions / binding
+  const index = g.index.array;
+  const srcTri = (fi) => Math.floor(index[fi * 3] / 3);
   const faceN = (fi) => {
-    const b = fi * 9;
+    const b = srcTri(fi) * 9;
     const e1 = [arr[b + 3] - arr[b], arr[b + 4] - arr[b + 1], arr[b + 5] - arr[b + 2]], e2 = [arr[b + 6] - arr[b], arr[b + 7] - arr[b + 1], arr[b + 8] - arr[b + 2]];
     return norm(cross(e1, e2));
   };
@@ -338,8 +359,39 @@ function makeBVH(list) {
     first(o, d, far = 10) { const hs = this.hits(o, d, far); return hs[0] || null; },
     closest(p) {
       const r = bvh.closestPointToPoint(new THREE.Vector3(p[0], p[1], p[2]), {});
-      return r ? { p: V(r.point), n: faceN(r.faceIndex), d: r.distance } : null;
+      return r ? { p: V(r.point), n: faceN(r.faceIndex), d: r.distance, fi: srcTri(r.faceIndex) } : null;
     },
+  };
+}
+
+/**
+ * Closest-skin weights: the bone weights of the base-mesh surface point nearest to p (barycentric blend of the
+ * triangle's three base vertices), filtered to `allow`. Cloth / straps / chains bound this way move exactly
+ * with the skin under them (no shearing through the trapezius when the neck bends).
+ */
+function makeClosestSkinner(h, fullBody, fallback) {
+  const tris = fullBody.tris(), pos = h.pos;
+  const B = makeBVH([{ pos, tris }]);
+  const bones = h.skeleton.bones;
+  return (p, { allow = null, exclude = null } = {}) => {
+    const c = B.closest(p);
+    const ia = tris[c.fi * 6], ib = tris[c.fi * 6 + 2], ic = tris[c.fi * 6 + 4];
+    const A = [pos[ia * 3], pos[ia * 3 + 1], pos[ia * 3 + 2]], Bv = [pos[ib * 3], pos[ib * 3 + 1], pos[ib * 3 + 2]], C = [pos[ic * 3], pos[ic * 3 + 1], pos[ic * 3 + 2]];
+    const v0 = sub(Bv, A), v1 = sub(C, A), v2 = sub(c.p, A);
+    const d00 = dot(v0, v0), d01 = dot(v0, v1), d11 = dot(v1, v1), d20 = dot(v2, v0), d21 = dot(v2, v1);
+    const den = d00 * d11 - d01 * d01 || 1e-12;
+    let wb = clamp01((d11 * d20 - d01 * d21) / den), wc = clamp01((d00 * d21 - d01 * d20) / den);
+    if (!Number.isFinite(wb) || !Number.isFinite(wc)) { wb = 1 / 3; wc = 1 / 3; }   // degenerate triangle
+    const wa = Math.max(0, 1 - wb - wc);
+    const acc = new Map();
+    for (const [v, k] of [[ia, wa], [ib, wb], [ic, wc]]) for (const [b, w] of h.weights[v]) {
+      const name = bones[b].name;
+      if ((allow && !allow.includes(name)) || (exclude && exclude.includes(name))) continue;
+      acc.set(b, (acc.get(b) || 0) + w * k);
+    }
+    const list = [...acc.entries()].filter(([, w]) => w > 1e-3);
+    // the skin right there is driven by bones outside `allow`: blend the allowed bones of the nearest vertices
+    return list.length ? list : fallback(p, { allow, exclude });
   };
 }
 const surf = (part) => ({ pos: part.pos, tris: part.tris() });
@@ -367,8 +419,10 @@ function scaleCharacter(h, parts, S) {
  */
 async function sculpt(h, fn) {
   const n = h.pos.length / 3, o = h.origin;
+  const isBody = new Uint8Array(n);
+  for (const v of h.baseObj.groupVerts('body')) isBody[v] = 1;
   for (let i = 0; i < n; i++) {
-    const p = fn([h.pos[i * 3], h.pos[i * 3 + 1], h.pos[i * 3 + 2]]);
+    const p = fn([h.pos[i * 3], h.pos[i * 3 + 1], h.pos[i * 3 + 2]], !!isBody[i]);
     for (let k = 0; k < 3; k++) { h.pos[i * 3 + k] = p[k]; h.dm[i * 3 + k] = p[k] * 10 + o[k]; }
   }
   h.skeleton = await buildSkeleton(h.baseObj, h.pos);
@@ -388,6 +442,68 @@ function addHelperBone(h, name, parentName, p) {
   return b;
 }
 
+/** Moves the whole character (mesh, every bone but Root) up by d metres: stands it on its boot soles. */
+function liftCharacter(h, parts, d) {
+  const arrays = new Set([h.pos, ...parts.map((p) => p.pos)]);
+  for (const a of arrays) for (let i = 1; i < a.length; i += 3) a[i] += d;
+  const sk = h.skeleton;
+  for (const b of sk.bones) { if (b.name === 'Root') continue; b.head.y += d; b.tail.y += d; }
+  for (const b of sk.bones) if (b.parent >= 0 && sk.bones[b.parent].name === 'Root') b.localPos = b.head.clone().sub(sk.bones[b.parent].head).applyQuaternion(sk.bones[b.parent].world.clone().invert());
+  h.height += d; h.headTop = h.height;
+}
+
+/**
+ * Raises the pelvis bone's REST position by d (children keep their world rest positions, the mesh is unchanged).
+ * retargetClips places the pelvis at its rest position + the clip's offset, so in every clip the whole body sits
+ * d higher: it compensates the library clips sinking this heavy, short-legged body's feet into the floor.
+ */
+function liftPelvis(h, d) {
+  const sk = h.skeleton, pel = sk.byName.pelvis;
+  pel.head.y += d; pel.tail.y += d;
+  const fix = (b) => {
+    if (b.parent < 0) return;
+    const p = sk.bones[b.parent];
+    b.localPos = b.head.clone().sub(p.head).applyQuaternion(p.world.clone().invert());
+  };
+  fix(pel);
+  for (const b of sk.bones) if (b.parent === pel.index) fix(b);
+}
+
+/** Drops kept faces of `part` that sit in small connected islands (< minFaces), unless keepIsland(centroid) says so. */
+function dropIslands(part, minFaces, keepIsland = () => false) {
+  const F = part.obj.faces;
+  const par = new Int32Array(part.nVerts).map((_, i) => i);
+  const find = (a) => { while (par[a] !== a) a = par[a] = par[par[a]]; return a; };
+  F.forEach((f, fi) => { if (part.keep[fi]) for (let k = 1; k < f.v.length; k++) { const a = find(f.v[0]), b = find(f.v[k]); if (a !== b) par[a] = b; } });
+  const comp = new Map();
+  F.forEach((f, fi) => {
+    if (!part.keep[fi]) return;
+    const r = find(f.v[0]);
+    let c = comp.get(r);
+    if (!c) comp.set(r, c = { faces: [], cen: [0, 0, 0] });
+    c.faces.push(fi);
+    for (const v of f.v) for (let k = 0; k < 3; k++) c.cen[k] += part.pos[v * 3 + k] / f.v.length;
+  });
+  let dropped = 0;
+  for (const c of comp.values()) {
+    if (c.faces.length >= minFaces) continue;
+    const cen = c.cen.map((x) => x / c.faces.length);
+    if (keepIsland(cen, c.faces.length)) continue;
+    for (const fi of c.faces) part.keep[fi] = 0;
+    dropped += c.faces.length;
+  }
+  return dropped;
+}
+
+// cleaver orientation about the forearm (deg; - = edge forward) and the matching arm offsets: see poseOffsets
+const BLADE_ROLL = -40;
+// rest height (body top, m) and the pelvis rest lift that keeps the boots on the floor in the library clips
+const REST_HEIGHT = 4.52;
+const PELVIS_LIFT = 0;
+const MESH_LIFT = 0.04;
+// apron uv layout: front sheet v 0..AP_V, its back layer AP_BV0..AP_BV1, straps / hem / ties above 0.87
+const AP_V = 0.7, AP_BV0 = 0.705, AP_BV1 = 0.865;
+
 // =====================================================================================================
 export async function build(lib) {
   const N = lib.makeNoise(4242);
@@ -402,40 +518,111 @@ export async function build(lib) {
       'lowerarm-muscle-decr-incr': 1, 'lowerarm-fat-decr-incr': 0.6, 'lowerarm-scale-horiz-decr-incr': 0.5, 'lowerarm-scale-depth-decr-incr': 0.5, 'measure-wrist-circ-decr-incr': 1,
       'measure-upperarm-length-decr-incr': 0.35, 'measure-lowerarm-length-decr-incr': 0.3,
       'l-hand-scale-decr-incr': 1, 'l-hand-fingers-diameter-decr-incr': 1,
-      'stomach-pregnant-decr-incr': 1.1, 'measure-waist-circ-decr-incr': 1, 'stomach-navel-down-up': -0.5,
-      'measure-hips-circ-decr-incr': 0.5, 'buttocks-volume-decr-incr': 0.4,
-      'upperleg-muscle-decr-incr': 1, 'upperleg-fat-decr-incr': 0.7, 'measure-thigh-circ-decr-incr': 1,
-      'lowerleg-muscle-decr-incr': 0.8, 'lowerleg-fat-decr-incr': 0.6, 'measure-calf-circ-decr-incr': 1, 'measure-knee-circ-decr-incr': 0.6, 'measure-ankle-circ-decr-incr': 0.8,
+      'stomach-pregnant-decr-incr': 0.8, 'measure-waist-circ-decr-incr': 1, 'stomach-navel-down-up': -0.5,
+      'measure-hips-circ-decr-incr': 0.6, 'buttocks-volume-decr-incr': 0.5,
+      'upperleg-muscle-decr-incr': 1, 'upperleg-fat-decr-incr': 1, 'measure-thigh-circ-decr-incr': 1,
+      'lowerleg-muscle-decr-incr': 1, 'lowerleg-fat-decr-incr': 1, 'measure-calf-circ-decr-incr': 1, 'measure-knee-circ-decr-incr': 0.8, 'measure-ankle-circ-decr-incr': 1,
       'measure-upperleg-height-decr-incr': -0.35, 'measure-lowerleg-height-decr-incr': -0.35,
       'foot-scale-decr-incr': 0.4,
     },
-    expression: { 'mouth-open': 0.3 },
+    // the mouth is sewn shut under the sack: no open jaw pushing the cloth out
+    expression: {},
   };
   const h = await lib.Human.create(opts);
   {
-    // ---- sculpt: swollen left fist, Popeye forearms (the right wrist thickens into the blade root), a huge
-    // trapezius yoke so the hooded head sinks between the shoulders
+    // ---- sculpt: a swollen left fist (~1.7x, knuckle growths, thick wrist), Popeye forearms (the right wrist
+    // thickens into the blade root), a huge trapezius yoke so the hooded head sinks between the shoulders, a fat
+    // gut that overhangs the waistband, love handles rolling over it, back-fat rolls under the tumour, and
+    // heavier thighs / calves so the giant does not stand on a bodybuilder's thin legs
     const S0 = h.skeleton.byName, P0 = (n) => V(S0[n].head);
     const Wl = P0('hand_l'), axL = norm(sub(Wl, P0('lowerarm_l'))), Wr = P0('hand_r'), axR = norm(sub(Wr, P0('lowerarm_r')));
     const ElL = P0('lowerarm_l'), ElR = P0('lowerarm_r');
     const neck = P0('neck_01'), clY = (P0('clavicle_l')[1] + P0('upperarm_l')[1]) / 2;
-    console.log('  sculpt: neck', neck.map((x) => x.toFixed(3)).join(','), 'clavicle', P0('clavicle_l').map((x) => x.toFixed(3)).join(','), 'shoulder', P0('upperarm_l').map((x) => x.toFixed(3)).join(','), 'head', P0('head').map((x) => x.toFixed(3)).join(','));
-    await sculpt(h, (p) => {
+    const knuck = ['index_01_l', 'middle_01_l', 'ring_01_l', 'pinky_01_l'].map(P0);
+    const handC = scl(knuck.reduce((a, k) => add(a, k), [0, 0, 0]), 0.25);
+    const handAx = norm(sub(handC, Wl));
+    // back-of-hand direction (left hand, palm towards the thigh in the A-pose): away from the body
+    let dors = norm(cross(handAx, sub(P0('thumb_01_l'), Wl)));
+    if (dors[0] < 0) dors = scl(dors, -1);
+    const HS = 1.68; // fist scale about the wrist
+    const atHand = (p) => add(Wl, scl(sub(p, Wl), HS));
+    const handMid = atHand(lerp3(Wl, handC, 0.6));
+    const growths = [
+      [atHand(add(knuck[1], scl(dors, 0.012))), 0.035, 0.019], [atHand(add(knuck[2], scl(dors, 0.01))), 0.029, 0.016],
+      [atHand(add(lerp3(Wl, handC, 0.55), scl(dors, 0.024))), 0.048, 0.026], [atHand(add(lerp3(Wl, knuck[3], 0.45), scl(dors, 0.02))), 0.032, 0.016],
+    ];
+    const yHip = P0('thigh_l')[1], yW = P0('spine_01')[1], y3 = P0('spine_03')[1];
+    const chain0 = ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01'].map(P0);
+    const axisZ0 = (y) => {
+      if (y <= chain0[0][1]) return chain0[0][2];
+      for (let i = 0; i + 1 < chain0.length; i++) if (y <= chain0[i + 1][1]) return lerp(chain0[i][2], chain0[i + 1][2], (y - chain0[i][1]) / (chain0[i + 1][1] - chain0[i][1]));
+      return chain0[chain0.length - 1][2];
+    };
+    const legs = [['thigh_l', 'calf_l', 1, 0.1], ['thigh_r', 'calf_r', -1, 0.1], ['calf_l', 'foot_l', 1, 0.17], ['calf_r', 'foot_r', -1, 0.17]]
+      .map(([a, b, sx, amt]) => ({ a: P0(a), b: P0(b), sx, amt, t0: a.startsWith('thigh') ? 0.12 : 0.04, t1: a.startsWith('thigh') ? 0.92 : 0.8 }));
+    console.log('  sculpt: neck', neck.map((x) => x.toFixed(3)).join(','), 'clavicle', P0('clavicle_l').map((x) => x.toFixed(3)).join(','), 'shoulder', P0('upperarm_l').map((x) => x.toFixed(3)).join(','), 'head', P0('head').map((x) => x.toFixed(3)).join(','), 'waist', yW.toFixed(3), 'hip', yHip.toFixed(3));
+    await sculpt(h, (p, isBody) => {
       let q = p;
       {
+        // left fist ~1.7x about the wrist, the wrist itself thickened
         const d = sub(q, Wl), tt = dot(d, axL), r = len(sub(d, scl(axL, tt)));
-        const k = ss(-0.06, 0.02, tt) * (1 - ss(0.08, 0.11, r)) * (1 - ss(0.22, 0.28, tt));
-        if (k > 0) q = add(Wl, scl(d, 1 + 0.3 * k));
+        const k = ss(-0.07, 0.02, tt) * (1 - ss(0.09, 0.13, r)) * (1 - ss(0.24, 0.3, tt));
+        if (k > 0) q = add(Wl, scl(d, 1 + (HS - 1) * k));
+        const kw = ss(-0.16, -0.06, tt) * (1 - ss(-0.03, 0.03, tt)) * (1 - ss(0.05, 0.09, r));
+        if (kw > 0) q = add(q, scl(sub(d, scl(axL, tt)), 0.3 * kw));
       }
-      for (const [El, W, ax, amt] of [[ElL, Wl, axL, 0.17], [ElR, Wr, axR, 0.13]]) {
+      for (const [El, W, ax, amt] of [[ElL, Wl, axL, 0.2], [ElR, Wr, axR, 0.13]]) {
         const L = dist(El, W), d = sub(q, El), tt = dot(d, ax) / L, radial = sub(d, scl(ax, tt * L)), r = len(radial);
         if (tt > -0.1 && tt < 1.08 && r < 0.1) q = add(q, scl(radial, Math.sin(Math.PI * clamp01((tt + 0.05) / 1.12)) ** 0.7 * (1 - ss(0.065, 0.1, r)) * amt));
+      }
+      if (isBody) {
+        // tumorous knuckle / back-of-hand growths
+        for (const [c, rr, hgt] of growths) {
+          const dd = dist(q, c);
+          if (dd < rr) q = madd(q, norm(sub(q, handMid)), hgt * (1 - ss(0, rr, dd)) ** 2);
+        }
       }
       {
         const xs = Math.abs(q[0]);
         const w = Math.sin(Math.PI * clamp01((xs - 0.04) / 0.15)) * (1 - ss(0.035, 0.075, Math.abs(q[2] - neck[2] + 0.02))) *
           ss(clY - 0.06, clY + 0.01, q[1]) * (1 - ss(neck[1] + 0.07, neck[1] + 0.13, q[1]));
         if (w > 0) q = [q[0] + Math.sign(q[0]) * 0.006 * w, q[1] + 0.03 * w, q[2] - 0.004 * w];
+      }
+      if (isBody && q[1] > yHip - 0.12 && q[1] < y3 + 0.02) {
+        const zc = axisZ0(q[1]), rx = q[0], rz = q[2] - zc, rh = Math.hypot(rx, rz);
+        if (rh > 0.06) {
+          const c = rz / rh, sn = Math.abs(rx) / rh, out = [rx / rh, 0, rz / rh];
+          const y = q[1] - yW;
+          // gut: bulges forward from under the pecs to just below the navel, overhangs (sags down) and folds in
+          // sharply at the waistband crease
+          const wf = ss(-0.15, 0.75, c) * (1 - ss(0.13, 0.2, Math.abs(rx)) * 0.55);
+          const prof = ss(y3 - yW - 0.01, 0.02, y) * (1 - ss(-0.05, -0.085, y));
+          const sag = Math.exp(-(((y + 0.02) / 0.045) ** 2));
+          let dq = scl(out, 0.075 * prof * wf);
+          dq = add(dq, [0, -0.03 * sag * wf * ss(-0.09, -0.06, y), 0]);
+          // love handles: lateral / back-lateral rolls over the waistband
+          const wl = ss(0.55, 0.85, sn) * ss(-0.5, 0.2, c) * (1 - ss(0.5, 0.9, c));
+          const lh = Math.exp(-(((y - 0.01) / 0.04) ** 2)) * (1 - ss(-0.045, -0.07, y));
+          dq = add(dq, add(scl(out, 0.03 * lh * wl), [0, -0.012 * lh * wl, 0]));
+          // back fat: two horizontal rolls between the waist and the shoulder blades (under the tumour)
+          const wb = ss(-0.35, -0.75, c);
+          if (wb > 0 && y > -0.02 && y < y3 - yW - 0.01) {
+            const ph = (y + 0.02) / 0.072;
+            const roll = Math.max(0, Math.sin(Math.PI * ph)) ** 0.6 * (ph < 2 ? 1 : 0) * (1 - ss(0.12, 0.17, Math.abs(rx)));
+            dq = add(dq, scl(out, 0.014 * roll * wb));
+          }
+          q = add(q, dq);
+        }
+      }
+      // heavier thighs / calves: radial scale about the bone axis (each leg only on its own side)
+      for (const L of legs) {
+        if (Math.sign(q[0]) !== L.sx && Math.abs(q[0]) > 0.01) continue;
+        const ab = sub(L.b, L.a), Lb = len(ab), ax = scl(ab, 1 / Lb), d = sub(q, L.a), t = dot(d, ax) / Lb;
+        if (t < L.t0 - 0.05 || t > L.t1 + 0.05) continue;
+        const radial = sub(d, scl(ax, t * Lb)), r = len(radial);
+        if (r > 0.17) continue;
+        const w = ss(L.t0 - 0.05, L.t0 + 0.08, t) * (1 - ss(L.t1 - 0.08, L.t1 + 0.05, t)) * (1 - ss(0.13, 0.17, r));
+        q = add(q, scl(radial, L.amt * w));
       }
       return q;
     });
@@ -450,19 +637,71 @@ export async function build(lib) {
   const body = h.basePart({ name: 'body', role: 'skin' });
   const suit = await h.fit('clothes/male_casualsuit04', { name: 'trousers', role: 'cloth', hide: false });
   const waistY = sk.spine_01.head.y + 0.02;
+  let suitCrop = null;
   {
     const isl = uvIslands(suit), ib = new Map();
     suit.obj.faces.forEach((f, fi) => { let b = ib.get(isl[fi]); if (!b) ib.set(isl[fi], b = { y: 0, n: 0 }); for (const v of f.v) { b.y += suit.pos[v * 3 + 1]; b.n++; } });
     suit.obj.faces.forEach((f, fi) => { const b = ib.get(isl[fi]); if (b.y / b.n > waistY) suit.keep[fi] = 0; });
     for (const v of suit.deleteVerts) if (h.pos[v * 3 + 1] < waistY - 0.04) h.hidden.add(v);
+    // only the trouser islands are kept: crop the UV atlas to them (the shirt half of the casualsuit atlas would
+    // otherwise waste half of every trouser texture)
+    const uv = suit.obj.uvs, r = [9, 9, -9, -9];
+    suit.obj.faces.forEach((f, fi) => { if (suit.keep[fi]) for (const t of f.t) { r[0] = Math.min(r[0], uv[t * 2]); r[1] = Math.min(r[1], uv[t * 2 + 1]); r[2] = Math.max(r[2], uv[t * 2]); r[3] = Math.max(r[3], uv[t * 2 + 1]); } });
+    const m = 0.006;
+    // snapped to the 2048 source texel grid (the source maps are cropped to exactly this rect)
+    suitCrop = [Math.floor(Math.max(0, r[0] - m) * 2048) / 2048, Math.floor(Math.max(0, r[1] - m) * 2048) / 2048, Math.ceil(Math.min(1, r[2] + m) * 2048) / 2048, Math.ceil(Math.min(1, r[3] + m) * 2048) / 2048];
+    const nu = new Float32Array(uv.length);
+    for (let i = 0; i < uv.length; i += 2) { nu[i] = (uv[i] - suitCrop[0]) / (suitCrop[2] - suitCrop[0]); nu[i + 1] = (uv[i + 1] - suitCrop[1]) / (suitCrop[3] - suitCrop[1]); }
+    suit.obj = { ...suit.obj, uvs: nu };
+    console.log('  trousers uv crop', suitCrop.map((x) => x.toFixed(3)).join(','));
   }
   const boots = await h.fit('clothes/shoes03', { name: 'boots', role: 'cloth' });
+  let bootSole = 9;
+  {
+    // chunky work boots: shell ~9 % wider about the foot line, a welt that sticks out round the sole, the shaft
+    // 2 cm taller. (The sole sits below the bare foot's ground plane: the whole character is lifted onto it
+    // at the end, see liftCharacter.)
+    let top = 0;
+    for (let i = 1; i < boots.pos.length; i += 3) { bootSole = Math.min(bootSole, boots.pos[i]); top = Math.max(top, boots.pos[i]); }
+    const lines = [1, -1].map((sx) => {
+      const f = B(sx > 0 ? 'foot_l' : 'foot_r'), b = B(sx > 0 ? 'ball_l' : 'ball_r');
+      const d = norm([b[0] - f[0], 0, b[2] - f[2]]);
+      return { sx, a: madd([f[0], 0, f[2]], d, -0.1), b: madd([b[0], 0, b[2]], d, 0.09) };
+    });
+    const ankleY = B('foot_l')[1];
+    for (let i = 0; i < boots.nVerts; i++) {
+      const p = [boots.pos[i * 3], boots.pos[i * 3 + 1], boots.pos[i * 3 + 2]];
+      const L = p[0] >= 0 ? lines[0] : lines[1];
+      const ab = sub(L.b, L.a), t = clamp01(dot(sub([p[0], 0, p[2]], L.a), ab) / dot(ab, ab));
+      const c = madd(L.a, ab, t), o = [p[0] - c[0], 0, p[2] - c[2]];
+      const welt = 1 - ss(bootSole + 0.008, bootSole + 0.018, p[1]);
+      const k = 1.09 + 0.07 * welt;
+      boots.pos[i * 3] = c[0] + o[0] * k;
+      boots.pos[i * 3 + 2] = c[2] + o[2] * k;
+      boots.pos[i * 3 + 1] = p[1] + 0.02 * ss(ankleY, top, p[1]);
+    }
+  }
   const eyes = await h.fit('eyes/low-poly', { name: 'eyes', role: 'eye', hide: false });
+  let bootTop = 0;
+  for (let i = 1; i < boots.pos.length; i += 3) bootTop = Math.max(bootTop, boots.pos[i]);
+  console.log('  boots: sole', bootSole.toFixed(3), 'top', bootTop.toFixed(3));
 
   // BVH of the bare body (rest pose, human scale) + one including the trousers
   const fullBody = h.basePart({ name: 'bvh' });
   const bodyB = makeBVH([surf(fullBody)]);
-  const outerB = makeBVH([surf(fullBody), surf(suit), surf(boots)]);
+  // trunk = the body without forearms / hands: the swollen fist and the forearms hang at hip height in the rest
+  // pose and must not catch the rays that place the apron, chains, scars...
+  const trunkSurf = (() => {
+    const fa = new Set(h.skeleton.bones.filter((b) => /^(lowerarm|hand|thumb|index|middle|ring|pinky)/.test(b.name)).map((b) => b.index));
+    const aw = new Float32Array(h.pos.length / 3);
+    h.weights.forEach((l, v) => { for (const [b, w] of l) if (fa.has(b)) aw[v] += w; });
+    const t = fullBody.tris(), keepT = [];
+    for (let i = 0; i < t.length; i += 6) if (aw[t[i]] < 0.5 && aw[t[i + 2]] < 0.5 && aw[t[i + 4]] < 0.5) keepT.push(...t.slice(i, i + 6));
+    return { pos: h.pos, tris: Int32Array.from(keepT) };
+  })();
+  const trunkB = makeBVH([trunkSurf]);
+  const outerB = makeBVH([trunkSurf, surf(suit), surf(boots)]);
+  const skinClosest = makeClosestSkinner(h, fullBody, skinAt);
 
   // torso axis: z of the spine at height y
   const spineZ = (y) => {
@@ -480,110 +719,231 @@ export async function build(lib) {
   };
 
   // =================================================================== SACK HOOD (cloth)
-  // A burlap sack pulled over the (small) head, gathered round the neck by a rope. Dome rows are rays from the
-  // head centre (outermost hit, so ears / jaw are enclosed); below the skull, horizontal slices drape the cloth
-  // from the chin / jaw / back of the skull down to the rope, so nothing of the face can poke through.
+  // A loose burlap sack pulled over the (small) head: two flat panels (front / back) sewn up the sides and over
+  // the crown from ear to ear, two dog-eared top corners (the left one flopped), slack folds, tied round the neck
+  // by a rope (low under the chin at the front, at the nape behind) and a frayed skirt below the rope that drapes
+  // over the neck stump and the trapezius. The envelope is the head + neck raycast from the head centre, dilated
+  // and smoothed over the angular grid so the cloth tents over the nose and lips instead of hugging them.
   const hood = new Geo();
-  const headW = new Float32Array(h.pos.length / 3);
-  h.weights.forEach((l, v) => { for (const [b, w] of l) if (b === sk.head.index) headW[v] += w; });
+  const headW = new Float32Array(h.pos.length / 3), neckW = new Float32Array(h.pos.length / 3);
+  h.weights.forEach((l, v) => { for (const [b, w] of l) { if (b === sk.head.index) headW[v] += w; else if (b === sk.neck_01.index) neckW[v] += w; } });
   const hmin = [9, 9, 9], hmax = [-9, -9, -9];
   for (const v of h.baseObj.groupVerts('body')) if (headW[v] > 0.6) for (let k = 0; k < 3; k++) { hmin[k] = Math.min(hmin[k], h.pos[v * 3 + k]); hmax[k] = Math.max(hmax[k], h.pos[v * 3 + k]); }
   const HC = [0, (hmin[1] + hmax[1]) / 2 + 0.012, (hmin[2] + hmax[2]) / 2];
   const eyeY = (A.eyeL[1] + A.eyeR[1]) / 2;
   const neckTop = B('head'), neckBot = B('neck_01');
-  // the rope sits just under the jaw (the neck is very short: the chin hangs below mid-neck)
-  const cinchY = Math.max(neckBot[1] + 0.012, Math.min(lerp(neckBot[1], neckTop[1], 0.5), hmin[1] - 0.012));
-  const nf = bodyB.first([0, cinchY, 1], [0, 0, -1], 2), nb = bodyB.first([0, cinchY, -1], [0, 0, 1], 2);
+  // head + neck only (no trapezius / shoulders) for the envelope rays
+  const headB = (() => {
+    const t = fullBody.tris(), keepT = [];
+    for (let i = 0; i < t.length; i += 6) {
+      const vs = [t[i], t[i + 2], t[i + 4]];
+      if (vs.every((v) => headW[v] + neckW[v] > 0.55 && h.pos[v * 3 + 1] > neckBot[1] - 0.01)) keepT.push(...t.slice(i, i + 6));
+    }
+    return makeBVH([{ pos: h.pos, tris: Int32Array.from(keepT) }]);
+  })();
+  const chinY = hmin[1];
+  const ropeBack = lerp(neckBot[1], neckTop[1], 0.6);
+  const ropeFront = Math.max(neckBot[1] - 0.025, Math.min(chinY - 0.016, ropeBack - 0.012));
+  const nf = bodyB.first([0, ropeBack, 1], [0, 0, -1], 2), nb = bodyB.first([0, ropeBack, -1], [0, 0, 1], 2);
   const neckZ = (nf.p[2] + nb.p[2]) / 2;
-  const axisZ = (y) => lerp(neckZ, HC[2], ss(cinchY, HC[1], y));
-  const hoodInfo = { HC, cinchY, neckZ };
-  console.log('  hood: head centre', HC.map((x) => x.toFixed(3)).join(','), 'cinch', cinchY.toFixed(3), 'neck r', ((nf.p[2] - nb.p[2]) / 2).toFixed(3), 'eyeY', eyeY.toFixed(3), 'chin', hmin[1].toFixed(3));
+  const cinchY = ropeBack;
+  const axisZ = (y) => lerp(neckZ, HC[2], ss(ropeFront, HC[1], y));
+  const ropeY = (th) => { const w = (1 + Math.cos(th)) / 2; return lerp(ropeBack, ropeFront, w * w * (3 - 2 * w)); };
+  const ropeAt = (P) => ropeY(Math.atan2(P[0], P[2] - neckZ));
+  const hoodInfo = { HC, cinchY, neckZ, ropeY, ropeAt };
+  console.log('  hood: head centre', HC.map((x) => x.toFixed(3)).join(','), 'rope front', ropeFront.toFixed(3), 'back', ropeBack.toFixed(3), 'neck r', ((nf.p[2] - nb.p[2]) / 2).toFixed(3), 'eyeY', eyeY.toFixed(3), 'chin', chinY.toFixed(3), 'neck', neckBot[1].toFixed(3), neckTop[1].toFixed(3));
+  const hoodUV = {};
+  // skirt length below the rope, measured along the cloth (longer at the front, a little uneven)
+  const skirtLen = (th) => lerp(0.038, 0.05, ss(-0.2, 0.9, Math.cos(th))) + N.noise(th * 3, 0.5, 4.1) * 0.005;
+  hoodInfo.skirtLen = skirtLen;
+  hoodInfo.thetaOf = (P) => Math.atan2(P[0], P[2] - neckZ);
+  let hoodSkin;
   {
-    const NT = 24;
-    const thetaOf = (k) => -Math.PI + (k / NT) * Math.PI * 2; // seam at the back
-    const rows = [];
-    const wrinkle = (p, amp) => {
-      const c = [0, p[1], axisZ(p[1])];
-      const d = norm([p[0] - c[0], 0, p[2] - c[2]]);
-      return madd(p, d, N.fbm(p[0] * 28, p[1] * 28, p[2] * 28, 3) * amp);
-    };
-    for (const phiDeg of [13, 26, 39, 52, 65, 78]) {
-      const ph = phiDeg * Math.PI / 180, ring = [];
-      for (let k = 0; k <= NT; k++) {
-        const th = thetaOf(k);
-        const d = [Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th)];
-        const hs = bodyB.hits(HC, d, 0.17);
-        const env = hs.length ? hs[hs.length - 1].d : 0.1;
-        const front = ss(0.3, 0.85, Math.cos(th)) * ss(45, 78, phiDeg);
-        let off = lerp(0.017, 0.006, front);
-        // loose, lopsided crown: the bag's surplus flops over towards the back-left; blunt corners at the seam ends
-        off += 0.017 * Math.exp(-((phiDeg / 34) ** 2)) * (0.4 + 0.6 * Math.max(0, Math.cos(th - 2.4)));
-        off += 0.012 * Math.exp(-(((phiDeg - 40) / 14) ** 2)) * Math.abs(Math.sin(th)) ** 6;
-        ring.push(wrinkle(madd(HC, d, env + off), 0.005 * (1 - front)));
-      }
-      rows.push(ring);
+    const NT = 40;                                    // columns around; panels split at theta = +-90 deg (side seams)
+    const thetaOf = (k) => -Math.PI + (k / NT) * Math.PI * 2;   // k = 0 / NT: back centre, NT/2: front centre
+    const PHI = [8, 16, 25, 34, 43, 52, 61, 70, 79, 88];
+    const NL = 5, NSK = 3;                             // lower rows (equator -> rope), skirt rows below the rope
+    const R = PHI.length + NL + 1 + NSK;
+    // ---- raw envelope radii (dome rays from HC; lower rows horizontal rays from the neck axis)
+    const raw = [];
+    const dirOf = (phi, th) => [Math.sin(phi) * Math.sin(th), Math.cos(phi), Math.sin(phi) * Math.cos(th)];
+    for (const phiDeg of PHI) {
+      const ph = phiDeg * Math.PI / 180, row = [];
+      for (let k = 0; k < NT; k++) { const hs = headB.hits(HC, dirOf(ph, thetaOf(k)), 0.2); row.push(hs.length ? hs[hs.length - 1].d : 0.09); }
+      raw.push(row);
     }
-    const yEq = rows[rows.length - 1].reduce((a, p) => a + p[1], 0) / (NT + 1);
-    const prevR = rows[rows.length - 1].map((p) => Math.hypot(p[0], p[2] - axisZ(p[1])));
-    let prevY = yEq;
-    const NS = 7;
-    for (let s = 1; s <= NS; s++) {
-      const y = lerp(yEq, cinchY, s / (NS + 1));
-      const zc = axisZ(y), ring = [];
-      for (let k = 0; k <= NT; k++) {
-        const th = thetaOf(k), d = [Math.sin(th), 0, Math.cos(th)];
-        const hs = bodyB.hits([0, y, zc], d, 0.13);
-        const rs = hs.length ? hs[hs.length - 1].d : 0;
-        const front = ss(0.3, 0.85, Math.cos(th));
-        const off = lerp(0.014, 0.006, front);
-        const gather = ss(0.35, 1, s / NS);
-        let r = Math.max(rs + off, prevR[k] - 0.5 * (prevY - y));
-        r += gather * 0.006 * Math.sin(th * 9 + N.noise(th, y * 20, 0.3) * 2); // folds gathering into the rope
-        prevR[k] = r;
-        ring.push(wrinkle([Math.sin(th) * r, y, zc + Math.cos(th) * r], 0.003));
+    const yEqAt = (k) => HC[1] + Math.cos(88 * Math.PI / 180) * raw[PHI.length - 1][k];
+    const lowerY = (r, k) => lerp(yEqAt(k), ropeY(thetaOf(k)), (r + 1) / (NL + 1));
+    for (let r = 0; r < NL; r++) {
+      const row = [];
+      for (let k = 0; k < NT; k++) {
+        const th = thetaOf(k), y = lowerY(r, k), c = [0, y, axisZ(y)];
+        const hs = headB.hits(c, [Math.sin(th), 0, Math.cos(th)], 0.16);
+        row.push(hs.length ? hs[hs.length - 1].d : 0.05);
       }
-      prevY = y;
-      rows.push(ring);
+      raw.push(row);
     }
-    const neckRing = (y, extra, pleat) => {
-      const out = [];
-      for (let k = 0; k <= NT; k++) {
-        const th = thetaOf(k), d = [Math.sin(th), 0, Math.cos(th)];
-        const c = [0, y, axisZ(y)];
-        const hs = bodyB.hits(c, d, 0.3);
-        const r0 = hs.length ? hs[0].d : 0.08;
-        out.push(madd(c, d, r0 + extra + pleat * (0.5 + 0.5 * Math.sin(th * 13 + 0.7))));
+    // dilate (bridge the nose / lips / ears) then smooth around and down
+    const RR = raw.length;
+    let env = raw.map((row, r) => row.map((_, k) => {
+      let m = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dk = -2; dk <= 2; dk++) {
+        const rr = r + dr; if (rr < 0 || rr >= RR) continue;
+        // compare in a common frame: dome radii and lower-row horizontal radii are close enough near the equator
+        m = Math.max(m, raw[rr][(k + dk + NT) % NT] * (dr === 0 && Math.abs(dk) < 2 ? 1 : 0.97));
       }
-      return out;
+      return m;
+    }));
+    for (let it = 0; it < 3; it++) env = env.map((row, r) => row.map((v, k) => {
+      const a = row[(k + NT - 1) % NT], b = row[(k + 1) % NT];
+      const up = env[Math.max(0, r - 1)][k], dn = env[Math.min(RR - 1, r + 1)][k];
+      return Math.max(raw[r][k] + 0.004, v * 0.4 + (a + b) * 0.2 + (up + dn) * 0.1);
+    }));
+    // ---- final ring positions
+    const ring = [];
+    const cornerL = norm([0.8, 0.58, -0.08]), cornerR = norm([-0.8, 0.58, -0.08]);
+    const slack = (th, phiDeg) => {
+      const front = ss(0.35, 0.9, Math.cos(th));
+      let o = lerp(0.022, 0.019, front);
+      o += 0.008 * Math.exp(-((phiDeg / 30) ** 2));                 // loose crown
+      return o;
     };
-    const cin = neckRing(cinchY, 0.004, 0.004);
-    rows.push(cin, neckRing(cinchY - 0.01, 0.012, 0.007));
-    const R = rows.length;
-    const top = bodyB.hits(HC, [0, 1, 0], 0.2).pop();
-    const pole = hood.v(madd(HC, [0, 1, 0], (top ? top.d : 0.1) + 0.02), [0.5, 0.0]);
-    const idx = rows.map((ring, r) => ring.map((p, k) => hood.v(p, [k / NT, (r + 1) / R * 0.86])));
-    for (let k = 0; k < NT; k++) hood.tri(pole, idx[0][k], idx[0][k + 1]);
-    for (let r = 0; r + 1 < R; r++) for (let k = 0; k < NT; k++) hood.quad(idx[r][k], idx[r + 1][k], idx[r + 1][k + 1], idx[r][k + 1]);
-    hoodInfo.rows = R;
-    // rope round the cinch, a knot at the back-left and two frayed hanging ends
-    const ropeR = 0.0058;
-    const ring = cin.slice(0, NT).map((p) => { const c = [0, p[1], axisZ(p[1])]; return madd(p, norm([p[0] - c[0], 0, p[2] - c[2]]), ropeR * 0.8); });
-    ring.push(ring[0]);
-    tube(hood, ring, ropeR, 5, [0, 0.88, 1, 0.94]);
-    const kp = ring[Math.round(NT * 0.66)];
+    const foldN = (p, amp) => madd(p, norm([p[0], 0, p[2] - axisZ(p[1])]), (N.fbm(p[0] * 22, p[1] * 9, p[2] * 22, 3) * 0.7 + N.noise(Math.atan2(p[0], p[2] - axisZ(p[1])) * 5, p[1] * 14, 2.7) * 0.5) * amp);
+    for (let r = 0; r < PHI.length; r++) {
+      const ph = PHI[r] * Math.PI / 180, row = [];
+      for (let k = 0; k < NT; k++) {
+        const th = thetaOf(k), d = dirOf(ph, th);
+        let rad = env[r][k] + slack(th, PHI[r]);
+        // dog-eared corners at both ends of the crown seam; the left one flops over backwards
+        const aL = Math.acos(Math.max(-1, Math.min(1, dot(d, cornerL)))), aR = Math.acos(Math.max(-1, Math.min(1, dot(d, cornerR))));
+        const eL = Math.exp(-((aL / 0.27) ** 2)), eR = Math.exp(-((aR / 0.24) ** 2));
+        rad += 0.05 * eL + 0.042 * eR;
+        let p = madd(HC, d, rad);
+        p = add(p, scl([0.0, -0.022, -0.016], eL * eL));
+        row.push(foldN(p, 0.004 * (1 - 0.6 * ss(0.35, 0.9, Math.cos(th)))));
+      }
+      ring.push(row);
+    }
+    const prevR = ring[PHI.length - 1].map((p) => Math.hypot(p[0], p[2] - axisZ(p[1])));
+    let prevY = ring[PHI.length - 1].map((p) => p[1]);
+    for (let r = 0; r < NL; r++) {
+      const row = [];
+      for (let k = 0; k < NT; k++) {
+        const th = thetaOf(k), y = lowerY(r, k), zc = axisZ(y);
+        const gather = ss(0.3, 1, (r + 1) / NL);
+        let rad = Math.max(env[PHI.length + r][k] + lerp(0.016, 0.006, gather) + 0.006 * (1 - ss(0.35, 0.9, Math.cos(th))), prevR[k] - 0.55 * (prevY[k] - y));
+        rad += gather * 0.007 * Math.sin(th * 11 + N.noise(th * 2, y * 20, 0.3) * 2.5);   // folds gathering into the rope
+        prevR[k] = rad; prevY[k] = y;
+        row.push(foldN([Math.sin(th) * rad, y, zc + Math.cos(th) * rad], 0.003 * (1 - gather)));
+      }
+      ring.push(row);
+    }
+    // rope ring (cinched onto the neck) and the skirt flaring out over the neck stump / trapezius
+    const neckHit = (y, th) => {
+      const c = [0, y, axisZ(y)], d = [Math.sin(th), 0, Math.cos(th)];
+      const hs = bodyB.hits(c, d, 0.3);
+      return { c, d, r: hs.length ? hs[0].d : 0.07 };
+    };
+    const cin = [];
+    for (let k = 0; k < NT; k++) {
+      const th = thetaOf(k), y = ropeY(th), q = neckHit(y, th);
+      cin.push(madd(q.c, q.d, q.r + 0.005 + 0.003 * (0.5 + 0.5 * Math.sin(th * 13 + 0.7))));
+    }
+    ring.push(cin);
+    // skirt: marched DOWN THE BODY SURFACE from the rope in equal arc-length steps (uniform weave density, no
+    // near-horizontal shelf fanned out over the trapezius), 7-12 mm clear of the skin. The last ~13 mm of every
+    // column (measured along the cloth from the rope, see skirtArc) is the frayed fringe; the skin under the whole
+    // skirt is kept (body trimming below), so the fringe shows the bloody neck, never the sky behind the boss.
+    {
+      const cur = cin.map((p) => p.slice());
+      const dir = cin.map((p) => norm(add(scl(norm([p[0], 0, p[2] - axisZ(p[1])]), 0.3), [0, -1, 0])));
+      for (let s = 1; s <= NSK; s++) {
+        const f = s / NSK, row = [];
+        for (let k = 0; k < NT; k++) {
+          const th = thetaOf(k), step = skirtLen(th) / NSK;
+          let q = madd(cur[k], dir[k], step);
+          const c = bodyB.closest(q);
+          let n = c.n;
+          if (dot(n, sub(c.p, [0, c.p[1], axisZ(c.p[1])])) < 0) n = scl(n, -1);
+          q = madd(c.p, n, 0.007 + 0.003 * f + 0.0015 * (1 + Math.sin(th * 7 + 1.3)) * f);
+          const d = norm(sub(q, cur[k]));
+          q = madd(cur[k], d, step);                   // exact arc length per row
+          dir[k] = norm(add(scl(dir[k], 0.35), scl(d, 0.65)));
+          cur[k] = q;
+          row.push(q);
+        }
+        ring.push(row);
+      }
+    }
+    hoodInfo.cin = cin;
+    hoodInfo.skirtArc = polyDist([...cin, cin[0]]);
+    // ---- two panels with arc-length UVs (uniform weave density), stacked: front v 0.02..0.47, back 0.51..0.96
+    const panels = [{ k0: NT / 4, k1: (3 * NT) / 4, kc: NT / 2, v0: 0.02 }, { k0: (3 * NT) / 4, k1: NT + NT / 4, kc: NT, v0: 0.51 }];
+    const P = (r, k) => ring[r][((k % NT) + NT) % NT];
+    const rowLen = (r, a, b) => { let L = 0; for (let k = a; k < b; k++) L += dist(P(r, k), P(r, k + 1)); return L; };
+    let maxHalf = 0, maxMer = 0;
+    const pole = add(HC, [0, env[0].reduce((a, x) => a + x, 0) / NT + slack(0, 0) + 0.004, 0]);
+    for (const pn of panels) {
+      pn.s = ring.map((_, r) => { const out = {}; let acc = 0; out[pn.kc] = 0; for (let k = pn.kc; k < pn.k1; k++) { acc += dist(P(r, k), P(r, k + 1)); out[k + 1] = acc; } acc = 0; for (let k = pn.kc; k > pn.k0; k--) { acc -= dist(P(r, k), P(r, k - 1)); out[k - 1] = acc; } return out; });
+      pn.t = [];
+      for (let k = pn.k0; k <= pn.k1; k++) { let acc = dist(pole, P(0, k)); const col = [acc]; for (let r = 1; r < R; r++) { acc += dist(P(r - 1, k), P(r, k)); col.push(acc); } pn.t[k] = col; }
+      for (let r = 0; r < R; r++) maxHalf = Math.max(maxHalf, Math.abs(pn.s[r][pn.k0]), Math.abs(pn.s[r][pn.k1]));
+      for (let k = pn.k0; k <= pn.k1; k++) maxMer = Math.max(maxMer, pn.t[k][R - 1]);
+    }
+    const UC = 0.6, D = Math.min(0.37 / maxHalf, 0.44 / maxMer);   // u 0.23..0.97 (the rope lives in u < 0.22)
+    Object.assign(hoodUV, { D, panels: panels.map((p) => ({ v0: p.v0 })), uc: UC, maxHalf, maxMer });
+    const vtx = [];
+    for (const [pi, pn] of panels.entries()) {
+      const ids = [];
+      const pv = hood.v(pole, [UC, pn.v0]);
+      for (let r = 0; r < R; r++) {
+        const row = [];
+        for (let k = pn.k0; k <= pn.k1; k++) row.push(hood.v(P(r, k), [UC + pn.s[r][k] * D, pn.v0 + pn.t[k][r] * D]));
+        ids.push(row);
+      }
+      const W = pn.k1 - pn.k0;
+      for (let k = 0; k < W; k++) hood.tri(pv, ids[0][k], ids[0][k + 1]);
+      for (let r = 0; r + 1 < R; r++) for (let k = 0; k < W; k++) hood.quad(ids[r][k], ids[r + 1][k], ids[r + 1][k + 1], ids[r][k + 1]);
+      vtx.push({ ids, pv, pi });
+    }
+    hoodInfo.rows = R; hoodInfo.ropeRow = PHI.length + NL; hoodInfo.nVertsCloth = hood.n;
+    // ---- rope: twisted hemp round the cinch, a knot at the back-left and two frayed hanging ends
+    const ropeR = 0.0062;
+    const rp = cin.map((p) => { const c = [0, p[1], axisZ(p[1])]; return madd(p, norm([p[0] - c[0], 0, p[2] - c[2]]), ropeR * 0.75); });
+    rp.push(rp[0]);
+    tube(hood, rp, ropeR, 5, [0.02, 0.02, 0.2, 0.62], null, { swapUV: true });
+    const kp = rp[Math.round(NT * 0.18)];
     const kd = norm([kp[0], 0, kp[2] - axisZ(kp[1])]);
-    tube(hood, [madd(kp, kd, 0.0), madd(kp, kd, 0.013)], (t) => 0.011 * Math.sin(Math.PI * (0.15 + 0.7 * t)) + 0.004, 6, [0, 0.95, 0.3, 1]);
-    for (const [dx, l] of [[0.014, 0.1], [-0.01, 0.07]]) {
+    tube(hood, [madd(kp, kd, -0.002), madd(kp, kd, 0.016)], (t) => 0.012 * Math.sin(Math.PI * (0.15 + 0.7 * t)) + 0.005, 7, [0.02, 0.64, 0.2, 0.72], null, { swapUV: true });
+    for (const [dx, dz, l] of [[0.016, 0.006, 0.12], [-0.008, 0.012, 0.085]]) {
       const pts = [];
-      for (let i = 0; i <= 5; i++) pts.push(add(madd(kp, kd, 0.012 + i * 0.003), [dx * i / 5, -l * i / 5, 0]));
-      tube(hood, pts, (t) => ropeR * (1 - 0.3 * t), 4, [0.35, 0.95, 1, 1]);
+      for (let i = 0; i <= 6; i++) { const t = i / 6; pts.push(add(madd(kp, kd, 0.014 + t * 0.012), [dx * t, -l * t, dz * t * t])); }
+      tube(hood, pts, (t) => ropeR * (1 - 0.25 * t), 5, [0.02, dx > 0 ? 0.74 : 0.86, 0.2, dx > 0 ? 0.84 : 0.96], null, { swapUV: true });
     }
     hoodInfo.knot = kp;
+    // skin weights: the sack rides on the head, blending to the neck towards the rope; rope / skirt follow the skin
+    // the skirt binds to the skin it lies on (body below the rope only: never the head inside the sack)
+    const below = fullBody.tris().filter(() => true);
+    const belowT = [];
+    for (let i = 0; i < below.length; i += 6) {
+      const vs = [below[i], below[i + 2], below[i + 4]];
+      if (vs.every((v) => { const q = [h.pos[v * 3], h.pos[v * 3 + 1], h.pos[v * 3 + 2]]; return q[1] < ropeAt(q) - 0.008; })) belowT.push(...below.slice(i, i + 6));
+    }
+    const skinBelowRope = makeClosestSkinner(h, { tris: () => Int32Array.from(belowT) }, skinAt);
+    hoodSkin = (p, i) => {
+      if (i >= hoodInfo.nVertsCloth) return skinClosest(p, { allow: ['neck_01', 'head', 'spine_03'] });
+      const yr = ropeAt(p);
+      if (p[1] < yr - 0.003) return skinBelowRope(p, { exclude: ['head'] });
+      const kh = ss(yr + 0.005, yr + 0.06, p[1]);
+      return [['head', 0.15 + 0.85 * kh], ['neck_01', 0.85 * (1 - kh)]];
+    };
   }
-  const hoodPart = toPart(lib, h, hood, 'hood', 'cloth', (p) => skinAt(p, { allow: ['head', 'neck_01', 'spine_03', 'clavicle_l', 'clavicle_r'] }));
+  const hoodPart = toPart(lib, h, hood, 'hood', 'cloth', hoodSkin);
 
   // =================================================================== APRON (cloth)
-  const yTop = lerp(sk.spine_03.head.y, sk.neck_01.head.y, 0.72);
+  // Heavy leather butcher's apron: the bib hangs from a neck strap and bridges flat across the pecs (no pec or
+  // nipple contour), standing off the sternum; the sheet drapes over the gut overhang and hangs to the shins.
+  const yTop = lerp(sk.spine_03.head.y, sk.neck_01.head.y, 0.66);
   const yWaist = sk.spine_01.head.y + 0.02;
   const yCrotch = sk.thigh_l.head.y - 0.07;
   const yBot = lerp(sk.calf_l.head.y, sk.foot_l.head.y, 0.3);
@@ -604,24 +964,33 @@ export async function build(lib) {
     for (let r = 0; r < NV; r++) {
       const lowRow = [];
       lows.push(lowRow);
-      const y = lerp(yTop, yBot, r / (NV - 1)) + (r ? 0 : 0);
       const row = [];
       for (let c = 0; c < NU; c++) {
         const u = c / (NU - 1) * 2 - 1;
+        // the top edge hangs from the two strap corners: corners lifted, the middle sags a little
+        const y = lerp(yTop, yBot, r / (NV - 1)) + (r ? 0 : 0.014 * Math.abs(u) ** 3 - 0.008 * (1 - u * u));
         const x = u * hw(y);
         const hit = outerB.first([x, y, 1.5], [0, 0, -1], 2);
         let z = hit ? hit.p[2] : (zPrev[c] ?? 0.1);
-        lowRow.push(z + 0.007);
-        const off = 0.011 + 0.004 * (1 - Math.abs(u));
-        z += off;
-        if (zPrev[c] !== null) z = Math.max(z, zPrev[c] - 0.24 * (lerp(yTop, yBot, (r - 1) / (NV - 1)) - y));
+        lowRow.push(z + 0.008);
+        z += 0.012 + 0.004 * (1 - Math.abs(u));
+        // heavy leather: below the gut it falls almost plumb (stands off the thighs, so the knees can swing
+        // under it in walk / run without the sheet following each leg)
+        if (zPrev[c] !== null) z = Math.max(z, zPrev[c] - (y < yWaist ? 0.15 : 0.24) * (lerp(yTop, yBot, (r - 1) / (NV - 1)) - y));
         zPrev[c] = z;
         // sides wrap a little around the gut
         const wrap = ss(0.75, 1, Math.abs(u)) * ss(yTop - 0.05, yWaist, y) * 0.02;
-        const fold = 0.007 * Math.sin(c * 2.3 + N.noise(c * 0.7, 0.3, 0.1) * 2) * ss(yWaist, yCrotch - 0.05, y);
+        const fold = 0.007 * Math.sin(c * 2.3 + N.noise(c * 0.7, 0.3, 0.1) * 2) * ss(yWaist, yCrotch - 0.05, y) +
+          0.016 * Math.sin(u * Math.PI * 2.6 + 0.8 + N.noise(u * 2, y * 3, 0.6) * 0.8) * ss(yWaist - 0.05, yBot, y);
         row.push([x, y, z - wrap + fold]);
       }
       grid.push(row);
+    }
+    // bib: stiff leather spans flat between the pecs (upper concave envelope of each row), never into the body
+    for (let r = 0; r < NV; r++) {
+      const y = grid[r][0][1];
+      if (y < yWaist + 0.04) continue;
+      for (let it = 0; it < 30; it++) for (let c = 1; c + 1 < NU; c++) grid[r][c][2] = Math.max(grid[r][c][2], (grid[r][c - 1][2] + grid[r][c + 1][2]) / 2);
     }
     // smooth the hanging part horizontally (cloth does not follow the gap between the legs)
     for (let it = 0; it < 3; it++) for (let r = 1; r < NV; r++) {
@@ -640,12 +1009,26 @@ export async function build(lib) {
         grid[r][c][2] = Math.max(lows[r][c], lerp(zs[r][c], avg, 0.5));
       }
     }
-    const idx = grid.map((row, r) => row.map((p, c) => apron.v(p, [c / (NU - 1), r / (NV - 1) * 0.86])));
+    // the top corners fold forward where the strap pulls them
+    for (const c of [0, 1, NU - 2, NU - 1]) { const k = c === 0 || c === NU - 1 ? 1 : 0.4; grid[0][c][2] += 0.012 * k; grid[1][c][2] += 0.005 * k; }
+    const idx = grid.map((row, r) => row.map((p, c) => apron.v(p, [c / (NU - 1), r / (NV - 1) * AP_V])));
     for (let r = 0; r + 1 < NV; r++) for (let c = 0; c + 1 < NU; c++) apron.quad(idx[r][c], idx[r + 1][c], idx[r + 1][c + 1], idx[r][c + 1]);
+    // back layer (the dark flesh side of the hide): the sheet again 2.5 mm behind it, wound the other way, in its
+    // own squashed uv band, so a fold that turns the apron over shows dark suede, not the front's tint
+    const gN = (r, c) => {
+      const a = grid[Math.min(NV - 1, r + 1)][c], b = grid[Math.max(0, r - 1)][c], d = grid[r][Math.min(NU - 1, c + 1)], e = grid[r][Math.max(0, c - 1)];
+      const n = norm(cross(sub(d, e), sub(b, a)));
+      return n[2] < 0 ? scl(n, -1) : n;
+    };
+    const idxB = grid.map((row, r) => row.map((p, c) => apron.v(madd(p, gN(r, c), -0.0025), [c / (NU - 1), AP_BV0 + r / (NV - 1) * (AP_BV1 - AP_BV0)])));
+    for (let r = 0; r + 1 < NV; r++) for (let c = 0; c + 1 < NU; c++) apron.quad(idxB[r][c], idxB[r][c + 1], idxB[r + 1][c + 1], idxB[r + 1][c]);
     apronInfo.grid = grid;
-    // straps: neck loop from the bib corners over the traps behind the neck; waist ties around the back
+    // rolled, stitched top hem
+    tube(apron, grid[0].map((p) => add(p, [0, -0.002, 0.002])), 0.0042, 4, [0, 0.935, 1, 0.955]);
+    // straps: neck loop from the bib corners up over the collarbones and round the back of the neck just under
+    // the sack's skirt (following the neck contour); waist ties round the back
     const ribbon = (pts, width, uvr, lift = 0.004) => {
-      const proj = pts.map((p) => { const c = bodyB.closest(p); const n = dot(c.n, sub(p, c.p)) < 0 ? scl(c.n, -1) : c.n; return { p: madd(c.p, n, lift), n }; });
+      const proj = pts.map((p) => { const c = trunkB.closest(p); const n = dot(c.n, sub(p, c.p)) < 0 ? scl(c.n, -1) : c.n; return { p: madd(c.p, n, lift), n }; });
       const start = apron.n;
       proj.forEach((q, i) => {
         const t = norm(sub(proj[Math.min(proj.length - 1, i + 1)].p, proj[Math.max(0, i - 1)].p));
@@ -655,39 +1038,64 @@ export async function build(lib) {
         apron.v(madd(q.p, side, -width / 2), [u, uvr[3]]);
       });
       for (let i = 0; i + 1 < proj.length; i++) { const a = start + i * 2; apron.quad(a, a + 2, a + 3, a + 1); }
+      return proj;
     };
     const tl = grid[0][NU - 1], tr = grid[0][0];
-    const trapL = outerB.first([0.1, 2.5, spineZ(sk.neck_01.head.y) + 0.0], [0, -1, 0], 3).p;
-    const trapR = [-trapL[0], trapL[1], trapL[2]];
-    const backN = around(bodyB, 180, trapL[1] - 0.025).p;
-    const neckPts = catmull([tl, madd(trapL, [0, 1, 0], 0.01), add(backN, [0, 0, -0.01]), madd(trapR, [0, 1, 0], 0.01), tr], 5);
-    ribbon(neckPts, 0.026, [0, 0.885, 1, 0.915], 0.005);
+    const neckPt = (thDeg, extra = 0) => {
+      const th = thDeg * Math.PI / 180, front = ss(-0.2, 0.9, Math.cos(th));
+      const y = ropeY(th) - lerp(0.034, 0.05, front) - 0.014 - extra;
+      const c = [0, y, axisZ(y)], d = [Math.sin(th), 0, Math.cos(th)];
+      const hs = bodyB.hits(c, d, 0.35);
+      return madd(c, d, (hs.length ? hs[0].d : 0.08) + 0.005);
+    };
+    // the path is placed by rays from the neck / spine axis (no closest-point snapping, which zig-zags between
+    // the neck and the trapezius): over the pecs from the bib corners, then round the neck just under the skirt
+    const onSurface = (q, clear = 0.006) => {
+      const c = [0, q[1], q[1] > yTop ? axisZ(q[1]) : spineZ(q[1])], d = norm([q[0] - c[0], 0, q[2] - c[2]]);
+      const hs = trunkB.hits(c, d, 0.6);
+      return { p: madd(c, d, (hs.length ? hs[hs.length - 1].d : len(sub(q, c))) + clear), n: d };
+    };
+    const ring = [60, 90, 120, 150, 180, -150, -120, -90, -60].map((a) => { const p = neckPt(a, 0.006); return { p, n: norm([p[0], 0, p[2] - axisZ(p[1])]) }; });
+    const chestRun = (corner, a0) => [0.3, 0.6, 0.85].map((f) => onSurface(lerp3(corner, a0.p, f)));
+    const sPts = [{ p: add(tl, [0, 0.004, 0.004]), n: [0, 0, 1] }, ...chestRun(tl, ring[0]), ...ring, ...chestRun(tr, ring[ring.length - 1]).reverse(), { p: add(tr, [0, 0.004, 0.004]), n: [0, 0, 1] }];
+    {
+      const P = catmull(sPts.map((q) => q.p), 4), Nn = catmull(sPts.map((q) => q.n), 4).map(norm);
+      const start = apron.n, width = 0.024;
+      P.forEach((p, i) => {
+        const t = norm(sub(P[Math.min(P.length - 1, i + 1)], P[Math.max(0, i - 1)]));
+        const sd = norm(cross(t, Nn[i]));
+        const u = i / (P.length - 1);
+        apron.v(madd(p, sd, width / 2), [u, 0.875]);
+        apron.v(madd(p, sd, -width / 2), [u, 0.9]);
+      });
+      for (let i = 0; i + 1 < P.length; i++) { const a = start + i * 2; apron.quad(a, a + 2, a + 3, a + 1); }
+    }
     const wy = yWaist - 0.01;
     const sideL = grid.find((row) => row[0][1] <= wy)[NU - 1], sideR = grid.find((row) => row[0][1] <= wy)[0];
     const tie = catmull([sideL, around(outerB, 120, wy).p, around(outerB, 155, wy).p, around(outerB, 180, wy).p, around(outerB, -155, wy).p, around(outerB, -120, wy).p, sideR], 4);
-    ribbon(tie, 0.024, [0, 0.925, 1, 0.955], 0.006);
+    ribbon(tie, 0.024, [0, 0.905, 1, 0.93], 0.006);
     // knot + hanging tie ends at the small of the back
     const kb = around(outerB, 178, wy);
-    const ends = [];
-    for (const dx of [0.03, -0.025]) {
+    for (const [dx, u0] of [[0.03, 0], [-0.025, 0.5]]) {
       const pts = [];
       for (let i = 0; i <= 6; i++) pts.push(add(madd(kb.p, kb.n, 0.012 + i * 0.002), [dx * i / 6, -0.17 * i / 6, 0]));
-      ends.push(pts);
-    }
-    for (const pts of ends) {
       const start = apron.n;
-      pts.forEach((p, i) => { const u = i / (pts.length - 1); apron.v(add(p, [0.012, 0, 0]), [u, 0.965]); apron.v(add(p, [-0.012, 0, 0]), [u, 0.995]); });
+      pts.forEach((p, i) => { const u = u0 + 0.48 * i / (pts.length - 1); apron.v(add(p, [0.012, 0, 0]), [u, 0.962]); apron.v(add(p, [-0.012, 0, 0]), [u, 0.992]); });
       for (let i = 0; i + 1 < pts.length; i++) { const a = start + i * 2; apron.quad(a, a + 1, a + 3, a + 2); }
     }
     apronInfo.knot = kb;
   }
   const torsoBones = ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01'];
   const apronPart = toPart(lib, h, apron, 'apron', 'cloth', (p) => {
-    if (p[1] > yCrotch + 0.06 || p[2] < spineZ(p[1])) return skinAt(p, { allow: [...torsoBones, 'clavicle_l', 'clavicle_r'] });
-    // hanging part: pelvis -> thighs (split left / right), so the knees do not punch through when walking
-    const t = ss(yCrotch + 0.06, yBot, p[1]);
-    const side = ss(-0.07, 0.07, p[0]);
-    return [['pelvis', 1 - 0.7 * t], ['thigh_l', 0.7 * t * side], ['thigh_r', 0.7 * t * (1 - side)]];
+    if (p[1] > yWaist + 0.02 || p[2] < spineZ(p[1])) return skinClosest(p, { allow: [...torsoBones, 'clavicle_l', 'clavicle_r'] });
+    // hanging sheet: one heavy panel on the pelvis (+ a little spine_01 at the waist); the thighs only nudge it
+    // (at most ~30 % on the outer edge, ~20 % each in the middle, so the middle follows the AVERAGE of the legs
+    // and never folds into a wedge between them), fading out again towards the hem so the bottom swings as a whole
+    const t = ss(yWaist + 0.02, yCrotch - 0.04, p[1]);
+    const k = 0.4 * ss(yCrotch + 0.08, yCrotch - 0.06, p[1]) * (1 - 0.25 * ss(yCrotch - 0.06, yBot, p[1]));
+    const side = ss(-0.2, 0.2, p[0]);
+    const wl = k * (0.5 + 0.25 * (side - 0.5) * 2), wr = k * (0.5 - 0.25 * (side - 0.5) * 2);
+    return [['spine_01', 0.25 * (1 - t)], ['pelvis', 1 - 0.25 * (1 - t) - wl - wr], ['thigh_l', wl], ['thigh_r', wr]];
   });
 
   // =================================================================== TUMOUR on the upper back (gore, emissive)
@@ -750,6 +1158,11 @@ export async function build(lib) {
   const tumPart = toPart(lib, h, tum, 'tumour', 'gore', (p) => skinAt(p, { allow: ['spine_02', 'spine_03', 'neck_01', 'clavicle_l', 'clavicle_r'] }));
 
   // =================================================================== CLEAVER (bone blade, gear) + flesh sheath (gore)
+  // The right ulna has grown out past the wrist into a 1.6 m bone blade: a rounded, ridged cortical shaft along the
+  // spine (a long bone, not a plank), a shallow vascular groove beside it, a body that thins into a crude bevel, bone
+  // teeth along the inner half of the edge, chipped notches further out and a clipped point where the spine sweeps
+  // down to meet the rising belly. Both faces wobble (organic thickness), the +t face is a little fuller. Muscle
+  // and tendon from the forearm climb over the root and run up the faces before they sink into the bone.
   const blade = new Geo(), sheath = new Geo();
   const cleaverInfo = {};
   {
@@ -759,115 +1172,157 @@ export async function build(lib) {
     const radial = norm(sub(thumb, scl(ax, dot(thumb, ax))));
     let wd = norm(cross(ax, radial));                // dorsal / lateral side (blade width direction)
     if (wd[0] > 0) wd = scl(wd, -1);
+    // rolled 40 deg about the forearm so that, with the arm hanging (and abducted by poseOffsets), the edge points
+    // forward and out and the flat faces the thigh: the swing of walk / run carries the blade past the leg
+    wd = norm(rot(wd, ax, BLADE_ROLL * Math.PI / 180));
     const td = norm(cross(ax, wd));                  // blade thickness direction
-    const at = (s, q, t) => add(add(madd(W0, ax, s), scl(wd, q)), scl(td, t));
-    const L = 0.65, s0 = -0.03, qs = -0.026;
-    const tipS = 0.6;
-    // edge line (width from the spine) with a convex belly and two chips
-    const edgeW = (s) => {
-      let w = lerp(0.05, 0.176, ss(-0.035, 0.11, s)) + 0.014 * Math.sin(Math.PI * clamp01(s / L)) + 0.01 * ss(0.3, 0.6, s);
-      w -= 0.014 * Math.exp(-(((s - 0.3) / 0.012) ** 2)) + 0.01 * Math.exp(-(((s - 0.48) / 0.01) ** 2)) + 0.006 * Math.exp(-(((s - 0.19) / 0.008) ** 2));
-      return w;
+    // a slight scimitar sweep back towards the spine; the edge belly stays convex
+    const bend = (s) => 0.024 * clamp01(s / 0.65) ** 2;
+    const at = (s, q, t) => add(add(madd(W0, ax, s), scl(wd, q - bend(s))), scl(td, t));
+    const L = 0.66, s0 = -0.03, qs = -0.026, tipQ = qs + 0.11;
+    // bone teeth (sawtooth leaning towards the tip) on the inner half of the edge, broken notches further out
+    const serr = (s) => {
+      if (s < 0.05 || s > 0.33) return 0;
+      const x = (s - 0.05) / 0.029, k = Math.floor(x), fr = x - k;
+      const amp = 0.011 * (0.6 + 0.8 * hash(k * 7 + 3)) * ss(0.05, 0.085, s) * (1 - ss(0.29, 0.33, s));
+      return amp * (fr < 0.72 ? fr / 0.72 : (1 - fr) / 0.28);
     };
-    const rowsS = [];
-    for (let i = 0; i <= 22; i++) rowsS.push(lerp(s0, L, Math.pow(i / 22, 0.92)));
-    // cross-section: [q, t] with the spine at q = qTop and the edge at q = qBot
-    const section = (s) => {
-      const eW = edgeW(Math.min(s, tipS + 0.02));
-      let qTop = qs, qBot = qs + eW;
-      if (s > tipS) { const k = (s - tipS) / (L - tipS); qTop = lerp(qs, qBot - 0.004, ss(0, 1, k) ** 0.8); }
-      const taper = 1 - 0.3 * clamp01(s / L);
-      const Tsp = 0.032 * taper * (s > tipS ? lerp(1, 0.25, (s - tipS) / (L - tipS)) : 1);
-      const width = qBot - qTop;
-      const T = (f) => (f < 0.75 ? lerp(Tsp, Tsp * 0.45, f / 0.75) : lerp(Tsp * 0.4, 0.002, (f - 0.75) / 0.25));
+    const CHIPS = [[0.385, 0.007, 0.011], [0.455, 0.012, 0.006], [0.53, 0.009, 0.013], [0.585, 0.006, 0.006]];
+    const chip = (s) => CHIPS.reduce((a, [c, w, d]) => a + d * Math.exp(-(((s - c) / w) ** 2)), 0);
+    const widthBase = (s) => lerp(0.055, 0.168, ss(-0.035, 0.13, s)) + 0.02 * Math.sin(Math.PI * clamp01(s / L)) ** 1.5;
+    const edgeW = (s) => widthBase(s) - serr(s) - chip(s) + 0.0025 * N.noise(s * 55, 0.4, 2.2) * ss(0.02, 0.1, s);
+    const qTopF = (s) => lerp(qs, tipQ, ss(0.36, L, s) ** 1.7);
+    const qBotF = (s) => { const e = qs + edgeW(Math.min(s, 0.6)); return s <= 0.5 ? e : lerp(e, tipQ, ss(0.5, L, s) ** 1.25); };
+    const rSp = (s) => 0.0175 * (1 - 0.45 * ss(0.0, L, s)) * (1 + 0.25 * ss(0.12, -0.03, s));
+    // cross-section, one side (+1 / -1): [q, t] from the spine apex to the edge (q increasing)
+    const profile = (s, side) => {
+      const qT = qTopF(s), qB = qBotF(s), W = Math.max(1e-4, qB - qT);
+      const r = Math.min(rSp(s), W * 0.3), qc = qT + r;
+      const k = (side > 0 ? 1.08 : 0.93) * (1 + 0.13 * N.noise(s * 9, side * 3.1, 0.7));
+      const ridge = 0.002 + 0.0015 * Math.max(0, N.noise(s * 30, 1.7, side));
+      const body = (f) => qT + lerp(2 * r, W, f);
       return [
-        [[qTop - 0.007 * taper, 0], [qTop + 0.002, Tsp / 2], [qTop + width * 0.4, T(0.4) / 2], [qTop + width * 0.75, T(0.75) / 2]],
-        [[qTop + width * 0.75, T(0.75) * 0.4 / 0.45 / 2], [qBot, 0]],
-        [[qBot, 0], [qTop + width * 0.75, -T(0.75) * 0.4 / 0.45 / 2]],
-        [[qTop + width * 0.75, -T(0.75) / 2], [qTop + width * 0.4, -T(0.4) / 2], [qTop + 0.002, -Tsp / 2], [qTop - 0.007 * taper, 0]],
+        [qT - ridge, 0],
+        [qc - 0.72 * r, side * 0.66 * r * k],
+        [qc, side * r * k],
+        [qT + 1.85 * r, side * 0.66 * r * k],
+        [body(0.07), side * 0.5 * r * k],                 // vascular groove
+        [body(0.16), side * 0.62 * r * k],
+        [body(0.45), side * 0.5 * r * k],
+        [body(0.72), side * 0.4 * r * k],
+        [body(0.88), side * (0.3 * r * k + 0.0012)],        // bevel line
+        [qB, 0],
       ];
     };
-    // four strips (hard edges at the bevel lines and the edge)
-    let vofs = 0;
-    for (let strip = 0; strip < 4; strip++) {
-      const rows = rowsS.map((s) => section(s)[strip]);
-      const m = rows[0].length;
-      const base = blade.n;
-      rows.forEach((sec, i) => sec.forEach(([q, t], k) => blade.v(at(rowsS[i], q, t), [i / (rowsS.length - 1), vofs + (k / (m - 1)) * 0.22])));
-      for (let i = 0; i + 1 < rows.length; i++) for (let k = 0; k + 1 < m; k++) {
-        const a = base + i * m + k, b = base + (i + 1) * m + k;
-        blade.quad(a, b, b + 1, a + 1);
+    // section polygon (closed, counter-clockwise in (q, t)): apex, +t side, edge, -t side back to the apex
+    const polygon = (s) => { const a = profile(s, 1), b = profile(s, -1); return [...a, ...b.slice(1, -1).reverse()]; };
+    // where a ray from the shaft centre at angle a (0 = towards the edge, pi = over the spine) leaves the section
+    const sectionRay = (s, a) => {
+      const poly = polygon(s), r = Math.min(rSp(s), 0.3 * (qBotF(s) - qTopF(s)));
+      const o = [qTopF(s) + r, 0], d = [Math.cos(a), Math.sin(a)];
+      let best = null;
+      for (let i = 0; i < poly.length; i++) {
+        const p = poly[i], q = poly[(i + 1) % poly.length], e = [q[0] - p[0], q[1] - p[1]];
+        const den = d[0] * e[1] - d[1] * e[0];
+        if (Math.abs(den) < 1e-12) continue;
+        const w = [p[0] - o[0], p[1] - o[1]];
+        const t = (w[0] * e[1] - w[1] * e[0]) / den, u = (w[0] * d[1] - w[1] * d[0]) / den;
+        if (t > 0 && u >= 0 && u <= 1 && (!best || t < best)) best = t;
       }
-      vofs += 0.25;
+      return [o[0] + d[0] * (best || r), o[1] + d[1] * (best || r)];
+    };
+    // rows along the blade (denser towards the point); ring: edge -> (-t side) -> apex -> (+t side) -> edge, uv
+    // u along the blade (0 .. 0.9), v around by arc length (the seam runs along the thin edge)
+    const NR = 30;
+    const rowsS = [];
+    for (let i = 0; i < NR; i++) rowsS.push(lerp(s0, L, Math.pow(i / (NR - 1), 0.85)));
+    const rings = rowsS.map((s) => {
+      const a = profile(s, 1), b = profile(s, -1);
+      const ring = [...b.slice().reverse(), ...a.slice(1)];        // edge(-) ... apex ... edge(+)
+      return ring.map(([q, t]) => at(s, q, t));
+    });
+    const M = rings[0].length;
+    const vAcc = rings.map((ring) => { const acc = [0]; for (let k = 1; k < M; k++) acc.push(acc[k - 1] + dist(ring[k - 1], ring[k])); return acc.map((x) => x / (acc[M - 1] || 1)); });
+    const base = blade.n;
+    rings.forEach((ring, i) => ring.forEach((p, k) => blade.v(p, [0.9 * i / (NR - 1), 0.004 + 0.992 * vAcc[Math.max(1, Math.min(NR - 2, i))][k]])));
+    for (let i = 0; i + 1 < NR; i++) for (let k = 0; k + 1 < M; k++) {
+      const a = base + i * M + k, b = a + M;
+      blade.quad(a, b, b + 1, a + 1);
     }
-    // bony knobs along the spine near the wrist
-    for (const [s, hgt] of [[0.03, 0.03], [0.09, 0.036], [0.15, 0.03], [0.21, 0.024], [0.28, 0.018], [0.35, 0.012]]) {
-      const sec = section(s)[0];
-      const apex = at(s, sec[0][0], 0);
-      const tip = madd(madd(apex, wd, -hgt), ax, 0.012);
+    // bony knobs (osteophytes) along the spine ridge near the wrist; small uv cells at u > 0.91
+    let cell = 0;
+    const cellUV = () => { const k = cell++; return [0.915 + (k % 4) * 0.021, 0.02 + Math.floor(k / 4) * 0.05]; };
+    for (const [s, hgt] of [[0.2, 0.026], [0.255, 0.02], [0.31, 0.016], [0.37, 0.012], [0.43, 0.008]]) {
+      const apex = at(s, qTopF(s), 0);
+      const tip = madd(madd(apex, wd, -hgt), ax, 0.01 + 0.006 * hash(s * 100));
       const ring = [];
-      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; ring.push(add(apex, add(scl(ax, Math.cos(a) * 0.013), scl(td, Math.sin(a) * 0.009)))); }
-      const ids = ring.map((p, k) => blade.v(madd(p, wd, 0.004), [0.95, 0.9 + k * 0.01]));
-      const t = blade.v(tip, [0.98, 0.99]);
+      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; ring.push(add(apex, add(scl(ax, Math.cos(a) * 0.013), scl(td, Math.sin(a) * 0.01)))); }
+      const [cu, cv] = cellUV();
+      const ids = ring.map((p, k) => blade.v(madd(p, wd, 0.004), [cu + 0.004 * k, cv]));
+      const t = blade.v(tip, [cu + 0.01, cv + 0.04]);
       for (let k = 0; k < 5; k++) blade.tri(ids[k], ids[(k + 1) % 5], t);
     }
     // bone spurs breaking out of the forearm along the ulna, leading into the blade spine
     for (const [s, hgt] of [[-0.05, 0.04], [-0.11, 0.032], [-0.17, 0.022]]) {
       const c = madd(W0, ax, s);
       const hs = bodyB.hits(c, scl(wd, -1), 0.12);
-      const base = hs.length ? madd(hs[0].p, wd, 0.004) : madd(c, wd, -0.04);
-      const tip = add(madd(base, wd, -hgt), scl(ax, -hgt * 0.45));
+      const bs = hs.length ? madd(hs[0].p, wd, 0.004) : madd(c, wd, -0.04);
+      const tip = add(madd(bs, wd, -hgt), scl(ax, -hgt * 0.45));
       const ring = [];
-      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; ring.push(add(base, add(scl(ax, Math.cos(a) * 0.011), scl(td, Math.sin(a) * 0.009)))); }
-      const ids = ring.map((p, k) => blade.v(p, [0.9, 0.9 + k * 0.01]));
-      const tv = blade.v(tip, [0.93, 0.99]);
+      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; ring.push(add(bs, add(scl(ax, Math.cos(a) * 0.011), scl(td, Math.sin(a) * 0.009)))); }
+      const [cu, cv] = cellUV();
+      const ids = ring.map((p, k) => blade.v(p, [cu + 0.004 * k, cv]));
+      const tv = blade.v(tip, [cu + 0.01, cv + 0.04]);
       for (let k = 0; k < 5; k++) blade.tri(ids[k], ids[(k + 1) % 5], tv);
     }
-    Object.assign(cleaverInfo, { W0, ax, wd, td, L, qs, edgeW, section, at });
-    // flesh sheath: forearm skin surface at s<0 swelling into a fleshy cuff that grips the blade base
-    const NA = 14;
-    const sRows = [-0.13, -0.1, -0.07, -0.045, -0.02, 0.0, 0.02, 0.045, 0.07];
+    Object.assign(cleaverInfo, { W0, ax, wd, td, L, qs, tipQ, edgeW, qTopF, qBotF, rSp, serr, chip, CHIPS, profile, at, bend });
+
+    // flesh sheath: the forearm skin swells into a muscular cuff that grips the blade root; its rim is ragged and
+    // climbs much further up the spine side (tongues of muscle) than over the edge side
+    const NA = 16;
+    const sRows = [-0.13, -0.1, -0.07, -0.045, -0.02, 0.0, 0.02, 0.045, 0.07, 0.095, 0.12, 0.145];
+    const ext = (a) => 0.02 + 0.075 * (0.5 - 0.5 * Math.cos(a)) ** 2 + 0.045 * Math.max(0, Math.sin(3 * a + 1.3)) ** 2 + 0.012 * N.noise(a * 2.3, 0.4, 5.1);
     const ringPts = sRows.map((s, ri) => {
-      const sec = section(Math.max(s, s0));
-      const qTop = sec[0][0][0], qBot = sec[1][1][0];
-      const qc = (qTop + qBot) / 2, hq = (qBot - qTop) / 2, ht = sec[0][1][1];
       const out = [];
+      const lastRows = ss(0.03, 0.145, s);              // the rim rows creep up the blade (more on the spine side)
       for (let k = 0; k <= NA; k++) {
         const a = (k / NA) * Math.PI * 2;
+        const sE = s + ext(a) * lastRows;
         const dir = add(scl(wd, Math.cos(a)), scl(td, Math.sin(a)));
-        // forearm skin radius along this direction
-        const c = madd(W0, ax, s);
+        const c = madd(W0, ax, sE);
         const hs = bodyB.hits(c, dir, 0.12);
         const rSkin = hs.length ? hs[0].d : 0.04;
-        // blade envelope (ellipse around the blade section)
-        const eq = qc + Math.cos(a) * (hq + 0.006), et = Math.sin(a) * (ht + 0.006);
-        const pBlade = add(add(c, scl(wd, eq)), scl(td, et));
         const pSkin = madd(c, dir, rSkin + 0.002);
-        const k2 = ss(-0.06, 0.06, s);
+        const sq = sectionRay(Math.max(sE, s0), a);
+        const thick = lerp(0.008, 0.0014, ss(0.0, 0.145, s)) * (0.7 + 0.5 * Math.max(0, N.noise(a * 1.7, s * 30, 1.3)));
+        const pBlade = at(Math.max(sE, s0), sq[0] + Math.cos(a) * thick, sq[1] + Math.sin(a) * thick);
+        const k2 = ss(-0.06, 0.05, s);
         let p = lerp3(pSkin, pBlade, k2);
-        const swell = 0.011 * Math.sin(Math.PI * clamp01((s + 0.12) / 0.2)) * (0.6 + 0.4 * N.noise(a * 1.7, s * 30, 1.3));
-        const radial = norm(sub(p, add(c, scl(wd, lerp(0, qc, k2)))));
-        p = madd(p, radial, swell + (ri === sRows.length - 1 ? -0.003 : 0));
+        const swell = 0.011 * Math.sin(Math.PI * clamp01((s + 0.12) / 0.17)) * (0.6 + 0.4 * N.noise(a * 1.7, s * 30, 1.3)) * (1 - k2 * 0.6);
+        p = madd(p, dir, swell);
         out.push(p);
       }
       return out;
     });
-    const sid = ringPts.map((ring, r) => ring.map((p, k) => sheath.v(p, [r / (sRows.length - 1), k / NA * 0.8])));
+    const sid = ringPts.map((ring, r) => ring.map((p, k) => sheath.v(p, [0.4 * r / (sRows.length - 1), k / NA * 0.78])));
     for (let r = 0; r + 1 < sRows.length; r++) for (let k = 0; k < NA; k++) sheath.quad(sid[r][k], sid[r][k + 1], sid[r + 1][k + 1], sid[r + 1][k]);
+    // tendons: thick cords from the cuff up each face, half sunk into the bone, tapering where they fuse with it
     let ti = 0;
+    const tendonAt = (s, f, side, lift) => {
+      const pr = profile(s, side), qT = qTopF(s), qB = qBotF(s), q = lerp(qT, qB, f);
+      let t = 0;
+      for (let i = 0; i + 1 < pr.length; i++) if (q >= pr[i][0] && q <= pr[i + 1][0]) { const u = (q - pr[i][0]) / ((pr[i + 1][0] - pr[i][0]) || 1); t = lerp(pr[i][1], pr[i + 1][1], u); break; }
+      return at(s, q, t + side * lift);
+    };
     for (const side of [1, -1]) {
-      for (const [f0, len0, wig] of [[0.25, 0.13, 0.6], [0.5, 0.19, -0.8], [0.78, 0.1, 0.5]]) {
+      for (const [f0, len0, wig, r0] of side > 0 ? [[0.26, 0.24, 0.6, 0.008], [0.55, 0.16, -0.8, 0.0068]] : [[0.3, 0.2, -0.6, 0.0075], [0.58, 0.13, 0.8, 0.0064]]) {
         const pts = [];
-        for (let i = 0; i <= 6; i++) {
-          const s = 0.05 + (len0 * i) / 6;
-          const sec = section(s);
-          const qTop = sec[0][0][0], qBot = sec[1][1][0];
-          const f = f0 + Math.sin(i * 0.9 + f0 * 7) * 0.05 * wig;
-          const q = lerp(qTop, qBot, f);
-          const thick = sec[0][2][1] * lerp(1, 0.6, f) + 0.004;
-          pts.push(at(s, q, side * thick));
+        for (let i = 0; i <= 8; i++) {
+          const s = 0.1 + (len0 * i) / 8, tt = i / 8;
+          const f = f0 + Math.sin(i * 0.8 + f0 * 7) * 0.035 * wig - 0.04 * tt * Math.sign(wig);
+          pts.push(tendonAt(s, f, side, r0 * lerp(0.1, -0.45, tt ** 1.5)));
         }
-        tube(sheath, pts, (tt) => lerp(0.0075, 0.0018, tt), 4, [0.45, 0.82 + ti * 0.03, 1, 0.84 + ti * 0.03]);
+        tube(sheath, pts, (tt) => r0 * lerp(1, 0.08, tt ** 1.3), 5, [0.44, 0.8 + ti * 0.045, 1, 0.84 + ti * 0.045]);
         ti++;
       }
     }
@@ -883,7 +1338,7 @@ export async function build(lib) {
   const chains = new Geo();
   const chainInfo = { links: 0 };
   {
-    const outer2 = makeBVH([surf(fullBody), surf(suit), surf(apronPart)]);
+    const outer2 = makeBVH([trunkSurf, surf(suit), surf(apronPart)]);
     const project = (p, clear, axisOut = true) => {
       const c = outer2.closest(p);
       const ctr = [0, c.p[1], spineZ(c.p[1])];
@@ -893,7 +1348,8 @@ export async function build(lib) {
     };
     const LI = 0.056, WI = 0.028, RW = 0.0088; // inner length / width, wire radius (human scale)
     let uvSlot = 0;
-    const slotUV = () => { const k = uvSlot++; const cx = k % 8, cy = Math.floor(k / 8); return [cx / 8, cy / 10, (cx + 1) / 8, (cy + 1) / 10]; };
+    // links: 10 x 8 slots in v 0..0.8 (hooks own v 0.82..1)
+    const slotUV = () => { const k = uvSlot++ % 80; const cx = k % 10, cy = Math.floor(k / 10); return [cx / 10, cy / 10, (cx + 1) / 10, (cy + 1) / 10 - 0.004]; };
     const link = (c, T, side, nrm, standing) => {
       // elongated hexagon centre line in the plane (T, side)
       const hl = LI / 2 + RW * 0.5, hw = WI / 2 + RW * 0.5;
@@ -903,15 +1359,14 @@ export async function build(lib) {
       tube(chains, pts, RW, standing ? 3 : 4, uvr, null, { ref: nrm });
       chainInfo.links++;
     };
-    const lay = (path, { lift = 0, skin }) => {
-      const P = resample(path, LI);
+    const lay = (P, { lift = 0, skin }) => {
       for (let i = 0; i < P.length; i++) {
         const T = norm(sub(P[Math.min(P.length - 1, i + 1)], P[Math.max(0, i - 1)]));
         const pr = project(P[i], 0);
         const n = norm(sub(pr.n, scl(T, dot(pr.n, T))));
         const side = norm(cross(T, n));
         const standing = i % 2 === 1;
-        const c = madd(pr.p, n, (standing ? WI / 2 + RW : RW) + 0.003 + lift);
+        const c = madd(pr.p, n, (standing ? WI / 2 + RW : RW) + 0.003 + (typeof lift === 'function' ? lift(i) : lift));
         const g0 = chains.n;
         link(c, T, standing ? n : side, n, standing);
         const w = skin(c, i / (P.length - 1));
@@ -921,11 +1376,12 @@ export async function build(lib) {
     };
     const chainPath = (sgn) => {
       // sgn = +1: from a hook in the LEFT shoulder blade over the left trap, across the chest to the right hip
-      const backHook = around(bodyB, 180 - sgn * 34, sk.spine_03.head.y + 0.03);
-      const trap = outerB.first([sgn * 0.125, 2.5, spineZ(sk.neck_01.head.y) - 0.01], [0, -1, 0], 3).p;
+      const backHook = around(trunkB, 180 - sgn * 34, sk.spine_03.head.y + 0.03);
+      // over the trapezius well out from the neck (clear of the sack's skirt)
+      const trap = outerB.first([sgn * 0.158, 2.5, spineZ(sk.neck_01.head.y) - 0.012], [0, -1, 0], 3).p;
       const pts = [
         madd(backHook.p, backHook.n, 0.01),
-        madd(around(bodyB, 180 - sgn * 50, lerp(sk.spine_03.head.y, trap[1], 0.65)).p, [0, 0, -1], 0.01),
+        madd(around(trunkB, 180 - sgn * 50, lerp(sk.spine_03.head.y, trap[1], 0.65)).p, [0, 0, -1], 0.01),
         add(trap, [0, 0.015, 0]),
         madd(around(outerB, sgn * 42, lerp(trap[1], yTop, 0.55)).p, [0, 0, 1], 0.015),
         madd(around(outerB, sgn * 14, yTop - 0.06 - (sgn > 0 ? 0 : 0.05)).p, [0, 0, 1], 0.02),
@@ -935,12 +1391,20 @@ export async function build(lib) {
       ];
       return { pts, backHook };
     };
-    const torsoSkin = (c) => skinAt(c, { allow: [...torsoBones, 'clavicle_l', 'clavicle_r'] });
+    // pinned to the skin under them: every link takes the skin's OWN bone mix at its contact point (closest
+    // point on the base mesh: trapezius links carry neck / clavicle / upper-arm weights like the skin there, so
+    // they ride on the shoulder when the arm is raised instead of hanging in the air); never the head, the
+    // forearms or the legs
+    const torsoSkin = (c) => skinClosest(c, { allow: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'clavicle_l', 'clavicle_r', 'upperarm_l', 'upperarm_r'] });
     chainInfo.paths = [];
-    for (const sgn of [1, -1]) {
-      const { pts, backHook } = chainPath(sgn);
-      const path = catmull(pts, 8);
-      const P = lay(path, { lift: sgn < 0 ? 0.012 : 0, skin: (c) => torsoSkin(c) });
+    const built = [1, -1].map((sgn) => { const { pts, backHook } = chainPath(sgn); return { sgn, backHook, P: resample(catmull(pts, 8), LI) }; });
+    // where the two chains cross on the chest, the second passes over the first (no interpenetrating links)
+    let best = { d: 9, i: 0, j: 0 };
+    built[0].P.forEach((a, i) => built[1].P.forEach((b, j) => { const d = dist(a, b); if (d < best.d) best = { d, i, j }; }));
+    chainInfo.cross = best;
+    for (const [n, { sgn, backHook, P: Pc }] of built.entries()) {
+      const i0 = n === 0 ? best.i : best.j, sign = n === 0 ? -0.35 : 1;
+      const P = lay(Pc, { lift: (i) => sign * 2.6 * RW * Math.exp(-(((i - i0) * LI / 0.075) ** 2)), skin: (c) => torsoSkin(c) });
       const end = P[P.length - 1];
       const hip = project(end, 0.02);
       chainInfo.paths.push({ sgn, P, tailEnd: madd(hip.p, hip.n, RW + 0.004), hipN: hip.n, backHook });
@@ -961,6 +1425,7 @@ export async function build(lib) {
       const side = norm(cross(upv, out));
       const pts = hookCurve(sc).map(([x, y]) => add(add(top, scl(out, x)), scl(upv, y)));
       tube(chains, pts, (t) => 0.0058 * sc * (t > 0.82 ? lerp(1, 0.12, (t - 0.82) / 0.18) : 1), 5, uvr, w, { ref: side });
+      (chainInfo.tips ||= []).push(pts[pts.length - 1], pts[pts.length - 3]);
     };
     chainInfo.hooks = [];
     for (const c of chainInfo.paths) {
@@ -969,7 +1434,7 @@ export async function build(lib) {
       const fwd = norm(cross([0, 1, 0], out));
       const top = add(c.tailEnd, [0, -LI * 0.45, 0]);
       const thigh = c.sgn > 0 ? 'thigh_r' : 'thigh_l';
-      hook(top, fwd, [0, 1, 0], 1.25, [['pelvis', 0.5], [thigh, 0.5]], [0, 0.82, 0.5, 0.9]);
+      hook(top, fwd, [0, 1, 0], 1.7, [['pelvis', 0.5], [thigh, 0.5]], c.sgn > 0 ? [0, 0.82, 0.5, 0.9] : [0.5, 0.82, 1, 0.9]);
       chainInfo.hooks.push({ p: top, kind: 'hang' });
       // pierced hook in the shoulder blade: the J goes under the skin and out again
       const bh = c.backHook;
@@ -983,41 +1448,52 @@ export async function build(lib) {
         const depth = 0.012 - Math.sin(a) * 0.03 + (i / 8) * 0.004;
         pts.push(add(madd(hp, upb, along), scl(bh.n, depth)));
       }
-      tube(chains, pts, (t) => 0.0055 * (t > 0.8 ? lerp(1, 0.15, (t - 0.8) / 0.2) : 1), 5, [0.5, 0.82, 1, 0.9], torsoSkin(hp), { ref: bh.n });
+      tube(chains, pts, (t) => 0.0062 * (t > 0.8 ? lerp(1, 0.15, (t - 0.8) / 0.2) : 1), 5, c.sgn > 0 ? [0, 0.91, 0.5, 0.995] : [0.5, 0.91, 1, 0.995], torsoSkin(hp), { ref: bh.n });
       chainInfo.hooks.push({ p: hp, n: bh.n, up: upb, kind: 'pierce' });
     }
   }
-  const chainPart = toPart(lib, h, chains, 'chains', 'gear', (p) => skinAt(p, { allow: torsoBones }));
+  const chainPart = toPart(lib, h, chains, 'chains', 'gear', (p) => skinClosest(p, { allow: ['pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'clavicle_l', 'clavicle_r', 'upperarm_l', 'upperarm_r'] }));
 
   // =================================================================== body trimming
   // right hand gone (the forearm ends in the cleaver)
   const handR = new Set(h.skeleton.bones.filter((b) => b.name === 'hand_r' || /_0\d_r$/.test(b.name)).map((b) => b.index));
   const handW = new Float32Array(h.pos.length / 3);
   h.weights.forEach((l, v) => { for (const [b, w] of l) if (handR.has(b)) handW[v] += w; });
-  // head under the sack (keep a window around the eyes so the eye holes show sockets, not the inside of the sack)
-  const underHood = (v) => {
-    const p = [h.pos[v * 3], h.pos[v * 3 + 1], h.pos[v * 3 + 2]];
-    if (p[1] < cinchY + 0.01) return false;
-    const eyeWin = Math.abs(p[1] - eyeY) < 0.03 && Math.abs(p[0]) < 0.065 && p[2] > A.eyeL[2] - 0.035;
-    return !eyeWin;
-  };
+  // Only skin INSIDE the closed sack goes: a vertex counts as covered when it sits above the rope and the sack
+  // cloth lies over it (a ray along its normal, or outwards from the neck axis, hits the hood within 9 cm); a face
+  // goes when all its corners are covered. The neck / trapezius under the skirt and the shoulders around it stay,
+  // so the fringe never shows the background. A window round the eyes stays too (sockets behind the eye holes).
+  // Feet / ankles inside the boots go (no toes poking through the shoe).
+  const eyeWin = (p) => Math.abs(p[1] - eyeY) < 0.03 && Math.abs(p[0]) < 0.065 && p[2] > A.eyeL[2] - 0.035;
+  const inSack = new Uint8Array(h.pos.length / 3);
+  {
+    const hoodB = makeBVH([surf(hoodPart)]);
+    const bn = fullBody.normals();
+    for (const v of h.baseObj.groupVerts('body')) {
+      const p = [h.pos[v * 3], h.pos[v * 3 + 1], h.pos[v * 3 + 2]];
+      if (p[1] < ropeAt(p) + 0.004 || eyeWin(p)) continue;
+      const n = norm([bn[v * 3], bn[v * 3 + 1], bn[v * 3 + 2]]), o = norm([p[0], 0, p[2] - axisZ(p[1])]);
+      if (hoodB.first(p, n, 0.09) || hoodB.first(p, o, 0.09)) inSack[v] = 1;
+    }
+  }
   body.obj.faces.forEach((f, fi) => {
     if (f.v.every((v) => handW[v] > 0.35)) body.keep[fi] = 0;
-    else if (f.v.every(underHood)) body.keep[fi] = 0;
+    else if (f.v.every((v) => inSack[v])) body.keep[fi] = 0;
+    else if (f.v.every((v) => h.pos[v * 3 + 1] < bootTop - 0.012)) body.keep[fi] = 0;
   });
+  // stray slivers / islands left by the cuts (the eye window stays)
+  const droppedIslands = dropIslands(body, 60, (c) => Math.min(dist(c, A.eyeL), dist(c, A.eyeR)) < 0.06);
+  console.log('  body: dropped', droppedIslands, 'faces in small islands');
 
   // =================================================================== TEXTURES
   const set = (c, k) => { c[0] = k[0]; c[1] = k[1]; c[2] = k[2]; };
-  const black = createImage(64, 64, [0, 0, 0, 255]); // emissive mask for parts that must NOT light up in the rage phase
   const CI = cleaverInfo, T = tumInfo, AP = apronInfo;
 
   // ---- trousers: dark, filthy work trousers ripped off at the boot tops, worn-through knees, a burst seam on the left thigh
-  let bootTop = 0;
-  for (let i = 1; i < boots.pos.length; i += 3) bootTop = Math.max(bootTop, boots.pos[i]);
-  const suitBase = grade(lib.cloneImage(await lib.texture(suit.asset.textures.diffuse, 1024)), (c) => {
+  const suitBase = grade(cropUV(await lib.texture(suit.asset.textures.diffuse, 2048), suitCrop, 1024, lib.resize), (c) => {
     const l = lum(c);
     const g = [l * 0.95, l * 0.84, l * 0.62];
-    for (let k = 0; k < 3; k++) c[k] = lerp(c[k], g[k], 0.88) * 0.45;
+    for (let k = 0; k < 3; k++) c[k] = lerp(c[k], g[k], 0.88) * 0.52;
   });
   const thighSegL = boneSeg(sk.thigh_l);
   const tearW = (P) => {
@@ -1031,20 +1507,32 @@ export async function build(lib) {
   };
   const cloth = lib.paintCloth(suit, {
     seed: 31, human: h, base: suitBase,
-    normal: await lib.texture(suit.asset.textures.normal, 1024), ao: await lib.texture(suit.asset.textures.ao, 1024),
-    size: 1024, normalSize: 1024, ormSize: 512,
+    normal: cropUV(await lib.texture(suit.asset.textures.normal, 2048), suitCrop, 512, lib.resize), ao: cropUV(await lib.texture(suit.asset.textures.ao, 2048), suitCrop, 256, lib.resize),
+    size: 1024, normalSize: 512, ormSize: 256,
     fade: 0.3, grime: 1, grimeNoise: 1.1, weave: 0.8, innerDarken: 0,
     blood: { hands: 0.6, splatter: 0.55, edges: 0.7 },
     tear: { amount: 0.22, scale: 6, fray: 0.9, where: tearW, threadColor: [0.1, 0.085, 0.06] },
   });
-  suit.material = lib.material('cloth', { ...cloth, alpha: cloth.alpha, doubleSided: true, pngBits: 6, emissiveMap: black, emissive: [0, 0, 0] });
+  // the seat and the backs of the legs (the view players shoot the tumour from): lighter, dusty, worn fabric so
+  // the lower half does not read as one black mass from behind; mud splashes low on the calves
+  {
+    const R = texSize(512), sS = { tris: suit.tris(), pos: suit.pos, nrm: suit.normals() };
+    const back = bakeField(sS, suit.obj.uvs, R, (P, Nn) => ss(0.15, -0.55, Nn[2]) * (0.75 + 0.25 * ss(-0.3, 0.4, N.fbm(P[0] * 6, P[1] * 6, P[2] * 6, 3))), { fill: 0, blur: 2 });
+    const mud = bakeField(sS, suit.obj.uvs, R, (P) => (1 - ss(bootTop + 0.02, bootTop + 0.22, P[1])) * ss(0.05, 0.5, N.fbm(P[0] * 16 + 3, P[1] * 16, P[2] * 16, 3)), { fill: 0, blur: 1 });
+    applyFields(cloth.albedo, [back, mud], R, (c, b, m) => {
+      const k = 1 + 1.0 * b; c[0] *= k; c[1] *= k * 0.985; c[2] *= k * 0.95;
+      over(c, lin([104, 92, 74]), b * 0.18);
+      over(c, lin([92, 78, 60]), m * 0.45);
+    });
+  }
+  suit.material = lib.material('cloth', { ...cloth, alpha: cloth.alpha, doubleSided: true, pngBits: 6 });
   h.hideCovered(body, (p) => cloth.holeAt(p, 0.1));
 
   // ---- skin: pale, sickly, stretched; striae, bulging veins, scars, chafing under the chains, blood everywhere
   const skinBase = grade(lib.cloneImage(await lib.texture('system', 'skins/old_caucasian_male/old_lightskinned_male_diffuse.png', 2048)), (c) => {
     const l = lum(c);
     const g = [l * 1.04, l * 0.8, l * 0.66];
-    for (let k = 0; k < 3; k++) c[k] = lerp(c[k], g[k], 0.72) * 0.5;
+    for (let k = 0; k < 3; k++) c[k] = lerp(c[k], g[k], 0.72) * 0.45;
   });
   const sUAl = boneSeg(sk.upperarm_l), sUAr = boneSeg(sk.upperarm_r), sLAl = boneSeg(sk.lowerarm_l), sLAr = boneSeg(sk.lowerarm_r);
   const armDirL = norm(sub(B('lowerarm_l'), B('upperarm_l'))), armDirR = norm(sub(B('lowerarm_r'), B('upperarm_r')));
@@ -1052,9 +1540,9 @@ export async function build(lib) {
   const chainD = chainInfo.paths.map((c) => polyDist(c.P));
   const pierce = chainInfo.hooks.filter((k) => k.kind === 'pierce').flatMap((k) => [madd(k.p, k.up, -0.042), madd(k.p, k.up, -0.066)].map((p) => ({ p: bodyB.closest(p).p })));
   const knuckles = ['index_01_l', 'middle_01_l', 'ring_01_l', 'pinky_01_l'].map(B);
-  const scarA = [around(bodyB, 40, yTop + 0.01).p, around(bodyB, 6, yTop - 0.13).p];   // stitched gash across the left pec
-  const scarB = [around(bodyB, -70, yWaist + 0.1).p, around(bodyB, -38, yWaist - 0.02).p]; // stapled cut on the right flank
-  const scarC = [around(bodyB, 150, yWaist + 0.16).p, around(bodyB, 115, yWaist + 0.02).p]; // stitched, on the left lower back
+  const scarA = [around(trunkB, 40, yTop + 0.01).p, around(trunkB, 6, yTop - 0.13).p];   // stitched gash across the left pec
+  const scarB = [around(trunkB, -70, yWaist + 0.1).p, around(trunkB, -38, yWaist - 0.02).p]; // stapled cut on the right flank
+  const scarC = [around(trunkB, 150, yWaist + 0.16).p, around(trunkB, 115, yWaist + 0.02).p]; // stitched, on the left lower back
   const veinRegion = (P) => {
     let w = 0.16;
     for (const [s, k] of [[sLAl, 1], [sLAr, 1.1], [sUAl, 0.8], [sUAr, 0.9]]) { const q = s(P); if (q.t > -0.15 && q.t < 1.05 && q.d < 0.1) w = Math.max(w, k * ss(-0.15, 0.1, q.t)); }
@@ -1107,8 +1595,23 @@ export async function build(lib) {
   const skinExtra = (P, Nn, c, st) => {
     // corpse marbling: greenish-yellow blotches and flushed pink-red patches
     const g = N.fbm(P[0] * 4 + 3, P[1] * 4, P[2] * 4, 3);
-    mul(c, [0.86, 0.95, 0.7], ss(0.15, 0.6, g) * 0.4);
-    mul(c, [1.06, 0.82, 0.86], ss(0.2, 0.7, -g) * 0.35);
+    mul(c, [0.86, 0.95, 0.7], ss(0.15, 0.6, g) * 0.5);
+    mul(c, [1.06, 0.8, 0.86], ss(0.2, 0.7, -g) * 0.45);
+    // broad tone variation (no uniform cream): sallow grey-brown patches, capillary mottling (purple-red lace)
+    over(c, lin([138, 118, 98]), ss(-0.15, 0.5, N.fbm(P[0] * 2.5 + 7, P[1] * 2.5, P[2] * 2.5, 3)) * 0.42);
+    const lace = N.worley(P[0] * 26, P[1] * 26, P[2] * 26);
+    mul(c, [0.84, 0.7, 0.78], (1 - ss(0.04, 0.16, Math.abs(lace - 0.5))) * ss(0.1, 0.6, N.fbm(P[0] * 7 + 1, P[1] * 7, P[2] * 7, 2) + 0.2) * 0.55);
+    // micro detail for the giant's close-ups: pores (small pits), a fine cross-hatch of skin creases and a strong
+    // roughness break-up (oily sheen on chest / shoulders / back, dry dull patches, sweat-glossy folds)
+    const pw = N.worley(P[0] * 450, P[1] * 450, P[2] * 450);
+    const pore = (1 - ss(0.1, 0.24, pw)) * (0.45 + 0.55 * ss(-0.2, 0.4, N.noise(P[0] * 40, P[1] * 40, P[2] * 40)));
+    st.h -= pore * 0.3; mul(c, [0.88, 0.8, 0.78], pore * 0.3);
+    const xh = Math.min(Math.abs(N.noise(P[0] * 210, P[1] * 70, P[2] * 210)), Math.abs(N.noise(P[0] * 70 + 5, P[1] * 210, P[2] * 70)));
+    st.h -= (1 - ss(0.0, 0.05, xh)) * 0.14;
+    const oil = ss(-0.1, 0.5, N.fbm(P[0] * 6 + 11, P[1] * 6, P[2] * 6, 3));
+    st.ro = lerp(st.ro, 0.34, oil * 0.65);
+    st.ro = lerp(st.ro, 0.8, ss(0.1, 0.6, -N.fbm(P[0] * 9 + 3, P[1] * 9, P[2] * 9, 3)) * 0.7);
+    st.ro += N.fbm(P[0] * 60, P[1] * 60, P[2] * 60, 2) * 0.12 + pore * 0.1;
     // stretch marks: the front of the shoulders / armpits (along the arm) and the flanks (oblique)
     let sm = 0;
     for (const [s, perp, adir] of [[sUAl, perpL, armDirL], [sUAr, perpR, armDirR]]) {
@@ -1128,6 +1631,13 @@ export async function build(lib) {
       const brk = ss(-0.1, 0.3, N.noise(P[0] * 30 + P[2] * 30, Math.round(f) * 0.41, 3.1));
       sm = Math.max(sm, line * brk * region);
     }
+    if (P[1] > yWaist - 0.09 && P[1] < yWaist + 0.16 && P[2] > spineZ(P[1]) + 0.05) {
+      const region = ss(yWaist - 0.09, yWaist - 0.04, P[1]) * (1 - ss(yWaist + 0.08, yWaist + 0.16, P[1])) * ss(0.02, 0.07, Math.abs(P[0]) + 0.03) * ss(0.25, 0.6, N.fbm(P[0] * 5 + 2, P[1] * 5, P[2] * 5, 2) + 0.5);
+      const f = (P[1] - 2.2 * P[0] * P[0]) / 0.0085 + N.noise(P[0] * 22, P[1] * 22, P[2] * 22) * 0.8;
+      const line = 1 - ss(0.07, 0.22, Math.abs(f - Math.round(f)));
+      const brk = ss(-0.1, 0.3, N.noise(P[0] * 35, Math.round(f) * 0.37, 6.1));
+      sm = Math.max(sm, line * brk * region);
+    }
     if (sm > 0) {
       const fresh = ss(-0.2, 0.4, N.noise(P[0] * 9, P[1] * 9, P[2] * 9 + 4));
       over(c, mix3(lin([200, 182, 176]), lin([128, 56, 74]), fresh), sm * 0.55);
@@ -1135,7 +1645,7 @@ export async function build(lib) {
     }
     // bulging veins (dark blue-green under the pale skin), radiating from the tumour
     const vv = Math.max(veinAt(P), tumVein(P) * 1.1);
-    if (vv > 0) { over(c, lin([62, 60, 82]), vv * 0.45); st.h += vv * 0.9; }
+    if (vv > 0) { over(c, lin([70, 80, 94]), vv * 0.6); st.h += vv * 1.1; }
     // inflamed, swollen skin around the tumour
     const dT = dist(P, T.Bp);
     const infl = 1 - ss(0.08, 0.22, dT + N.fbm(P[0] * 10, P[1] * 10, P[2] * 10, 3) * 0.03);
@@ -1163,7 +1673,7 @@ export async function build(lib) {
     }
     // blood soaked out of the sack, running down the neck, chest and back
     {
-      const below = cinchY - 0.012 - P[1];
+      const below = ropeAt(P) - 0.03 - P[1];   // from under the skirt down
       const r = Math.hypot(P[0], P[2] - hoodInfo.neckZ);
       if (below > -0.02 && below < 0.32 && r < 0.2) {
         const lenMax = 0.03 + 0.15 * ss(-0.2, 0.6, N.noise(P[0] * 14 + P[2] * 9, 0.7, 2.3));
@@ -1221,92 +1731,177 @@ export async function build(lib) {
     extra: skinExtra,
   });
 
-  // ---- sack hood: coarse burlap, eye holes cut out, mouth sewn shut, soaked with blood from below
+  // ---- sack hood: coarse open-weave burlap (over-under jute threads with dark gaps, slubs, stray fibres) at a
+  // uniform density (arc-length UVs), sewn side / crown seams, knife-cut eye holes, the mouth sewn shut with
+  // heavy cross-stitches, a frayed hem (only warp threads hang below the last weft), blood soaked up from the neck
   const HCc = hoodInfo.HC;
-  const hoodTex = paintPart(hoodPart, { size: 512, normalSize: 512, ormSize: 256, rough: 0.95, normalStrength: 3 }, (P, Nn, st, u, v) => {
-    if (v > 0.875) { // rope: twisted hemp strands
-      const tw = Math.sin((u * 260 + v * 900) * Math.PI);
-      set(st.c, mix3(lin([116, 98, 68]), lin([62, 50, 34]), 0.5 + 0.5 * tw));
-      st.h = tw * 0.9;
-      over(st.c, lin([56, 15, 10]), ss(0.05, 0.6, N.fbm(P[0] * 40, P[1] * 40, P[2] * 40, 3)) * 0.75);
+  const seamZ = (y) => (y >= HCc[1] ? HCc[2] : axisZ(y));
+  // weave at real jute-sacking density on the 4.45 m giant: 1.9 mm thread pitch here = ~4.7 mm on the full-size
+  // boss (the old 4.2 mm pitch was scaled 2.5x into a 1 cm basket weave); 1536 px keeps ~5 px per thread
+  const SP = 0.0019;
+  const hoodTex = paintPart(hoodPart, { size: 1536, normalSize: 1536, ormSize: 256, rough: 0.94, normalStrength: 2.2 }, (P, Nn, st, u, v) => {
+    if (u < 0.22) { // rope / knot / hanging ends (swapped uvs: u around, v along): twisted hemp strands
+      const ua = (u - 0.02) / 0.18;
+      const tw = Math.sin((v * 160 + ua * 3) * Math.PI * 2);
+      set(st.c, mix3(lin([128, 106, 72]), lin([58, 46, 30]), 0.5 + 0.5 * tw));
+      mul(st.c, [0.85, 0.8, 0.75], ss(-0.2, 0.6, N.fbm(P[0] * 90, P[1] * 90, P[2] * 90, 2)) * 0.5);
+      st.h = tw * 0.9 + N.noise(v * 900, ua * 9, 0.4) * 0.2;
+      const fr = v > 0.74 ? ss(0.06, 0.0, ((v - 0.74) % 0.12) - 0.04) : 0;       // frayed tips of the hanging ends
+      mul(st.c, [1.15, 1.1, 1.0], fr);
+      over(st.c, lin([56, 15, 10]), ss(0.05, 0.6, N.fbm(P[0] * 40, P[1] * 40, P[2] * 40, 3)) * 0.7);
+      st.ro = 0.9;
       return;
     }
-    const fu = u * 150, fv = v * 120;
+    st.stitch = 0;
+    const pn = v < 0.49 ? 0 : 1;
+    const sm = (u - hoodUV.uc) / hoodUV.D, tm = (v - hoodUV.panels[pn].v0) / hoodUV.D;
+    const fu = sm / SP + pn * 0.37, fv = tm / SP;
     const iu = Math.floor(fu), iv = Math.floor(fv), tu = fu - iu, tv = fv - iv;
-    const thU = Math.sin(Math.PI * tu), thV = Math.sin(Math.PI * tv);
-    const top = ((iu + iv) & 1) === 0;
-    const hw = top ? thU * (0.55 + 0.45 * thV) : thV * (0.55 + 0.45 * thU);
-    const gap = (1 - ss(0.0, 0.4, thU)) * (1 - ss(0.0, 0.4, thV));
-    set(st.c, lin([122, 94, 62]));
-    mul(st.c, [1 + (hash(iu * 7 + 1) - 0.5) * 0.14, 1 + (hash(iu * 7 + 1) - 0.5) * 0.14, 1 + (hash(iu * 7 + 1) - 0.5) * 0.14], 1);
-    mul(st.c, [1 + (hash(iv * 13 + 5) - 0.5) * 0.25, 1 + (hash(iv * 13 + 5) - 0.5) * 0.25, 1 + (hash(iv * 13 + 5) - 0.5) * 0.25], 1);
-    mul(st.c, [0.3, 0.24, 0.2], gap * 0.55);
-    st.h = hw * 0.8 + N.fbm(P[0] * 70, P[1] * 70, P[2] * 70, 3) * 0.5;
+    // thread half-widths with slubs (thick lumps) along each thread
+    const wWarp = 0.33 + 0.07 * hash(iu * 31 + pn) + 0.07 * Math.max(0, N.noise(iu * 0.71, fv * 0.11, 3.1));
+    const wWeft = 0.31 + 0.07 * hash(iv * 17 + 9 + pn) + 0.07 * Math.max(0, N.noise(fu * 0.11, iv * 0.67, 7.7));
+    const pu = 1 - ss(wWarp - 0.1, wWarp, Math.abs(tu - 0.5)), pv = 1 - ss(wWeft - 0.1, wWeft, Math.abs(tv - 0.5));
+    const zWarp = 0.5 + 0.5 * Math.cos(Math.PI * (fv + iu)), zWeft = 0.5 - 0.5 * Math.cos(Math.PI * (fu + iv));
+    const hWarp = pu * (0.35 + 0.65 * zWarp) * (0.75 + 0.25 * Math.cos(Math.PI * (tu - 0.5) * 2)), hWeft = pv * (0.35 + 0.65 * zWeft) * (0.75 + 0.25 * Math.cos(Math.PI * (tv - 0.5) * 2));
+    const warpOn = hWarp >= hWeft;
+    const thr = Math.max(hWarp, hWeft);
+    const gap = (1 - pu) * (1 - pv);
+    // fibre streaks along the visible thread
+    const fib = warpOn ? N.noise(fv * 5.5, iu * 1.3, 0.2) : N.noise(fu * 5.5, iv * 1.3, 5.2);
+    set(st.c, lin([126, 97, 62]));
+    const tvar = warpOn ? hash(iu * 7 + 1 + pn * 101) : hash(iv * 13 + 5 + pn * 77);
+    mul(st.c, [0.82 + 0.3 * tvar, 0.82 + 0.28 * tvar, 0.8 + 0.26 * tvar], 1);
+    mul(st.c, [1.08, 1.06, 1.0], ss(0.0, 0.5, fib) * 0.6);
+    mul(st.c, [0.72, 0.66, 0.6], ss(0.0, -0.5, fib) * 0.5);
+    mul(st.c, [0.3, 0.24, 0.2], gap * 0.85);
+    mul(st.c, [0.78, 0.72, 0.66], (1 - thr) * (1 - gap) * 0.5);   // threads darken where they dive under
+    st.h = thr * 0.9 - gap * 0.35 + fib * 0.08;
+    // stray fibres: thin, slightly curved hairs lying across the weave
+    const sf = Math.abs(N.noise(P[0] * 260 + P[1] * 40, P[1] * 260, P[2] * 260 - P[0] * 30));
+    const stray = (1 - ss(0.0, 0.025, sf)) * ss(0.25, 0.5, N.noise(P[0] * 25, P[1] * 25, P[2] * 25 + 9));
+    over(st.c, lin([160, 132, 92]), stray * 0.55); st.h += stray * 0.35;
     // grime, sweat, old stains
-    mul(st.c, [0.62, 0.54, 0.46], ss(-0.3, 0.6, N.fbm(P[0] * 18, P[1] * 18, P[2] * 18, 4)) * 0.85);
-    mul(st.c, [0.8, 0.74, 0.66], ss(0.0, 0.5, N.fbm(P[0] * 6 + 3, P[1] * 6, P[2] * 6, 3)) * 0.6);
+    mul(st.c, [0.66, 0.57, 0.48], ss(-0.3, 0.6, N.fbm(P[0] * 18, P[1] * 18, P[2] * 18, 4)) * 0.75);
+    mul(st.c, [0.82, 0.75, 0.66], ss(0.0, 0.5, N.fbm(P[0] * 6 + 3, P[1] * 6, P[2] * 6, 3)) * 0.6);
     let bl = 0;
-    // soaked from the neck up (blood and sweat), dark around the sewn mouth
-    bl = Math.max(bl, ss(cinchY + 0.06, cinchY, P[1] + N.fbm(P[0] * 20, P[1] * 10, P[2] * 20, 3) * 0.03) * 0.95);
+    // side / crown seams: the panels' fabric rolls into a ridge, closed with thick twine stitches
+    {
+      const sd = Math.abs(P[2] - seamZ(P[1]));
+      const ridge = 1 - ss(0.002, 0.008, sd);
+      st.h += ridge * 1.1; mul(st.c, [0.72, 0.62, 0.52], ridge * 0.5);
+      const along = P[1] < HCc[1] + 0.02 ? P[1] : P[0];
+      const m = (((along % 0.011) + 0.011) % 0.011) - 0.0055;
+      const th = (1 - ss(0.0009, 0.0018, Math.abs(m - (P[2] - seamZ(P[1])) * 0.45))) * (1 - ss(0.007, 0.009, sd));
+      over(st.c, lin([42, 30, 20]), th); st.h += th * 1.2;
+    }
+    // frayed hem: below the last weft only warp threads hang, each ending at its own length. Distances are
+    // measured along the cloth from the rope (the skirt hugs the trapezius, so height would smear the fringe
+    // over a wide shelf): dH = cloth left above the hem
+    const onSkirt = P[1] < ropeAt(P) - 0.0015;
+    const dH = onSkirt ? hoodInfo.skirtLen(hoodInfo.thetaOf(P)) - hoodInfo.skirtArc(P, 0.1) : 1;
+    if (dH < 0.012) {
+      // the last weft sits at dH = 0.012; each warp thread hangs on below it to its own end
+      const end = 0.012 - (0.003 + 0.01 * hash(iu * 3 + 7 + pn * 13));
+      if (!(pu > 0.45 && dH > end)) st.a = 0;
+      mul(st.c, [0.62, 0.55, 0.5], (1 - ss(0, 0.012, dH)) * 0.6);
+    }
+    // soaked from the neck up (blood and sweat), dark round the sewn mouth
+    bl = Math.max(bl, ss(ropeAt(P) + 0.07, ropeAt(P) - 0.01, P[1] + N.fbm(P[0] * 20, P[1] * 10, P[2] * 20, 3) * 0.03) * 0.9);
+    const front = P[2] > HCc[2] + 0.02;
     const dm = Math.hypot((P[0] - A.mouth[0]) * 0.8, P[1] - A.mouth[1]);
-    if (P[2] > HCc[2]) bl = Math.max(bl, (1 - ss(0.015, 0.05, dm + N.fbm(P[0] * 30, P[1] * 30, 0.5, 3) * 0.012)) * 0.95);
+    if (front) bl = Math.max(bl, (1 - ss(0.018, 0.05, dm + N.fbm(P[0] * 30, P[1] * 30, 0.5, 3) * 0.012)) * 0.85);
     // eye holes: ragged, cut with a knife; bloody tears running down below them
     for (const e of [A.eyeL, A.eyeR]) {
-      if (P[2] < e[2] - 0.02) continue;
+      if (!front) continue;
       const dx = P[0] - e[0], dy = P[1] - e[1];
-      const r = Math.hypot(dx, dy * 1.2) + N.fbm(P[0] * 90, P[1] * 90, 0.3, 3) * 0.0035;
-      if (r < 0.0145) { st.a = 0; continue; }
-      const rim = 1 - ss(0.0145, 0.022, r);
-      mul(st.c, [0.45, 0.32, 0.26], rim * 0.8); st.h += rim * 0.6;
-      if (dy < 0 && dy > -0.07) bl = Math.max(bl, (1 - ss(0.002, 0.005, Math.abs(dx - Math.sin(dy * 60) * 0.002))) * (1 - ss(0.04, 0.07, -dy)) * 0.9);
+      const r = Math.hypot(dx * 0.95, dy * 1.25) + N.fbm(P[0] * 90, P[1] * 90, 0.3, 3) * 0.004;
+      if (r < 0.0165) { st.a = 0; continue; }
+      const rim = 1 - ss(0.0165, 0.025, r);
+      mul(st.c, [0.42, 0.3, 0.24], rim * 0.8); st.h += rim * 0.7;
+      if (dy < 0 && dy > -0.08) bl = Math.max(bl, (1 - ss(0.0022, 0.0055, Math.abs(dx - Math.sin(dy * 60) * 0.002))) * (1 - ss(0.045, 0.08, -dy)) * 0.95);
       bl = Math.max(bl, rim * 0.6);
     }
-    // the mouth sewn shut: a slit with crude cross stitches of black twine
-    if (P[2] > HCc[2]) {
-      const dx = P[0] - A.mouth[0], dy = P[1] - A.mouth[1] + dx * dx * 2;
-      if (Math.abs(dx) < 0.032) {
-        const slit = (1 - ss(0.0008, 0.002, Math.abs(dy))) * ss(0.032, 0.026, Math.abs(dx));
-        mul(st.c, [0.2, 0.1, 0.08], slit); st.h -= slit;
-        const m = (((dx % 0.0085) + 0.0085) % 0.0085) - 0.00425;
-        const th = (1 - ss(0.0007, 0.0014, Math.min(Math.abs(m - dy * 0.7), Math.abs(m + dy * 0.7)))) * (1 - ss(0.005, 0.0065, Math.abs(dy))) * ss(0.03, 0.024, Math.abs(dx));
-        over(st.c, lin([24, 16, 12]), th); st.h += th * 1.4;
+    // the mouth sewn shut: a dark slit closed with big crude X stitches of black twine (read from 10 m)
+    if (front) {
+      const dx = P[0] - A.mouth[0], dy = P[1] - A.mouth[1] + dx * dx * 1.5;
+      if (Math.abs(dx) < 0.04 && Math.abs(dy) < 0.012) {
+        const slit = (1 - ss(0.001, 0.0028, Math.abs(dy))) * ss(0.04, 0.032, Math.abs(dx));
+        mul(st.c, [0.16, 0.08, 0.06], slit); st.h -= slit * 1.2;
+        const pitch = 0.016, m = (((dx % pitch) + pitch) % pitch) - pitch / 2;
+        const hx = pitch * 0.4, hy = 0.0105;
+        const d1 = Math.abs(m * hy - dy * hx) / Math.hypot(hx, hy), d2 = Math.abs(m * hy + dy * hx) / Math.hypot(hx, hy);
+        const inX = Math.abs(dy) < hy && Math.abs(m) < hx + 0.001;
+        const th = inX ? (1 - ss(0.0014, 0.0024, Math.min(d1, d2))) * ss(0.04, 0.034, Math.abs(dx)) : 0;
+        // pale, bleached twine: reads against the dark bloody slit
+        over(st.c, lin([176, 156, 118]), th); st.h += th * 1.8; st.ro = lerp(st.ro, 0.7, th); st.stitch = th;
+        // needle holes pulled open, a little blood weeping from each
+        const hole = 1 - ss(0.0006, 0.0016, Math.hypot(Math.abs(m) - hx, Math.abs(dy) - hy));
+        bl = Math.max(bl, hole * 0.9);
       }
-    }
-    // the sewn top seam over the crown (ear to ear) with thick stitches
-    if (P[1] > HCc[1] + 0.03) {
-      const sd = Math.abs(P[2] - HCc[2] - 0.004);
-      const ridge = 1 - ss(0.001, 0.006, sd);
-      st.h += ridge * 1.2; mul(st.c, [0.7, 0.6, 0.5], ridge * 0.5);
-      const m = (((P[0] % 0.011) + 0.011) % 0.011) - 0.0055;
-      const th = (1 - ss(0.0008, 0.0016, Math.abs(m - (P[2] - HCc[2]) * 0.5))) * (1 - ss(0.006, 0.008, sd));
-      over(st.c, lin([40, 30, 22]), th); st.h += th;
     }
     if (bl > 0) {
       const age = ss(-0.3, 0.5, N.noise(P[0] * 30, P[1] * 30, P[2] * 30));
-      over(st.c, mix3(lin([66, 18, 12]), lin([30, 10, 8]), age), Math.min(1, bl) * 0.88);
-      st.ro = lerp(st.ro, 0.7, bl);
+      over(st.c, mix3(lin([70, 16, 11]), lin([30, 9, 7]), age), Math.min(1, bl) * 0.88 * (1 - (st.stitch || 0)));
+      st.ro = lerp(st.ro, lerp(0.55, 0.75, age), bl);
     }
   });
 
-  // ---- apron: heavy canvas, once white, soaked with old and fresh blood, hand smears, ragged hem, rips and a slash
+  // ---- apron: heavy dark-brown leather (pebbled grain, creases, scuffed lighter edges, stitched hems), the lower
+  // two thirds soaked with oxidised blood (tide marks, gravity drips ending in drops), glossy still-wet patches,
+  // bloody hand wipes, a ragged hem, rips, a cleaver slash and a scorched hole. A clear value step below the skin.
   const smears = [[0.16, AP.yWaist - 0.05, -0.6], [0.2, AP.yCrotch + 0.02, -0.75], [-0.18, AP.yWaist - 0.12, 0.7]];
-  const apronTex = paintPart(apronPart, { size: 1024, normalSize: 1024, ormSize: 512, rough: 0.9, normalStrength: 2.2 }, (P, Nn, st, u, v) => {
-    const strap = v > 0.875;
-    set(st.c, strap ? lin([150, 140, 120]) : lin([186, 178, 158]));
-    const mott = N.fbm(P[0] * 6, P[1] * 6, P[2] * 6, 4);
-    mul(st.c, [0.9, 0.85, 0.74], ss(-0.3, 0.6, mott) * 0.65);
-    const wu = Math.sin(u * Math.PI * 2 * 170), wv = Math.sin(v * Math.PI * 2 * 230);
-    st.h = (wu * 0.5 + 0.5) * 0.22 + (wv * 0.5 + 0.5) * 0.22 + N.fbm(P[0] * 40, P[1] * 40, P[2] * 40, 3) * 0.35;
-    // grease / sweat yellowing on the bib, dirt towards the hem
-    mul(st.c, [0.95, 0.86, 0.68], ss(AP.yTop - 0.25, AP.yTop, P[1]) * 0.35);
+  const apronTex = paintPart(apronPart, { size: 1024, normalSize: 512, ormSize: 512, rough: 0.55, normalStrength: 2.4 }, (P, Nn, st, u, v) => {
+    const strap = v > 0.87;
+    if (!strap && v > AP_V + 0.002) {
+      // back layer: the flesh side of the hide, dark brown suede, blood soaked through in blotches, no sheen
+      set(st.c, lin([52, 38, 28]));
+      mul(st.c, [0.78, 0.74, 0.7], ss(-0.2, 0.6, N.fbm(P[0] * 9, P[1] * 9, P[2] * 9, 4)) * 0.6);
+      const fuzz = N.fbm(P[0] * 300, P[1] * 300, P[2] * 300, 2);
+      st.h = fuzz * 0.25; st.ro = 0.88 + 0.06 * fuzz;
+      const soak = ss(0.05, 0.4, N.fbm(P[0] * 4.5 + 2, P[1] * 2.5, P[2] * 4.5, 5) + 0.2 * ss(AP.yWaist, AP.yBot, P[1]));
+      over(st.c, lin([36, 12, 9]), soak * 0.75);
+      apronCut(P, st);
+      return;
+    }
+    set(st.c, strap ? lin([58, 41, 30]) : lin([68, 46, 33]));
+    const mott = N.fbm(P[0] * 7, P[1] * 7, P[2] * 7, 4);
+    mul(st.c, [0.8, 0.76, 0.72], ss(-0.2, 0.6, mott) * 0.6);
+    mul(st.c, [1.12, 1.08, 1.02], ss(-0.1, -0.6, mott) * 0.5);
+    // pebbled grain + creases where the leather bends
+    const grain = N.worley(P[0] * 520, P[1] * 520, P[2] * 520);
+    const crease = ss(0.82, 0.96, N.ridged(P[0] * 9, P[1] * 34, P[2] * 9, 3)) * ss(-0.2, 0.4, N.fbm(P[0] * 3 + 4, P[1] * 3, P[2] * 3, 2) + 0.2);
+    st.h = ss(0.0, 0.5, grain) * 0.35 - crease * 0.9 + N.fbm(P[0] * 60, P[1] * 60, P[2] * 60, 3) * 0.15;
+    mul(st.c, [0.7, 0.66, 0.62], crease * 0.6);
+    st.ro = 0.5 + 0.12 * ss(0.0, 0.5, grain);
+    // scuffed, lighter worn edges and highs
+    const dSide = strap ? 1 : Math.min(u, 1 - u) * 0.36, dTop = strap ? 1 : v / AP_V * 1.05;
+    const worn = Math.max(1 - ss(0.0, 0.03, Math.min(dSide, dTop)), ss(0.3, 0.75, N.fbm(P[0] * 16, P[1] * 16, P[2] * 16, 3)) * 0.5);
+    over(st.c, lin([126, 94, 66]), worn * 0.45); st.ro = lerp(st.ro, 0.42, worn * 0.5);
+    // stitched hems 8 mm in from the sides and the top (and along both strap edges)
+    {
+      const sd = strap ? Math.min(Math.abs(v - 0.875), Math.abs(v - 0.9), Math.abs(v - 0.905), Math.abs(v - 0.93)) * 0.9 : Math.abs(Math.min(dSide, dTop) - 0.009);
+      const along = strap ? u * 0.9 : dSide < dTop ? P[1] : P[0];
+      const dash = ss(0.0028, 0.0018, Math.abs((((along % 0.0075) + 0.0075) % 0.0075) - 0.00375));
+      const sti = (1 - ss(0.0008, 0.0016, sd)) * dash;
+      over(st.c, lin([150, 128, 96]), sti * 0.85); st.h += sti * 0.9;
+      const fold = strap ? 0 : 1 - ss(0.0, 0.006, Math.min(dSide, dTop));
+      st.h += fold * 0.6;
+    }
+    // grease sheen on the bib, dirt towards the hem
+    st.ro = lerp(st.ro, 0.34, ss(AP.yTop - 0.3, AP.yTop, P[1]) * 0.6);
     const hem = ss(AP.yBot + 0.2, AP.yBot, P[1]);
-    over(st.c, lin([66, 56, 44]), hem * 0.65 * ss(-0.4, 0.4, N.fbm(P[0] * 12, P[1] * 12, P[2] * 12, 3)));
-    // blood: a diluted pink-brown wash where it soaked into the canvas, crusted dark cores with tide-lines at the
-    // dried edges, vertical runs, wiped hand smears, fine spray; a few still-wet glossy patches on the belly
-    const soakN = N.fbm(P[0] * 4.5 + 2, P[1] * 3, P[2] * 4.5, 5) + ss(AP.yWaist + 0.12, AP.yCrotch - 0.1, P[1]) * 0.35;
-    const wash = ss(-0.15, 0.3, soakN), core = ss(0.28, 0.6, soakN);
-    const tide = ss(-0.02, 0.05, soakN) * (1 - ss(0.05, 0.16, soakN));
-    const runs = ss(0.5, 0.75, N.noise(P[0] * 70, P[1] * 2.2, 0.5)) * ss(0.05, 0.4, soakN + 0.15) * ss(AP.yTop - 0.12, AP.yWaist, P[1]);
+    over(st.c, lin([52, 42, 32]), hem * 0.6 * ss(-0.4, 0.4, N.fbm(P[0] * 12, P[1] * 12, P[2] * 12, 3)));
+    // blood: soaked into the lower two thirds (oxidised, dark), tide marks, drips with drops, wet glossy cores
+    const lowK = ss(AP.yTop - 0.18, AP.yWaist - 0.05, P[1]) ** 1 ;
+    const soakN = N.fbm(P[0] * 4.5 + 2, P[1] * 2.5, P[2] * 4.5, 5) + (1 - lowK) * 0.55 - 0.15;
+    const core = ss(0.0, 0.35, soakN), tide = ss(-0.07, -0.02, soakN) * (1 - ss(-0.02, 0.03, soakN));
+    // gravity drips: from the soaked areas downwards, thin runs with a fat drop at each end
+    const col = Math.floor(P[0] / 0.011), cx = (P[0] / 0.011 - col) - 0.5;
+    const runStart = AP.yWaist - 0.05 - hash(col * 7 + 3) * 0.35, runLen = 0.06 + hash(col * 13 + 1) * 0.22;
+    const below = runStart - P[1];
+    const hasRun = hash(col * 29 + 5) > 0.45 && below > 0 && below < runLen;
+    const run = hasRun ? (1 - ss(0.14, 0.3, Math.abs(cx) * (1 + below * 6))) : 0;
+    const drop = hash(col * 29 + 5) > 0.45 ? 1 - ss(0.25, 0.42, Math.hypot(cx, (P[1] - (runStart - runLen)) / 0.011)) : 0;
     let marks = 0;
     for (const [sx, sy, ang] of smears) {
       const dx = P[0] - sx, dy = P[1] - sy;
@@ -1319,17 +1914,21 @@ export async function build(lib) {
     }
     const spray = N.worley(P[0] * 55, P[1] * 55, P[2] * 55);
     marks = Math.max(marks, (1 - ss(0.05, 0.11, spray)) * ss(0.2, 0.6, N.fbm(P[0] * 3, P[1] * 3, P[2] * 3, 2) + 0.4) * 0.85);
-    const dried = mix3(lin([86, 28, 17]), lin([44, 16, 10]), ss(-0.3, 0.5, N.noise(P[0] * 18, P[1] * 18, P[2] * 18)));
-    over(st.c, lin([146, 92, 78]), wash * 0.5);
-    over(st.c, dried, Math.max(core * 0.9, runs * 0.85, marks * 0.9));
-    mul(st.c, [0.55, 0.42, 0.4], tide * 0.55);
-    const fresh = ss(0.35, 0.65, N.fbm(P[0] * 4 + 11, P[1] * 4, P[2] * 4, 3)) * ss(AP.yTop - 0.2, AP.yWaist, P[1]) * core;
-    over(st.c, lin([86, 4, 6]), fresh * 0.85);
-    const bk = Math.max(wash * 0.35, core, runs, marks);
-    st.ro = lerp(st.ro, lerp(0.7, 0.18, fresh), bk);
-    st.h += core * 0.15 + marks * 0.1;
+    const bloodK = Math.min(1, Math.max(core * (strap ? 0.6 : 1), run * 0.9, drop * 0.95, marks * 0.9));
+    const dried = mix3(lin([62, 16, 10]), lin([30, 9, 6]), ss(-0.3, 0.5, N.noise(P[0] * 18, P[1] * 18, P[2] * 18)));
+    over(st.c, dried, bloodK * 0.92);
+    mul(st.c, [0.5, 0.4, 0.38], tide * 0.6);
+    const wet = ss(0.25, 0.55, N.fbm(P[0] * 5 + 11, P[1] * 3, P[2] * 5, 3)) * ss(AP.yTop - 0.15, AP.yWaist, P[1]) * Math.max(core, run, drop);
+    over(st.c, lin([96, 6, 6]), wet * 0.8);
+    st.ro = lerp(st.ro, lerp(0.72, 0.1, ss(0.0, 0.6, wet)), Math.max(bloodK, wet));
+    st.h += core * 0.12 + drop * 0.3 + run * 0.15 - tide * 0.1;
     if (strap) return;
-    // ragged hem, two rips up from it, a cleaver slash across the lower left, scorched hole on the right
+    apronCut(P, st);
+  });
+
+  /** Ragged hem, two rips up from it, a cleaver slash across the lower left, a scorched hole on the right (front
+   * sheet and back layer alike: both are cut by the same 3D test). */
+  function apronCut(P, st) {
     const hemLine = AP.yBot + 0.025 + N.fbm(P[0] * 18, 0.3, 0.7, 4) * 0.035 + Math.abs(N.noise(P[0] * 50, 1.3, 0.2)) * 0.02;
     let cut = P[1] < hemLine;
     for (const [rx, rl] of [[-0.09, 0.17], [0.12, 0.11]]) {
@@ -1344,81 +1943,133 @@ export async function build(lib) {
         const ex = Math.abs((P[0] - a[0]) * d[1] - (P[1] - a[1]) * d[0]) / Math.sqrt(L2);
         const wdt = 0.009 * Math.sin(Math.PI * t) + N.noise(t * 30, 0.4, 0.1) * 0.0015;
         if (ex < wdt) cut = true;
-        else mul(st.c, [0.6, 0.5, 0.48], (1 - ss(wdt, wdt + 0.008, ex)) * 0.7);
+        else { const lip = 1 - ss(wdt, wdt + 0.008, ex); over(st.c, lin([120, 92, 66]), lip * 0.6); st.h += lip * 0.4; }
       }
     }
     const dh = Math.hypot(P[0] + 0.12, P[1] - (AP.yWaist - 0.2)) + N.fbm(P[0] * 50, P[1] * 50, 0.2, 3) * 0.008;
     if (dh < 0.02) cut = true;
     else mul(st.c, [0.3, 0.24, 0.2], (1 - ss(0.02, 0.035, dh)) * 0.8);
-    mul(st.c, [0.7, 0.62, 0.55], (1 - ss(0.0, 0.02, P[1] - hemLine)) * 0.6);
+    mul(st.c, [0.75, 0.7, 0.66], (1 - ss(0.0, 0.02, P[1] - hemLine)) * 0.6);
     if (cut) st.a = 0;
-  });
+  }
 
-  // ---- cleaver: yellowed bone with growth bands, porous spine, cracks, a honed lighter edge, blood; rage: glowing edge
-  const bladeTex = paintPart(bladePart, { size: 1024, normalSize: 1024, ormSize: 512, rough: 0.5, emissive: true, emissiveSize: 256, normalStrength: 2.6 }, (P, Nn, st, u, v) => {
-    const q = sub(P, CI.W0), s = dot(q, CI.ax), w = dot(q, CI.wd);
-    const f = clamp01((w - CI.qs) / CI.edgeW(Math.min(s, 0.62)));
-    set(st.c, mix3(lin([194, 182, 154]), lin([128, 108, 76]), ss(0.5, 0.0, f) * 0.5 + ss(0.25, 0.0, s) * 0.4));
-    mul(st.c, [0.95, 0.85, 0.66], ss(0.0, 0.5, N.fbm(P[0] * 4 + 1, P[1] * 4, P[2] * 4, 3)) * 0.7);
-    over(st.c, lin([92, 72, 48]), ss(-0.2, 0.6, N.fbm(P[0] * 12, P[1] * 12, P[2] * 12, 4)) * 0.45);
-    const band = Math.sin(f * 38 + N.noise(s * 8, f * 3, 0.5) * 3);
-    mul(st.c, [0.9, 0.86, 0.78], (band * 0.5 + 0.5) * 0.35);
-    st.h = band * 0.15 + N.ridged(s * 40, f * 6, 0.3 + v, 2) * 0.25;
-    const pore = N.worley(P[0] * 260, P[1] * 260, P[2] * 260);
-    const spine = ss(0.25, 0.0, f);
-    over(st.c, lin([92, 72, 50]), (1 - ss(0.08, 0.2, pore)) * spine * 0.7); st.h -= (1 - ss(0.08, 0.2, pore)) * spine * 0.8;
-    const cr = N.ridged(P[0] * 30, P[1] * 30, P[2] * 30, 3);
-    const crack = ss(0.82, 0.95, cr) * ss(0.2, 0.6, N.fbm(P[0] * 6, P[1] * 6, P[2] * 6, 2) + 0.3);
-    over(st.c, lin([60, 42, 28]), crack * 0.8); st.h -= crack * 0.9;
-    const bevel = ss(0.74, 0.8, f);
-    over(st.c, lin([226, 214, 190]), bevel * 0.6); st.ro = lerp(st.ro, 0.28, bevel);
-    st.h += bevel * Math.sin(s * 900 + N.noise(s * 50, f * 20, 1) * 4) * 0.05;
-    const base = ss(0.16, 0.0, s);
-    over(st.c, lin([150, 70, 66]), base * 0.6);
-    // the classic cleaver hole near the spine at the tip (painted: dark hole, worn bevelled rim)
-    {
-      const dh = Math.hypot(s - 0.545, (f - 0.2) * CI.edgeW(0.545));
-      const hole = 1 - ss(0.011, 0.0135, dh), rim = (1 - ss(0.013, 0.022, dh)) * (1 - hole);
-      mul(st.c, [0.06, 0.05, 0.05], hole); st.h -= hole * 2; st.ro = lerp(st.ro, 0.9, hole);
-      over(st.c, lin([120, 96, 70]), rim * 0.6); st.h += rim * 0.5;
+  // ---- cleaver: living bone. Ivory to yellowed off-white cortex with brown / grey staining (blotchy, never
+  // streaked along the blade like wood grain), fine Haversian pores, hairline cracks, open spongy (cancellous) bone
+  // where the edge chipped and at the broken point, a dark vascular groove beside the spine with a vessel in it,
+  // blood pooled in the serrations; wet and flushed where it leaves the flesh, dry and chalky towards the point.
+  // Rage: the edge, the cracks and the groove vessel glow.
+  const bladeTex = paintPart(bladePart, { size: 1024, normalSize: 1024, ormSize: 512, rough: 0.6, emissive: true, emissiveSize: 512, normalStrength: 2.2 }, (P, Nn, st, u, v) => {
+    const q = sub(P, CI.W0), s = dot(q, CI.ax), w = dot(q, CI.wd) + CI.bend(s);
+    const qT = CI.qTopF(s), qB = CI.qBotF(s), W = Math.max(1e-4, qB - qT);
+    const r = Math.min(CI.rSp(s), W * 0.3);
+    const f = clamp01((w - qT) / W), dEdge = Math.max(0, qB - w);    // width fraction, distance to the edge (m)
+    const shaft = ss((2.2 * r) / W, (1.6 * r) / W, f);               // the rounded spine shaft
+    const bevel = ss(0.86, 0.9, (w - qT - 2 * r) / Math.max(1e-4, W - 2 * r));
+    const knob = u > 0.905;                                          // osteophytes / spurs
+    // ---- base: ivory -> yellowed, yellower and darker along the spine shaft and in the root
+    const age = clamp01(0.4 + 0.6 * N.fbm(P[0] * 6 + 2, P[1] * 6, P[2] * 6, 3) + 0.25 * shaft + 0.2 * ss(0.2, 0.0, s));
+    set(st.c, mix3(lin([226, 214, 186]), lin([198, 172, 122]), age));
+    // brown and grey staining: isotropic blotches at two scales
+    const stB = N.fbm(P[0] * 11 + 7, P[1] * 11, P[2] * 11, 4), stG = N.fbm(P[0] * 17 - 3, P[1] * 17, P[2] * 17, 3);
+    over(st.c, lin([128, 94, 60]), ss(0.08, 0.5, stB) * 0.62);
+    over(st.c, lin([92, 70, 50]), ss(0.3, 0.65, stB) * 0.45);
+    mul(st.c, [0.8, 0.74, 0.66], (0.35 + 0.65 * shaft) * ss(-0.2, 0.5, N.fbm(P[0] * 3 + 5, P[1] * 3, P[2] * 3, 2) + 0.2) * 0.5);
+    over(st.c, lin([146, 144, 136]), ss(0.18, 0.6, stG) * 0.35);
+    mul(st.c, [0.86, 0.82, 0.76], ss(-0.4, 0.4, N.fbm(P[0] * 40, P[1] * 40, P[2] * 40, 3)) * 0.35);     // fine mottle
+    // cortical surface: soft undulation + faint fibre texture (height only, short and broken, no long streaks)
+    st.h = N.fbm(P[0] * 25, P[1] * 25, P[2] * 25, 3) * 0.35 + N.fbm(P[0] * 160, P[1] * 160, P[2] * 160, 2) * 0.12;
+    // the shaft: a raised, knobbly cortical ridge
+    st.h += shaft * 0.25 + shaft * N.worley(P[0] * 60, P[1] * 60, P[2] * 60) * 0.3;
+    // Haversian pores: small sparse pinholes (denser on the shaft and near the edge)
+    const pw = N.worley(P[0] * 520, P[1] * 520, P[2] * 520);
+    const poreK = 0.35 + 0.65 * Math.max(shaft, 1 - ss(0.0, 0.03, dEdge));
+    const pore = (1 - ss(0.07, 0.13, pw)) * ss(-0.1, 0.3, N.noise(P[0] * 60, P[1] * 60, P[2] * 60) + 0.15) * poreK;
+    mul(st.c, [0.55, 0.47, 0.4], pore * 0.7); st.h -= pore * 0.5;
+    // vascular groove beside the shaft (both faces): darker, reddish-brown channel with a vessel along it
+    const qG = qT + 2 * r + 0.07 * (W - 2 * r), gq = Math.abs(w - qG);
+    const groove = (1 - ss(0.002, 0.009, gq)) * ss(0.0, 0.05, s) * (1 - ss(0.5, 0.6, s)) * (knob ? 0 : 1);
+    over(st.c, lin([118, 72, 52]), groove * 0.7); st.h -= groove * 0.35;
+    const vessel = (1 - ss(0.0007, 0.0022, gq + 0.0006 * N.noise(s * 120, 0.3, 1.1))) * groove;
+    over(st.c, lin([92, 20, 24]), vessel * 0.9); st.h += vessel * 0.25;
+    // small vessels branching off the groove near the root (living bone), fading out towards the point
+    const lv = ss(0.72, 0.9, N.ridged(P[0] * 70, P[1] * 70, P[2] * 70, 2)) * ss(0.3, 0.04, s) * (1 - shaft);
+    over(st.c, lin([120, 40, 40]), lv * 0.6); st.h += lv * 0.15;
+    // hairline cracks: thin, wiggly, branching dark lines (zero crossings of a noise field), only here and there
+    const cn = Math.abs(N.noise(P[0] * 38, P[1] * 38, P[2] * 38) + 0.35 * N.noise(P[0] * 110, P[1] * 110, P[2] * 110));
+    const crack = (1 - ss(0.006, 0.018, cn)) * ss(0.15, 0.5, N.fbm(P[0] * 5 + 9, P[1] * 5, P[2] * 5, 2) + 0.25);
+    over(st.c, lin([62, 48, 36]), crack * 0.8); st.h -= crack * 0.6;
+    // cancellous (spongy) bone where the cortex broke away: the chip notches, the serration roots, the point
+    let brk = 0;
+    for (const [c, wC, dC] of CI.CHIPS) brk = Math.max(brk, Math.exp(-(((s - c) / (wC * 1.5)) ** 2)) * (1 - ss(0.008, 0.012 + dC, dEdge)));
+    brk = Math.max(brk, ss(0.6, 0.65, s) * (1 - ss(0.01, 0.03, dEdge + Math.abs(w - CI.tipQ) * 0.2)));
+    brk = Math.max(brk, ss(0.002, 0.006, CI.serr(s)) * (1 - ss(0.003, 0.008, dEdge)) * 0.8);
+    if (brk > 0) {
+      const sp = N.worley(P[0] * 300, P[1] * 300, P[2] * 300), sp2 = N.worley(P[0] * 700 + 3, P[1] * 700, P[2] * 700);
+      const hole = Math.max(1 - ss(0.25, 0.42, sp), (1 - ss(0.2, 0.4, sp2)) * 0.6);
+      const k = clamp01(brk * 1.2);
+      over(st.c, mix3(lin([212, 196, 160]), lin([86, 44, 32]), hole), k * 0.9);
+      st.h -= k * (0.4 + hole * 0.9); st.ro = lerp(st.ro, 0.92, k);
     }
-    // living bone: dark red vessels running from the root along the blade
-    const lv = ss(0.7, 0.92, N.ridged(s * 14, f * 30, 0.6, 2)) * ss(0.42, 0.08, s) * ss(0.15, 0.3, f) * (1 - ss(0.7, 0.8, f));
-    over(st.c, lin([96, 24, 28]), lv * 0.8); st.h += lv * 0.5;
-    const ves = ss(0.7, 0.9, N.ridged(P[0] * 50, P[1] * 50, P[2] * 50, 2)) * ss(0.25, 0.02, s);
-    over(st.c, lin([90, 20, 26]), ves * 0.8); st.h += ves * 0.4;
-    let bl = 0;
-    bl = Math.max(bl, ss(0.6, 0.95, f) * ss(-0.1, 0.5, N.fbm(s * 9, f * 4, 0.7, 3) + 0.25));
-    bl = Math.max(bl, ss(0.12, -0.02, s) * 0.9);
-    bl = Math.max(bl, ss(0.45, 0.7, N.noise(f * 30, s * 2.5, 0.9)) * ss(0.4, 0.05, s) * 0.9);
-    bl = Math.max(bl, (1 - ss(0.05, 0.12, N.worley(P[0] * 90, P[1] * 90, P[2] * 90))) * 0.8);
-    bl = Math.max(bl, ss(0.15, 0.45, N.fbm(P[0] * 5 + 7, P[1] * 5, P[2] * 5, 4)) * 0.85);
+    // blood: pooled in the serrations (fresh, wet), a crust along the edge, splatter, smears near the root
+    let bl = 0, wet = 0;
+    const pool = ss(0.002, 0.007, CI.serr(s) + 0.003 * N.noise(s * 90, 0.3, 2.2)) * (1 - ss(0.003, 0.012 + 0.008 * Math.max(0, N.noise(P[0] * 80, P[1] * 80, P[2] * 80)), dEdge));
+    bl = Math.max(bl, pool); wet = Math.max(wet, pool * 0.9);
+    bl = Math.max(bl, (1 - ss(0.004, 0.02, dEdge + N.fbm(P[0] * 30, P[1] * 30, P[2] * 30, 3) * 0.012)) * ss(0.05, 0.12, s) * 0.8);
+    bl = Math.max(bl, (1 - ss(0.04, 0.1, N.worley(P[0] * 95, P[1] * 95, P[2] * 95))) * ss(0.1, 0.5, N.fbm(P[0] * 4, P[1] * 4, P[2] * 4, 2) + 0.35) * 0.8);
+    bl = Math.max(bl, ss(0.16, 0.0, s) * ss(-0.2, 0.3, N.fbm(P[0] * 20, P[1] * 20, P[2] * 20, 3) + 0.2) * 0.9);
     if (bl > 0) {
-      const fresh = ss(0.3, 0.7, N.fbm(P[0] * 7 + 3, P[1] * 7, P[2] * 7, 3));
-      over(st.c, mix3(lin([66, 18, 12]), lin([96, 8, 10]), fresh), Math.min(1, bl) * 0.9);
-      st.ro = lerp(st.ro, lerp(0.55, 0.18, fresh), Math.min(1, bl));
-      st.h += bl * 0.1;
+      const fresh = clamp01(wet + ss(0.4, 0.8, N.fbm(P[0] * 7 + 3, P[1] * 7, P[2] * 7, 3)) * 0.5);
+      over(st.c, mix3(lin([60, 16, 11]), lin([104, 10, 10]), fresh), Math.min(1, bl) * 0.9);
+      st.ro = lerp(st.ro, lerp(0.58, 0.12, fresh), Math.min(1, bl));
+      st.h += bl * 0.08;
     }
-    const g = ss(0.82, 0.98, f) * (0.6 + 0.4 * N.noise(s * 30, 0.2, 0.4)) + crack * 0.5 + ves * 0.4;
+    // gloss: wet and flushed where it grows out of the flesh, dry and chalky towards the point
+    const wetRoot = ss(0.16, 0.0, s);
+    over(st.c, lin([184, 112, 98]), wetRoot * 0.45 * (1 - bl));
+    const chalk = ss(0.35, 0.62, s) * (1 - bl);
+    over(st.c, lin([222, 216, 202]), chalk * 0.25);
+    st.ro = lerp(st.ro, 0.26, wetRoot * 0.8);
+    st.ro = lerp(st.ro, 0.88, chalk * 0.8);
+    // the crude bevel: a little cleaner, denser and smoother (honed by use), with nicks
+    const nk = Math.floor(s / 0.011 + N.noise(s * 20, 1.7, 0.3) * 1.5);
+    const nick = (hash(nk * 7 + 3) > 0.78 ? 1 : 0) * (1 - ss(0.002, 0.005 + 0.004 * hash(nk * 13 + 1), dEdge)) * ss(0.33, 0.36, s);
+    over(st.c, lin([216, 200, 160]), bevel * 0.35 * (1 - nick) * (1 - bl));
+    st.ro = lerp(st.ro, 0.42, bevel * (1 - nick) * (1 - bl) * 0.7);
+    over(st.c, lin([110, 84, 60]), nick * 0.6); st.h -= nick * 0.5;
+    st.ao = 1 - groove * 0.35 - pore * 0.25;
+    const g = (1 - ss(0.003, 0.016, dEdge)) * (0.65 + 0.35 * N.noise(s * 30, 0.2, 0.4)) + crack * 0.7 + vessel * 0.8 + brk * 0.4;
     st.e[0] = g; st.e[1] = g * 0.32; st.e[2] = g * 0.08;
   });
 
-  // ---- flesh sheath: raw muscle and tendon growing out of the forearm over the blade root
-  const sheathTex = paintPart(sheathPart, { size: 512, normalSize: 512, ormSize: 256, rough: 0.32, normalStrength: 3 }, (P, Nn, st, u, v) => {
-    const torn = ss(0.12, 0.24, u + N.fbm(P[0] * 60, P[1] * 60, P[2] * 60, 3) * 0.08);
-    const fib = N.ridged(v * 40, u * 4, 0.7, 3);
-    set(st.c, mix3(lin([104, 30, 28]), lin([44, 10, 10]), ss(0.3, 0.8, fib)));
+  // ---- flesh sheath: raw, wet muscle swelling out of the forearm over the blade root; glossy pale tendons
+  const sheathTex = paintPart(sheathPart, { size: 512, normalSize: 512, ormSize: 256, rough: 0.3, normalStrength: 3 }, (P, Nn, st, u, v) => {
+    const s = dot(sub(P, CI.W0), CI.ax);
+    const tendon = u > 0.42;
+    const torn = tendon ? 1 : ss(-0.1, -0.055, s + N.fbm(P[0] * 60, P[1] * 60, P[2] * 60, 3) * 0.02);
+    // muscle fibres run along the forearm / blade
+    const fib = N.ridged(dot(P, CI.wd) * 160, dot(P, CI.td) * 160, s * 18, 3);
+    set(st.c, mix3(lin([118, 32, 30]), lin([52, 11, 12]), ss(0.3, 0.8, fib)));
     mul(st.c, [0.75, 0.62, 0.6], ss(-0.2, 0.6, N.fbm(P[0] * 25, P[1] * 25, P[2] * 25, 3)) * 0.6);
     st.h = fib * 0.8 + N.fbm(P[0] * 80, P[1] * 80, P[2] * 80, 3) * 0.4;
-    const ten = ss(0.75, 0.95, N.ridged(v * 14 + 3, u * 1.5, 2.1, 2));
-    over(st.c, lin([196, 170, 140]), ten * 0.75); st.h += ten * 0.6;
-    over(st.c, lin([200, 170, 110]), (1 - ss(0.1, 0.25, N.worley(P[0] * 150, P[1] * 150, P[2] * 150))) * 0.4 * ss(0.3, 0.7, u));
-    over(st.c, mix3(lin([128, 92, 90]), lin([120, 60, 64]), ss(0.0, 0.15, u)), 1 - torn);
+    st.ro = 0.26;
+    // fascia: pale, glossy sheets and strands over the muscle; fat nodules near the rim
+    over(st.c, lin([196, 172, 150]), ss(0.8, 0.95, N.ridged(P[0] * 70, P[1] * 70, P[2] * 70, 2)) * 0.45);
+    over(st.c, lin([206, 176, 112]), (1 - ss(0.1, 0.25, N.worley(P[0] * 150, P[1] * 150, P[2] * 150))) * 0.35 * ss(0.0, 0.08, s));
+    if (tendon) {
+      // tendon: white-pink sinew, wet sheen, darker where it sinks into the bone
+      const across = Math.abs((((v - 0.8) / 0.045) % 1) * 2 - 1);   // 0 on the cord's crest, 1 at its sides
+      set(st.c, mix3(lin([200, 150, 138]), lin([132, 52, 50]), clamp01(across * 1.2 + 0.3 * N.fbm(P[0] * 40, P[1] * 40, P[2] * 40, 3))));
+      over(st.c, lin([226, 206, 190]), (1 - ss(0.1, 0.35, across)) * 0.5);
+      const tf = Math.abs(Math.sin(u * 300 + N.noise(P[0] * 90, P[1] * 90, P[2] * 90) * 3));
+      st.h = tf * 0.25 - across * 0.4; st.ro = 0.24;
+      mul(st.c, [0.7, 0.5, 0.48], ss(0.2, 0.36, s) * 0.5);
+    }
+    // forearm skin at the far end (matches the inflamed skin it grows out of), a raw torn band where it splits
+    over(st.c, mix3(lin([160, 104, 98]), lin([132, 62, 66]), torn), (1 - torn) * 0.95);
     mul(st.c, [0.5, 0.35, 0.35], (1 - Math.abs(torn - 0.5) * 2) * 0.6);
-    st.ro = lerp(0.55, 0.28, torn);
-    const clot = ss(0.3, 0.6, N.fbm(P[0] * 40 + 2, P[1] * 40, P[2] * 40, 3));
-    over(st.c, lin([32, 8, 6]), clot * 0.8 * torn); st.ro = lerp(st.ro, 0.45, clot * torn);
-    over(st.c, lin([150, 120, 96]), ss(0.8, 0.95, N.ridged(P[0] * 70, P[1] * 70, P[2] * 70, 2)) * 0.35 * torn); // fascia strands
+    st.ro = lerp(0.55, st.ro, torn);
+    const clot = ss(0.3, 0.6, N.fbm(P[0] * 40 + 2, P[1] * 40, P[2] * 40, 3)) * torn * (tendon ? 0.4 : 1);
+    over(st.c, lin([36, 8, 6]), clot * 0.75); st.ro = lerp(st.ro, 0.45, clot);
   });
 
   // ---- tumour: purple-red swollen lobes, yellow pus heads, dark veins, glowing fissures
@@ -1440,15 +2091,37 @@ export async function build(lib) {
     st.e[0] = g; st.e[1] = g * 0.42; st.e[2] = g * 0.1;
   });
 
-  // ---- chains + hooks: rusty iron, dried blood
-  const chainTex = paintPart(chainPart, { size: 512, normalSize: 512, ormSize: 256, rough: 0.45, normalStrength: 2.5 }, (P, Nn, st) => {
+  // ---- chains + hooks: rusty iron links; the meat hooks are worn steel (bright scratched metal, a little rust)
+  // with wet blood only where they pierce the skin and at the hanging hooks' points
+  const pierceP = chainInfo.hooks.filter((k) => k.kind === 'pierce').map((k) => k.p);
+  const tips = chainInfo.tips || [];
+  const chainTex = paintPart(chainPart, { size: 512, normalSize: 512, ormSize: 256, rough: 0.45, normalStrength: 2.5 }, (P, Nn, st, u, v) => {
+    if (v > 0.81) {
+      // butcher's meat hooks: dull, grimy forged steel (no chrome), rust blooms, dried blood and fat in the bend
+      set(st.c, lin([88, 86, 84])); st.me = 0.6; st.ro = 0.55;
+      const scr = ss(0.6, 0.9, Math.abs(N.noise(P[0] * 400, P[1] * 40, P[2] * 400)));
+      mul(st.c, [1.25, 1.24, 1.22], scr * 0.4); st.ro = lerp(st.ro, 0.45, scr * 0.4);   // a few worn, scratched highs
+      mul(st.c, [0.62, 0.58, 0.54], ss(-0.2, 0.5, N.fbm(P[0] * 25 + 3, P[1] * 25, P[2] * 25, 3)) * 0.7);   // grime
+      const rust = ss(0.05, 0.45, N.fbm(P[0] * 50, P[1] * 50, P[2] * 50, 4) + 0.15);
+      over(st.c, mix3(lin([112, 56, 28]), lin([62, 32, 18]), ss(-0.3, 0.4, N.noise(P[0] * 90, P[1] * 90, P[2] * 90))), rust * 0.85);
+      st.me = lerp(st.me, 0.12, rust); st.ro = lerp(st.ro, 0.9, rust);
+      const dried = ss(0.15, 0.55, N.fbm(P[0] * 18 + 8, P[1] * 18, P[2] * 18, 3));
+      over(st.c, lin([46, 12, 9]), dried * 0.8); st.me = lerp(st.me, 0.05, dried); st.ro = lerp(st.ro, 0.62, dried);
+      st.h = rust * 0.5 + scr * 0.1 + dried * 0.2;
+      let near = 9;
+      for (const q of pierceP) near = Math.min(near, dist(P, q) - 0.035);
+      for (const q of tips) near = Math.min(near, dist(P, q));
+      const wet = (1 - ss(0.0, 0.045, near)) * ss(-0.3, 0.3, N.fbm(P[0] * 60, P[1] * 60, P[2] * 60, 2) + 0.25);
+      over(st.c, lin([84, 6, 6]), wet * 0.9); st.me = lerp(st.me, 0.0, wet); st.ro = lerp(st.ro, 0.12, wet);
+      return;
+    }
     set(st.c, lin([74, 70, 66])); st.me = 0.85; st.ro = 0.42;
     const rust = ss(0.0, 0.45, N.fbm(P[0] * 40, P[1] * 40, P[2] * 40, 4) + 0.15);
     over(st.c, mix3(lin([110, 58, 30]), lin([70, 38, 22]), ss(-0.3, 0.4, N.noise(P[0] * 90, P[1] * 90, P[2] * 90))), rust * 0.85);
     st.me = lerp(0.85, 0.15, rust); st.ro = lerp(0.42, 0.88, rust);
     st.h = rust * 0.6 + N.fbm(P[0] * 150, P[1] * 150, P[2] * 150, 2) * 0.3 * rust;
-    const b = ss(0.25, 0.55, N.fbm(P[0] * 12 + 4, P[1] * 12, P[2] * 12, 3));
-    over(st.c, lin([50, 14, 10]), b * 0.8); st.me = lerp(st.me, 0.05, b); st.ro = lerp(st.ro, 0.55, b);
+    const b = ss(0.35, 0.6, N.fbm(P[0] * 12 + 4, P[1] * 12, P[2] * 12, 3));
+    over(st.c, lin([50, 14, 10]), b * 0.7); st.me = lerp(st.me, 0.05, b); st.ro = lerp(st.ro, 0.55, b);
   });
 
   // ---- ambient occlusion bakes (contact shadows under the apron, chains, sack and tumour)
@@ -1458,35 +2131,41 @@ export async function build(lib) {
   {
     const occ = makeBVH([surf(fullBody), surf(hoodPart), surf(apronPart), surf(chainPart), surf(tumPart), surf(sheathPart), surf(suit), surf(boots)]).bvh;
     const ao = bakeField(baseS, h.baseObj.uvs, RA, aoTracer(occ, { rays: 16, maxDist: 0.1 }));
-    applyFields(skin.albedo, [ao], RA, (c, a) => { const k = lerp(1, a, 0.8); c[0] *= k; c[1] *= k; c[2] *= k; });
+    // contact shadows / creases: darker with a subsurface red tint (light scattered through flesh), not grey
+    applyFields(skin.albedo, [ao], RA, (c, a) => { c[0] *= lerp(1, a, 0.6); c[1] *= lerp(1, a, 0.88); c[2] *= lerp(1, a, 0.84); });
     const apS = nsurf(apronPart);
     const occA = makeBVH([surf(apronPart), surf(chainPart), surf(fullBody), surf(hoodPart)]).bvh;
     const aoA = bakeField(apS, apronPart.obj.uvs, texSize(256), aoTracer(occA, { rays: 12, maxDist: 0.08 }));
     applyFields(apronTex.albedo, [aoA], texSize(256), (c, a) => { const k = lerp(1, a, 0.7); c[0] *= k; c[1] *= k; c[2] *= k; });
   }
-  // rage glow mask for the skin: veins around the tumour, along the arms and over the chest
+  // rage glow mask for the skin: veins radiating from the tumour, along the arms and over the chest. 1024 and
+  // blurred before encoding, smooth region falloffs (the old 256-512 map with hard region edges broke into JPEG
+  // blocks of orange at 2.8x emissive)
   const RE = texSize(1024);
   const glow = bakeField(baseS, h.baseObj.uvs, RE, (P) => {
     const dT = dist(P, T.Bp);
-    const region = Math.max(1 - ss(0.12, 0.38, dT), (() => { const q = sLAr(P); return q.d < 0.1 ? 0.9 : 0; })(), (() => { const q = sUAr(P); return q.d < 0.11 ? 0.6 : 0; })(), (() => { const q = sLAl(P); return q.d < 0.1 ? 0.55 : 0; })(), P[1] > yTop - 0.15 && P[2] > 0 ? 0.4 : 0);
-    return Math.min(1, Math.max(veinAt(P) * region * 1.3, tumVein(P) * 1.2));
-  }, { fill: 0, blur: 1 });
+    const near = (seg, r0, k) => { const q = seg(P); return (1 - ss(r0 * 0.7, r0, q.d)) * ss(-0.15, 0.05, q.t) * (1 - ss(0.95, 1.1, q.t)) * k; };
+    const region = Math.max(1 - ss(0.12, 0.38, dT), near(sLAr, 0.1, 0.9), near(sUAr, 0.11, 0.6), near(sLAl, 0.1, 0.55),
+      ss(yTop - 0.22, yTop - 0.1, P[1]) * ss(-0.02, 0.06, P[2] - spineZ(P[1])) * 0.4);
+    return Math.min(1, Math.max(veinAt(P) ** 1.4 * region * 1.5, tumVein(P) * 1.3));
+  }, { fill: 0, blur: 2 });
   const skinEm = createImage(RE, RE, [0, 0, 0, 255]);
   for (let i = 0; i < RE * RE; i++) { const gl = glow[i]; skinEm.data[i * 4] = toByte(gl); skinEm.data[i * 4 + 1] = toByte(gl * 0.3); skinEm.data[i * 4 + 2] = toByte(gl * 0.07); }
-  for (let i = 0; i < skin.orm.data.length; i += 4) skin.orm.data[i + 1] = Math.max(skin.orm.data[i + 1], 84);
+  for (let i = 0; i < skin.orm.data.length; i += 4) skin.orm.data[i + 1] = Math.max(skin.orm.data[i + 1], 105);
 
-  // ---- materials
+  // ---- materials (only body / cleaver / tumour carry emissive masks: the rage phase lights exactly those, see
+  // extras.rage; the eyes keep their own glow)
   body.material = lib.material('skin', { ...skin, emissiveMap: skinEm, emissive: [0, 0, 0] });
-  hoodPart.material = lib.material('cloth', { ...hoodTex, alpha: hoodTex.alpha, doubleSided: true, pngBits: 6, emissiveMap: black, emissive: [0, 0, 0] });
-  apronPart.material = lib.material('cloth', { ...apronTex, alpha: apronTex.alpha, doubleSided: true, pngBits: 6, emissiveMap: black, emissive: [0, 0, 0] });
+  hoodPart.material = lib.material('cloth', { ...hoodTex, alpha: hoodTex.alpha, doubleSided: true, pngBits: 6 });
+  apronPart.material = lib.material('cloth', { ...apronTex, alpha: apronTex.alpha, doubleSided: true, pngBits: 6 });
   bladePart.material = lib.material('gear', { ...bladeTex, emissive: [0, 0, 0] });
-  sheathPart.material = lib.material('gore', { ...sheathTex, emissiveMap: black, emissive: [0, 0, 0] });
+  sheathPart.material = lib.material('gore', { ...sheathTex });
   tumPart.material = lib.material('gore', { ...tumTex, emissive: [0.42, 0.13, 0.03] });
-  chainPart.material = lib.material('gear', { ...chainTex, emissiveMap: black, emissive: [0, 0, 0] });
+  chainPart.material = lib.material('gear', { ...chainTex });
   const bootTex = await lib.texture(boots.asset.textures.diffuse, 512);
   boots.material = lib.material('cloth', {
     albedo: lib.grungeTexture(bootTex, { seed: 5, darken: 0.3, dirt: 0.9, blood: 0.35, tint: [0.55, 0.52, 0.48] }),
-    roughness: 0.6, metalness: 0, emissiveMap: black, emissive: [0, 0, 0],
+    roughness: 0.6, metalness: 0,
   });
   const eyeM = lib.paintEyes(await lib.texture('system', 'eyes/materials/brown_eye.png', 256), { style: 'glow', color: [1, 0.42, 0.08] });
   eyes.material = lib.material('eye', { albedo: eyeM.albedo, emissiveMap: eyeM.emissiveMap, emissive: [1, 0.55, 0.25], roughness: 0.15 });
@@ -1494,15 +2173,23 @@ export async function build(lib) {
 
   const parts = [body, suit, boots, eyes, hoodPart, apronPart, tumPart, bladePart, sheathPart, chainPart];
   for (const p of parts) console.log('  part', p.name.padEnd(14), p.triCount(), 'tris');
-  console.log('  chain links', chainInfo.links);
+  console.log('  chain links', chainInfo.links, 'cross gap', chainInfo.cross.d.toFixed(3));
 
-  // =================================================================== scale to full size, helper bones, hitboxes
-  const S = 4.2 / h.height;
-  const bladeMid = (s) => CI.at(s, CI.qs + 0.5 * CI.edgeW(s), 0);
+  // =================================================================== scale to full size, lift, helper bones, hitboxes
+  // Built at ~4.6 m rest (body top) so that, with the clips' hunch partly cancelled by poseOffsets, the sack top
+  // sits at ~3.9-4.0 m in idle / walk (def.height 4.0).
+  const S = REST_HEIGHT / h.height;
+  // cleaver capsule axis: the blade's mid-width line from just past the wrist to one radius short of the point
+  const CL_R = 0.092;                                   // human scale (~0.23 m at full size: spine to edge)
+  const bladeMid = (s) => CI.at(s, (CI.qTopF(s) + CI.qBotF(s)) / 2, 0);
   const tumourPts = [];
   for (const v of new Set(Array.from(tumPart.tris()).filter((_, i) => i % 2 === 0))) tumourPts.push(v);
   scaleCharacter(h, parts, S);
-  console.log('scale', S.toFixed(3), 'height', h.height.toFixed(3));
+  // the boot soles reach below the bare foot's ground plane: stand the whole character on them
+  const LIFT = -bootSole * S + 0.004;
+  liftCharacter(h, parts, LIFT);
+  const toFull = (p) => [p[0] * S, p[1] * S + LIFT, p[2] * S];
+  console.log('scale', S.toFixed(3), 'lift', LIFT.toFixed(3), 'height', h.height.toFixed(3));
 
   // Capsules [bone, radius, toBone] in metres at full size. The game picks the capsule a bullet ray enters FIRST,
   // so the weak points must not sit inside a neighbour's end cap: the head capsule (skull base -> crown) covers the
@@ -1511,9 +2198,9 @@ export async function build(lib) {
   // Leaf helper bones (no skin weights) give the capsules their end points.
   const bones = h.skeleton.bones, byName = h.skeleton.byName;
   const BP = (n) => byName[n].head.clone();
-  addHelperBone(h, 'head_top', 'head', scl(add(HC, [0, 0.035, 0.005]), S));
-  addHelperBone(h, 'cleaver_root', 'lowerarm_r', scl(bladeMid(0.1), S));
-  addHelperBone(h, 'cleaver_tip', 'lowerarm_r', scl(bladeMid(0.56), S));
+  addHelperBone(h, 'head_top', 'head', toFull(add(HC, [0, 0.035, 0.005])));
+  addHelperBone(h, 'cleaver_root', 'lowerarm_r', toFull(bladeMid(0.03 + 0.5 * CL_R)));
+  addHelperBone(h, 'cleaver_tip', 'lowerarm_r', toFull(bladeMid(CI.L - 0.8 * CL_R)));
   const ownerOf = (bn) => {
     if (bn === 'head' || bn === 'neck_01') return 'head';
     if (bn === 'spine_03' || bn.startsWith('clavicle')) return 'chest';
@@ -1526,23 +2213,66 @@ export async function build(lib) {
   const owned = {};
   for (const part of parts) {
     for (const v of new Set(Array.from(part.tris()).filter((_, i) => i % 2 === 0))) {
-      const name = part.name === 'cleaver' ? 'cleaver' : ownerOf(bones[part.weights[v][0][0]].name);
+      // the flesh tendrils / straps on the blade belong to the cleaver capsule, not the forearm
+      const onBlade = part.name === 'cleaver' || (part.name === 'cleaver_flesh' && dot(sub([part.pos[v * 3], part.pos[v * 3 + 1], part.pos[v * 3 + 2]], toFull(CI.W0)), CI.ax) > 0.02 * S);
+      const name = onBlade ? 'cleaver' : ownerOf(bones[part.weights[v][0][0]].name);
       (owned[name] ||= []).push(new THREE.Vector3(part.pos[v * 3], part.pos[v * 3 + 1], part.pos[v * 3 + 2]));
     }
   }
   const dSeg = (p, a, b) => new THREE.Line3(a, b).closestPointToPoint(p, true, new THREE.Vector3()).distanceTo(p);
   const pct = (a, q) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * q))]; };
   const radius = (name, a, b, q = 0.8) => pct(owned[name].map((p) => dSeg(p, a, b)), q);
-  // chest: from spine_03 up to a helper placed so the top cap ends at the base of the sack (iterated)
-  const s3 = BP('spine_03'), n1 = BP('neck_01'), capTop = n1.y + 0.03;
+  // chest (the rage weak point: upper torso + back tumour): ONE horizontal capsule across the shoulder blades
+  // (helpers chest_r -> chest_l under spine_03), fitted on the rest pose by a small search: it must hold >= 97 % of
+  // the tumour and as much of the upper torso as it can while enclosing as little empty air as possible (the old
+  // vertical r 0.70 capsule stuck out 0.25-0.3 m behind the back and above the shoulders and took hits on nothing)
+  const s3 = BP('spine_03'), n1 = BP('neck_01');
   const tumV = tumourPts.map((v) => new THREE.Vector3(tumPart.pos[v * 3], tumPart.pos[v * 3 + 1], tumPart.pos[v * 3 + 2]));
-  let chestTop = n1.clone(), rChest = 0;
-  for (let it = 0; it < 4; it++) {
-    rChest = Math.min(0.66, Math.max(radius('chest', s3, chestTop), pct(tumV.map((p) => dSeg(p, s3, chestTop)), 0.97)));
-    const k = Math.max(0.05, Math.min(1, (capTop - rChest - s3.y) / (n1.y - s3.y)));
-    chestTop = s3.clone().lerp(n1, k);
+  let chestFit;
+  {
+    const solid = makeBVH([surf(fullBody)]), extra = makeBVH([surf(tumPart), surf(hoodPart), surf(chainPart), surf(apronPart)]);
+    // winding check: a point far in front of the chest must be on the outer side of its closest face
+    const probe = solid.closest([0, s3.y, 4]);
+    const wSign = dot(probe.n, sub([0, s3.y, 4], probe.p)) > 0 ? 1 : -1;
+    const tc = tumV.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / tumV.length);
+    const air = [], step = 0.08;
+    for (let x = -1.1; x <= 1.1; x += step) for (let y = s3.y - 0.7; y <= n1.y + 0.6; y += step) for (let z = tc.z - 0.6; z <= tc.z + 1.3; z += step) {
+      const c = solid.closest([x, y, z]);
+      if (c.d < 0.05 || dot(c.n, sub([x, y, z], c.p)) * wSign < 0) continue;      // inside the body / on it
+      if (extra.closest([x, y, z]).d < 0.05) continue;                             // tumour, sack, chains, apron
+      air.push(new THREE.Vector3(x, y, z));
+    }
+    const chestV = owned.chest.filter((_, i) => i % 3 === 0), tumS = tumV.filter((_, i) => i % 2 === 0);
+    const inCap = (list, x0, x1, y, z, r) => {
+      let n = 0;
+      const r2 = r * r;
+      for (const p of list) {
+        const dy = p.y - y; if (dy > r || dy < -r) continue;
+        const dz = p.z - z; if (dz > r || dz < -r) continue;
+        const dx = p.x < x0 ? p.x - x0 : p.x > x1 ? p.x - x1 : 0;
+        if (dx * dx + dy * dy + dz * dz <= r2) n++;
+      }
+      return n;
+    };
+    const evalCap = (x0, x1, y, z, r) => ({ tum: inCap(tumS, x0, x1, y, z, r) / tumS.length, chest: inCap(chestV, x0, x1, y, z, r) / chestV.length, air: inCap(air, x0, x1, y, z, r) * step ** 3 });
+    let best = null;
+    const capTop = n1.y - 0.06;
+    for (let y = tc.y - 0.25; y <= tc.y + 0.3; y += 0.05) for (let z = tc.z + 0.1; z <= tc.z + 0.75; z += 0.05)
+      for (let r = 0.3; r <= 0.66; r += 0.04) for (let a = 0.05; a <= 0.75; a += 0.05) {
+        if (y + r > capTop) continue;
+        const e = evalCap(tc.x - a, tc.x + a, y, z, r);
+        if (e.tum < 0.97) continue;
+        const score = e.chest - 1.6 * e.air;
+        if (!best || score > best.score) best = { score, y, z, r, a, ...e };
+      }
+    // the old capsule for comparison (vertical spine_03 -> top, r 0.70)
+    const old = (() => { let ca = 0; const top = s3.clone().lerp(n1, 0.35); for (const p of air) if (dSeg(p, s3, top) <= 0.7) ca++; return ca * step ** 3; })();
+    chestFit = best;
+    console.log(`  chest fit: y ${best.y.toFixed(2)} z ${best.z.toFixed(2)} half-len ${best.a.toFixed(2)} r ${best.r.toFixed(2)} -> tumour ${(best.tum * 100).toFixed(0)}%, upper torso ${(best.chest * 100).toFixed(0)}%, air ${best.air.toFixed(3)} m3 (old vertical r0.70 capsule: air ~${old.toFixed(3)} m3); ${air.length} air voxels`);
+    addHelperBone(h, 'chest_r', 'spine_03', [tc.x - best.a, best.y, best.z]);
+    addHelperBone(h, 'chest_l', 'spine_03', [tc.x + best.a, best.y, best.z]);
   }
-  addHelperBone(h, 'chest_top', 'spine_03', chestTop.toArray());
+  const rChest = chestFit.r;
   // gut: vertical segment through the centre of the belly vertices, top cap below spine_03
   const gz = owned.belly.reduce((a, p) => a + p.z, 0) / owned.belly.length;
   const s1 = BP('spine_01'), s2 = BP('spine_02');
@@ -1551,9 +2281,10 @@ export async function build(lib) {
   gHi.y = Math.max(gLo.y + 0.05, Math.min(gHi.y, s3.y - rGut * 0.85));
   rGut = radius('belly', gLo, gHi, 0.78);
   addHelperBone(h, 'gut_lo', 'spine_01', gLo.toArray());
+  addHelperBone(h, 'pelvis_top', 'pelvis', BP('pelvis').lerp(BP('spine_01'), 0.25).toArray());
   addHelperBone(h, 'gut_hi', 'spine_01', gHi.toArray());
   const HB = {
-    head: ['head', 'head_top'], chest: ['spine_03', 'chest_top'], belly: ['gut_lo', 'gut_hi'], pelvis: ['pelvis', 'spine_01'],
+    head: ['head', 'head_top'], chest: ['chest_r', 'chest_l'], belly: ['gut_lo', 'gut_hi'], pelvis: ['pelvis', 'pelvis_top'],
     upperarm_l: ['upperarm_l', 'lowerarm_l'], lowerarm_l: ['lowerarm_l', 'hand_l'], hand_l: ['hand_l', 'middle_02_l'],
     upperarm_r: ['upperarm_r', 'lowerarm_r'], lowerarm_r: ['lowerarm_r', 'hand_r'], cleaver: ['cleaver_root', 'cleaver_tip'],
     thigh_l: ['thigh_l', 'calf_l'], calf_l: ['calf_l', 'foot_l'], foot_l: ['foot_l', 'ball_l'],
@@ -1562,12 +2293,20 @@ export async function build(lib) {
   const hitboxes = {}, capsules = {};
   for (const [name, [b0, b1]] of Object.entries(HB)) {
     const a = BP(b0), b = BP(b1);
-    let r = name === 'chest' ? rChest : name === 'belly' ? rGut : radius(name, a, b, name === 'cleaver' ? 0.6 : name === 'head' ? 0.85 : 0.8);
-    if (name === 'pelvis') r = Math.min(r, 0.6);
+    let r = name === 'chest' ? rChest : name === 'belly' ? rGut : radius(name, a, b, name === 'cleaver' ? 0.97 : name === 'head' ? 0.85 : 0.8);
+    if (name === 'pelvis') r = Math.min(r, 0.56);
+    if (name === 'cleaver') r = Math.max(0.18, Math.min(0.27, r));
     hitboxes[name] = [b0, +r.toFixed(3), b1];
     capsules[name] = { bone: b0, to: b1, radius: +r.toFixed(3), length: +a.distanceTo(b).toFixed(3) };
   }
   console.log('  hitboxes', Object.entries(hitboxes).map(([k, v]) => `${k}:${v[1]}`).join(' '));
+  {
+    const a = BP('cleaver_root'), b = BP('cleaver_tip'), r = hitboxes.cleaver[1];
+    const bv = [];
+    for (let i = 0; i < bladePart.pos.length; i += 3) bv.push(new THREE.Vector3(bladePart.pos[i], bladePart.pos[i + 1], bladePart.pos[i + 2]));
+    const reach = Math.max(...bv.map((p) => p.distanceTo(toFull(CI.W0).reduce((v, x, k) => (v.setComponent(k, x), v), new THREE.Vector3()))));
+    console.log(`  cleaver capsule: ${(bv.filter((p) => dSeg(p, a, b) <= r).length / bv.length * 100).toFixed(0)}% of the blade vertices inside, blade reaches ${reach.toFixed(2)} m from the wrist, capsule ${a.distanceTo(b).toFixed(2)} m + 2 x r ${r}`);
+  }
   // self-check (rest pose): which capsule does a ray hit first?
   {
     const caps = Object.entries(hitboxes).map(([name, [b0, r, b1]]) => ({ name, a: BP(b0), b: BP(b1), r }));
@@ -1576,27 +2315,52 @@ export async function build(lib) {
       for (const c of caps) for (let t = 0; t < 12; t += 0.01) { const p = o.clone().addScaledVector(d, t); if (dSeg(p, c.a, c.b) <= c.r) { if (!best || t < best.t) best = { t, name: c.name }; break; } }
       return best?.name;
     };
-    const hc = scl(HC, 1).map((x) => x * S), tb = scl(T.Bp, S);
+    const hc = toFull(HC), tb = toFull(T.Bp);
     const tests = {
       'head front': [[hc[0], hc[1], 6], [0, 0, -1]], 'head back': [[hc[0], hc[1], -6], [0, 0, 1]], 'head side': [[6, hc[1] - 0.05, hc[2]], [-1, 0, 0]],
       'head from below (8 m, eye height)': [[0, 1.7, 8], norm(sub(hc, [0, 1.7, 8]))],
       'tumour from behind': [[tb[0], tb[1], -6], [0, 0, 1]], 'tumour from behind-above': [[tb[0], tb[1] + 3, -6], norm(sub(tb, [tb[0], tb[1] + 3, -6]))],
       'pecs front': [[0.35, s3.y + 0.25, 6], [0, 0, -1]], 'gut front': [[0, s1.y + 0.1, 6], [0, 0, -1]],
+      'cleaver point (side)': (() => { const p = toFull(CI.at(CI.L - 0.03, CI.tipQ - 0.01, 0)); return [add(p, scl(CI.td, -6)), CI.td]; })(),
+      'cleaver edge belly (side)': (() => { const p = toFull(CI.at(0.45, CI.qBotF(0.45) - 0.012, 0)); return [add(p, scl(CI.td, -6)), CI.td]; })(),
+      'cleaver spine (side)': (() => { const p = toFull(CI.at(0.3, CI.qTopF(0.3) + 0.01, 0)); return [add(p, scl(CI.td, -6)), CI.td]; })(),
     };
     console.log('  first capsule hit:', Object.entries(tests).map(([k, [o, d]]) => `${k} -> ${first(new THREE.Vector3(...o), new THREE.Vector3(...d))}`).join('; '));
   }
+  // The library clips sink this short-legged, heavy-booted body's soles ~4-8 cm into the floor in idle / walk
+  // stance / attacks (retargetClips scales the clips' pelvis drop by the pelvis-height ratio while the short legs
+  // bend at their own lengths, and the long boots dip at heel and toe). Raising the pelvis REST bone does not help
+  // (its children keep their rest, so it only raises that ratio - the feet sank further); instead the MESH is
+  // raised against the skeleton by MESH_LIFT: every clip carries the boots up by exactly that much (only the
+  // rarely seen bind pose floats by it).
+  if (PELVIS_LIFT) liftPelvis(h, PELVIS_LIFT);
+  for (const a of new Set([h.pos, ...parts.map((p) => p.pos)])) for (let i = 1; i < a.length; i += 3) a[i] += MESH_LIFT;
+  h.height += MESH_LIFT; h.headTop = h.height;
 
-  // the clips already carry a zombie hunch: only lift the neck / head so the hood looks at its prey, drop the
-  // shoulders forward a little, and keep the left hand balled into a fist
+  // Pose offsets (local euler deg, added after the clip every frame):
+  //  - the clips' zombie hunch is only partly straightened in the lower / mid spine (keeps a hunched, heavy 4 m
+  //    silhouette), and the neck / head are lifted against the clips' head drop so the face reads from below:
+  //    walk_a's head hangs ~45-50 deg face-down, which hid the eyes and sewn mouth (the head weak point) behind the
+  //    sack's crown at 9-13 m (measured in game: -64 deg raw, -38 with neck -16 / head -11). With neck -22 /
+  //    head -16 the face looks ~27-32 deg down in walk_a (readable from a player's eye height at 9-13 m), about
+  //    level in idle, slightly up in run; the scream's thrown-back head reaches ~80 deg (a roar to the sky, short
+  //    of vertical). A slight head tilt gives a cocked look.
+  //  - the cleaver arm is held ~20 deg out from the body so the 1.6 m blade swings past the thigh / apron and never
+  //    back into the shoulder blade (validated over idle / walk_a / run / stagger / attack / leap / scream)
+  //  - shoulders dropped forward a little, the left hand balled into a fist
   const poseOffsets = {
-    spine_03: [2, 0, 0], neck_01: [-18, 0, 0], head: [-16, 0, 0],
-    clavicle_l: [0, 0, -5], clavicle_r: [0, 0, 5],
+    spine_01: [-7, 0, 0], spine_02: [-7, 0, 0], spine_03: [-3, 0, 0], neck_01: [-22, 0, 0], head: [-16, 0, 6],
+    clavicle_l: [0, 0, -5], clavicle_r: [0, 0, 5], upperarm_r: [0, 0, -20],
   };
   for (const f of ['index', 'middle', 'ring', 'pinky']) Object.assign(poseOffsets, { [f + '_01_l']: [62, 0, 0], [f + '_02_l']: [75, 0, 0], [f + '_03_l']: [55, 0, 0] });
   Object.assign(poseOffsets, { thumb_02_l: [30, 0, 0], thumb_03_l: [35, 0, 0] });
+  // rage look for brains/butcher.js: these meshes' emissive masks light up in this colour (x intensity); the
+  // tumour (the rage weak point) also pulses
+  const rage = { color: [1, 0.35, 0.08], intensity: 2.8, meshes: ['body', 'cleaver', 'tumour'], pulse: ['tumour'], intensityOf: { tumour: 1.5 } };
   return {
-    human: h, parts, budget: 18000, partBudget: { body: 8000, trousers: 1500, boots: 650 },
-    extras: { poseOffsets, hitboxes, capsules, weakPoints: { head: 'sack-hooded head', chest: 'upper torso + glowing back tumour (rage phase)' }, archetype: 'boss', gender: 'male', boss: 'butcher' },
-    lod1: { budget: 5000, texScale: 0.5, drop: ['eyes'], partBudget: { body: 2000, trousers: 420, boots: 220, hood: 320, apron: 360, tumour: 260, cleaver: 300, cleaver_flesh: 160, chains: 760 } },
+    human: h, parts, budget: 18000, partBudget: { body: 7300, trousers: 1300, boots: 650 },
+    extras: { poseOffsets, hitboxes, capsules, rage, weakPoints: { head: 'sack-hooded head', chest: 'upper torso across the shoulder blades + the glowing back tumour (rage phase)' }, archetype: 'boss', gender: 'male', boss: 'butcher' },
+    // bosses never switch to LOD1 in game (build with --nolod); if one is built anyway the chains stay whole links
+    lod1: { budget: 6000, texScale: 0.25, drop: ['eyes'], partBudget: { body: 2400, trousers: 420, boots: 220, hood: 500, apron: 400, tumour: 260, cleaver: 300, cleaver_flesh: 200 } },
   };
 }
