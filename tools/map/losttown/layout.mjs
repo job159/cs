@@ -44,6 +44,14 @@ export const META = {
   size: [142, 152],
   // [minx, miny, minz, maxx, maxy, maxz]: playable/nav bounds (facades, backdrop and sky extend beyond)
   bounds: [-76, -2, -76, 68, 45, 76],
+  // lightmap budget (tools/map/compile.mjs): 4 texel/m packs into 3 x 2048² RGBM atlases (+ sun masks; maxAtlases 4 is only a
+  // safety cap: its 78 % fill estimate would scale 3 down to 2.8 texel/m although the packer reaches 95 %), keeps the bake
+  // under ~1.6 GB of Node memory and the GPU share near 130 MB on phones; 48 adaptive samples for clean shadowed walls.
+  // The realtime 2048 sun shadow map adds the crisp near shadows on top of the baked sun mask.
+  lightmapResolution: 4, maxAtlases: 4, lightmapSamples: 48,
+  // draw calls: light materials (< 150k triangles map-wide: props, frames, trims, signs, wires) merge until they need at
+  // most ceil(total / 12000) meshes -> 118 meshes in all instead of 254 (one per material x 40 m chunk)
+  trisPerMesh: 12000,
   killY: LEVEL.killY,
   axes: '+X east, +Y up, +Z south; north = -Z',
   yawConvention: 'forward = (-sin(yaw), 0, -cos(yaw)); 0 = N, -PI/2 = E, PI = S, PI/2 = W',
@@ -72,14 +80,32 @@ export const ENV = {
   },
   sky: {
     hdri: 'overcast_soil_puresky', res: '1k', alt: ['kloppenheim_01_puresky', 'kloppenheim_07_puresky'],
-    rotationDeg: 0, envIntensity: 0.55, backgroundIntensity: 0.7,
+    // -157: the HDRI's bright cloud gap sits on the sun bearing (242 deg); checked in captures/map/skyline_rotpano.png
+    rotationDeg: -157, envIntensity: 0.55, backgroundIntensity: 0.7,
     tint: '#9fae94', note: 'tint the background towards green-grey (reference: dark olive storm clouds); optional cloud dome layer with slow scroll + lightning flashes (round 10)',
   },
   fog: { color: '#5b6459', density: 0.0105, note: 'FogExp2: ~50% at 80 m — the ends of the arms (60-75 m) dissolve; skyline towers are silhouettes' },
-  exposure: 1.0,
-  grade: 'desaturated (-15%), green-grey midtones, cool shadows (#6f7d86), warm sun highlights (#ffd3a0); emissive signs read saturated amber/red',
+  exposure: 1.6,   // the canyons sit in shade under a storm sky: 1.6 keeps them readable (tuned in game, captures/map/losttown/exp)
+  // colour grade (Renderer.setGrade, linear multipliers): desaturated, green-grey midtones, cool shadows, warm sun
+  // highlights; emissive signs stay saturated amber / red (they sit in the highlight range)
+  grade: {
+    saturation: 0.84, contrast: 1.06,
+    shadowTint: [0.9, 0.98, 1.04], highlightTint: [1.06, 1.0, 0.9], gain: [0.96, 1.0, 0.95],
+    note: 'desaturated (-16%), green-grey midtones, cool shadows (#6f7d86), warm sun highlights (#ffd3a0); emissive signs read saturated amber/red',
+  },
   ambient: { hemiSky: '#8e9a8a', hemiGround: '#3d3a33', hemiIntensity: 0.35, note: 'only if the HDRI env is disabled at low quality' },
   wind: { dirDeg: 60, strength: 0.3, note: 'newspapers and ash drift NE; awnings and banners flutter; smoke columns lean NE' },
+  // runtime ambient FX (map.json fx -> game/src/world/mapAmbient.js): animated soft smoke plumes with fire at the base,
+  // ash and paper scraps drifting NE with the wind around the camera
+  fx: {
+    wind: [0.87, -0.5],
+    smoke: [
+      { id: 'FX_TOWER', pos: [200, 106, -60], height: 300, r0: 8, r1: 34, drift: [199, -115], life: 150, count: 56, opacity: 0.85, color: '#2e2924', color1: '#55524c', fog: 0.9, note: 'burning grid tower in the skyline (BD_SKYLINE grid_burning)' },
+      { id: 'FX_CAR_E', pos: [58.5, 1.0, -18.0], height: 26, r0: 0.7, r1: 8, drift: [13, -7.5], life: 15, count: 30, opacity: 0.8, color: '#3b3733', color1: '#7a766e', fire: 12, fireWidth: 1.1, fireHeight: 1.5, fireIntensity: 5, note: 'burning sedan E_CAR_X, East Cross (L_FIRE_E)' },
+      { id: 'FX_BARREL_SW', pos: [-10.5, 0.95, 11.0], height: 11, r0: 0.25, r1: 2.6, drift: [4, -2.3], life: 8, count: 12, opacity: 0.55, color: '#3d3934', color1: '#77736c', fire: 7, fireWidth: 0.3, fireHeight: 0.75, fireIntensity: 5, note: 'burning barrel C_FIRE_SW (L_FIRE_C)' },
+    ],
+    ash: { count: 110, radius: 14, size: 0.06, paper: 0.1, fall: 0.35, color: '#6e6a64', color1: '#b8b3a7' },
+  },
   ambientFx: ['ash flakes + paper scraps blowing down the arms', 'smoke columns from the burning car (E cross) and behind the skyline', 'distant thunder + sirens', 'flies over dumpsters', 'dripping water under the rail bridge', 'flickering signage'],
 };
 
@@ -520,9 +546,9 @@ export const LANDMARKS = {
   },
   ledGantry: {
     id: 'LM_LED', zone: 'west', name: 'LED 撤離告示門架', nameEn: 'LED evacuation gantry',
-    x: -69.5, posts: [[-69.5, -8.0], [-69.5, 8.0]], postSize: 1.2, postH: 13.0, beamY: [11.6, 12.4],
-    panel: { z: [-4.5, 4.5], y: [7.8, 11.4], faceX: -69.0, facing: 'E', pixel: 'amber dot-matrix (emissive, 2 px dots, scanlines)', cycle: ['LEAVE TOWN NOW!!', '封城中　立即撤離', 'QUARANTINE ZONE', 'NO ENTRY'] },
-    roadSign: { text: 'HARBOR RD → · 港口路', y: [6.2, 7.2], z: [-1.5, 1.5] },
+    x: -69.5, posts: [[-69.5, -8.0], [-69.5, 8.0]], postSize: 1.2, postH: 16.2, beamY: [15.2, 16.0],
+    panel: { z: [-4.5, 4.5], y: [7.4, 14.2], faceX: -69.0, facing: 'E', lines: ['LEAVE', 'TOWN', 'NOW!!'], pixel: 'amber dot-matrix (emissive round dots, 0.2 m pitch), three stacked lines like the reference board; red 封城中 立即撤離 ticker along the bottom', cycle: ['LEAVE TOWN NOW!!', '封城中　立即撤離', 'QUARANTINE ZONE', 'NO ENTRY'] },
+    roadSign: { text: 'HARBOR RD → · 港口路', y: [5.9, 6.9], z: [-1.5, 1.5] },
     barricade: {
       x: [-71.1, -68.6],
       parts: [
@@ -778,12 +804,12 @@ export const BOSS_ARENAS = {
 export const LIGHTS = [
   { id: 'L_FIRE_E', type: 'point', realtime: true, pos: [58.5, 1.1, -18.0], color: '#ff8a3a', intensity: 30, range: 13, flicker: { kind: 'fire', speed: 1.0, amount: 0.35 }, note: 'burning car, East Cross' },
   { id: 'L_FIRE_C', type: 'point', realtime: true, pos: [-10.5, 1.4, 11.0], color: '#ff9442', intensity: 14, range: 8, flicker: { kind: 'fire', speed: 1.4, amount: 0.4 }, note: 'barrel fire at the SW plaza corner' },
-  { id: 'L_LED_W', type: 'point', realtime: true, pos: [-67.0, 9.2, 0.0], color: '#ffae2e', intensity: 22, range: 20, flicker: { kind: 'scroll', speed: 0.25, amount: 0.15 }, note: 'LED gantry wash on the barricade' },
+  { id: 'L_LED_W', type: 'point', realtime: true, pos: [-67.0, 10.6, 0.0], color: '#ffae2e', intensity: 30, range: 22, flicker: { kind: 'scroll', speed: 0.25, amount: 0.15 }, note: 'LED gantry wash on the barricade' },
   { id: 'L_DELI', type: 'point', realtime: true, pos: [-12.5, 3.9, -33.0], color: '#dff2ff', intensity: 9, range: 9, flicker: { kind: 'fluorescent', speed: 3.0, amount: 0.8 }, note: 'failing tubes inside the deli' },
   { id: 'L_BEACON_E', type: 'spot', realtime: true, pos: [41.3, 3.5, -2.0], color: '#ffa22a', intensity: 14, range: 12, flicker: { kind: 'rotate', speed: 1.4, amount: 1.0 }, note: 'rotating beacon on the army truck cab' },
   { id: 'L_LAMP_S', type: 'point', realtime: true, pos: [7.0, 7.2, 44.0], color: '#ffb46b', intensity: 10, range: 15, flicker: { kind: 'sodium', speed: 0.6, amount: 0.9 }, note: 'failing sodium streetlamp (LAMP_9)' },
   // baked
-  { id: 'LB_LED_PANEL', type: 'area', realtime: false, pos: [-69.0, 9.6, 0.0], size: [9, 3.6], color: '#ffae2e', intensity: 6, note: 'LED panel emissive' },
+  { id: 'LB_LED_PANEL', type: 'area', realtime: false, pos: [-68.7, 10.8, 0.0], size: [9, 6.8], color: '#ffae2e', intensity: 8, note: 'LED panel emissive' },
   { id: 'LB_BRIDGE_1', type: 'point', realtime: false, pos: [-3.5, 4.9, -63.0], color: '#ffb066', intensity: 8, range: 10 },
   { id: 'LB_TUNNEL_END', type: 'point', realtime: false, pos: [0, 4.5, -75], color: '#ff9f50', intensity: 6, range: 9, note: 'distant lamp at the far end of the underpass (silhouettes zombies)' },
   { id: 'LB_SIGNALS', type: 'emissive', realtime: false, note: 'bike signal lenses (amber + green) on the 4 masts, blinking amber (emissive animation only)' },

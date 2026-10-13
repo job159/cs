@@ -1,6 +1,8 @@
 // Multi-view screenshots of a map in the running game (one headless browser, several camera views).
 //   node tools/map/mapshots.mjs <mapId> [--views views.json] [--out captures/map/<map>] [--q high] [--w 1280 --h 720]
-// views.json: [{ "name": "corner", "pos": [x, y, z], "yaw": 0.5, "pitch": 0.05, "hideVm": true }, ...]
+// views.json: [{ "name": "corner", "pos": [x, y, z], "yaw": 0.5, "pitch": 0.05, "hideVm": true, "js": "<page code run first>" }, ...]
+//   [--eval script.js [--evalTimeout ms]] runs a page script after load (walk test, perf probe) and prints its result
+//   (pitch > 0 looks down; `js` e.g. "__cf.renderer.post.exposure = 1.4;" or "__cf.renderer.setQuality('medium');")
 // Without --views it shoots the map's player spawns and spawners. Uses the dev server (http://127.0.0.1:5190)
 // and the same system-wide browser slots as tools/shot.mjs (SHOT_MAX, default 3).
 import { spawn, execFileSync } from 'node:child_process';
@@ -40,7 +42,9 @@ while (!lockFile) {
   }
   if (!lockFile) { if (Date.now() - t0 > 600000) { console.error('no browser slot'); process.exit(3); } await new Promise((r) => setTimeout(r, 700)); }
 }
-const hard = setTimeout(() => { console.error('hard timeout'); cleanup(); process.exit(2); }, 600000);
+const hard = setTimeout(() => { console.error('hard timeout'); cleanup(); process.exit(2); }, 600000 + (opt('eval') ? +opt('evalTimeout', 1800000) : 0));
+// keep the slot lock fresh (other runs reclaim locks older than 4 min) while a long --eval is running
+setInterval(() => { try { const t = new Date(); fs.utimesSync(lockFile, t, t); } catch { /* gone */ } }, 60000).unref();
 hard.unref();
 
 child = spawn(exe, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${path.join(os.tmpdir(), 'cf-mapshot-' + port)}`,
@@ -57,11 +61,14 @@ ws.onmessage = (e) => {
   const m = JSON.parse(e.data);
   if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
   else if (m.method === 'Runtime.exceptionThrown') logs.push('EXCEPTION: ' + (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text));
-  else if (m.method === 'Runtime.consoleAPICalled' && (m.params.type === 'error')) logs.push('error: ' + m.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
+  else if (m.method === 'Runtime.consoleAPICalled') {
+    const txt = m.params.args.map((a) => a.value ?? a.description ?? '').join(' ');
+    if (m.params.type === 'error') logs.push('error: ' + txt); else if (/^\[(map|app)\]/.test(txt)) logs.push(txt);
+  }
 };
 const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
-const ev = async (expr) => {
-  const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true, timeout: 120000 });
+const ev = async (expr, timeout = 120000) => {
+  const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true, timeout });
   if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text);
   return r.result?.result?.value;
 };
@@ -70,13 +77,24 @@ await send('Page.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
 await send('Page.navigate', { url: `${base}?map=${map}&match=0&q=${q}` });
 const tl = Date.now();
-while (Date.now() - tl < 120000) {
+const loadMs = +opt('load', 300000);
+while (Date.now() - tl < loadMs) {
   await new Promise((r) => setTimeout(r, 300));
   if (await ev('document.readyState === "complete" && window.__shotReady === true && !!(window.__cf && window.__cf.game && window.__cf.game.player)').catch(() => false)) break;
 }
+console.log(`page ready after ${((Date.now() - tl) / 1000).toFixed(1)} s`);
 await new Promise((r) => setTimeout(r, 1500));
 const info = await ev(`(() => { __cf.stop(); const g = __cf.game; const d = g.world.def || {};
   return { spawns: d.playerSpawns, spawners: (d.spawners || []).map((s) => [s.pos, s.facing]), stats: d.stats }; })()`);
+// --eval <file>: run a page script first (async body, `return` value printed; up to --evalTimeout ms, default 30 min),
+// e.g. tools/map/walktest.js or a perf probe; without --views no default views are shot after it
+if (opt('eval')) {
+  const code = fs.readFileSync(opt('eval'), 'utf8');
+  const t0 = Date.now();
+  const out = await ev(`(async () => { ${code} })()`, +opt('evalTimeout', 1800000));
+  console.log(`eval (${((Date.now() - t0) / 1000).toFixed(1)} s) -> ${typeof out === 'string' ? out : JSON.stringify(out)}`);
+  if (!views) views = [];
+}
 if (!views) {
   views = [];
   (info.spawns || []).slice(0, 2).forEach((p, i) => views.push({ name: `spawn${i}`, pos: [p.x ?? p[0], p.y ?? p[1], p.z ?? p[2]], yaw: (p[3] ?? 0), pitch: 0.05 }));
@@ -84,7 +102,8 @@ if (!views) {
 }
 fs.mkdirSync(outDir, { recursive: true });
 for (const v of views) {
-  const r = await ev(`(() => { const g = __cf.game; g.player.pos.set(${v.pos.join(',')}); g.player.yaw = ${v.yaw}; g.player.pitch = ${v.pitch ?? 0};
+  const r = await ev(`(() => { const g = __cf.game; ${v.js || ''}
+    g.player.pos.set(${v.pos.join(',')}); g.player.yaw = ${v.yaw}; g.player.pitch = ${v.pitch ?? 0};
     if (g.vm) g.vm.visible = ${v.hideVm === false ? 'true' : 'false'};
     if (g.hud && g.hud.root) g.hud.root.style.display = 'none';
     document.querySelectorAll('#hud, .fe-lockhint, #fe').forEach((e) => { e.style.display = 'none'; });

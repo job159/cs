@@ -95,10 +95,11 @@ export const MATERIALS = {
   // ---------------------------------------------------------------- street furniture
   chainlink: { set: 'chainlink', surf: 'metal', alphaTest: 0.45, side: 'double', lm: 0.5, metal: 1 },
   grate: { set: 'grate', surf: 'grate', alphaTest: 0.5, side: 'double', lm: 0.6, metal: 1, tile: 1 },
+  perf_plate: { set: 'perforated', surf: 'grate', lm: 0.6, tile: 0.66 },   // perforated ramp plate (opaque holes over a dark backing)
   pole_wood: { set: 'wood_planks', surf: 'wood', tile: [0.6, 3], color: '#6e5a45', lm: 1 },
   wire: { set: null, surf: 'metal', color: '#141414', rough: 0.7, lm: 0, cast: false },
   rubber: { set: null, surf: 'dirt', color: '#1b1b1b', rough: 0.8, lm: 1 },
-  sandbag: { set: 'canvas', surf: 'sand', tile: 0.8, color: '#a39272', lm: 1 },
+  sandbag: { set: 'canvas', surf: 'sand', tile: 0.8, color: '#c9c4b2', lm: 1 },   // polypropylene sand-bag beige (the canvas set is already warm)
   tape_police: { set: null, surf: 'wood', color: '#e8c21a', rough: 0.6, lm: 0, cast: false, side: 'double' },
   cone_orange: { set: null, surf: 'wood', color: '#d4501c', rough: 0.5, lm: 1 },
   reflective_white: { set: null, surf: 'wood', color: '#d8d8d2', rough: 0.5, lm: 1 },
@@ -112,7 +113,7 @@ export const MATERIALS = {
   // ---------------------------------------------------------------- vehicles (tinted per vehicle with vertex colour)
   car_paint: { set: null, surf: 'metal', rough: 0.42, metal: 0.3, lm: 1, env: 1.0 },
   car_paint_worn: { set: 'metal_worn', surf: 'metal', tile: 2.4, rough: 0.8, lm: 1, env: 0.8 },
-  car_burnt: { set: 'metal_rusty', surf: 'metal', tile: 1.4, color: '#6b625c', lm: 1 },
+  car_burnt: { set: 'metal_worn', surf: 'metal', tile: 1.4, color: '#8a827c', lm: 1 },   // charred grey-brown (metal_rusty x grey read as a black hole in the shade)
   car_chrome: { set: null, surf: 'metal', color: '#b8bcc0', rough: 0.25, metal: 1, lm: 1, env: 1.5 },
   car_plastic: { set: null, surf: 'metal', color: '#1e1f20', rough: 0.8, lm: 1 },
   car_glass: { set: null, surf: 'glass', color: '#121a20', rough: 0.05, opacity: 0.45, lm: 0, env: 2.2, cast: false },

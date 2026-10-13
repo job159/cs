@@ -1369,18 +1369,19 @@ function ledGantry(kit, L) {
     flat(kit, rect2(-hw + 0.12, py0 + 0.1, hw - 0.12, py1 - 0.1), 0.0, 'frame_dark', { tint: '#151514' });
     for (let x = -hw + 0.12 + 0.72; x < hw - 0.2; x += 0.72) flat(kit, rect2(x - 0.008, py0 + 0.1, x + 0.008, py1 - 0.1), 0.002, 'steel_dark', { tint: '#2c2b29' });
     for (let y = py0 + 0.1 + 0.48; y < py1 - 0.15; y += 0.48) flat(kit, rect2(-hw + 0.12, y - 0.008, hw - 0.12, y + 0.008), 0.002, 'steel_dark', { tint: '#2c2b29' });
-    // LEAVE TOWN / NOW!! in amber (pitch 0.14), the 封城中 立即撤離 ticker in red underneath (pitch 0.036)
-    const p = 0.14, d = 0.1;
-    const l1 = 'LEAVE TOWN', l2 = 'NOW!!';
-    const top1 = py1 - 0.32;
-    ledDots(kit, l1, LED5, -((ledWidth(l1, LED5) - 1) * p) / 2, top1, p, d, 'lamp_amber', true);
-    ledDots(kit, l2, LED5, -((ledWidth(l2, LED5) - 1) * p) / 2, top1 - 10 * p, p, d, 'lamp_amber', true);
+    // LEAVE / TOWN / NOW!! stacked in big amber dots like the reference board (lines from the layout, pitch fitted to
+    // the panel: 3 x 7 rows + 2 x 3 gap rows above a 0.95 m strip), the 封城中 立即撤離 ticker in red underneath (pitch 0.036)
+    const lines = P.lines || ['LEAVE TOWN', 'NOW!!'];
+    const rowsN = lines.length * 7 + (lines.length - 1) * 3;
+    const p = Math.min(0.2, (py1 - py0 - 0.2 - 0.95 - 0.3) / rowsN, (W - 2.6) / Math.max(...lines.map((l) => ledWidth(l, LED5)))), d = p * 0.74;
+    const top1 = py1 - 0.1 - 0.3;
+    lines.forEach((l, i) => ledDots(kit, l, LED5, -((ledWidth(l, LED5) - 1) * p) / 2, top1 - i * 10 * p, p, d, 'lamp_amber', true));
     const pt = 0.036, tick = '封城中 立即撤離';
     const font16 = { ...LED, ' ': Array(16).fill('.'.repeat(8)) };
     ledDots(kit, tick, font16, -((ledWidth(tick, font16) - 1) * pt) / 2, py0 + 0.2 + 15 * pt, pt, pt * 0.78, 'lamp_red', false);
-    // side marker chevrons (amber) flanking the main lines
+    // side marker chevrons (amber) flanking the middle line
     for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {
-      const cx = s * (hw - 0.75 - i * 0.36), cy = top1 - 13 * p;
+      const cx = s * (hw - 0.75 - i * 0.36), cy = top1 - ((lines.length - 1) * 5 + 3) * p;
       for (let k = -3; k <= 3; k++) flat(kit, circle(d / 2, 8).map(([a, b]) => [cx - s * Math.abs(k) * p * 0.6 + a, cy + k * p + b]), 0.006, 'lamp_amber');
     }
     // hangers to the truss, cable, a service walkway with a rail along the bottom

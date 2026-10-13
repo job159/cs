@@ -226,7 +226,7 @@
 | 地標 | 位置 | 規格與重點 |
 |---|---|---|
 | **鐵路高架橋＋LOST TOWN 字牌**（LM_BRIDGE） | x −26..26, z −74..−62 | 鉚接鋼板梁（綠灰漆、鏽痕）架在石面混凝土橋台上；橋下淨高 5.2 m、橋面 6.6 m、欄杆頂 7.8 m。欄杆上 8 塊傾斜的米白字板「LOST TOWN」（每塊 2.0 × 2.2 m，其中一塊歪掉），從堡壘一路看得到。橋下掛一面綠色路牌「↑ N QUARRY ST · 採石場街」（一個吊架斷了）。兩盞籠罩鈉燈（一盞壞了），有滴水。涵洞口用白色貨櫃橫擋，兩側疊木箱，西側留 1.37 m 殭屍縫。 |
-| **LED 撤離告示門架**（LM_LED） | x −69.5，橫跨西街盡頭 | 兩座 1.2 m 鋼格塔（高 13 m）加頂部桁架；9 × 3.6 m 琥珀色點陣面板（y 7.8–11.4）朝東輪播「LEAVE TOWN NOW!!」／「封城中 立即撤離」／「QUARANTINE ZONE」／「NO ENTRY」；下掛綠色路牌「HARBOR RD → · 港口路」。路障是兩堵 2 層高木箱牆，中間一個貨櫃（門朝堡壘）；有一個倒下的木箱，形成 2 m 殭屍縫。從堡壘往西看正好落在視線盡頭，WSW 的低角度陽光讓它呈剪影。 |
+| **LED 撤離告示門架**（LM_LED） | x −69.5，橫跨西街盡頭 | 兩座 1.2 m 鋼格塔（高 16.2 m）加頂部桁架；9 × 6.8 m 琥珀色點陣面板（y 7.4–14.2），像原作一樣三行大字「LEAVE／TOWN／NOW!!」（點距 0.2 m），底部紅色跑馬燈「封城中 立即撤離」（輪播文案：LEAVE TOWN NOW!!／封城中 立即撤離／QUARANTINE ZONE／NO ENTRY）；下掛綠色路牌「HARBOR RD → · 港口路」。路障是兩堵 2 層高木箱牆，中間一個貨櫃（門朝堡壘）；有一個倒下的木箱，形成 2 m 殭屍縫。從堡壘往西看正好落在視線盡頭，WSW 的低角度陽光讓它呈剪影。 |
 | **LOST TOWN 轉角大飯店**（C_NW） | 西北切角 | 切角面 3–4 樓（y 10.5–16.8）掛兩排傾斜字板 LOST／TOWN，其中一塊只靠鐵鍊吊著；屋頂有木製水塔（紐約式）。前方是一座自行車號誌桅桿。 |
 | **廣告轉角**（C_NE） | 東北切角 | 屋頂鋼架加維修走道，掛 3 面廣告牌（y 22.5–27）：FIZZ COLA「ICE COLD」、褪色電影海報、FIZZ COLA「DELICIOUS AND REFRESHING」。海報紙剝落。一樓是咖啡館，紅白遮陽棚已破。 |
 | **自行車號誌桅桿**（LM_SIGNALS） | 四個切角 | 直徑 0.3 m 立柱，7 m 懸臂在 y 6.2 伸到車道上方，每支懸臂掛 2 組黃色號誌（綠色自行車燈、琥珀色閃燈）。懸臂可被 BOSS 撞彎或撞斷（bossBreakable）；最終 BOSS 第二階段會拔起來丟。 |
@@ -299,7 +299,7 @@
 - **頭頂結構不可烘進導航**：鐵橋橋面、所有遮陽棚、防火梯、號誌懸臂、LED 門架與面板、街燈燈頭、招牌、候車亭頂。否則下方地面會從單層網格中消失。這正是原作「站在紅白遮陽棚下殭屍走不到」的成因，我們刻意修正。
 - player_clip 只放進玩家碰撞，**不放進導航**，殭屍可以穿過路障縫。
 - 旗標：WALK（街道、人行道、口袋、甲板、斜坡、店內）、CLIMB（堡壘外牆、路障木箱）、NOBOSS（甲板、斜坡、殭屍縫、後巷、涵洞口袋、店內；建議新增的位元 16）、BLOCK（車頂、木箱頂等孤島）。
-- 烘焙後只保留與堡壘甲板連通的區塊，其餘孤島清除 WALK。
+- 烘焙後只保留與堡壘甲板連通的區塊，其餘孤島清除 WALK。泛洪種子是玩家出生點與每個出怪點的地面點：窗戶／屋頂出怪點用它的 `exit`（從牆面或屋簷上的 `pos` 起算會把後面的樓板、店面天花板變成可走孤島，執行期 `nearestWalkable()` 會把殭屍丟上去——整合時在熟食店 2 樓樓板發現並修正）。
 - `navcheck.mjs` 以同樣的規則（步高 0.55 m、8 鄰接、禁止切角、半徑 0.3 m）粗略柵格化藍圖：目前 24,368 個可走格中有 24,366 個與堡壘連通（另外 2 格是牆角的孤立碎格，烘焙時會清除）；28 個出怪點、10 個補給點、2 個 BOSS 落點、8 個玩家出生點全部可到達。
 - 碰撞簡化原則：建築用盒狀外殼；一樓店面凹進 0.3 m；可進入的兩家店有室內碰撞；車輛用 2–3 個盒子；路障木箱、貨櫃、堡壘用精確盒子；斜坡用楔形；遮陽棚與招牌有碰撞（子彈會打到），但不烘進導航。頂部在 y 45 加一層 clip 天花板；所有屋頂都上不去（可走地面 1 m 內沒有可攀的邊緣）。
 
@@ -309,12 +309,13 @@
 
 - **時間**：初秋 17:10，風暴鋒面逼近，太陽從雲縫露出。
 - **太陽**：方位 242°（西南偏西）、仰角 30°，`dir = [−0.765, 0.5, 0.407]`，色 #ffdcb4，強度 2.0；2048 陰影貼圖跟隨玩家（對齊 texel），範圍 40 m。陽光順著西街與東街照進來，LED 門架呈剪影；堡壘屋頂與高樓上層有暖光，南北向街道峽谷留在冷色陰影中。
-- **天空**：Poly Haven `overcast_soil_puresky`（1k HDR，備選 `kloppenheim_01_puresky`），背景偏暗綠灰（#9fae94 色調），envIntensity 0.55；可加一層緩慢流動的雲罩，第 10 回合加閃電。
+- **天空**：Poly Haven `overcast_soil_puresky`（1k HDR，備選 `kloppenheim_01_puresky`），旋轉 −157°（HDRI 的亮雲缺口對準 242° 的太陽方位），背景偏暗綠灰（#9fae94 色調），envIntensity 0.55；可加一層緩慢流動的雲罩，第 10 回合加閃電。
 - **霧**：FogExp2 #5b6459，density 0.0105（約 80 m 處 50%），讓各街盡頭（60–75 m）淡出，天際線只剩剪影。
-- **調色**：降飽和 15%，中間調綠灰、陰影冷色（#6f7d86）、高光暖色（#ffd3a0），自發光招牌保持飽和的琥珀與紅。
+- **曝光與調色**（`ENV.exposure`、`ENV.grade` → map.json → `Renderer.setGrade`）：曝光 1.6（1.0 時街道峽谷幾乎全黑，對照 `captures/map/losttown/exp/`）；飽和度 0.84、對比 1.06，陰影偏冷 `[0.9, 0.98, 1.04]`、高光偏暖 `[1.06, 1.0, 0.9]`、gain `[0.96, 1.0, 0.95]`（中間調綠灰），自發光招牌保持飽和的琥珀與紅。
 - **即時光源（剛好 6 盞）**：L_FIRE_E（東橫街起火轎車）、L_FIRE_C（西南角燃燒油桶）、L_LED_W（LED 面板照在路障上）、L_DELI（熟食店閃爍日光燈）、L_BEACON_E（軍卡旋轉燈）、L_LAMP_S（南大道故障鈉燈）。
 - **烘焙光**：LED 面板自發光、橋下鈉燈、涵洞深處的燈（讓殭屍以剪影出現）、號誌燈、仍亮著的街燈、少數亮燈的店面與 2 樓窗戶、遠景火光。
 - **環境特效**：灰燼與報紙沿街飄（風往東北）、起火車輛與遠方高樓的煙柱、遠處雷聲與警笛、垃圾箱旁的蒼蠅、橋下滴水、閃爍招牌。
+  已實作（`ENV.fx` → `game/src/world/mapAmbient.js`）：天際線起火高樓 300 m 高、往東北飄的柔和煙柱（取代原本的靜態煙團，那在天空前面看起來像一根實心的深色膠囊）；東橫街起火轎車與西南角油桶的煙柱＋底部火焰；鏡頭周圍 110 片灰燼與紙屑隨風飄。
 
 ---
 
@@ -324,6 +325,22 @@
 - 貼圖：主角建築（四棟轉角大樓、鐵橋、LED 門架、堡壘）用 2k，其他用 1k；`game/assets/maps/common/` 已有的 CC0 材質盡量重用（asphalt、asphalt_cracked、concrete_floor、brick_red、brick_painted、plaster、corrugated、metal_rusty、metal_painted、wood_planks、grate、chainlink、canvas、road_paint、tiles、tread_plate）。
 - 光照貼圖：uv2＋RGBM 或半浮點 PNG 圖集（沿用 `tools/map/lib/lightmap*.mjs`）。
 - 窗戶：樓上用視差或 cubemap 假室內（可選），多數直接用「暗玻璃＋窗簾」貼圖。
+
+### 12.1 實測（整合版，2026-10-13）
+
+編譯：`node tools/map/compile.mjs losttown --meshopt`（6 區、821k 三角形、118 個 mesh、92 個材質；光照貼圖 4 texel/m、3 張 2048² atlas、48 samples、烘焙約 33 分鐘（5 執行緒，機器與其他工作共用），Node 峰值 1.44 GB）。地圖包：static.glb 28 MB（meshopt）、光照貼圖 18 MB、碰撞 0.2 MB、導航 0.4 MB。
+
+`node tools/map/mapshots.mjs losttown --q high --eval tools/map/perfprobe.js`（12 個最壞視角：甲板四向與斜角、三條街盡頭回望、廣場兩角）：
+
+| 畫質 | 主畫面 draw calls | 主畫面三角形 | 含太陽陰影 pass | 備註 |
+|---|---|---|---|---|
+| 高 | 188–209 | 773–918k | 235–255 calls、1.05–1.19 M | 含後製 ~10、第一人稱武器手臂約 60–80 個 draw call |
+| 中 | 186–207 | 773–918k | 233–253 calls | 陰影 1024 |
+
+- 地圖本身約 110–120 個 draw call：輕量材質（道具、窗框、招牌、電線）全圖合併成最多 ceil(總數 ÷ 12000) 個 mesh（`META.trisPerMesh`），254 → 118 個 mesh；主畫面 draw calls 從 221–324 降到 188–209。
+- 太陽陰影 pass 只畫大型遮擋物（`mapPackage.js` 的 `RT_CAST_SKIP`：道具、窗框、招牌、車輛小零件、托架、沙包、電線不進即時陰影；它們的影子已經烘進太陽遮罩）：陰影 pass 從 87 calls／~720k 三角形降到 47 calls／~270k。
+- 影格時間（共用的 Intel 內顯、同時有多個無頭瀏覽器與烘焙在跑，1280×720）：78–94 ms；同條件下演習場 22–31 ms。拆解（南巷回望）：片段著色約 40 ms、幾何約 40 ms、陰影 pass 約 1–2 ms、模擬 2–3 ms。後續優化：道具 LOD／再簡化（道具約 200k 三角形）、電線降段數、KTX2 貼圖。
+- 走路測試 `tools/map/walktest.js`：從出生點沿導航路徑走到 28 個出怪點 exit、10 個補給、2 個 BOSS 落點，40／40 條路線通過（糖果店要跳過 0.55 m 窗台，是設計如此），沒有卡住、沒有掉落。導航 `navverify.mjs`：23,438 個可走格，全部出生點／出怪點／補給／購買區／BOSS 落點與堡壘連通；唯一孤島是糖果店櫃台後 8 格（不在任何出怪點 5 m 內）。
 
 ---
 
@@ -359,5 +376,7 @@
 | `tools/map/losttown/layout.mjs` | 唯一的數值來源：STREETS、CURBS、SURFACES、FACADES、BUILDINGS、BACKDROP、LANDMARKS（含堡壘幾何產生器 `fortToWorld`）、PROPS、STREET_LAMPS、MANHOLES、NAV_RULES、BLOCKERS、ZONES、SPAWNERS、PLAYER_SPAWNS、BUY、SUPPLY、BOSS_ARENAS、LIGHTS、ROUND_PLAN、BUILD_ZONES、`toMapJson()`、`validate()`。執行 `node tools/map/losttown/layout.mjs` 自我檢查；加 `--json` 輸出 map.json 欄位。 |
 | `tools/map/losttown/render-layout.mjs` | 俯視藍圖 SVG＋PNG（`captures/losttown_layout.png`；`--focus cx,cz,half` 輸出近景） |
 | `tools/map/losttown/navcheck.mjs` | 導航連通檢查（`--png` 輸出 `captures/losttown_navcheck.png`） |
+| `tools/map/losttown/navverify.mjs` | 檢查**編譯後**的 nav.bin／map.json（`--png` 輸出 `captures/map/losttown/nav.png`） |
+| `tools/map/walktest.js` | 遊戲內走路測試：玩家控制器沿導航路徑走到每個出怪點 exit、補給、BOSS 落點（`tools/shot.mjs --eval`） |
 | `captures/refs/losttown/*.jpg` | 參考截圖（gitignored，不可散布） |
 | `game/assets/maps/losttown/map.json` | 整合時由 `toMapJson()` 產生 |

@@ -1,0 +1,6961 @@
+{
+ "id": "losttown",
+ "name": "失落之城",
+ "nameEn": "LOST TOWN",
+ "version": 1,
+ "built": "2026-10-13T09:27:33.802Z",
+ "bounds": [
+  -76,
+  -2,
+  -76,
+  68,
+  45,
+  76
+ ],
+ "killY": -10,
+ "chunk": 40,
+ "sun": {
+  "dir": [
+   -0.765,
+   0.5,
+   0.407
+  ],
+  "color": "#ffdcb4",
+  "intensity": 2,
+  "shadow": {
+   "mapSize": 2048,
+   "extent": 40,
+   "followPlayer": true,
+   "texelSnap": true,
+   "near": 1,
+   "far": 220,
+   "bias": -0.0004,
+   "normalBias": 0.03
+  }
+ },
+ "env": {
+  "hdri": "overcast_soil_puresky",
+  "files": {
+   "1k": "../common/hdri/overcast_soil_puresky_1k.hdr"
+  },
+  "rotation": -2.740166925631097,
+  "intensity": 0.55,
+  "backgroundIntensity": 0.7,
+  "backgroundBlur": 0,
+  "tint": "#9fae94"
+ },
+ "fog": {
+  "color": "#5b6459",
+  "density": 0.0105
+ },
+ "exposure": 1.6,
+ "grade": {
+  "saturation": 0.84,
+  "contrast": 1.06,
+  "shadowTint": [
+   0.9,
+   0.98,
+   1.04
+  ],
+  "highlightTint": [
+   1.06,
+   1,
+   0.9
+  ],
+  "gain": [
+   0.96,
+   1,
+   0.95
+  ],
+  "note": "desaturated (-16%), green-grey midtones, cool shadows (#6f7d86), warm sun highlights (#ffd3a0); emissive signs read saturated amber/red"
+ },
+ "fx": {
+  "wind": [
+   0.87,
+   -0.5
+  ],
+  "smoke": [
+   {
+    "id": "FX_TOWER",
+    "pos": [
+     200,
+     106,
+     -60
+    ],
+    "height": 300,
+    "r0": 8,
+    "r1": 34,
+    "drift": [
+     199,
+     -115
+    ],
+    "life": 150,
+    "count": 56,
+    "opacity": 0.85,
+    "color": "#2e2924",
+    "color1": "#55524c",
+    "fog": 0.9,
+    "note": "burning grid tower in the skyline (BD_SKYLINE grid_burning)"
+   },
+   {
+    "id": "FX_CAR_E",
+    "pos": [
+     58.5,
+     1,
+     -18
+    ],
+    "height": 26,
+    "r0": 0.7,
+    "r1": 8,
+    "drift": [
+     13,
+     -7.5
+    ],
+    "life": 15,
+    "count": 30,
+    "opacity": 0.8,
+    "color": "#3b3733",
+    "color1": "#7a766e",
+    "fire": 12,
+    "fireWidth": 1.1,
+    "fireHeight": 1.5,
+    "fireIntensity": 5,
+    "note": "burning sedan E_CAR_X, East Cross (L_FIRE_E)"
+   },
+   {
+    "id": "FX_BARREL_SW",
+    "pos": [
+     -10.5,
+     0.95,
+     11
+    ],
+    "height": 11,
+    "r0": 0.25,
+    "r1": 2.6,
+    "drift": [
+     4,
+     -2.3
+    ],
+    "life": 8,
+    "count": 12,
+    "opacity": 0.55,
+    "color": "#3d3934",
+    "color1": "#77736c",
+    "fire": 7,
+    "fireWidth": 0.3,
+    "fireHeight": 0.75,
+    "fireIntensity": 5,
+    "note": "burning barrel C_FIRE_SW (L_FIRE_C)"
+   }
+  ],
+  "ash": {
+   "count": 110,
+   "radius": 14,
+   "size": 0.06,
+   "paper": 0.1,
+   "fall": 0.35,
+   "color": "#6e6a64",
+   "color1": "#b8b3a7"
+  }
+ },
+ "preview": null,
+ "playerSpawns": [
+  [
+   -2.56,
+   2.59,
+   -1.2,
+   1.132
+  ],
+  [
+   1.2,
+   2.59,
+   -2.56,
+   -0.438
+  ],
+  [
+   2.56,
+   2.59,
+   1.2,
+   -2.009
+  ],
+  [
+   -1.2,
+   2.59,
+   2.56,
+   2.703
+  ],
+  [
+   -0.96,
+   2.59,
+   -3.8,
+   0.247
+  ],
+  [
+   3.8,
+   2.59,
+   -0.96,
+   -1.323
+  ],
+  [
+   0.96,
+   2.59,
+   3.8,
+   -2.894
+  ],
+  [
+   -3.8,
+   2.59,
+   0.96,
+   1.818
+  ]
+ ],
+ "zones": [
+  {
+   "id": "center",
+   "name": "中央路口",
+   "polygon": [
+    [
+     -15,
+     -9
+    ],
+    [
+     -9,
+     -15
+    ],
+    [
+     9,
+     -15
+    ],
+    [
+     15,
+     -9
+    ],
+    [
+     15,
+     9
+    ],
+    [
+     8,
+     16
+    ],
+    [
+     -8,
+     16
+    ],
+    [
+     -15,
+     9
+    ]
+   ]
+  },
+  {
+   "id": "north",
+   "name": "北大道／鐵橋",
+   "polygon": [
+    [
+     -9,
+     -76
+    ],
+    [
+     9,
+     -76
+    ],
+    [
+     9,
+     -53
+    ],
+    [
+     24,
+     -53
+    ],
+    [
+     24,
+     -50
+    ],
+    [
+     9,
+     -50
+    ],
+    [
+     9,
+     -15
+    ],
+    [
+     -9,
+     -15
+    ]
+   ]
+  },
+  {
+   "id": "west",
+   "name": "西街／西橫街",
+   "polygon": [
+    [
+     -76,
+     -9
+    ],
+    [
+     -66,
+     -9
+    ],
+    [
+     -66,
+     -34
+    ],
+    [
+     -54,
+     -34
+    ],
+    [
+     -54,
+     -9
+    ],
+    [
+     -15,
+     -9
+    ],
+    [
+     -15,
+     9
+    ],
+    [
+     -54,
+     9
+    ],
+    [
+     -54,
+     38
+    ],
+    [
+     -66,
+     38
+    ],
+    [
+     -66,
+     9
+    ],
+    [
+     -76,
+     9
+    ]
+   ]
+  },
+  {
+   "id": "east",
+   "name": "東街／東橫街",
+   "polygon": [
+    [
+     15,
+     -9
+    ],
+    [
+     52,
+     -9
+    ],
+    [
+     52,
+     -34
+    ],
+    [
+     66,
+     -34
+    ],
+    [
+     66,
+     34
+    ],
+    [
+     52,
+     34
+    ],
+    [
+     52,
+     9
+    ],
+    [
+     43,
+     9
+    ],
+    [
+     43,
+     24
+    ],
+    [
+     40,
+     24
+    ],
+    [
+     40,
+     9
+    ],
+    [
+     15,
+     9
+    ]
+   ]
+  },
+  {
+   "id": "south",
+   "name": "南大道／南橫街",
+   "polygon": [
+    [
+     -8,
+     16
+    ],
+    [
+     8,
+     16
+    ],
+    [
+     8,
+     48
+    ],
+    [
+     38,
+     48
+    ],
+    [
+     38,
+     58
+    ],
+    [
+     8,
+     58
+    ],
+    [
+     8,
+     76
+    ],
+    [
+     -8,
+     76
+    ],
+    [
+     -8,
+     58
+    ],
+    [
+     -38,
+     58
+    ],
+    [
+     -38,
+     48
+    ],
+    [
+     -8,
+     48
+    ]
+   ]
+  }
+ ],
+ "spawners": [
+  {
+   "id": "SP_N_TUN_A",
+   "zone": "north",
+   "pos": [
+    -4.5,
+    0,
+    -70
+   ],
+   "kind": "gate",
+   "facing": -3.077,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    -3.7,
+    0,
+    -60.5
+   ]
+  },
+  {
+   "id": "SP_N_TUN_B",
+   "zone": "north",
+   "pos": [
+    3,
+    0,
+    -71
+   ],
+   "kind": "gate",
+   "facing": 3.099,
+   "rounds": [
+    2,
+    10
+   ],
+   "exit": [
+    -3.7,
+    0,
+    -60.5
+   ]
+  },
+  {
+   "id": "SP_N_MH",
+   "zone": "north",
+   "pos": [
+    2.5,
+    0,
+    -38
+   ],
+   "kind": "manhole",
+   "facing": 3.076,
+   "rounds": [
+    3,
+    10
+   ]
+  },
+  {
+   "id": "SP_N_AL",
+   "zone": "north",
+   "pos": [
+    19,
+    0,
+    -51.5
+   ],
+   "kind": "alley",
+   "facing": 2.788,
+   "rounds": [
+    4,
+    10
+   ],
+   "exit": [
+    10.5,
+    0,
+    -51.3
+   ]
+  },
+  {
+   "id": "SP_N_WIN_W",
+   "zone": "north",
+   "pos": [
+    -9.4,
+    4.9,
+    -33
+   ],
+   "kind": "window",
+   "facing": -2.864,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    -7.6,
+    0.15,
+    -33
+   ]
+  },
+  {
+   "id": "SP_N_WIN_E",
+   "zone": "north",
+   "pos": [
+    9.4,
+    4.9,
+    -36
+   ],
+   "kind": "window",
+   "facing": 2.886,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    7.6,
+    0.15,
+    -36
+   ]
+  },
+  {
+   "id": "SP_N_BRIDGE",
+   "zone": "north",
+   "pos": [
+    -3,
+    6.6,
+    -62.6
+   ],
+   "kind": "roof",
+   "facing": -3.094,
+   "rounds": [
+    7,
+    10
+   ],
+   "exit": [
+    -3,
+    0,
+    -59
+   ]
+  },
+  {
+   "id": "SP_W_XN",
+   "zone": "west",
+   "pos": [
+    -60,
+    0,
+    -31
+   ],
+   "kind": "street",
+   "facing": -2.048,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    -55.5,
+    0,
+    -24
+   ]
+  },
+  {
+   "id": "SP_W_XS",
+   "zone": "west",
+   "pos": [
+    -60,
+    0,
+    35
+   ],
+   "kind": "street",
+   "facing": -1.043,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    -64.5,
+    0,
+    28
+   ]
+  },
+  {
+   "id": "SP_W_LED",
+   "zone": "west",
+   "pos": [
+    -74,
+    0,
+    -2.2
+   ],
+   "kind": "fence",
+   "facing": -1.601,
+   "rounds": [
+    2,
+    10
+   ],
+   "exit": [
+    -67.5,
+    0,
+    -2.2
+   ]
+  },
+  {
+   "id": "SP_W_MH",
+   "zone": "west",
+   "pos": [
+    -40,
+    0,
+    2
+   ],
+   "kind": "manhole",
+   "facing": -1.521,
+   "rounds": [
+    3,
+    10
+   ]
+  },
+  {
+   "id": "SP_W_WIN",
+   "zone": "west",
+   "pos": [
+    -33,
+    4.9,
+    9.4
+   ],
+   "kind": "window",
+   "facing": -1.293,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    -33,
+    0.15,
+    7.6
+   ]
+  },
+  {
+   "id": "SP_W_ROOF",
+   "zone": "west",
+   "pos": [
+    -33,
+    8.6,
+    -9.6
+   ],
+   "kind": "roof",
+   "facing": -1.854,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    -33,
+    0.15,
+    -7.6
+   ]
+  },
+  {
+   "id": "SP_E_XN",
+   "zone": "east",
+   "pos": [
+    59,
+    0,
+    -31
+   ],
+   "kind": "street",
+   "facing": 2.055,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    60,
+    0,
+    -24
+   ]
+  },
+  {
+   "id": "SP_E_XS",
+   "zone": "east",
+   "pos": [
+    59,
+    0,
+    31
+   ],
+   "kind": "street",
+   "facing": 1.087,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    64.5,
+    0,
+    25
+   ]
+  },
+  {
+   "id": "SP_E_DOCK",
+   "zone": "east",
+   "pos": [
+    69,
+    0,
+    -3
+   ],
+   "kind": "gate",
+   "facing": 1.614,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    63.5,
+    0,
+    -3
+   ]
+  },
+  {
+   "id": "SP_E_AL",
+   "zone": "east",
+   "pos": [
+    41.5,
+    0,
+    21.5
+   ],
+   "kind": "alley",
+   "facing": 1.093,
+   "rounds": [
+    4,
+    10
+   ],
+   "exit": [
+    41.5,
+    0,
+    10.5
+   ]
+  },
+  {
+   "id": "SP_E_WIN",
+   "zone": "east",
+   "pos": [
+    33,
+    4.9,
+    -9.4
+   ],
+   "kind": "window",
+   "facing": 1.848,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    33,
+    0.15,
+    -7.6
+   ]
+  },
+  {
+   "id": "SP_E_ROOF",
+   "zone": "east",
+   "pos": [
+    31,
+    8.6,
+    9.6
+   ],
+   "kind": "roof",
+   "facing": 1.27,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    31,
+    0.15,
+    7.6
+   ]
+  },
+  {
+   "id": "SP_S_XW",
+   "zone": "south",
+   "pos": [
+    -34,
+    0,
+    53
+   ],
+   "kind": "street",
+   "facing": -0.57,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    -28,
+    0,
+    51.3
+   ]
+  },
+  {
+   "id": "SP_S_XE",
+   "zone": "south",
+   "pos": [
+    34,
+    0,
+    53
+   ],
+   "kind": "street",
+   "facing": 0.57,
+   "rounds": [
+    1,
+    10
+   ],
+   "exit": [
+    28,
+    0,
+    54.7
+   ]
+  },
+  {
+   "id": "SP_S_EXT",
+   "zone": "south",
+   "pos": [
+    0,
+    0,
+    73.5
+   ],
+   "kind": "gate",
+   "facing": 0,
+   "rounds": [
+    2,
+    10
+   ],
+   "exit": [
+    -4,
+    0,
+    66
+   ]
+  },
+  {
+   "id": "SP_S_MH",
+   "zone": "south",
+   "pos": [
+    -2,
+    0,
+    30
+   ],
+   "kind": "manhole",
+   "facing": -0.067,
+   "rounds": [
+    3,
+    10
+   ]
+  },
+  {
+   "id": "SP_S_WIN",
+   "zone": "south",
+   "pos": [
+    -8.4,
+    4.9,
+    42
+   ],
+   "kind": "window",
+   "facing": -0.197,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    -6.6,
+    0.15,
+    42
+   ]
+  },
+  {
+   "id": "SP_S_ROOF",
+   "zone": "south",
+   "pos": [
+    12,
+    8.8,
+    38.4
+   ],
+   "kind": "roof",
+   "facing": 0.303,
+   "rounds": [
+    6,
+    10
+   ],
+   "exit": [
+    7.4,
+    0.15,
+    38.4
+   ]
+  },
+  {
+   "id": "SP_C_WIN_NE",
+   "zone": "center",
+   "pos": [
+    12.3,
+    4.9,
+    -12.3
+   ],
+   "kind": "window",
+   "facing": 2.356,
+   "rounds": [
+    7,
+    10
+   ],
+   "exit": [
+    11.2,
+    0.15,
+    -11.2
+   ]
+  },
+  {
+   "id": "SP_C_WIN_SW",
+   "zone": "center",
+   "pos": [
+    -11.8,
+    4.9,
+    12.8
+   ],
+   "kind": "window",
+   "facing": -0.745,
+   "rounds": [
+    7,
+    10
+   ],
+   "exit": [
+    -10.9,
+    0.15,
+    11.9
+   ]
+  },
+  {
+   "id": "SP_C_MH",
+   "zone": "center",
+   "pos": [
+    1.5,
+    0,
+    -9.6
+   ],
+   "kind": "manhole",
+   "facing": 2.987,
+   "rounds": [
+    8,
+    10
+   ]
+  }
+ ],
+ "buy": [
+  [
+   0,
+   2.59,
+   0,
+   7.6
+  ]
+ ],
+ "supply": [
+  [
+   -0.66,
+   2.71,
+   1.41
+  ],
+  [
+   0.66,
+   2.71,
+   -1.41
+  ],
+  [
+   -6.6,
+   0.15,
+   -35.2
+  ],
+  [
+   -36,
+   0,
+   1.4
+  ],
+  [
+   36.5,
+   0,
+   3.8
+  ],
+  [
+   5.2,
+   0,
+   31
+  ],
+  [
+   14,
+   0.15,
+   15.2
+  ],
+  [
+   -60,
+   0,
+   4
+  ],
+  [
+   59,
+   0,
+   -4
+  ],
+  [
+   0,
+   0,
+   53
+  ]
+ ],
+ "bossArenas": {
+  "mid": {
+   "center": [
+    0,
+    0,
+    30
+   ],
+   "radius": 26
+  },
+  "final": {
+   "center": [
+    0,
+    0,
+    -40
+   ],
+   "radius": 34
+  }
+ },
+ "lights": [
+  {
+   "id": "L_FIRE_E",
+   "type": "point",
+   "realtime": true,
+   "pos": [
+    58.5,
+    1.1,
+    -18
+   ],
+   "color": "#ff8a3a",
+   "intensity": 30,
+   "range": 13,
+   "flicker": {
+    "kind": "fire",
+    "speed": 1,
+    "amount": 0.35
+   }
+  },
+  {
+   "id": "L_FIRE_C",
+   "type": "point",
+   "realtime": true,
+   "pos": [
+    -10.5,
+    1.4,
+    11
+   ],
+   "color": "#ff9442",
+   "intensity": 14,
+   "range": 8,
+   "flicker": {
+    "kind": "fire",
+    "speed": 1.4,
+    "amount": 0.4
+   }
+  },
+  {
+   "id": "L_LED_W",
+   "type": "point",
+   "realtime": true,
+   "pos": [
+    -67,
+    10.6,
+    0
+   ],
+   "color": "#ffae2e",
+   "intensity": 30,
+   "range": 22,
+   "flicker": {
+    "kind": "scroll",
+    "speed": 0.25,
+    "amount": 0.15
+   }
+  },
+  {
+   "id": "L_DELI",
+   "type": "point",
+   "realtime": true,
+   "pos": [
+    -12.5,
+    3.9,
+    -33
+   ],
+   "color": "#dff2ff",
+   "intensity": 9,
+   "range": 9,
+   "flicker": {
+    "kind": "fluorescent",
+    "speed": 3,
+    "amount": 0.8
+   }
+  },
+  {
+   "id": "L_BEACON_E",
+   "type": "spot",
+   "realtime": true,
+   "pos": [
+    41.3,
+    3.5,
+    -2
+   ],
+   "color": "#ffa22a",
+   "intensity": 14,
+   "range": 12,
+   "flicker": {
+    "kind": "rotate",
+    "speed": 1.4,
+    "amount": 1
+   }
+  },
+  {
+   "id": "L_LAMP_S",
+   "type": "point",
+   "realtime": true,
+   "pos": [
+    7,
+    7.2,
+    44
+   ],
+   "color": "#ffb46b",
+   "intensity": 10,
+   "range": 15,
+   "flicker": {
+    "kind": "sodium",
+    "speed": 0.6,
+    "amount": 0.9
+   }
+  },
+  {
+   "id": "LB_LED_PANEL",
+   "type": "point",
+   "realtime": false,
+   "pos": [
+    -68.7,
+    10.8,
+    0
+   ],
+   "size": [
+    9,
+    6.8
+   ],
+   "color": "#ffae2e",
+   "intensity": 8,
+   "radius": 4.5,
+   "range": 14,
+   "bake": true
+  },
+  {
+   "id": "LB_BRIDGE_1",
+   "type": "point",
+   "realtime": false,
+   "pos": [
+    -3.5,
+    4.9,
+    -63
+   ],
+   "color": "#ffb066",
+   "intensity": 8,
+   "range": 10,
+   "bake": true
+  },
+  {
+   "id": "LB_TUNNEL_END",
+   "type": "point",
+   "realtime": false,
+   "pos": [
+    0,
+    4.5,
+    -75
+   ],
+   "color": "#ff9f50",
+   "intensity": 6,
+   "range": 9,
+   "bake": true
+  },
+  {
+   "type": "point",
+   "pos": [
+    14.47,
+    4.48,
+    8.894
+   ],
+   "color": "#ffc27a",
+   "intensity": 5,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    17.6,
+    3.61,
+    12.4
+   ],
+   "color": "#ffbf80",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.04
+  },
+  {
+   "type": "point",
+   "pos": [
+    12.2,
+    3.71,
+    18
+   ],
+   "color": "#ffb46a",
+   "intensity": 7,
+   "range": 8,
+   "radius": 0.04
+  },
+  {
+   "type": "point",
+   "pos": [
+    17.2,
+    2.53,
+    12.6
+   ],
+   "color": "#d6cfd2",
+   "intensity": 4.5,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    12.6,
+    2.53,
+    17.6
+   ],
+   "color": "#d6cfd2",
+   "intensity": 4.5,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -7.823,
+    2.88,
+    15.54
+   ],
+   "color": "#ffbf7a",
+   "intensity": 4,
+   "range": 5,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    5.15,
+    7.3,
+    22
+   ],
+   "color": "#ffc27a",
+   "intensity": 45,
+   "range": 18,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.3,
+    3,
+    -8.3
+   ],
+   "color": "#d9d4c8",
+   "intensity": 4.5,
+   "range": 16,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.3,
+    10,
+    -8.3
+   ],
+   "color": "#d4d6d0",
+   "intensity": 3.25,
+   "range": 14,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    8.3,
+    3,
+    -8.3
+   ],
+   "color": "#d9d4c8",
+   "intensity": 3.24,
+   "range": 16,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    8.3,
+    10,
+    -8.3
+   ],
+   "color": "#d4d6d0",
+   "intensity": 2.3400000000000003,
+   "range": 14,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    7.8,
+    3,
+    8.8
+   ],
+   "color": "#d9d4c8",
+   "intensity": 2.8800000000000003,
+   "range": 16,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    7.8,
+    10,
+    8.8
+   ],
+   "color": "#d4d6d0",
+   "intensity": 2.08,
+   "range": 14,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -7.8,
+    3,
+    8.8
+   ],
+   "color": "#d9d4c8",
+   "intensity": 3.9600000000000004,
+   "range": 16,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -7.8,
+    10,
+    8.8
+   ],
+   "color": "#d4d6d0",
+   "intensity": 2.8600000000000003,
+   "range": 14,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -3.411,
+    1.4,
+    -7.911
+   ],
+   "color": "#d6d2c8",
+   "intensity": 1.6,
+   "range": 9,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    7.911,
+    1.4,
+    -3.411
+   ],
+   "color": "#d6d2c8",
+   "intensity": 1.6,
+   "range": 9,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    3.411,
+    1.4,
+    7.911
+   ],
+   "color": "#d6d2c8",
+   "intensity": 1.6,
+   "range": 9,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -7.911,
+    1.4,
+    3.411
+   ],
+   "color": "#d6d2c8",
+   "intensity": 1.6,
+   "range": 9,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    38.6,
+    9.83,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    27.4,
+    16.63,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    35.8,
+    20.03,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    33.95,
+    2.33,
+    -8.55
+   ],
+   "color": "#ffc58a",
+   "intensity": 3,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    47.5,
+    9.83,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    46,
+    3.33,
+    -11.4
+   ],
+   "color": "#d8ecff",
+   "intensity": 12,
+   "range": 10,
+   "radius": 0.4,
+   "decay": 1.5,
+   "name": "laundromat"
+  },
+  {
+   "type": "point",
+   "pos": [
+    46,
+    1.6,
+    -11.6
+   ],
+   "color": "#cfe0ea",
+   "intensity": 7,
+   "range": 9,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    36,
+    9.83,
+    9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    40.45,
+    2.48,
+    19.9
+   ],
+   "color": "#ffbf7a",
+   "intensity": 2.4,
+   "range": 5,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    52.45,
+    2.98,
+    18.05
+   ],
+   "color": "#ffc58a",
+   "intensity": 2.6,
+   "range": 5,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    65.1,
+    5.6,
+    -3
+   ],
+   "color": "#ffd8a8",
+   "intensity": 16,
+   "range": 12,
+   "radius": 0.15,
+   "decay": 1.6,
+   "name": "dock_lamp"
+  },
+  {
+   "type": "point",
+   "pos": [
+    65.1,
+    5.6,
+    3
+   ],
+   "color": "#ffd8a8",
+   "intensity": 16,
+   "range": 12,
+   "radius": 0.15,
+   "decay": 1.6,
+   "name": "dock_lamp"
+  },
+  {
+   "type": "point",
+   "pos": [
+    65.55,
+    2.98,
+    -9.45
+   ],
+   "color": "#ffc27a",
+   "intensity": 2.6,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    72.6,
+    2.45,
+    -3
+   ],
+   "color": "#ff4a32",
+   "intensity": 1.4,
+   "range": 5,
+   "radius": 0.1,
+   "decay": 1.5,
+   "name": "exit"
+  },
+  {
+   "type": "point",
+   "pos": [
+    69.5,
+    3.4,
+    -3
+   ],
+   "color": "#c2c0b8",
+   "intensity": 3,
+   "range": 8,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    66.75,
+    13.23,
+    -18.4
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    66.75,
+    16.63,
+    -26.8
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    65.55,
+    2.63,
+    -20.05
+   ],
+   "color": "#ffbf7a",
+   "intensity": 2.8,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    66.75,
+    6.43,
+    16.5
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    66.75,
+    13.23,
+    25.5
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    64.6,
+    6.2,
+    12.95
+   ],
+   "color": "#ff4030",
+   "intensity": 3.2,
+   "range": 6,
+   "radius": 0.3,
+   "decay": 1.5,
+   "name": "neon"
+  },
+  {
+   "type": "point",
+   "pos": [
+    55.2,
+    4,
+    -33.55
+   ],
+   "color": "#ffc27a",
+   "intensity": 14,
+   "range": 14,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    41.5,
+    2.65,
+    23.55
+   ],
+   "color": "#ffb468",
+   "intensity": 1.6,
+   "range": 4,
+   "radius": 0.04
+  },
+  {
+   "type": "point",
+   "pos": [
+    55.5,
+    4.05,
+    33.55
+   ],
+   "color": "#dfe6ee",
+   "intensity": 12,
+   "range": 13,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    58,
+    1.6,
+    24
+   ],
+   "color": "#cfc8bc",
+   "intensity": 6,
+   "range": 9,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    34,
+    7.3,
+    6.15
+   ],
+   "color": "#ffc27a",
+   "intensity": 45,
+   "range": 18,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    46,
+    7.3,
+    -6.15
+   ],
+   "color": "#ffc27a",
+   "intensity": 45,
+   "range": 18,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    62.25,
+    7.3,
+    -18
+   ],
+   "color": "#ffc27a",
+   "intensity": 45,
+   "range": 18,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    48.7,
+    1.55,
+    -7.9
+   ],
+   "color": "#ff9442",
+   "intensity": 7,
+   "range": 7,
+   "radius": 0.25,
+   "name": "barrel_glow"
+  },
+  {
+   "type": "point",
+   "pos": [
+    30.5,
+    8,
+    0
+   ],
+   "color": "#d6ccbb",
+   "intensity": 12,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    38.5,
+    8,
+    0
+   ],
+   "color": "#d6ccbb",
+   "intensity": 12,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    46.5,
+    8,
+    0
+   ],
+   "color": "#d6ccbb",
+   "intensity": 12,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    32,
+    2.6,
+    0
+   ],
+   "color": "#cfc8bb",
+   "intensity": 5,
+   "range": 14,
+   "radius": 1.5,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    44,
+    2.6,
+    0
+   ],
+   "color": "#cfc8bb",
+   "intensity": 5,
+   "range": 14,
+   "radius": 1.5,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    40.2,
+    2.4,
+    1.9
+   ],
+   "color": "#d8cdb8",
+   "intensity": 6,
+   "range": 8,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    36.6,
+    2,
+    -5
+   ],
+   "color": "#d8cdb8",
+   "intensity": 3.5,
+   "range": 6,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    58.5,
+    8,
+    0
+   ],
+   "color": "#d6ccbb",
+   "intensity": 14,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    6.5,
+    -21
+   ],
+   "color": "#d3cbbd",
+   "intensity": 15,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    6.5,
+    -13
+   ],
+   "color": "#d3cbbd",
+   "intensity": 15,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    6.5,
+    13
+   ],
+   "color": "#d3cbbd",
+   "intensity": 15,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    6.5,
+    21
+   ],
+   "color": "#d3cbbd",
+   "intensity": 15,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    2.4,
+    -23.5
+   ],
+   "color": "#ccc6ba",
+   "intensity": 7,
+   "range": 13,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    2.4,
+    -17
+   ],
+   "color": "#ccc6ba",
+   "intensity": 7,
+   "range": 13,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    2.4,
+    17
+   ],
+   "color": "#ccc6ba",
+   "intensity": 7,
+   "range": 13,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    2.4,
+    23.5
+   ],
+   "color": "#ccc6ba",
+   "intensity": 7,
+   "range": 13,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    4.5,
+    -31
+   ],
+   "color": "#c9c8c0",
+   "intensity": 6,
+   "range": 12,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    59,
+    4.5,
+    31.6
+   ],
+   "color": "#c9c8c0",
+   "intensity": 6,
+   "range": 12,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    41.5,
+    3.2,
+    10.5
+   ],
+   "color": "#cfc6b6",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    41.5,
+    3.2,
+    14.5
+   ],
+   "color": "#cfc6b6",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    41.5,
+    3.2,
+    19
+   ],
+   "color": "#cfc6b6",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    41.5,
+    3.2,
+    22.5
+   ],
+   "color": "#cfc6b6",
+   "intensity": 9,
+   "range": 9,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    41.5,
+    10,
+    16
+   ],
+   "color": "#cfc6b6",
+   "intensity": 6,
+   "range": 12,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -9.75,
+    16.63,
+    -38.4
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -15.7,
+    1.77,
+    -34.9
+   ],
+   "color": "#cfe3ff",
+   "intensity": 2.2,
+   "range": 4.5,
+   "radius": 0.5,
+   "decay": 1.5,
+   "name": "fridge"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -12.4,
+    4,
+    -37
+   ],
+   "color": "#e4efff",
+   "intensity": 7,
+   "range": 9,
+   "radius": 0.35,
+   "decay": 1.2,
+   "name": "tube"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -15.7,
+    4,
+    -36.5
+   ],
+   "color": "#e4efff",
+   "intensity": 7,
+   "range": 9,
+   "radius": 0.35,
+   "decay": 1.2,
+   "name": "tube"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -11,
+    3,
+    -37
+   ],
+   "color": "#c9d2dc",
+   "intensity": 4,
+   "range": 11,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -11,
+    3,
+    -29.4
+   ],
+   "color": "#c9d2dc",
+   "intensity": 4,
+   "range": 11,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -15.9,
+    3,
+    -34.6
+   ],
+   "color": "#c9d2dc",
+   "intensity": 4,
+   "range": 11,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -9.75,
+    13.23,
+    -41.5
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.4,
+    5.41,
+    -57.1
+   ],
+   "color": "#ffc27a",
+   "intensity": 3.5,
+   "range": 6,
+   "radius": 0.1
+  },
+  {
+   "type": "point",
+   "pos": [
+    9.75,
+    13.23,
+    -30.8
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    9.75,
+    20.03,
+    -38.6
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    8.55,
+    2.28,
+    -30.35
+   ],
+   "color": "#ffc58a",
+   "intensity": 3.5,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    10.2,
+    2.73,
+    -34.4
+   ],
+   "color": "#ffb468",
+   "intensity": 2.6,
+   "range": 4.5,
+   "radius": 0.04
+  },
+  {
+   "type": "point",
+   "pos": [
+    11.6,
+    2.63,
+    -50.45
+   ],
+   "color": "#ffbf7a",
+   "intensity": 4,
+   "range": 7,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    6.35,
+    1.55,
+    -60.55
+   ],
+   "color": "#ff9442",
+   "intensity": 7,
+   "range": 7,
+   "radius": 0.25,
+   "name": "barrel_glow"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -6.35,
+    7.3,
+    -30
+   ],
+   "color": "#ffb36b",
+   "intensity": 28,
+   "range": 15,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    6.35,
+    7.3,
+    -40
+   ],
+   "color": "#ffb36b",
+   "intensity": 28,
+   "range": 15,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    6.35,
+    7.3,
+    -58
+   ],
+   "color": "#ffb36b",
+   "intensity": 28,
+   "range": 15,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    -29.5
+   ],
+   "color": "#d6ccbb",
+   "intensity": 9,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    -37.5
+   ],
+   "color": "#d6ccbb",
+   "intensity": 9,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    -45.5
+   ],
+   "color": "#d6ccbb",
+   "intensity": 9,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    -53.5
+   ],
+   "color": "#d6ccbb",
+   "intensity": 9,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    4.7,
+    -60.4
+   ],
+   "color": "#c9ccc8",
+   "intensity": 4.5,
+   "range": 11,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -5,
+    2.3,
+    -60.2
+   ],
+   "color": "#c9ccc8",
+   "intensity": 1.6,
+   "range": 5.5,
+   "radius": 0.3,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    12,
+    4.5,
+    -51.5
+   ],
+   "color": "#cfc6b6",
+   "intensity": 4.5,
+   "range": 10,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    19.5,
+    4.5,
+    -51.5
+   ],
+   "color": "#cfc6b6",
+   "intensity": 3,
+   "range": 9,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    55.483,
+    23.55,
+    -39
+   ],
+   "color": "#ff7a30",
+   "intensity": 9,
+   "range": 7,
+   "radius": 0.5,
+   "decay": 1.5,
+   "name": "fire_far"
+  },
+  {
+   "type": "point",
+   "pos": [
+    58.45,
+    26.95,
+    -39
+   ],
+   "color": "#ff7a30",
+   "intensity": 9,
+   "range": 7,
+   "radius": 0.5,
+   "decay": 1.5,
+   "name": "fire_far"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.75,
+    13.23,
+    30.5
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.9,
+    0.83,
+    33.6
+   ],
+   "color": "#ffb468",
+   "intensity": 2.6,
+   "range": 3.6,
+   "radius": 0.08,
+   "decay": 1.5,
+   "name": "shop"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.75,
+    20.03,
+    46.5
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -7.55,
+    2.83,
+    43.15
+   ],
+   "color": "#ffc58a",
+   "intensity": 3,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    -13,
+    13.23,
+    47.25
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -12,
+    2.33,
+    47.85
+   ],
+   "color": "#ff5a40",
+   "intensity": 2.2,
+   "range": 4.5,
+   "radius": 0.2,
+   "decay": 1.5,
+   "name": "neon"
+  },
+  {
+   "type": "point",
+   "pos": [
+    8.75,
+    13.13,
+    32
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    8.9,
+    2.73,
+    28.6
+   ],
+   "color": "#d8ecff",
+   "intensity": 3,
+   "range": 4.5,
+   "radius": 0.3,
+   "decay": 1.5,
+   "name": "shop"
+  },
+  {
+   "type": "point",
+   "pos": [
+    9.5,
+    1.73,
+    34.75
+   ],
+   "color": "#cfe4ff",
+   "intensity": 1.8,
+   "range": 4,
+   "radius": 0.3,
+   "decay": 1.5,
+   "name": "shop"
+  },
+  {
+   "type": "point",
+   "pos": [
+    9.5,
+    2.63,
+    39.6
+   ],
+   "color": "#d6cfd2",
+   "intensity": 6.5,
+   "range": 8,
+   "radius": 0.9,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    9.6,
+    2.63,
+    43
+   ],
+   "color": "#d6cfd2",
+   "intensity": 6.5,
+   "range": 8,
+   "radius": 0.9,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    10.2,
+    2.63,
+    46
+   ],
+   "color": "#d6cfd2",
+   "intensity": 6.5,
+   "range": 8,
+   "radius": 0.9,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    13.6,
+    2.63,
+    46.5
+   ],
+   "color": "#d6cfd2",
+   "intensity": 6.5,
+   "range": 8,
+   "radius": 0.9,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    17.4,
+    2.63,
+    46.5
+   ],
+   "color": "#d6cfd2",
+   "intensity": 6.5,
+   "range": 8,
+   "radius": 0.9,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    21.4,
+    2.63,
+    46.5
+   ],
+   "color": "#d6cfd2",
+   "intensity": 6.5,
+   "range": 8,
+   "radius": 0.9,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -25.8,
+    9.83,
+    47.25
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -31.05,
+    3.73,
+    49.12
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    28.5,
+    9.83,
+    47.25
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    30.3,
+    3.73,
+    49.12
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -20.44,
+    13.23,
+    58.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -31.48,
+    20.03,
+    58.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -30.6,
+    3.73,
+    56.88
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -8.75,
+    9.83,
+    62.2
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    20.04,
+    9.83,
+    58.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    31.08,
+    16.63,
+    58.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    30.6,
+    3.73,
+    56.88
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    8.75,
+    16.63,
+    59.4
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    9.83,
+    76.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    3,
+    13.23,
+    76.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -6,
+    16.63,
+    76.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -3,
+    23.43,
+    76.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    5.4,
+    3.93,
+    74.88
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -36.5,
+    4.23,
+    53.6
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    36.5,
+    4.23,
+    52.4
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -27.3,
+    1.6,
+    49
+   ],
+   "color": "#ff9442",
+   "intensity": 7,
+   "range": 7.5,
+   "radius": 0.25,
+   "name": "barrel_glow"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -6.7,
+    1.6,
+    66.5
+   ],
+   "color": "#ff9442",
+   "intensity": 7,
+   "range": 7.5,
+   "radius": 0.25,
+   "name": "barrel_glow"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    31
+   ],
+   "color": "#d6ccbb",
+   "intensity": 11,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    39
+   ],
+   "color": "#d6ccbb",
+   "intensity": 11,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    8.5,
+    46
+   ],
+   "color": "#d6ccbb",
+   "intensity": 11,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -5.6,
+    2.6,
+    30.5
+   ],
+   "color": "#cfc8bb",
+   "intensity": 5.5,
+   "range": 13,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    5.6,
+    2.6,
+    34.5
+   ],
+   "color": "#cfc8bb",
+   "intensity": 5.5,
+   "range": 13,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -5.6,
+    2.6,
+    42.5
+   ],
+   "color": "#cfc8bb",
+   "intensity": 5.5,
+   "range": 13,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    5.6,
+    2.6,
+    46
+   ],
+   "color": "#cfc8bb",
+   "intensity": 5.5,
+   "range": 13,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -24,
+    6.5,
+    53
+   ],
+   "color": "#d3cbbd",
+   "intensity": 14,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -14,
+    6.5,
+    53
+   ],
+   "color": "#d3cbbd",
+   "intensity": 14,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    14,
+    6.5,
+    53
+   ],
+   "color": "#d3cbbd",
+   "intensity": 14,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    24,
+    6.5,
+    53
+   ],
+   "color": "#d3cbbd",
+   "intensity": 14,
+   "range": 20,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -19,
+    2.4,
+    51
+   ],
+   "color": "#ccc6ba",
+   "intensity": 6.5,
+   "range": 12,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -9,
+    2.4,
+    55
+   ],
+   "color": "#ccc6ba",
+   "intensity": 6.5,
+   "range": 12,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    9,
+    2.4,
+    51
+   ],
+   "color": "#ccc6ba",
+   "intensity": 6.5,
+   "range": 12,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    19,
+    2.4,
+    55
+   ],
+   "color": "#ccc6ba",
+   "intensity": 6.5,
+   "range": 12,
+   "radius": 1.4,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    7.5,
+    53
+   ],
+   "color": "#d6ccbb",
+   "intensity": 12,
+   "range": 22,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -34,
+    4.5,
+    53
+   ],
+   "color": "#c9c8c0",
+   "intensity": 7,
+   "range": 12,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    34,
+    4.5,
+    53
+   ],
+   "color": "#c9c8c0",
+   "intensity": 7,
+   "range": 12,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    6.5,
+    61.5
+   ],
+   "color": "#d3cbbd",
+   "intensity": 13,
+   "range": 18,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    6.5,
+    66
+   ],
+   "color": "#d3cbbd",
+   "intensity": 13,
+   "range": 18,
+   "radius": 1.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -4.5,
+    2.4,
+    64.5
+   ],
+   "color": "#ccc6ba",
+   "intensity": 6,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    4.5,
+    2.4,
+    66.5
+   ],
+   "color": "#ccc6ba",
+   "intensity": 6,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    5,
+    73.4
+   ],
+   "color": "#c9c8c0",
+   "intensity": 7,
+   "range": 11,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0,
+    11,
+    70
+   ],
+   "color": "#d0cabe",
+   "intensity": 10,
+   "range": 16,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    14,
+    11.5,
+    43
+   ],
+   "color": "#d6d0c4",
+   "intensity": 8,
+   "range": 14,
+   "radius": 1.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    6.4,
+    1.7,
+    29.6
+   ],
+   "color": "#cfc8bb",
+   "intensity": 3,
+   "range": 6,
+   "radius": 0.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -38.4,
+    16.63,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -42,
+    9.83,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -37.6,
+    13.13,
+    9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -44.3,
+    9.83,
+    9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -52.7,
+    20.03,
+    9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -51.7,
+    2.78,
+    8.55
+   ],
+   "color": "#ffc58a",
+   "intensity": 3.2,
+   "range": 6,
+   "radius": 0.05
+  },
+  {
+   "type": "point",
+   "pos": [
+    -53.25,
+    13.23,
+    29.8
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -66.75,
+    9.83,
+    -19.6
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -66.75,
+    20.03,
+    -28.6
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -74.5,
+    16.63,
+    -9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -66.75,
+    13.18,
+    23.4
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -66.75,
+    23.38,
+    33
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -71,
+    19.98,
+    9.75
+   ],
+   "color": "#ffb468",
+   "intensity": 2.4,
+   "range": 3.6,
+   "radius": 0.15,
+   "decay": 1.5,
+   "name": "window"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -67.7,
+    1.55,
+    7
+   ],
+   "color": "#ff9442",
+   "intensity": 7,
+   "range": 7,
+   "radius": 0.25,
+   "name": "barrel_glow"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -34,
+    7.3,
+    -3.9
+   ],
+   "color": "#ffb36b",
+   "intensity": 28,
+   "range": 15,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    -58.2,
+    7.3,
+    22
+   ],
+   "color": "#ffb36b",
+   "intensity": 28,
+   "range": 15,
+   "radius": 0.12
+  },
+  {
+   "type": "point",
+   "pos": [
+    -46.6,
+    1.6,
+    -7.75
+   ],
+   "color": "#ff9442",
+   "intensity": 6,
+   "range": 7,
+   "radius": 0.25,
+   "name": "barrel_glow"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -64.82,
+    3.8,
+    -24.2
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -55.18,
+    3.6,
+    27.6
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -61.5,
+    3.9,
+    -32.82
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -58.5,
+    3.9,
+    36.82
+   ],
+   "color": "#ffc27a",
+   "intensity": 9,
+   "range": 11,
+   "radius": 0.12,
+   "name": "worklight"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -31,
+    8,
+    0
+   ],
+   "color": "#d8cfbe",
+   "intensity": 6.5,
+   "range": 20,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -40,
+    8,
+    0
+   ],
+   "color": "#d8cfbe",
+   "intensity": 6.5,
+   "range": 20,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -49,
+    8,
+    0
+   ],
+   "color": "#d8cfbe",
+   "intensity": 6.5,
+   "range": 20,
+   "radius": 2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -28.5,
+    3.6,
+    3.6
+   ],
+   "color": "#d6cec0",
+   "intensity": 4,
+   "range": 13,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -36.5,
+    3.6,
+    -3.6
+   ],
+   "color": "#d6cec0",
+   "intensity": 4,
+   "range": 13,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -44.5,
+    3.6,
+    3.6
+   ],
+   "color": "#d6cec0",
+   "intensity": 4,
+   "range": 13,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -52,
+    3.6,
+    -3.6
+   ],
+   "color": "#d6cec0",
+   "intensity": 4,
+   "range": 13,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    6.5,
+    -21
+   ],
+   "color": "#d2ccc0",
+   "intensity": 10,
+   "range": 17,
+   "radius": 1.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    6.5,
+    -11
+   ],
+   "color": "#d2ccc0",
+   "intensity": 10,
+   "range": 17,
+   "radius": 1.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    6.5,
+    13
+   ],
+   "color": "#d2ccc0",
+   "intensity": 10,
+   "range": 17,
+   "radius": 1.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    6.5,
+    23
+   ],
+   "color": "#d2ccc0",
+   "intensity": 10,
+   "range": 17,
+   "radius": 1.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -61.8,
+    3.2,
+    -17
+   ],
+   "color": "#d2ccc0",
+   "intensity": 3.5,
+   "range": 11,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -58.2,
+    3.2,
+    18
+   ],
+   "color": "#d2ccc0",
+   "intensity": 3.5,
+   "range": 11,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    6.5,
+    0
+   ],
+   "color": "#d6cfc2",
+   "intensity": 5,
+   "range": 15,
+   "radius": 1.6,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60.5,
+    3.2,
+    26.4
+   ],
+   "color": "#d2ccc0",
+   "intensity": 6,
+   "range": 10,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -59.5,
+    3.4,
+    -22.8
+   ],
+   "color": "#d2ccc0",
+   "intensity": 5,
+   "range": 10,
+   "radius": 0.8,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -63,
+    4.2,
+    0
+   ],
+   "color": "#d4ccbe",
+   "intensity": 8,
+   "range": 14,
+   "radius": 1.2,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    4.5,
+    -29.5
+   ],
+   "color": "#c9c8c2",
+   "intensity": 5,
+   "range": 11,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -60,
+    4.5,
+    33.5
+   ],
+   "color": "#c9c8c2",
+   "intensity": 5,
+   "range": 11,
+   "radius": 1,
+   "decay": 1,
+   "name": "fill"
+  }
+ ],
+ "objectives": [
+  {
+   "id": "S_TRUCK_BREAK",
+   "type": "bossBreak",
+   "zone": "south",
+   "round": 5,
+   "boss": "butcher",
+   "landmark": "LM_TRUCK_BARRICADE",
+   "trigger": {
+    "pos": [
+     0,
+     0,
+     72
+    ],
+    "note": "the butcher walks z 72 -> 30 (BOSS_ARENAS.mid.intro) and hits the barricade at ~z 70.6"
+   },
+   "truck": {
+    "size": [
+     8.2,
+     3.4,
+     2.5
+    ],
+    "intact": {
+     "pos": [
+      1.1,
+      0,
+      69.2
+     ],
+     "rot": 0.06
+    },
+    "shoved": {
+     "pos": [
+      3.3,
+      0,
+      67
+     ],
+     "rot": 1,
+     "roll": 0.04
+    }
+   },
+   "pieces": [
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -7.42,
+      0,
+      68.72
+     ],
+     "rot": 0.03,
+     "tint": "#b49a70",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -7.23,
+       0,
+       64.95
+      ],
+      "rot": 1.757,
+      "rx": 0,
+      "delay": 0
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -7.39,
+      1.3,
+      68.69
+     ],
+     "rot": -0.054,
+     "tint": "#bfa47a",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -6.86,
+       0,
+       65.52
+      ],
+      "rot": 0.374,
+      "rx": 1.571,
+      "delay": 0.05
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -7.4,
+      0,
+      69.9
+     ],
+     "rot": -0.004,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -6.34,
+       0,
+       66.21
+      ],
+      "rot": 1.738,
+      "rx": 1.571,
+      "delay": 0.1
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -7.38,
+      1.3,
+      69.88
+     ],
+     "rot": 0.06,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -6.52,
+       0,
+       64.87
+      ],
+      "rot": 0.671,
+      "rx": 0,
+      "delay": 0.15
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -6.17,
+      0,
+      68.7
+     ],
+     "rot": 0.013,
+     "tint": "#b49a70",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -5.1,
+       0,
+       65.68
+      ],
+      "rot": 1.042,
+      "rx": 1.571,
+      "delay": 0.2
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -6.17,
+      1.3,
+      68.68
+     ],
+     "rot": 0.04,
+     "tint": "#b49a70",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -5.97,
+       0,
+       63.38
+      ],
+      "rot": -1.591,
+      "rx": 1.571,
+      "delay": 0.25
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -6.18,
+      0,
+      69.89
+     ],
+     "rot": -0.015,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -5.08,
+       0,
+       67.1
+      ],
+      "rot": -1.134,
+      "rx": 0,
+      "delay": 0.3
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -6.2,
+      1.3,
+      69.91
+     ],
+     "rot": 0.005,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -7.14,
+       0,
+       66.52
+      ],
+      "rot": -3.03,
+      "rx": 1.571,
+      "delay": 0.35
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -5,
+      0,
+      68.7
+     ],
+     "rot": 0.01,
+     "tint": "#a99064",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -3.93,
+       0,
+       64.93
+      ],
+      "rot": -0.385,
+      "rx": 1.571,
+      "delay": 0.4
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -5,
+      1.3,
+      68.7
+     ],
+     "rot": -0.002,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -4.35,
+       0,
+       64.25
+      ],
+      "rot": 1.379,
+      "rx": 0,
+      "delay": 0.45
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -5.02,
+      0,
+      69.89
+     ],
+     "rot": 0.025,
+     "tint": "#bfa47a",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -4.47,
+       0,
+       66.46
+      ],
+      "rot": 1.373,
+      "rx": 1.571,
+      "delay": 0.5
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.16,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      -4.98,
+      1.3,
+      69.88
+     ],
+     "rot": 0.046,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       -5.96,
+       0,
+       66.76
+      ],
+      "rot": -3.013,
+      "rx": 1.571,
+      "delay": 0.55
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      5.92,
+      0,
+      68.69
+     ],
+     "rot": 0.004,
+     "tint": "#a99064",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       4.88,
+       0,
+       63.58
+      ],
+      "rot": -2.83,
+      "rx": 0,
+      "delay": 0.6
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      5.91,
+      1.3,
+      68.69
+     ],
+     "rot": -0.012,
+     "tint": "#bfa47a",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       6.44,
+       0,
+       63.2
+      ],
+      "rot": -1.729,
+      "rx": 1.571,
+      "delay": 0.65
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      5.9,
+      0,
+      69.89
+     ],
+     "rot": 0.01,
+     "tint": "#bfa47a",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       4.79,
+       0,
+       67.36
+      ],
+      "rot": -0.395,
+      "rx": 1.571,
+      "delay": 0.7
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      5.91,
+      1.3,
+      69.91
+     ],
+     "rot": 0.017,
+     "tint": "#a99064",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       4.73,
+       0,
+       65.1
+      ],
+      "rot": -2.39,
+      "rx": 0,
+      "delay": 0.75
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      7.32,
+      0,
+      68.72
+     ],
+     "rot": 0.002,
+     "tint": "#b49a70",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       8.17,
+       0,
+       66.16
+      ],
+      "rot": -2.068,
+      "rx": 1.571,
+      "delay": 0.8
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      7.29,
+      1.3,
+      68.69
+     ],
+     "rot": 0.005,
+     "tint": "#c8ae84",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       7.57,
+       0,
+       65.39
+      ],
+      "rot": 0.648,
+      "rx": 1.571,
+      "delay": 0.85
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      7.31,
+      0,
+      69.91
+     ],
+     "rot": 0.007,
+     "tint": "#a99064",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       7.7,
+       0,
+       64.47
+      ],
+      "rot": -2.647,
+      "rx": 0,
+      "delay": 0.9
+     }
+    },
+    {
+     "kind": "crate",
+     "size": [
+      1.36,
+      1.28,
+      1.16
+     ],
+     "pos": [
+      7.3,
+      1.3,
+      69.92
+     ],
+     "rot": 0.008,
+     "tint": "#bfa47a",
+     "fragments": [
+      "lid",
+      "side",
+      "side",
+      "side",
+      "side",
+      "base"
+     ],
+     "to": {
+      "pos": [
+       6.18,
+       0,
+       64.47
+      ],
+      "rot": -2.4,
+      "rx": 1.571,
+      "delay": 0.95
+     }
+    }
+   ],
+   "clear": {
+    "colliders": [
+     {
+      "box": [
+       0,
+       0,
+       69.3,
+       16,
+       8,
+       2.6
+      ],
+      "note": "barricade + BLK_S_TRUCK"
+     }
+    ],
+    "nav": {
+     "rect": [
+      -8,
+      67.5,
+      8,
+      71.1
+     ],
+     "note": "whole lane walkable after the break"
+    }
+   },
+   "after": {
+    "colliders": [
+     {
+      "box": [
+       3.3,
+       0,
+       67,
+       8.2,
+       3.4,
+       2.5
+      ],
+      "rot": 1,
+      "note": "shoved truck"
+     }
+    ]
+   },
+   "note": "static package draws the intact barricade; the runtime breakable takes these pieces over"
+  },
+  {
+   "id": "S_PROPANE",
+   "type": "explosive",
+   "zone": "south",
+   "boss": "butcher",
+   "round": 5,
+   "effect": "stagger",
+   "radius": 4.5,
+   "tanks": [
+    [
+     6.57,
+     0.43,
+     28.65
+    ],
+    [
+     6.8,
+     0.43,
+     29.32
+    ],
+    [
+     6.55,
+     0.43,
+     29.92
+    ],
+    [
+     7.3,
+     0.43,
+     26.65
+    ],
+    [
+     7.68,
+     0.43,
+     26.67
+    ],
+    [
+     7.32,
+     0.43,
+     27.23
+    ],
+    [
+     7.7,
+     0.43,
+     27.25
+    ]
+   ],
+   "note": "propane bottles hidden under the grocery produce stand S_PRODUCE (+ the exchange cage by the door): shooting one stuns the butcher if it stands within radius"
+  }
+ ],
+ "static": {
+  "file": "static.glb",
+  "meshopt": true
+ },
+ "collision": {
+  "file": "collision.glb"
+ },
+ "nav": {
+  "json": "nav.json",
+  "bin": "nav.bin"
+ },
+ "lightmap": {
+  "encoding": "rgbm-sqrt",
+  "range": 16,
+  "mode": "indirect+mask",
+  "uv": "uv1",
+  "atlases": [
+   {
+    "rgbm": "lm_0.png",
+    "sun": "lm_0_sun.png",
+    "width": 2048,
+    "height": 2048
+   },
+   {
+    "rgbm": "lm_1.png",
+    "sun": "lm_1_sun.png",
+    "width": 2048,
+    "height": 2048
+   },
+   {
+    "rgbm": "lm_2.png",
+    "sun": "lm_2_sun.png",
+    "width": 2048,
+    "height": 2048
+   }
+  ]
+ },
+ "materials": {
+  "asphalt_patch": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/asphalt_dark_diff.jpg",
+    "nor": "../common/asphalt_dark_nor.jpg",
+    "arm": "../common/asphalt_dark_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "decal": true,
+   "surf": "concrete",
+   "lm": 0.55,
+   "cast": false,
+   "res": "1k"
+  },
+  "curb": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_floor_diff.jpg",
+    "nor": "../common/concrete_floor_nor.jpg",
+    "arm": "../common/concrete_floor_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "members": [
+    "curb",
+    "trim_concrete"
+   ],
+   "lm": 1,
+   "res": "2k"
+  },
+  "paint_white": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/road_paint_diff.png",
+    "nor": "../common/road_paint_nor.jpg",
+    "arm": "../common/road_paint_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "alphaTest": 0.32,
+   "decal": true,
+   "surf": "concrete",
+   "members": [
+    "paint_white",
+    "paint_yellow",
+    "paint_red"
+   ],
+   "lm": 0.5,
+   "cast": false
+  },
+  "steel_dark": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_rusty_diff.jpg",
+    "nor": "../common/metal_rusty_nor.jpg",
+    "arm": "../common/metal_rusty_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.9,
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "decal_stain": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_stain_diff.png",
+    "nor": "../common/decal_stain_nor.jpg",
+    "arm": "../common/decal_stain_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "decal": true,
+   "surf": "concrete",
+   "lm": 0.5,
+   "cast": false
+  },
+  "decal_cracks": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_cracks_diff.png",
+    "nor": "../common/decal_cracks_nor.jpg",
+    "arm": "../common/decal_cracks_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "blend": true,
+   "decal": true,
+   "surf": "concrete",
+   "lm": 0.5,
+   "cast": false
+  },
+  "decal_dirt": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_dirt_diff.png",
+    "nor": "../common/decal_dirt_nor.jpg",
+    "arm": "../common/decal_dirt_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "decal": true,
+   "surf": "dirt",
+   "lm": 0.5,
+   "cast": false
+  },
+  "decal_puddle": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_puddle_diff.png",
+    "nor": "../common/decal_puddle_nor.jpg",
+    "arm": "../common/decal_puddle_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "env": 2.6,
+   "decal": true,
+   "surf": "water",
+   "lm": 0.5,
+   "cast": false
+  },
+  "metal_container": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_container_diff.jpg",
+    "nor": "../common/metal_container_nor.jpg",
+    "arm": "../common/metal_container_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "lm": 0.8,
+   "res": "1k"
+  },
+  "frame_white": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.9,
+   "surf": "metal",
+   "lm": 1
+  },
+  "steel": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.75,
+   "metal": 0.8,
+   "surf": "metal",
+   "lm": 1
+  },
+  "car_chrome": {
+   "color": "#ffffff",
+   "rough": 0.25,
+   "metal": 1,
+   "env": 1.5,
+   "surf": "metal",
+   "lm": 1
+  },
+  "frame_dark": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.85,
+   "surf": "metal",
+   "lm": 1
+  },
+  "sign_white": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "members": [
+    "sign_white",
+    "sign_red",
+    "sign_blue",
+    "sign_green",
+    "sign_yellow",
+    "billboard",
+    "paint_metal"
+   ],
+   "lm": 1
+  },
+  "wood_siding": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/wood_siding_diff.jpg",
+    "nor": "../common/wood_siding_nor.jpg",
+    "arm": "../common/wood_siding_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "wood",
+   "members": [
+    "wood_siding",
+    "ez_wood",
+    "nz_wood",
+    "sz_wood",
+    "wz_wood"
+   ],
+   "lm": 1,
+   "res": "1k"
+  },
+  "wood_planks": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/wood_planks_diff.jpg",
+    "nor": "../common/wood_planks_nor.jpg",
+    "arm": "../common/wood_planks_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "wood",
+   "members": [
+    "wood_planks",
+    "trim_wood"
+   ],
+   "lm": 1,
+   "res": "1k"
+  },
+  "ct_tread": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/tread_plate_diff.jpg",
+    "nor": "../common/tread_plate_nor.jpg",
+    "arm": "../common/tread_plate_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "rough": 0.85,
+   "metal": 0.7,
+   "surf": "metal",
+   "lm": 0.8
+  },
+  "perf_plate": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/perforated_diff.jpg",
+    "nor": "../common/perforated_nor.jpg",
+    "arm": "../common/perforated_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "surf": "grate",
+   "lm": 0.6
+  },
+  "sandbag": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/canvas_diff.jpg",
+    "nor": "../common/canvas_nor.jpg",
+    "arm": "../common/canvas_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "surf": "sand",
+   "lm": 1
+  },
+  "wire": {
+   "color": "#ffffff",
+   "rough": 0.7,
+   "surf": "metal",
+   "members": [
+    "wire",
+    "ez_ink_white",
+    "ez_ink_yellow",
+    "ez_ink_red",
+    "ez_ink",
+    "nz_ink",
+    "nz_ink_red",
+    "nz_ink_gold",
+    "nz_ink_white",
+    "nz_ink_rivet"
+   ],
+   "lm": 0,
+   "cast": false
+  },
+  "ct_fabric": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/canvas_diff.jpg",
+    "nor": "../common/canvas_nor.jpg",
+    "arm": "../common/canvas_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "side": "double",
+   "surf": "wood",
+   "members": [
+    "ct_fabric",
+    "ez_fabric",
+    "nz_fabric",
+    "sz_fabric",
+    "wz_fabric"
+   ],
+   "lm": 1
+  },
+  "metal_worn": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_worn_diff.jpg",
+    "nor": "../common/metal_worn_nor.jpg",
+    "arm": "../common/metal_worn_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "members": [
+    "metal_worn",
+    "car_burnt"
+   ],
+   "lm": 1,
+   "res": "1k"
+  },
+  "metal_painted": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_painted_diff.jpg",
+    "nor": "../common/metal_painted_nor.jpg",
+    "arm": "../common/metal_painted_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "corrugated": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/corrugated_diff.jpg",
+    "nor": "../common/corrugated_nor.jpg",
+    "arm": "../common/corrugated_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "metal": 1,
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "lamp_off": {
+   "color": "#ffffff",
+   "rough": 0.2,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "car_plastic": {
+   "color": "#ffffff",
+   "rough": 0.8,
+   "surf": "metal",
+   "members": [
+    "car_plastic",
+    "rubber",
+    "car_interior",
+    "sz_paint_yellow",
+    "sz_paint_white",
+    "sz_paint_green",
+    "sz_paint_red",
+    "sz_paint",
+    "wz_paint",
+    "wz_paint_red",
+    "wz_paint_white",
+    "wz_paint_green",
+    "wz_paint_yellow"
+   ],
+   "lm": 1
+  },
+  "lamp_green": {
+   "color": "#ffffff",
+   "emissive": "#30ff60",
+   "emissiveIntensity": 6,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "plaster": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/plaster_diff.jpg",
+    "nor": "../common/plaster_nor.jpg",
+    "arm": "../common/plaster_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 1,
+   "res": "1k"
+  },
+  "glass_dirty": {
+   "color": "#ffffff",
+   "rough": 0.25,
+   "metal": 0,
+   "opacity": 0.6,
+   "env": 0.9,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "interior_hidden": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/plaster_worn_diff.jpg",
+    "nor": "../common/plaster_worn_nor.jpg",
+    "arm": "../common/plaster_worn_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "members": [
+    "interior_hidden",
+    "interior_ceiling",
+    "interior_wall"
+   ],
+   "lm": 0.4,
+   "res": "1k"
+  },
+  "interior_floor": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/garage_floor_diff.jpg",
+    "nor": "../common/garage_floor_nor.jpg",
+    "arm": "../common/garage_floor_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "glass": {
+   "color": "#ffffff",
+   "rough": 0.06,
+   "metal": 0,
+   "opacity": 0.38,
+   "env": 1.3,
+   "surf": "glass",
+   "members": [
+    "glass",
+    "glass_shop"
+   ],
+   "lm": 0,
+   "cast": false
+  },
+  "decal_streak": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/decal_streak_diff.png",
+    "nor": "../common/decal_streak_nor.jpg",
+    "arm": "../common/decal_streak_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "blend": true,
+   "decal": true,
+   "surf": "concrete",
+   "lm": 0.5,
+   "cast": false
+  },
+  "metal_shutter": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_shutter_diff.jpg",
+    "nor": "../common/metal_shutter_nor.jpg",
+    "arm": "../common/metal_shutter_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "trim_stone": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_wall_diff.jpg",
+    "nor": "../common/concrete_wall_nor.jpg",
+    "arm": "../common/concrete_wall_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "members": [
+    "trim_stone",
+    "concrete_wall"
+   ],
+   "lm": 1,
+   "res": "1k"
+  },
+  "metal_rusty": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_rusty_diff.jpg",
+    "nor": "../common/metal_rusty_nor.jpg",
+    "arm": "../common/metal_rusty_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "brick_painted": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/brick_painted_diff.jpg",
+    "nor": "../common/brick_painted_nor.jpg",
+    "arm": "../common/brick_painted_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 1,
+   "res": "1k"
+  },
+  "concrete_dirty": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_dirty_diff.jpg",
+    "nor": "../common/concrete_dirty_nor.jpg",
+    "arm": "../common/concrete_dirty_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 1,
+   "res": "1k"
+  },
+  "trim_metal": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_painted_diff.jpg",
+    "nor": "../common/metal_painted_nor.jpg",
+    "arm": "../common/metal_painted_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.9,
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "grate": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/grate_diff.png",
+    "nor": "../common/grate_nor.jpg",
+    "arm": "../common/grate_arm.jpg"
+   },
+   "sizes": {
+    "diff": 512,
+    "nor": 512,
+    "arm": 512
+   },
+   "metal": 1,
+   "alphaTest": 0.5,
+   "side": "double",
+   "surf": "grate",
+   "lm": 0.6
+  },
+  "brick_red": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/brick_red_diff.jpg",
+    "nor": "../common/brick_red_nor.jpg",
+    "arm": "../common/brick_red_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 1,
+   "res": "2k"
+  },
+  "lamp_warm": {
+   "color": "#ffffff",
+   "emissive": "#ffc77a",
+   "emissiveIntensity": 14,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "brick_dark": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/brick_dark_diff.jpg",
+    "nor": "../common/brick_dark_nor.jpg",
+    "arm": "../common/brick_dark_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 1,
+   "res": "1k"
+  },
+  "prop_metal_trash_can_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/metal_trash_can_0_diff.jpg",
+    "nor": "../common/props/metal_trash_can_0_nor.jpg",
+    "arm": "../common/props/metal_trash_can_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "metal_trash_can"
+  },
+  "prop_metal_trash_can_1": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/metal_trash_can_1_diff.jpg",
+    "nor": "../common/props/metal_trash_can_1_nor.jpg",
+    "arm": "../common/props/metal_trash_can_1_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "metal_trash_can"
+  },
+  "lamp_amber": {
+   "color": "#ffffff",
+   "emissive": "#ff9a1a",
+   "emissiveIntensity": 8,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "prop_old_tyre_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/old_tyre_0_diff.jpg",
+    "nor": "../common/props/old_tyre_0_nor.jpg",
+    "arm": "../common/props/old_tyre_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "side": "double",
+   "surf": "dirt",
+   "lm": 1,
+   "prop": "old_tyre"
+  },
+  "prop_fire_hydrant_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/fire_hydrant_0_diff.jpg",
+    "nor": "../common/props/fire_hydrant_0_nor.jpg",
+    "arm": "../common/props/fire_hydrant_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "fire_hydrant"
+  },
+  "prop_Barrel_01_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/Barrel_01_0_diff.jpg",
+    "nor": "../common/props/Barrel_01_0_nor.jpg",
+    "arm": "../common/props/Barrel_01_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "Barrel_01"
+  },
+  "rubble": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/rubble_diff.jpg",
+    "nor": "../common/rubble_nor.jpg",
+    "arm": "../common/rubble_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.8,
+   "res": "1k"
+  },
+  "cone_orange": {
+   "color": "#ffffff",
+   "rough": 0.5,
+   "surf": "wood",
+   "members": [
+    "cone_orange",
+    "reflective_white"
+   ],
+   "lm": 1
+  },
+  "prop_cardboard_box_01_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/cardboard_box_01_0_diff.jpg",
+    "nor": "../common/props/cardboard_box_01_0_nor.jpg",
+    "arm": "../common/props/cardboard_box_01_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "side": "double",
+   "surf": "wood",
+   "lm": 1,
+   "prop": "cardboard_box_01"
+  },
+  "prop_trashbag_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/trashbag_0_diff.jpg",
+    "nor": "../common/props/trashbag_0_nor.jpg",
+    "arm": "../common/props/trashbag_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "side": "double",
+   "surf": "dirt",
+   "lm": 1,
+   "prop": "trashbag"
+  },
+  "prop_wooden_crate_02_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/wooden_crate_02_0_diff.jpg",
+    "nor": "../common/props/wooden_crate_02_0_nor.jpg",
+    "arm": "../common/props/wooden_crate_02_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "wood",
+   "lm": 1,
+   "prop": "wooden_crate_02"
+  },
+  "prop_plastic_crate_02_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/plastic_crate_02_0_diff.jpg",
+    "nor": "../common/props/plastic_crate_02_0_nor.jpg",
+    "arm": "../common/props/plastic_crate_02_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "surf": "wood",
+   "lm": 1,
+   "prop": "plastic_crate_02"
+  },
+  "prop_propane_tank_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/propane_tank_0_diff.jpg",
+    "nor": "../common/props/propane_tank_0_nor.jpg",
+    "arm": "../common/props/propane_tank_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "surf": "metal",
+   "lm": 1,
+   "prop": "propane_tank"
+  },
+  "prop_utility_box_02_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/utility_box_02_0_diff.jpg",
+    "nor": "../common/props/utility_box_02_0_nor.jpg",
+    "arm": "../common/props/utility_box_02_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "utility_box_02"
+  },
+  "tape_police": {
+   "color": "#ffffff",
+   "rough": 0.6,
+   "side": "double",
+   "surf": "wood",
+   "lm": 0,
+   "cast": false
+  },
+  "asphalt_cracked": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/asphalt_cracked_diff.jpg",
+    "nor": "../common/asphalt_cracked_nor.jpg",
+    "arm": "../common/asphalt_cracked_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.55,
+   "res": "2k"
+  },
+  "asphalt": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/asphalt_diff.jpg",
+    "nor": "../common/asphalt_nor.jpg",
+    "arm": "../common/asphalt_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.55,
+   "res": "2k"
+  },
+  "concrete_floor": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_floor_diff.jpg",
+    "nor": "../common/concrete_floor_nor.jpg",
+    "arm": "../common/concrete_floor_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.7,
+   "res": "2k"
+  },
+  "roof_tar": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/roof_tar_diff.jpg",
+    "nor": "../common/roof_tar_nor.jpg",
+    "arm": "../common/roof_tar_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "interior_tiles": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/tiles_worn_diff.jpg",
+    "nor": "../common/tiles_worn_nor.jpg",
+    "arm": "../common/tiles_worn_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "tile",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "ez_iron": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_rusty_diff.jpg",
+    "nor": "../common/metal_rusty_nor.jpg",
+    "arm": "../common/metal_rusty_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.9,
+   "surf": "metal",
+   "lm": 0,
+   "res": "1k"
+  },
+  "prop_security_light_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/security_light_0_diff.jpg",
+    "nor": "../common/props/security_light_0_nor.jpg",
+    "arm": "../common/props/security_light_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "security_light"
+  },
+  "prop_security_light_1": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/security_light_1_diff.jpg",
+    "nor": "../common/props/security_light_1_nor.jpg",
+    "arm": "../common/props/security_light_1_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "security_light"
+  },
+  "prop_security_light_2": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/security_light_2_diff.jpg",
+    "nor": "../common/props/security_light_2_nor.jpg",
+    "arm": "../common/props/security_light_2_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "security_light"
+  },
+  "lamp_cold": {
+   "color": "#ffffff",
+   "emissive": "#d8ecff",
+   "emissiveIntensity": 12,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "chainlink": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/chainlink_diff.png",
+    "nor": "../common/chainlink_nor.jpg",
+    "arm": "../common/chainlink_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "metal": 1,
+   "alphaTest": 0.45,
+   "side": "double",
+   "surf": "metal",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "prop_barrel_03_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/barrel_03_0_diff.jpg",
+    "nor": "../common/props/barrel_03_0_nor.jpg",
+    "arm": "../common/props/barrel_03_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 1,
+   "side": "double",
+   "surf": "metal",
+   "lm": 1,
+   "prop": "barrel_03"
+  },
+  "lamp_red": {
+   "color": "#ffffff",
+   "emissive": "#ff2a18",
+   "emissiveIntensity": 8,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "car_paint_worn": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/metal_worn_diff.jpg",
+    "nor": "../common/metal_worn_nor.jpg",
+    "arm": "../common/metal_worn_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 0.8,
+   "env": 0.8,
+   "surf": "metal",
+   "lm": 1,
+   "res": "1k"
+  },
+  "car_light": {
+   "color": "#ffffff",
+   "rough": 0.12,
+   "surf": "glass",
+   "members": [
+    "car_light",
+    "car_taillight"
+   ],
+   "lm": 1
+  },
+  "car_paint": {
+   "color": "#ffffff",
+   "rough": 0.42,
+   "metal": 0.3,
+   "env": 1,
+   "surf": "metal",
+   "lm": 1
+  },
+  "car_glass": {
+   "color": "#ffffff",
+   "rough": 0.05,
+   "opacity": 0.45,
+   "env": 2.2,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "prop_painted_wooden_bench_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/painted_wooden_bench_0_diff.jpg",
+    "nor": "../common/props/painted_wooden_bench_0_nor.jpg",
+    "arm": "../common/props/painted_wooden_bench_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "side": "double",
+   "surf": "wood",
+   "lm": 1,
+   "prop": "painted_wooden_bench"
+  },
+  "concrete_cracked": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_cracked_diff.jpg",
+    "nor": "../common/concrete_cracked_nor.jpg",
+    "arm": "../common/concrete_cracked_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.7,
+   "res": "1k"
+  },
+  "asphalt_dark": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/asphalt_dark_diff.jpg",
+    "nor": "../common/asphalt_dark_nor.jpg",
+    "arm": "../common/asphalt_dark_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.55,
+   "res": "1k"
+  },
+  "nz_bronze": {
+   "color": "#ffffff",
+   "rough": 0.42,
+   "metal": 1,
+   "env": 1.2,
+   "surf": "metal",
+   "lm": 0,
+   "cast": false
+  },
+  "gravel": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/gravel_diff.jpg",
+    "nor": "../common/gravel_nor.jpg",
+    "arm": "../common/gravel_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "surf": "dirt",
+   "lm": 0.5,
+   "res": "1k"
+  },
+  "sk_stone": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/plaster_diff.jpg",
+    "nor": "../common/plaster_nor.jpg",
+    "arm": "../common/plaster_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.35,
+   "res": "1k"
+  },
+  "sk_win": {
+   "color": "#ffffff",
+   "rough": 0.2,
+   "metal": 0,
+   "env": 0.8,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "sk_wood": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/wood_siding_diff.jpg",
+    "nor": "../common/wood_siding_nor.jpg",
+    "arm": "../common/wood_siding_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "wood",
+   "lm": 0.3,
+   "res": "1k"
+  },
+  "sk_roof": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/roof_tar_diff.jpg",
+    "nor": "../common/roof_tar_nor.jpg",
+    "arm": "../common/roof_tar_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.25,
+   "res": "1k"
+  },
+  "sk_lit": {
+   "color": "#ffffff",
+   "rough": 0.6,
+   "emissive": "#ffb066",
+   "emissiveIntensity": 2.4,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "sk_metal": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/paint_metal_diff.jpg",
+    "nor": "../common/paint_metal_nor.jpg",
+    "arm": "../common/paint_metal_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "metal",
+   "lm": 0.3
+  },
+  "sk_brick": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/brick_red_diff.jpg",
+    "nor": "../common/brick_red_nor.jpg",
+    "arm": "../common/brick_red_arm.jpg"
+   },
+   "sizes": {
+    "diff": 2048,
+    "nor": 2048,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     1024,
+     512
+    ],
+    "nor": [
+     1024,
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0.35,
+   "res": "2k"
+  },
+  "sk_fire": {
+   "color": "#ffffff",
+   "rough": 0.9,
+   "emissive": "#ff6a1e",
+   "emissiveIntensity": 18,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "sk_far": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/concrete_wall_diff.jpg",
+    "nor": "../common/concrete_wall_nor.jpg",
+    "arm": "../common/concrete_wall_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "surf": "concrete",
+   "lm": 0,
+   "cast": false,
+   "res": "1k"
+  },
+  "sk_glow": {
+   "color": "#ffffff",
+   "rough": 0.9,
+   "emissive": "#ffd08c",
+   "emissiveIntensity": 24,
+   "surf": "glass",
+   "lm": 0,
+   "cast": false
+  },
+  "sk_gold": {
+   "color": "#ffffff",
+   "rough": 0.3,
+   "metal": 1,
+   "emissive": "#ffc062",
+   "emissiveIntensity": 70,
+   "env": 1.4,
+   "surf": "metal",
+   "lm": 0,
+   "cast": false
+  },
+  "prop_concrete_road_barrier_02_0": {
+   "color": "#ffffff",
+   "maps": {
+    "diff": "../common/props/concrete_road_barrier_02_0_diff.jpg",
+    "nor": "../common/props/concrete_road_barrier_02_0_nor.jpg",
+    "arm": "../common/props/concrete_road_barrier_02_0_arm.jpg"
+   },
+   "sizes": {
+    "diff": 1024,
+    "nor": 1024,
+    "arm": 1024
+   },
+   "variants": {
+    "diff": [
+     512
+    ],
+    "nor": [
+     512
+    ],
+    "arm": [
+     512
+    ]
+   },
+   "rough": 1,
+   "metal": 0,
+   "side": "double",
+   "surf": "concrete",
+   "lm": 1,
+   "prop": "concrete_road_barrier_02"
+  }
+ },
+ "stats": {
+  "meshes": 118,
+  "triangles": 821726,
+  "collisionTriangles": 12343,
+  "chunks": 144,
+  "maxDrawCalls": 117,
+  "maxTriangles": 821694,
+  "viewRadius": 100,
+  "zones": [
+   "center",
+   "east",
+   "north",
+   "skyline",
+   "south",
+   "west"
+  ],
+  "lightmap": {
+   "texels": 4972535,
+   "atlases": 3,
+   "seconds": 1974
+  }
+ }
+}

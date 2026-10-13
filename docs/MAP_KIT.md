@@ -34,7 +34,9 @@ World.load()  （registry: game/src/world/maps/index.js；開發中的地圖用 
 | `node tools/map/compile.mjs losttown --only center --nobake` | 快速迭代單一區塊（不烘焙；執行期以 IBL + 太陽照明） |
 | `node tools/map/compile.mjs losttown --fast` | 預覽品質烘焙（4 texel/m、16 samples） |
 | `node tools/map/compile.mjs losttown` | 正式烘焙（META.lightmapResolution，預設 8 texel/m、64 samples、≤ 6 執行緒） |
-| `node tools/map/mapshots.mjs <registry id> --views views.json` | 一個瀏覽器拍多個視角（需 dev server），輸出 `captures/map/<id>/` |
+| `node tools/map/mapshots.mjs <registry id> --views views.json` | 一個瀏覽器拍多個視角（需 dev server），輸出 `captures/map/<id>/`；視角可帶 `js`（先在頁面執行，例如改曝光、畫質），`pitch` > 0 往下看 |
+| `node tools/map/losttown/navverify.mjs --png` | 檢查**編譯後**的導航格：從堡壘泛洪（與執行期相同規則），驗證出生點、出怪點（與 exit）、補給、購買區、BOSS 落點都連通，列出孤島；`captures/map/losttown/nav.png` 俯視圖 |
+| `node tools/map/mapshots.mjs <id> --eval tools/map/walktest.js` | 真的用玩家控制器沿導航路徑從出生點走到每個出怪點 exit／補給／BOSS 落點，回報卡住（隱形牆、爬不上的台階）與掉落的位置 |
 | `http://127.0.0.1:5190/?map=kittest&match=0` | 在遊戲中自由走動 |
 
 套件驗證場景：`tools/map/_kittest/`（街角：兩棟完整建築、車庫、圍籬空地、各型車輛、路燈、電線桿、號誌、拒馬…）。
@@ -70,7 +72,7 @@ export function build(kit, layout) {
 
 | 匯出 | 內容 |
 |---|---|
-| `META` | `{ id, name, nameEn, bounds:[minx,miny,minz,maxx,maxy,maxz], killY, chunk (合併格 m，預設 40), lightmapResolution (texel/m), maxAtlases, navCell, preview }` |
+| `META` | `{ id, name, nameEn, bounds:[minx,miny,minz,maxx,maxy,maxz], killY, chunk (合併格 m，預設 40), lightmapResolution (texel/m), maxAtlases, lightmapSamples (pass B 上限，預設 64), navCell, preview }` |
 | `ENV` | `{ sun:{ dir (指向太陽), color, intensity, angle (度), shadow:{ mapSize, extent } }, sky:{ hdri, rotationDeg, envIntensity, backgroundIntensity, backgroundBlur, tint }, fog:{ color ('auto' = 天空地平線色), density }, exposure, grade }` |
 | `toMapJson()` | 若有匯出，優先採用它的 `playerSpawns spawners buy supply zones bossArenas objectives`（地圖合約欄位） |
 | `ZONES` | `[{ id, name, nameEn, polygon:[[x,z]...], floorY? }]` |
@@ -179,7 +181,7 @@ export function build(kit, layout) {
 | 收邊 | `trim_stone` `trim_concrete` `trim_metal` `trim_wood` `frame_dark` `frame_white` `steel` `steel_dark` `awning_fabric` |
 | 室內 | `interior_wall` `interior_ceiling` `interior_hidden`（窗後假房間）`interior_floor`（車庫水泥）`interior_tiles`（髒污店面地磚）`interior_quarry`（深紅缸磚） |
 | 玻璃 / 燈 | `glass` `glass_dirty` `glass_shop` `lamp_warm` `lamp_cold` `lamp_red` `lamp_amber` `lamp_green` `lamp_off` |
-| 街道 / 車 | `chainlink` `grate` `pole_wood` `wire` `rubber` `sandbag` `tape_police` `cone_orange` `reflective_white` `sign_*` `billboard` `car_paint` `car_paint_worn` `car_burnt` `car_chrome` `car_plastic` `car_glass` `car_interior` `car_light` `car_taillight` |
+| 街道 / 車 | `chainlink` `grate` `perf_plate`（沖孔鋼板，圓孔不透明，下面要有深色底板）`pole_wood` `wire` `rubber` `sandbag` `tape_police` `cone_orange` `reflective_white` `sign_*` `billboard` `car_paint` `car_paint_worn` `car_burnt` `car_chrome` `car_plastic` `car_glass` `car_interior` `car_light` `car_taillight` |
 
 道具材質自動命名為 `prop_<id>_<n>`。新增材質：在 `MATERIALS` 加一筆；需要新貼圖時在 `tools/map/fetch.mjs` 的 `TEXTURES` 加一筆並重新抓取。
 
@@ -196,6 +198,11 @@ export function build(kit, layout) {
   （`x_diff.jpg` → `x_diff@1k.jpg`、`x_diff@512.jpg`，map.json `materials[].variants`），載入器 `variantFile()` 下載「仍 ≥ 上限的最小檔」，
   不足的部分在解碼時（createImageBitmap）縮小；同一檔案的貼圖共用快取。
 - 霧色 `'auto'` 取 HDRI 地平線色；`env.tint` 只染背景天空（例如綠灰色暴風雲）。
+- 調色：map.json `grade`（layout `ENV.grade` 物件：`saturation contrast shadowTint highlightTint lift gamma gain`，向量用線性倍率 `[r,g,b]`）與
+  `exposure` 由 `World.load` 呼叫 `Renderer.setGrade(grade, exposure)` 套用；沒有 grade 的地圖（演習場）會回到中性值。
+- 環境特效：map.json `fx`（layout `ENV.fx`）由 `game/src/world/mapAmbient.js` 繪製：`smoke`（會上升、擴散、隨風飄的柔和煙柱，
+  `fire` > 0 時底部加上加法混色的火焰）、`ash`（鏡頭周圍隨風飄的灰燼與紙屑）。每層一個 draw call（instanced 面向鏡頭的四邊形，
+  程序化貼圖，不需圖檔）；畫質低／中時粒子數 ×0.5／×0.75。
 - 新地圖：`game/src/world/maps/<id>.js` 呼叫 `buildPackageMap`，並在 `game/src/world/maps/index.js` 登記
   （`CATALOG` 一筆：`kind: 'chapter'`＋章節號 `no`、`objective`、可選 `thumb` 縮圖（16:9，沒有時選單畫出 `plan` 戰術平面圖）、
   選單背景鏡頭 `preview.path`。`status: 'wip'` 在選擇章節裡顯示「建置中」、不能選，`?map=<id>` 仍可直接載入；
@@ -204,8 +211,12 @@ export function build(kit, layout) {
 ## 7. 編譯器做的最佳化
 
 1. **材質折疊**：只差顏色 / 貼圖比例 / surf 的材質共用一個 GPU 材質（顏色移到頂點色、比例已烘進 UV）。
-2. **自適應合併格**：三角形少的材質（道具、招牌、燈）改用 2×、4×… 的大格合併，直到每個 mesh ≥ `META.minTrisPerMesh`（2500）。
-3. **隱藏面剔除**：建築足跡下與被上層地面覆蓋（≤ 6 cm）的地面在 `kit.finalize()` 被挖掉；貼地的朝下面（箱底、道具底）被刪除。
+2. **自適應合併格**：三角形少的材質（道具、招牌、燈）改用 2×、4×… 的大格合併，直到每個 mesh ≥ `META.minTrisPerMesh`（2500）；
+   設了 `META.trisPerMesh`（失落之城 12000）時，全圖 < `META.mergeBelow`（150k）三角形的材質還要合併到最多 ceil(總數 ÷ trisPerMesh) 個 mesh
+   （消防栓、窗框、招牌、電線這類散布在每個 40 m 格裡的材質，原本每格一個 draw call）。失落之城：254 → 118 個 mesh。
+3. **隱藏面剔除**：建築足跡下與被上層地面覆蓋（≤ 6 cm）的地面在 `kit.finalize()` 被挖掉；貼地的朝下面（箱底、道具底）被刪除；
+   `dropCoveredFaces` 再刪掉「緊貼另一個不透明面、而且前方是封閉實體」的三角形（背靠背的牆、貼牆的板子背面…；7 個取樣點都要成立，
+   完全共面的一對面還要從前方 3 cm 射線確認是在實體內，避免把一片零厚度隔板的兩面都刪掉），之後壓縮頂點。`--keepHidden` 關閉。
 4. 碰撞網格以 1 mm 焊接、依 SURF 分開頂點；導航格從出生點與出怪點泛洪，只標記可達的最低層。
 
 ## 8. 效能預算與檢查
@@ -214,6 +225,8 @@ export function build(kit, layout) {
   目標：高畫質任一視角 < 250 draw calls、< 1.2 M 可見三角形。
 - 光照貼圖：2048 atlas；`META.maxAtlases` 可限制張數（自動降解析度）。室內 / 假房間材質用較低的 `lm` 倍率。
 - 道具簡化到 `PROPS[].maxTris`（meshoptimizer），貼圖 1k、依畫質縮小。
+- 即時太陽陰影：有光照貼圖的地圖，道具、窗框、招牌、車輛小零件、托架、沙包、電線不畫進陰影貼圖（`mapPackage.js` `RT_CAST_SKIP`，map.json `materials[].rtCast` 可個別覆寫）——靜態對靜態的影子已在烘焙的太陽遮罩裡，即時陰影只需要讓大型遮擋物遮住玩家與殭屍。
+- 量測：`node tools/map/mapshots.mjs <id> --q high --eval tools/map/perfprobe.js`（各視角主畫面／含陰影的 draw calls、三角形、GPU 同步的影格時間，以及最後一個視角依群組拆分的可見物件數）。
 - 手機記憶體：高畫質約 25 組 1k 材質；中畫質法線 / arm 512、低畫質全部 ≤ 512（直接下載 `@512` 檔，不解碼 2k 原圖）；KTX2 壓縮貼圖是之後的優化項目。
 
 ## 9. 光照貼圖 Lightmaps（`tools/map/lib/lightmap*.mjs`）

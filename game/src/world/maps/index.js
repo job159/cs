@@ -15,13 +15,13 @@
 // status to 'ready' makes it the default automatically.
 const CATALOG = [
   {
-    id: 'losttown', kind: 'chapter', no: 1, status: 'wip',
+    id: 'losttown', kind: 'chapter', no: 1, status: 'ready',
     zh: '失落之城', en: 'LOST TOWN',
     desc: '被病毒封鎖的北美工業小鎮。十字形街區的中央路口築起貨櫃堡壘，屍潮從四條大街同時湧入。',
     objective: '死守中央路口，撐過 10 波屍潮並擊敗首領',
-    rounds: 10, boss: true, plan: 'cross',
+    rounds: 10, boss: true, plan: 'cross', thumb: 'assets/maps/losttown/thumb.jpg',
     load: () => import('./losttown.js'),
-    // north avenue looking down at the central fort (tune once the package is compiled)
+    // north avenue looking down at the central fort
     preview: { path: [[7, 4.2, -38, 0, 2.5, 0], [-5, 5.5, -27, 0, 2, 2], [6, 3.6, -19, -2, 2.5, 0]], period: 48 },
   },
   {

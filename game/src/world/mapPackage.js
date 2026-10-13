@@ -19,6 +19,7 @@ import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { parseGLB, decodeMeshopt, readScene, normScale } from './glb.js';
 import { NavGrid } from './nav.js';
+import { createMapAmbient } from './mapAmbient.js';
 
 const BASE = 'assets/maps/';
 
@@ -33,6 +34,11 @@ export const TEX_LIMITS = {
   ultra: { diff: 2048, nor: 2048, arm: 1024, prop: 1024, aniso: 16 },
 };
 const MAX_POINT_LIGHTS = { low: 2, medium: 4, high: 6, ultra: 6 };
+// Realtime sun-shadow casters of a baked map: static-on-static shadows already come from the baked sun mask, so the
+// realtime shadow map only needs the big occluders (facades, vehicles, containers, bridge, ramps) to shade players and
+// zombies. Small detail (props, window frames, signs, car trim, brackets, sandbags, wires) stays out of the shadow pass:
+// Lost Town drops from ~720k to ~300k shadow triangles. map.json materials[].rtCast overrides per material.
+const RT_CAST_SKIP = /^(prop_|frame_|sign_|car_plastic|car_chrome|car_light|steel_dark|sandbag|cone_|rubble|lamp_|wire|tape_)/;
 
 // ------------------------------------------------------------------------------------------ fetch / images
 const texCache = new Map();   // url|size|kind -> Promise<Texture>
@@ -331,7 +337,7 @@ export async function buildPackageMap(id, ctx) {
       const mesh = new THREE.Mesh(g, matForMesh(ex.mat, ex.lm ?? -1));
       mesh.name = inst.name;
       mesh.matrixAutoUpdate = false;
-      mesh.castShadow = md.cast !== false && !md.decal && !md.blend && !(md.opacity < 1);
+      mesh.castShadow = md.cast !== false && !md.decal && !md.blend && !(md.opacity < 1) && (md.rtCast ?? !(def.lightmap && RT_CAST_SKIP.test(ex.mat || '')));
       mesh.receiveShadow = true;
       mesh.userData.static = true;
       mesh.userData.surf = md.surf;
@@ -372,11 +378,16 @@ export async function buildPackageMap(id, ctx) {
   }
   const lightState = rtLights.map((l, i) => ({ l, pos: new THREE.Vector3(...l.pos), color: srgb(l.color), seed: i * 17.31, k: 1 }));
 
+  // ---- ambient FX (map.json fx: smoke plumes, fire, drifting ash; world/mapAmbient.js)
+  const ambient = createMapAmbient(def.fx, { quality: q });
+  if (ambient) root.add(ambient.root);
+
   // ---- update: shadow follow + light pool + flicker
   const tmp = new THREE.Vector3(), lsx = new THREE.Vector3(), lsy = new THREE.Vector3();
   let poolTimer = 0;
   const update = (dt, t) => {
     const cam = game?.camera;
+    ambient?.update(dt, t, cam, scene);
     const center = game?.player?.pos || cam?.position || tmp.set(0, 0, 0);
     if (sun.castShadow) {
       // texel-snapped follow: snap the centre in light space so shadow edges do not swim

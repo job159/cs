@@ -49,6 +49,8 @@ export class World {
   async load(map, ctx) {
     const res = await map.build({ ...ctx, world: this, scene: this.scene, root: this.root });
     this.def = res;
+    // per-map colour grade + exposure (map.json `grade` / `exposure`); maps without one get the neutral grade back
+    ctx?.game?.renderer?.setGrade?.(res.def?.grade ?? res.grade ?? null, res.def?.exposure ?? res.exposure ?? 1);
     if (res.root && res.root !== this.root) this.root.add(res.root);
     const colGeo = res.collisionGeometry || buildCollisionGeometry(res.colliders || []);
     this.collision = new Collision(colGeo);

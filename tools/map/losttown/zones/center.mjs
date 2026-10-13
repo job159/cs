@@ -444,7 +444,7 @@ function fortRamp(kit, F) {
   const u0 = -1.4, u1 = u0 + R.width, vf = -H - R.length, vt = -H;
   const yAt = (v) => ((v - vf) / (vt - vf)) * CH;
   const A = [u0, 0.03, vf], B = [u1, 0.03, vf], C = [u1, CH + 0.01, vt], D = [u0, CH + 0.01, vt];
-  kit.face([A, D, C, B], 'grate', { tint: '#c8c8c4' });
+  kit.face([A, D, C, B], 'perf_plate', { tint: '#d0d0cc' });
   const off = 0.035;
   kit.face([[u0 + 0.02, 0.03 - off, vf + 0.05], [u0 + 0.02, CH + 0.01 - off, vt], [u1 - 0.02, CH + 0.01 - off, vt], [u1 - 0.02, 0.03 - off, vf + 0.05]], 'steel', { tint: '#6c6b66' });
   // stringers with an upturned kick lip on both edges

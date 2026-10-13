@@ -563,6 +563,38 @@ export const SETS = {
     return { albedo, height, rough, metal, alpha, normalStrength: 1.0, noAO: true };
   } },
 
+  // perforated steel plate (fort ramps): staggered round holes, dark where the backing shows through (no alpha: the ramp
+  // carries a dark backing plate, and opaque holes never vanish in the mips the way alpha-tested ones do), worn
+  // galvanised grey with rust creeping out of the holes and scuffed bright along the walking line.
+  perforated: { tile: 0.66, N: 512, gen(N, tile) {
+    const albedo = new RGB(N), height = plane(N), rough = plane(N, 0.55), metal = plane(N, 0.35);
+    const cols = 6, rows = 8, hx = N / cols, hy = N / rows, rad = (0.03 / tile) * N;
+    const rust = fbm(N, 4, 4, 431), fine = fbm(N, 48, 2, 432), scuff = fbm(N, 2, 3, 433);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x;
+      const row = Math.floor(y / hy);
+      // nearest hole centre (own row and the two neighbours; staggered)
+      let d = 1e9;
+      for (let r = row - 1; r <= row + 1; r++) {
+        const cy = (r + 0.5) * hy, o2 = ((r % 2) + 2) % 2 ? hx / 2 : 0;
+        const cx = Math.round((x - o2 - hx / 2) / hx) * hx + o2 + hx / 2;
+        for (const cxx of [cx - hx, cx, cx + hx]) d = Math.min(d, Math.hypot(x - cxx, y - cy));
+      }
+      const hole = smoothstep(rad + 0.8, rad - 0.8, d), rim = smoothstep(rad + 3.5, rad, d) * (1 - hole);
+      const rr = smoothstep(0.5, 0.78, rust[i] + rim * 0.25);
+      let c = mix3(hex('#77797a'), hex('#5a5c5d'), fine[i]);
+      c = mix3(c, hex('#a2a4a3'), smoothstep(0.55, 0.8, scuff[i]) * 0.35);
+      c = mix3(c, hex('#5e3b26'), rr * 0.5);
+      c = mix3(c, hex('#2e2c2a'), rim * 0.5);
+      c = mix3(c, hex('#0e0e0e'), hole);
+      albedo.set(i, c);
+      height[i] = -hole * 0.004 - rim * 0.0008 + fine[i] * 0.0002;
+      rough[i] = lerp(lerp(0.5, 0.85, rr), 0.95, hole);
+      metal[i] = lerp(lerp(0.4, 0.05, rr), 0, hole);
+    }
+    return { albedo, height, rough, metal, normalStrength: 1.0 };
+  } },
+
   canvas: { tile: 1, N: 512, gen(N, tile) {
     const albedo = new RGB(N), height = plane(N), rough = plane(N, 0.95);
     const stain = fbm(N, 4, 4, 211), fine = fbm(N, 64, 2, 212);

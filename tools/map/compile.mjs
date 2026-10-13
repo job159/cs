@@ -6,6 +6,7 @@
 //   --only     compile just these zones (fast iteration; the package then only contains them)
 //   --nobake   skip the lightmap bake (runtime falls back to IBL + sun for every surface)
 //   --fast     quick bake preview (resolution 4, 16 samples)
+//   --keepHidden  keep faces flush against opaque faces (dropCoveredFaces culls them by default)
 //
 // Pipeline: every zone module exports build(kit, layout) (kit = tools/map/lib/kit.mjs, one per zone); the kit
 // accumulates geometry per (material, chunk). The compiler merges the zones, builds one mesh per bucket,
@@ -31,7 +32,7 @@ import { MeshBVH } from 'three-mesh-bvh';
 const args = process.argv.slice(2);
 const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 && args[i + 1] !== undefined && !args[i + 1].startsWith('--') ? args[i + 1] : d; };
 const flag = (n) => args.includes('--' + n);
-const mapId = args.find((a, i) => !a.startsWith('--') && (i === 0 || !args[i - 1].startsWith('--') || ['nobake', 'fast', 'meshopt'].includes(args[i - 1].slice(2))));
+const mapId = args.find((a, i) => !a.startsWith('--') && (i === 0 || !args[i - 1].startsWith('--') || ['nobake', 'fast', 'meshopt', 'keepHidden'].includes(args[i - 1].slice(2))));
 if (!mapId) { console.error('usage: node tools/map/compile.mjs <map> [--only zones] [--nobake] [--fast]'); process.exit(1); }
 const SRC = path.join(ROOT, 'tools', 'map', mapId);
 const OUT = path.resolve(opt('out', path.join(ROOT, 'game', 'assets', 'maps', mapId)));
@@ -128,15 +129,21 @@ async function main() {
     perMat.get(c).push(b);
   }
   const MIN_TRIS = +opt('minTris', META.minTrisPerMesh || 2500);
+  // light materials (props, trims, frames, signs, wires: < META.mergeBelow triangles in the whole map) are also merged
+  // until they need at most ceil(total / trisPerMesh) meshes: spread thinly over many 40 m chunks they would otherwise
+  // cost a draw call per chunk (a few hundred triangles of hydrant or window frame each), which phones pay for on the
+  // CPU, while one more mesh of a few thousand triangles outside the frustum costs next to nothing on the GPU
+  const TRIS_PER_MESH = +opt('trisPerMesh', META.trisPerMesh || 0), MERGE_BELOW = +(META.mergeBelow || 150000);
   const merged = new Map(); // key -> { mat, cell, f, list }
   for (const [c, list] of perMat) {
     let f = 1;
     const total = list.reduce((s, b) => s + b.tris, 0);
+    const maxCells = TRIS_PER_MESH > 0 && total < MERGE_BELOW ? Math.max(1, Math.ceil(total / TRIS_PER_MESH)) : Infinity;
     const ci0 = Math.min(...list.map((b) => b.chunk[0])), cj0 = Math.min(...list.map((b) => b.chunk[1]));
     const cellOf = (b) => [Math.floor((b.chunk[0] - ci0) / f), Math.floor((b.chunk[1] - cj0) / f)];
     for (;;) {
       const cells = new Set(list.map((b) => cellOf(b).join(',')));
-      if (total / cells.size >= MIN_TRIS || cells.size <= 1 || f >= 16) break;
+      if ((total / cells.size >= MIN_TRIS && cells.size <= maxCells) || cells.size <= 1 || f >= 16) break;
       f *= 2;
     }
     for (const b of list) {
@@ -199,6 +206,7 @@ async function main() {
     meshes.push(mesh);
   }
   dropHiddenBottoms(meshes);
+  if (!flag('keepHidden')) dropCoveredFaces(meshes, mats);
   const scene = new THREE.Group();
   for (const m of meshes) scene.add(m);
   scene.updateMatrixWorld(true);
@@ -214,26 +222,27 @@ async function main() {
   const receivers = meshes.filter((m) => m.userData.lightmap.receive !== false);
   const occluders = meshes.filter((m) => m.userData.lightmap.receive === false && m.userData.lightmap.castShadow !== false);
   const bakedLights = lights.filter((l) => l.bake !== false && !l.realtime && Array.isArray(l.pos));
-  // remove stale atlases
-  for (const f of fs.readdirSync(OUT)) if (/^lm_\d+(_sun)?\.png$/.test(f)) fs.unlinkSync(path.join(OUT, f));
+  // stale atlases go only when the new ones are written: the old package stays loadable during a long bake
+  const removeStaleAtlases = () => { for (const f of fs.readdirSync(OUT)) if (/^lm_\d+(_sun)?\.png$/.test(f)) fs.unlinkSync(path.join(OUT, f)); };
   if (!flag('nobake') && receivers.length) {
     const { bakeLightmaps } = await import('./lib/lightmap.mjs');
     const fast = flag('fast');
     const res = await bakeLightmaps(receivers, {
       sun: { dir: ENV.sun.dir, color: ENV.sun.color, intensity: ENV.sun.intensity, angle: ENV.sun.angle ?? 1.0 },
       skyHdr: hdrFile, skyIntensity: ENV.sky.envIntensity ?? 1, skyRotation: ((ENV.sky.rotationDeg || 0) * Math.PI) / 180,
-      resolution: +opt('res', fast ? 4 : META.lightmapResolution || 8), samples: +opt('samples', fast ? 16 : 64),
+      resolution: +opt('res', fast ? 4 : META.lightmapResolution || 8), samples: +opt('samples', fast ? 16 : META.lightmapSamples || 64),
       maxAtlas: +opt('atlas', 2048), maxAtlases: +opt('maxAtlases', META.maxAtlases || 0),
       threads: +opt('threads', 6), lights: bakedLights.map((l) => ({ ...l, pos: l.pos })), occluders,
       log: (...a) => log('   [lm]', ...a),
     });
+    removeStaleAtlases();
     const meta = res.write(OUT, 'lm');
     lightmap = { ...meta, mode: res.mode, range: res.range, stats: res.stats };
     // the baker may split meshes; collect the final list from the scene
     meshes.length = 0;
     scene.traverse((m) => { if (m.isMesh) meshes.push(m); });
     lap('lightmaps baked');
-  }
+  } else removeStaleAtlases();
 
   // ---------------------------------------------------------------- static.glb
   const matList = [...new Set(meshes.map((m) => m.userData.kitMat))];
@@ -297,7 +306,11 @@ async function main() {
   cgeo.computeBoundingBox();
   const bb = cgeo.boundingBox;
   const bounds = META.bounds || [Math.floor(bb.min.x) - 2, Math.floor(bb.min.y) - 2, Math.floor(bb.min.z) - 2, Math.ceil(bb.max.x) + 2, Math.ceil(bb.max.y) + 4, Math.ceil(bb.max.z) + 2];
-  const seeds = [...playerSpawns.map((p) => [p[0], p[1], p[2]]), ...spawners.map((s) => s.pos)];
+  // flood-fill seeds: the player spawns and the ground point of every spawner. Window / roof spawners sit on a facade
+  // or a roof edge; seeding there would mark the slab behind it (a 2F floor, a shop ceiling) as a walkable island
+  // that the runtime's nearestWalkable() then drops zombies onto, so they seed from their street-level `exit`.
+  const seeds = [...playerSpawns.map((p) => [p[0], p[1], p[2]]),
+    ...spawners.map((s) => ((s.kind === 'window' || s.kind === 'roof') && s.exit ? s.exit : s.pos))];
   const nav = bakeNav(cgeo, { bounds, cell: META.navCell || 0.5, seeds, areas: navAreas });
   fs.writeFileSync(path.join(OUT, 'nav.json'), JSON.stringify(nav.json));
   fs.writeFileSync(path.join(OUT, 'nav.bin'), nav.bin());
@@ -336,7 +349,7 @@ async function main() {
     bounds, killY: META.killY ?? bounds[1] - 5, chunk,
     sun: { dir: ENV.sun.dir, color: ENV.sun.color, intensity: ENV.sun.intensity, shadow: ENV.sun.shadow || { mapSize: 2048, extent: 45 } },
     env: { hdri: ENV.sky.hdri, files: hdriFiles, rotation: ((ENV.sky.rotationDeg || 0) * Math.PI) / 180, intensity: ENV.sky.envIntensity ?? 1, backgroundIntensity: ENV.sky.backgroundIntensity ?? 1, backgroundBlur: ENV.sky.backgroundBlur ?? 0, ...(ENV.sky.tint ? { tint: ENV.sky.tint } : {}) },
-    fog: { color: ENV.fog.color, density: ENV.fog.density }, exposure: ENV.exposure ?? 1, grade: ENV.grade || null, preview: META.preview || null,
+    fog: { color: ENV.fog.color, density: ENV.fog.density }, exposure: ENV.exposure ?? 1, grade: ENV.grade || null, fx: ENV.fx || null, preview: META.preview || null,
     playerSpawns, zones: zoneDefs, spawners, buy, supply, bossArenas, lights, objectives,
     static: { file: 'static.glb', meshopt: flag('meshopt') },
     collision: { file: 'collision.glb' },
@@ -393,9 +406,104 @@ function dropHiddenBottoms(meshes) {
       }
       if (hidden) dropped++; else keep.push(I[t], I[t + 1], I[t + 2]);
     }
-    if (keep.length !== I.length) g.setIndex(new THREE.BufferAttribute(Uint32Array.from(keep), 1));
+    if (keep.length !== I.length) { g.setIndex(new THREE.BufferAttribute(Uint32Array.from(keep), 1)); compactVertices(g); }
   }
   if (dropped) console.log(`  dropped ${dropped.toLocaleString()} hidden bottom triangles`);
+}
+
+/**
+ * Removes triangles that lie flush against an opaque face looking the other way: party walls of buildings built back to
+ * back, the sides of boxes pushed into walls, the backs of signs / plates mounted on facades, ground under kerbs and
+ * plinths. They can never be seen (each one faces into a closed opaque volume), but they cost triangles, lightmap atlas
+ * space and bake time as "texels inside geometry". Test per triangle: from 1 cm behind its face, along its normal, every
+ * one of 7 sample points (centroid, corners and edge midpoints pulled 12 % inwards) must reach an OPPOSING face (normal
+ * dot < -0.5) of an opaque, single-sided material within 5 cm, and the space in front of it must be inside a closed
+ * solid (a probe from 3 cm in front first hits the back of a face). Double-sided, alpha-tested, transparent and decal
+ * materials neither cover nor get culled. --keepHidden skips the pass.
+ */
+function dropCoveredFaces(meshes, mats) {
+  const opaque = (m) => {
+    const d = mats.get(m.userData.kitMat) || {};
+    return !d.alphaTest && !(d.opacity !== undefined && d.opacity < 1) && !d.blend && !d.decal && d.side !== 'double';
+  };
+  const cov = [];
+  for (const m of meshes) {
+    if (!opaque(m)) continue;
+    const P = m.geometry.attributes.position.array, I = m.geometry.index.array;
+    for (let t = 0; t < I.length; t++) { const a = I[t] * 3; cov.push(P[a], P[a + 1], P[a + 2]); }
+  }
+  if (!cov.length) return;
+  const cg = new THREE.BufferGeometry();
+  cg.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(cov), 3));
+  const bvh = new MeshBVH(cg);
+  const ray = new THREE.Ray(), n = new THREE.Vector3(), o = new THREE.Vector3();
+  const CP = cg.attributes.position.array;
+  const faceN = (fi, out) => {
+    const a = fi * 9;
+    const ux = CP[a + 3] - CP[a], uy = CP[a + 4] - CP[a + 1], uz = CP[a + 5] - CP[a + 2], vx = CP[a + 6] - CP[a], vy = CP[a + 7] - CP[a + 1], vz = CP[a + 8] - CP[a + 2];
+    return out.set(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx).normalize();
+  };
+  const hn = new THREE.Vector3();
+  // An opposing face directly in front (within 5 cm). Two exactly coplanar faces looking apart are ambiguous: two solids
+  // touching (party walls: hidden) or the two sides of one zero-thickness sheet (a fake room's ceiling over the next
+  // room's floor: both visible). Those only count when a probe from 3 cm in front first meets the BACK of a face (the
+  // space in front is inside a closed shell); a coverer with a gap (0.5 mm .. 5 cm, a plate on a wall) always counts.
+  const covered = (x, y, z) => {
+    ray.origin.set(x - n.x * 0.01, y - n.y * 0.01, z - n.z * 0.01); ray.direction.copy(n);
+    const hits = bvh.raycast(ray, THREE.DoubleSide, 0, 0.06);
+    let coplanar = false;
+    for (const h of hits) {
+      if (faceN(h.faceIndex, hn).dot(n) >= -0.5) continue;
+      if (h.distance > 0.0105) return true;
+      if (h.distance >= 0.0095) coplanar = true;
+    }
+    if (!coplanar) return false;
+    ray.origin.set(x + n.x * 0.03, y + n.y * 0.03, z + n.z * 0.03);
+    const h = bvh.raycastFirst(ray, THREE.DoubleSide, 0, 300);
+    return !!h && faceN(h.faceIndex, hn).dot(n) > 0.5;
+  };
+  let dropped = 0, droppedArea = 0;
+  const byMat = new Map();
+  for (const m of meshes) {
+    if (!opaque(m)) continue;
+    const g = m.geometry, P = g.attributes.position.array, I = g.index.array;
+    const keep = [];
+    for (let t = 0; t < I.length; t += 3) {
+      const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      n.set(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+      const area2 = n.length();
+      if (area2 < 1e-9) { keep.push(I[t], I[t + 1], I[t + 2]); continue; }
+      n.multiplyScalar(1 / area2);
+      const cx = (P[a] + P[b] + P[c]) / 3, cy = (P[a + 1] + P[b + 1] + P[c + 1]) / 3, cz = (P[a + 2] + P[b + 2] + P[c + 2]) / 3;
+      let hidden = covered(cx, cy, cz);
+      for (const [i, j] of [[a, a], [b, b], [c, c], [a, b], [b, c], [c, a]]) {
+        if (!hidden) break;
+        o.set((P[i] + P[j]) / 2, (P[i + 1] + P[j + 1]) / 2, (P[i + 2] + P[j + 2]) / 2);
+        hidden = covered(o.x * 0.88 + cx * 0.12, o.y * 0.88 + cy * 0.12, o.z * 0.88 + cz * 0.12);
+      }
+      if (hidden) { dropped++; droppedArea += area2 / 2; byMat.set(m.userData.kitMat, (byMat.get(m.userData.kitMat) || 0) + area2 / 2); } else keep.push(I[t], I[t + 1], I[t + 2]);
+    }
+    if (keep.length !== I.length) { g.setIndex(new THREE.BufferAttribute(Uint32Array.from(keep), 1)); compactVertices(g); }
+  }
+  if (dropped) console.log(`  dropped ${dropped.toLocaleString()} covered triangles (${Math.round(droppedArea).toLocaleString()} m², flush against opaque faces; ${[...byMat].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${k} ${Math.round(v)}`).join(', ')} m²)`);
+}
+
+/** Drops vertices no triangle references any more (after culling) and remaps the index. */
+function compactVertices(g) {
+  const I = g.index.array, n = g.attributes.position.count;
+  const remap = new Int32Array(n).fill(-1);
+  let m = 0;
+  for (let i = 0; i < I.length; i++) if (remap[I[i]] < 0) remap[I[i]] = m++;
+  if (m === n) return;
+  for (const [name, attr] of Object.entries(g.attributes)) {
+    const s = attr.itemSize, src = attr.array, dst = new src.constructor(m * s);
+    for (let v = 0; v < n; v++) { const r = remap[v]; if (r >= 0) for (let k = 0; k < s; k++) dst[r * s + k] = src[v * s + k]; }
+    g.setAttribute(name, new THREE.BufferAttribute(dst, s, attr.normalized));
+  }
+  const J = new Uint32Array(I.length);
+  for (let i = 0; i < I.length; i++) J[i] = remap[I[i]];
+  g.setIndex(new THREE.BufferAttribute(J, 1));
 }
 
 function commonPath(f) { return '../common/' + f.replace(/\\/g, '/'); }
