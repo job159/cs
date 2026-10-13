@@ -22,10 +22,14 @@
 //    roughness post-pass on the skin ORM (only small wet spots stay glossy)
 //  - sparse grey brows painted into the skin (no floating brow cards), toes / nails painted on the bare feet
 //  - hitboxes tightened for the gut (the lib's 80th percentile blows the torso capsules up), _seg collar -> torso
+//  - albedo values for the in-game read: the mesh-cavity occlusion and the cloth contact shadows go into the skin
+//    ORM's occlusion channel (occlusionPass), never multiplied into the albedo on top of it; skin sRGB mean over
+//    painted texels ~100-115 (tools/assets/zombies/albedo.mjs)
 import * as THREE from 'three';
 import { rasterUV, texelSurface, texelAttr } from '../lib/raster.mjs';
 import { smoothstep } from '../lib/noise.mjs';
 import { computeHitboxes } from '../lib/export.mjs';
+import { albedoTracer } from '../lib/albedoTrace.mjs';
 
 const srgb2lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 const lin2srgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
@@ -52,7 +56,7 @@ const C = {
   livid: lin([150, 128, 172]),
   mud: lin([40, 33, 25]), sole: lin([20, 16, 13]), ageSpot: lin([104, 92, 84]),
   // corpse skin palette (pale cold blue-grey with grey-green drift)
-  cold: lin([120, 129, 142]), sick: lin([116, 126, 108]), nail: lin([44, 38, 42]),
+  cold: lin([136, 145, 158]), sick: lin([132, 142, 124]), nail: lin([44, 38, 42]),
 };
 
 /**
@@ -341,7 +345,7 @@ export async function build(lib) {
   const skin = lib.paintSkin(h, {
     seed: 23, base, size: 2048, normalSize: 1024, ormSize: 1024,
     pallor: 0.35, tint: lin([146, 156, 172]), mottle: 0.85, veins: 1, bruises: 0.5, socket: 1, lips: 1, grime: 0.7,
-    coveredDarken: 0.75, normalStrength: 2.6, roughness: 0.62,
+    coveredDarken: 0.75, coveredShade: 0.22, normalStrength: 2.6, roughness: 0.62, // covered-skin shadow: in the ORM
     blood: { mouth: 0.75, hands: 0.5, splatter: 0.18 },
     extra: (P, Nn, c, st) => {
       // shiny bare scalp (greasy sheen) with blue temple veins showing through
@@ -421,15 +425,13 @@ export async function build(lib) {
       if (openSkin(P)) {
         if (bellyOpen(P)) {
           const sd = openSD(P, true);
-          const sh = smoothstep(-0.05, 0.0, sd);
-          const k = 1 - sh * 0.5; c[0] *= k; c[1] *= k; c[2] *= k;
+          const sh = smoothstep(-0.05, 0.0, sd); // (its shadow: occlusionPass below)
           over(c, lin([60, 52, 46]), smoothstep(-0.02, 0.0, sd) * 0.3);
           st.ro = mix(st.ro, 0.72, sh);
         } else {
           const tf = cloth.tearField(P, Nn);
           if (tf > -0.05) {
             const sh = (1 - smoothstep(0.0, 0.45, tf)) * 0.6 + (1 - smoothstep(0.2, 1.1, tf)) * 0.25;
-            const k = 1 - Math.min(0.75, sh); c[0] *= k; c[1] *= k; c[2] *= k;
             over(c, lin([60, 52, 46]), (1 - smoothstep(0.0, 0.3, tf)) * 0.35);
             st.ro = mix(st.ro, 0.75, sh);
           }
@@ -440,8 +442,7 @@ export async function build(lib) {
       if (P[2] > 0.0 && P[1] < A.neck[1] + 0.05 && P[1] > A.neck[1] - 0.2 && Math.abs(P[0]) < 0.16) {
         const v = smoothstep(A.neck[1] + 0.05, A.neck[1] - 0.02, P[1]) * smoothstep(0.16, 0.08, Math.abs(P[0]));
         const g = smoothstep(-0.2, 0.5, N3.fbm(P[0] * 18 + 4, P[1] * 18, P[2] * 18, 3));
-        over(c, lin([66, 54, 44]), v * g * 0.6);
-        const k = 1 - v * 0.45; c[0] *= k; c[1] *= k; c[2] *= k;
+        over(c, lin([66, 54, 44]), v * g * 0.6); // grime; the shadow of the collar is in occlusionPass
       }
       {
         const dx = P[0] - A.mouth[0] - 0.006, below = A.mouth[1] - 0.03 - P[1];
@@ -513,7 +514,30 @@ export async function build(lib) {
     const wet = core && N3.worley(P[0] * 70 + 2, P[1] * 70, P[2] * 70) < 0.09;
     return wet ? -0.3 : zone ? 0.5 : 0.42;
   });
+  // occlusion: mesh cavities (creases, sockets, under the gut) + the shirt's contact shadows -> ORM R channel
+  occlusionPass(h, skin.orm, (P, Nn, r, tris, i) => {
+    const bz = bellyZone(P);
+    const cf = smoothstep(0.15, 1.0, texelAttr(r, tris, base.cav.fine, i)) * (1 - bz * 0.6);
+    const cb = smoothstep(0.1, 1.0, texelAttr(r, tris, base.cav.broad, i));
+    let k = 1 - cf * 0.35 - cb * 0.42;
+    if (openSkin(P)) {
+      if (bellyOpen(P)) k *= 1 - smoothstep(-0.05, 0.0, openSD(P, true)) * 0.5;
+      else {
+        const tf = cloth.tearField(P, Nn);
+        if (tf > -0.05) k *= 1 - Math.min(0.75, (1 - smoothstep(0.0, 0.45, tf)) * 0.6 + (1 - smoothstep(0.2, 1.1, tf)) * 0.25);
+      }
+    }
+    if (P[2] > 0.0 && P[1] < A.neck[1] + 0.05 && P[1] > A.neck[1] - 0.2 && Math.abs(P[0]) < 0.16) {
+      k *= 1 - smoothstep(A.neck[1] + 0.05, A.neck[1] - 0.02, P[1]) * smoothstep(0.16, 0.08, Math.abs(P[0])) * 0.45;
+    }
+    return k;
+  });
   body.material = lib.material('skin', { ...skin });
+  const TR = albedoTracer('walker_b');
+  TR.snap('skin: composite base', base, body);
+  TR.snap('skin: final', skin.albedo, body);
+  TR.snap('clothes: final', cloth.albedo, suit);
+  TR.report();
 
   function paintBite(P, w, c, st) {
     const d = dist(P, w.p);
@@ -795,10 +819,8 @@ async function skinBase(lib, h, S, baldness, eyeY, eyeZ, bellyZone) {
       compose(di, smoothstep(-0.25, 0.45, N3.fbm(P[0] * 3 + 7, P[1] * 3, P[2] * 3, 3)) * 0.6, bz * 0.7);
       // creases and occluded folds: darker, purple-grey (dead skin pools colour in the folds)
       const cf = smoothstep(0.15, 1.0, texelAttr(r, tris, cav.fine, i)) * (1 - bz * 0.6);
-      const cb = smoothstep(0.1, 1.0, texelAttr(r, tris, cav.broad, i));
       mul(c, lin([150, 118, 140]), cf * 0.7);
-      const ao = 1 - cf * 0.35 - cb * 0.42;
-      c[0] *= ao; c[1] *= ao; c[2] *= ao;
+      // (the cavity occlusion itself, 1 - 0.35 fine - 0.42 broad, goes into the skin ORM: occlusionPass)
       // convex bony / stretched areas a touch lighter and waxier
       over(c, lin([150, 152, 146]).map((q) => q * (lumOf(c) / 0.24)), smoothstep(0.15, 0.8, -texelAttr(r, tris, cav.broad, i)) * 0.15);
       const b = baldness(P, true);
@@ -827,6 +849,7 @@ async function skinBase(lib, h, S, baldness, eyeY, eyeZ, bellyZone) {
     out.data[di] = toByte(c[0]); out.data[di + 1] = toByte(c[1]); out.data[di + 2] = toByte(c[2]);
   }
   out.mask = mask;
+  out.cav = cav;
   return out;
 }
 
@@ -869,10 +892,10 @@ function recolourSuit(img) {
       over(c, [l * 0.95, l, l * 1.08], 0.25); // denim: lose some saturation, darker (dirty, wet)
       c[0] *= 0.76; c[1] *= 0.78; c[2] *= 0.8;
     } else {
-      // dark brown ground (sRGB ~55, so the back does not go black under a rim light) with faded tan pinstripes
+      // dark brown ground (sRGB ~61, so the back does not go black under a rim light) with faded tan pinstripes
       // only ~15 % lighter in value: a cheap old shirt washed a hundred times, not a candy-striped one
       const s = smoothstep(0.03, 0.35, l);
-      const tgt = 0.036 * (1 + 0.36 * s);
+      const tgt = 0.046 * (1 + 0.36 * s);
       const hue = [mix(1.3, tan[0] / lumOf(tan), s), 1, mix(0.66, tan[2] / lumOf(tan), s)];
       const hl = lumOf(hue);
       for (let k = 0; k < 3; k++) c[k] = tgt * hue[k] / hl;
@@ -992,6 +1015,19 @@ function wetPass(h, orm, fn) {
     const v = fn(P);
     const g = orm.data[i * 4 + 1] / 255;
     orm.data[i * 4 + 1] = Math.round((v < 0 ? Math.min(g, -v) : Math.max(g, v)) * 255);
+  }
+}
+
+/** Multiplies the skin ORM's occlusion (R) by fn(P, N, raster, tris, texel) on the base-mesh UV layout. */
+function occlusionPass(h, orm, fn) {
+  const S = orm.width;
+  const bp = h.basePart({ name: 'occ' });
+  const tris = bp.tris(), nrm = bp.normals();
+  const r = rasterUV(tris, h.baseObj.uvs, S, 4);
+  const P = [0, 0, 0], Nn = [0, 0, 0];
+  for (let i = 0; i < S * S; i++) {
+    if (!texelSurface(r, tris, h.pos, nrm, i, P, Nn)) continue;
+    orm.data[i * 4] = Math.round(orm.data[i * 4] * Math.max(0, Math.min(1, fn(P, Nn, r, tris, i))));
   }
 }
 

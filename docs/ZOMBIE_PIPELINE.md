@@ -12,6 +12,9 @@ node tools/assets/zombies/build.mjs walker_a --preview   # 貼圖半解析度（
 node tools/assets/zombies/inspect.mjs game/assets/zombies/walker_a.glb --extras   # 網格/材質/貼圖大小/extras
 node tools/assets/zombies/validate.mjs game/assets/zombies/walker_a.glb game/assets/zombies/walker_a_lod1.glb
                                                     # Khronos glTF validator + 合約檢查（骨名、_SEG、角色材質名、三角形上限、extras）
+node tools/assets/zombies/albedo.mjs game/assets/zombies/walker_*.glb      # 每個材質 baseColor 的 sRGB 平均（只算實際有畫到的 texel）+ ORM AO 平均
+                                                    # （--uv u0,v0,u1,v1 只量一塊，例如頭部島 0.62,0.12,1,0.86）
+ZOMBIE_ALBEDO_TRACE=1 node tools/assets/zombies/build.mjs walker_a --preview --nolod   # 印出每個上色階段後的 albedo 平均
 ```
 
 下載的原始資料快取在 `tools/assets/zombies/src/`（git-ignore，約 170 MB；第一次 build 自動抓）。每次 build 會把用到的
@@ -111,7 +114,7 @@ export async function build(lib) {
 | `h.jointPos('joint-l-eye')`、`h.skeleton.byName` | 錨點 |
 | `merge(...presets)` / `PRESETS` | `average`、`gaunt`、`bloated`、`muscular`、`hunched`（駝背 = `poseOffsets`，不改 rest pose，動作仍共用） |
 | `texture(pack, path, size)` / `texture(localFile, size)` | 讀貼圖並縮放（縮好的版本快取在 `src/cache/`，4096² 原檔只解一次） |
-| `paintSkin(h, o)` | 皮膚：`pallor`+`tint`（屍色）、`mottle`、`veins`、`bruises`、`socket`（眼窩發黑）、`lips`、`grime`、`blood{mouth,hands,splatter}`、`wounds[{bone,t,dir,r,kind:'bite'|'gash',depth}]`、`coveredDarken`（衣服下的皮膚變暗＋擦傷）、`bump`（灰階高度，例 sohh 殭屍皮膚）、`extra(P,N,c,state)` 自訂 → `{albedo, normal, orm}` |
+| `paintSkin(h, o)` | 皮膚：`pallor`+`tint`（屍色）、`mottle`、`veins`、`bruises`、`socket`（眼窩發黑）、`lips`、`grime`、`blood{mouth,hands,splatter}`、`wounds[{bone,t,dir,r,kind:'bite'|'gash',depth}]`、`coveredDarken`（衣服下的皮膚：擦傷/瘀青色素＋陰影，陰影一律寫進 ORM AO；`coveredShade` 決定陰影有多少也乘進 albedo，預設 0.62＝舊行為，有輸出 AO 的角色請給 ~0.2）、`bump`（灰階高度，例 sohh 殭屍皮膚）、`extra(P,N,c,state)` 自訂 → `{albedo, normal, orm}` |
 | `paintCloth(part, o)` | 布料：`fade`、`yellow`（白布泛黃）、`weave`、`grime`、`blood{collar,hands,splatter,edges}`、`tear{amount,scale,stretch,fray,where(P,N),threadColor}` → `{albedo, normal, orm, alpha, holeAt(p), removedFaces}`；完全撕掉的面直接刪除 |
 | `paintEyes(img, {style:'milky'|'dead'|'glow'|'bloodshot', color})` | 混濁／死灰／發光（附 `emissiveMap`，material 要給 `emissive:[1,1,1]`） |
 | `grungeTexture(img, o)`、`thinHair(part, img, {amount})` | UV 空間髒污/血跡/染色；頭髮禿塊（alpha 挖洞） |
@@ -128,6 +131,33 @@ export async function build(lib) {
 - walker_a 參考：LOD0 8.8k（body 2.6k、worksuit 4.0k、shoes 0.65k、hair 0.75k、teeth 0.5k、eyes/brows 0.36k），4.8 MB；
   LOD1 2.4k，1.4 MB。檔案大小大頭是挖洞布料的 2048² PNG（≈2.3 MB）。
 
+### 2.3 Albedo 數值（遊戲內可讀性，必看）
+
+遊戲用太陽＋天空＋環境光照角色，而且 `occlusionTexture`（ORM 的 R）會再壓一次環境光。walker_a 第一版在調整時把
+AO／污垢／腐敗色一層層乘進 baseColor（皮膚只剩 sRGB ≈ 40、丹寧布 0.2 倍），在遊戲裡變成全黑剪影。規則：
+
+- **AO 二選一**：有匯出 ORM（`occlusionTexture`）就**不要**再把 AO／接觸陰影／衣服下陰影乘進 albedo。射線 AO、
+  布料投影都寫進 ORM 的 R（walker_a/c 的 `applyOcclusion`、walker_b 的 `occlusionPass`）；頭髮下的頭皮（髮根）、
+  血、污垢、瘀青這些「顏色」才留在 albedo，而且只當局部細節。
+- **數值目標**（`albedo.mjs` 量，sRGB、R/G/B 平均、只算有畫到的 texel）：蒼白／灰／蠟黃屍膚 95–140；衣物 55–120
+  （依布料顏色，黑色緊身褲取深灰 ~55–70，不要純黑）；血／污垢只能是局部。
+- 每次改完都要在**遊戲裡**看：測試場 `?w=akm&zombies=0&match=0&map=test`（不加 `map` 會進 Lost Town），用
+  `__cf.game.zombies.spawn('walker', pos, { model: 'walker_a', puppet: true })` 擺在 (2, 0, 8.8) 那疊木箱旁，5 m 與 15 m、
+  順光與背光都要看得出膚色和衣服顏色，不能是剪影；再到 Lost Town 實際地圖看一次（zviewer 的燈光比遊戲亮很多）。
+
+修正前後（`albedo.mjs`，LOD0；括號內是臉部正面 / 身體島 `--uv 0.80,0.30,0.95,0.70` / `0,0,0.62,0.8`）：
+
+| 類型 | 皮膚 | 衣物 | 鞋 |
+|---|---|---|---|
+| walker_a | 39.8 (58 / 34) → **97.6** (109 / 114) | 工作服 61.7 → **87.1** | 42.3 → **58.7** |
+| walker_b | 81.3 (98 / 76) → **100.9** (112 / 104) | 66.7 → **69.2** | （赤腳） |
+| walker_c | 41.0 (50 / 45) → **95.9** (97 / 114) | 53.1 → **71.9**（玫瑰色上衣 ~89、炭灰緊身褲 ~64） | 54.1 → **68.9** |
+
+（皮膚整體平均被頭髮蓋住的皮膚拉低：walker_a 的頭皮、walker_c 長髮簾下的耳朵／臉側／後頸都刻意塗成髮色，
+否則會從頭髮的破洞透出白色；臉與身體才是遊戲裡看得到的部分。）
+
+尚未依此規則檢查的類型（2026-10-13 量測）：runner 皮膚 48.2、boss_butcher 靴子 25.1 / 圍裙 46.7 —— 新增或修改角色時先跑 `albedo.mjs`。
+
 ## 3. 內部流程（`tools/assets/zombies/lib/`）
 
 | 模組 | 內容 |
@@ -143,6 +173,7 @@ export async function build(lib) {
 | `image.mjs` | pngjs + jpeg-js（純 JS）、面積縮放、高度圖→法線圖（Sobel，OpenGL 慣例） |
 | `export.mjs`、`glb.mjs` | 預算/減面、hitbox、自寫 GLB writer（JOINTS u8、_SEG stride 4、JPEG/PNG 內嵌） |
 | `credits.mjs` | 把 `usage` 合併進 `tools/assets/zombies/credits.json`，重寫 `docs/CREDITS.md` 的 zombie 區塊 |
+| `albedoTrace.mjs` | 除錯用：`ZOMBIE_ALBEDO_TRACE=1` 時 type 可在各上色階段 `snap()`，最後印出每階段的 albedo 平均（找出是哪一步把貼圖壓暗）；不影響輸出 |
 
 座標：MakeHuman 檔案是 decimeter、Y 上、面向 +Z；×0.1 並以 `joint-ground` 方塊重心為原點 → glTF。
 

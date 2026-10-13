@@ -13,14 +13,20 @@
 //
 // Everything specific to this character (texture grading, the masculine head transfer, tear regions, the snapped
 // strap, the bite / scalp-split painting, the neck-bite blood sheet on the cloth, decay tints, the ray-traced
-// ambient-occlusion + scalp-shadow + cloth-shadow bakes, the mouth cavity, the hammer) is implemented here on top of
-// the shared lib, which is only imported read-only (UV rasteriser, blur, normal-from-height, hitbox measure).
+// ambient-occlusion + cloth-shadow bakes (into the ORM occlusion channel, never into the albedo), the mouth cavity,
+// the hammer) is implemented here on top of the shared lib (UV rasteriser, blur, normal-from-height, hitbox measure).
+//
+// Albedo values (in-game read): the game lights characters with a sun + sky + environment, and any occlusion baked
+// into the base colour comes on top of the exported occlusionTexture. Keep the painted base colour at real-world
+// values (sRGB mean over painted texels, tools/assets/zombies/albedo.mjs: skin ~98 overall / ~110-115 face and body,
+// worksuit ~87, shoes ~59) and put every shadow-like term (AO, cloth contact shadow, covered skin) into the ORM.
 import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { rasterUV, texelSurface, texelAttr } from '../lib/raster.mjs';
 import { blurField, createImage, normalFromHeight } from '../lib/image.mjs';
 import { boneSegment } from '../lib/rig.mjs';
 import { computeHitboxes } from '../lib/export.mjs';
+import { albedoTracer } from '../lib/albedoTrace.mjs';
 
 // ---------- small colour helpers (linear-light work, sRGB 8-bit storage)
 const S2L = new Float32Array(256).map((_, i) => { const c = i / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
@@ -305,6 +311,20 @@ function applyFields(img, fields, R, fn) {
     img.data[i] = toByte(c[0]); img.data[i + 1] = toByte(c[1]); img.data[i + 2] = toByte(c[2]);
   }
   return img;
+}
+
+/**
+ * Multiplies the occlusion (R) channel of an ORM image by fn(...values) of fields baked at R x R (AO / contact
+ * shadows go here, not into the albedo: three.js applies the aoMap to the ambient + environment light only).
+ */
+function applyOcclusion(orm, fields, R, fn) {
+  const W = orm.width, vals = new Array(fields.length);
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+    for (let k = 0; k < fields.length; k++) vals[k] = fieldAt(fields[k], R, W, x, y);
+    const i = (y * W + x) * 4;
+    orm.data[i] = Math.round(orm.data[i] * clamp01(fn(...vals)));
+  }
+  return orm;
 }
 
 /** UDN blend of a detail normal map into a base normal map of the same size, weighted per texel by w(i) (0..1). */
@@ -673,13 +693,18 @@ export async function build(lib) {
   // ---- skin: CC0 zombie skin, graded to a sallow, dead grey-olive, male head structure, corpse treatment
   const skinSrc = 'skins/sohh_female_zombie_skin/';
   const male = await lib.texture('system', 'skins/middleage_caucasian_male/middleage_lightskinned_male_diffuse.png', 2048);
-  const skinBase = transferMaleHead(grade(lib.cloneImage(await lib.texture('skins03', skinSrc + 'sohh_Zombie_Female_diffuse.png', 2048)), (c) => {
-    // the sohh skin is near-white: pull it down to a dead mid-grey with a sick olive-yellow cast, keep its blotches
+  const TR = albedoTracer('walker_a');
+  const sohh = await lib.texture('skins03', skinSrc + 'sohh_Zombie_Female_diffuse.png', 2048);
+  TR.snap('skin: sohh source', sohh, body);
+  const skinBase = transferMaleHead(grade(lib.cloneImage(sohh), (c) => {
+    // the sohh skin is near-white: a dead pale grey with a sick olive-yellow cast, keep its blotches. (Was a 0.43x
+    // gain, which with the decay tints and the AO bake left the skin at sRGB ~40 = a black silhouette in game.)
     const l = lum(c[0], c[1], c[2]);
-    const k = 0.43 * Math.max(0.02, l) ** 0.2; // gain + contrast
+    const k = 1.42 * Math.max(0.02, l) ** 0.1; // gain (the decay tints below take ~45% off again), less contrast than the old l^1.2
     const g = [l * 1.0, l * 1.02, l * 0.78];
     for (let i = 0; i < 3; i++) c[i] = mix(c[i], g[i], 0.5) * k;
   }), male, 0.62);
+  TR.snap('skin: graded + male head', skinBase, body);
   const skinBump = lib.cloneImage(await lib.texture('skins03', skinSrc + 'sohh_Zombie_Female_bump.png', 2048));
   {
     // lower legs: the sohh legs are stretched into long streaks (read as fur / moss on the bare shin) -> flatten them
@@ -694,6 +719,7 @@ export async function build(lib) {
     blendBlur(skinBase, mask, r.covered, Math.max(2, Math.round(W / 400)), 0.55);
     if (skinBump.width === W) blendBlur(skinBump, mask, r.covered, Math.max(2, Math.round(W / 300)), 0.85);
   }
+  TR.snap('skin: + leg blur', skinBase, body);
 
   const handTipL = sk.middle_01_l ? sk.middle_01_l.head : sk.hand_l.tail, handTipR = sk.middle_01_r ? sk.middle_01_r.head : sk.hand_r.tail;
   const knuckles = [[handTipL.x, handTipL.y, handTipL.z], [handTipR.x, handTipR.y, handTipR.z]];
@@ -782,14 +808,14 @@ export async function build(lib) {
   const eyeY = (A.eyeL[1] + A.eyeR[1]) / 2;
   // dried crust: dark maroon-brown (thin film) to brown-black (thick, flaking); the same on every wound and run
   const crustA = lin([74, 27, 19]), crustB = lin([36, 15, 11]);
-  const legTone = (() => { const t = lin([96, 97, 90]); const l = lum(...t); return [t[0] / l, t[1] / l, t[2] / l, l]; })();
+  const legTone = (() => { const t = lin([124, 125, 114]); const l = lum(...t); return [t[0] / l, t[1] / l, t[2] / l, l]; })();
   const skin = lib.paintSkin(h, {
     seed: 11,
     base: skinBase,
     bump: skinBump,
     bumpStrength: 5.5, normalStrength: 2.6,
-    pallor: 0.5, tint: lin([142, 150, 112]), mottle: 0.85, veins: 0.9, bruises: 0.5, socket: 1, lips: 1, grime: 0.7,
-    coveredDarken: 0.85,
+    pallor: 0.5, tint: lin([142, 150, 112]), mottle: 0.85, veins: 0.9, bruises: 0.5, socket: 1, lips: 1, grime: 0.45,
+    coveredDarken: 0.85, coveredShade: 0.22, // skin seen through tears: grimy/bruised pigment; its shadow is in the ORM
     blood: { mouth: 0.8, hands: 0.6, splatter: 0.3 },
     wounds: [
       { bone: 'lowerarm_r', t: 0.45, dir: [0.1, 0.4, 1], r: 0.032, kind: 'gash', depth: 1.8 },
@@ -853,6 +879,7 @@ export async function build(lib) {
   });
 
   // ---- clothes: grimy dark-washed denim overalls + a grimy grey-khaki T-shirt, shredded, blood-wicked from the bite
+  TR.snap('skin: paintSkin', skin.albedo, body);
   const SC = texSize(2048);
   const suitDiff = await lib.texture(suit.asset.textures.diffuse, 2048);
   const SM = suitDiff.width;
@@ -863,12 +890,15 @@ export async function build(lib) {
     const sat = mx > 0 ? (mx - mn) / mx : 0;
     const shirt = ss(0.25, 0.55, l) * (1 - ss(0.12, 0.3, sat)); // the flat white T-shirt island
     shirtMask[y * SM + x] = shirt;
-    // denim: wash out the saturated toy blue -> dark, grimy slate denim
+    // denim: wash out the saturated toy blue -> grimy slate denim (sRGB ~80-90 after the grime; the 0.2x gain it had
+    // before rendered black in the game)
     const dn = [l * 0.88, l * 0.98, l * 1.12];
-    for (let i = 0; i < 3; i++) c[i] = mix(c[i], dn[i], 0.62) * 0.2;
+    for (let i = 0; i < 3; i++) c[i] = mix(c[i], dn[i], 0.62) * 0.45;
     // shirt: a dirty grey-khaki cotton (was white); deliberately darker than the face so the head stays the read
-    over(c, lin([94, 93, 85]), shirt);
+    over(c, lin([126, 124, 112]), shirt);
   });
+  TR.snap('suit: source', suitDiff, suit);
+  TR.snap('suit: graded base', suitBase, suit);
   const shirtAt = (u, v) => shirtMask[Math.min(SM - 1, Math.floor((v + 0.5 / SC) * SM)) * SM + Math.min(SM - 1, Math.floor((u + 0.5 / SC) * SM))];
 
   // the worksuit AO map was baked with both straps on: lift the right strap's shadow band off the shirt (front + back)
@@ -1050,6 +1080,7 @@ export async function build(lib) {
       }
     },
   });
+  TR.snap('suit: paintCloth', cloth.albedo, suit);
   // body faces under intact cloth go away; under holes (and the ripped-off sleeve / trouser leg) they stay visible
   h.hideCovered(body, (p) => cloth.holeAt(p, 0.1));
 
@@ -1098,9 +1129,10 @@ export async function build(lib) {
     }
   }
 
-  // ---- ray-traced ambient occlusion + scalp shadow + cloth shadow, multiplied into the albedos (the GLB has no AO
-  // slot in use for the skin, and a baked contact shadow is what makes folds, collar, sleeves, eye sockets, the
-  // hairline and the holes torn into the clothes read).
+  // ---- ray-traced ambient occlusion + cloth contact shadow -> the ORM occlusion channel (what makes folds, collar,
+  // sleeves, eye sockets, nostrils and the holes torn into the clothes read); only the dark scalp under the hair
+  // cards (hair roots) is pigment and goes into the albedo.
+  TR.snap('suit: + tear rims / strap', cloth.albedo, suit);
   const baseSkin = surf(h.basePart({ name: 'ao' }));
   const hairS = surf(hair), shoeS = surf(shoes);
   const RA = texSize(512);
@@ -1118,11 +1150,8 @@ export async function build(lib) {
     }, { fill: 0, blur: 3 });
     const opaque = (q) => cloth.tearField([q.x, q.y, q.z], [0, 0, 1]) <= 0;
     const shadow = bakeField(baseSkin, h.baseObj.uvs, RA, clothShadowTracer(suitBvh, opaque, { rays: 10, maxDist: 0.06 }), { blur: 1 });
-    applyFields(skin.albedo, [ao, scalp, shadow], RA, (c, a, s, sh) => {
-      over(c, hairCol, s * 0.85);                    // dark scalp (hair roots / shadow) under the hair cards
-      const k = mix(1, a, 0.7) * mix(1, sh * sh, 0.85);
-      c[0] *= k; c[1] *= k; c[2] *= k;
-    });
+    applyFields(skin.albedo, [scalp], RA, (c, s) => over(c, hairCol, s * 0.7)); // dark scalp (hair roots) under the hair cards
+    applyOcclusion(skin.orm, [ao, shadow], RA, (a, sh) => mix(1, a, 0.85) * mix(1, sh * sh, 0.9));
   }
   {
     const bvh = occluders([suitS, baseSkin, shoeS]);
@@ -1131,18 +1160,21 @@ export async function build(lib) {
     // the hanging strap stub hangs a few mm in front of the bib: only a light contact shadow, not a black strip
     const onStub = (P) => P[2] > bb.max[2] + 0.002 && P[1] < yb + 0.005 && P[0] > bb.min[0] - 0.02 && P[0] < bb.max[0] + 0.02;
     const ao = bakeField(suitS, suit.obj.uvs, RA, (P, Nn, i) => { const a = trace(P, Nn, i); return onStub(P) ? 1 - (1 - a) * 0.35 : a; });
-    applyFields(cloth.albedo, [ao], RA, (c, a) => { const k = mix(1, a, 0.85); c[0] *= k; c[1] *= k; c[2] *= k; });
+    applyOcclusion(cloth.orm, [ao], RA, (a) => mix(1, a, 0.6)); // on top of the worksuit's own AO map
   }
+  TR.snap('skin: + scalp (AO -> ORM)', skin.albedo, body);
+  TR.snap('suit: (AO -> ORM)', cloth.albedo, suit);
   // dried blood everywhere; no lip-gloss: painted blood on the skin is never shinier than roughness 0.42
   const skinOrm = skin.orm;
   for (let i = 0; i < skinOrm.data.length; i += 4) skinOrm.data[i + 1] = Math.max(skinOrm.data[i + 1], 107);
   body.material = lib.material('skin', { ...skin, albedo: ageBlood(skin.albedo, 0.85) });
   suit.material = lib.material('cloth', { ...cloth, albedo: cloth.albedo, alpha: cloth.alpha, doubleSided: true, pngBits: 6 });
+  TR.snap('skin: + ageBlood (final)', body.material.baseColor, body);
 
   // ---- shoes: scuffed dark work shoes; the pale sock band becomes a filthy grey-brown sock, darker at the top,
   // the left one soaked from the calf bite
   const shoeTex = await lib.texture(shoes.asset.textures.diffuse, 1024);
-  const shoeImg = lib.grungeTexture(shoeTex, { seed: 3, darken: 0.6, dirt: 1, blood: 0.25, tint: [0.42, 0.4, 0.38],
+  const shoeImg = lib.grungeTexture(shoeTex, { seed: 3, darken: 0.3, dirt: 1, blood: 0.25, tint: [0.62, 0.59, 0.56],
     match: (c) => { const l = lum(c[0], c[1], c[2]); for (let i = 0; i < 3; i++) c[i] = mix(c[i], l * [1.1, 0.98, 0.85][i], 0.7); } });
   {
     const W = shoeImg.width;
@@ -1172,6 +1204,8 @@ export async function build(lib) {
       shoeImg.data[o] = toByte(c[0]); shoeImg.data[o + 1] = toByte(c[1]); shoeImg.data[o + 2] = toByte(c[2]);
     }
   }
+  TR.snap('shoes: source', shoeTex, shoes);
+  TR.snap('shoes: final', shoeImg, shoes);
   shoes.material = lib.material('cloth', {
     albedo: shoeImg,
     normal: shoes.asset.textures.normal ? await lib.texture(shoes.asset.textures.normal, 512) : null,
@@ -1302,6 +1336,7 @@ export async function build(lib) {
   setHb('hand_l', 'hand_l', 0.045, 'middle_01_l');
   setHb('hand_r', 'hand_r', 0.045, 'middle_01_r');
 
+  TR.report();
   return {
     human: h,
     parts: [body, suit, shoes, eyes, teeth, hair, mouth, hammer], // eyebrows / stubble: painted into the skin (male head transfer)

@@ -71,6 +71,10 @@ export function retargetClips(clips, srcRoot, dstRoot, { fps = 30 } = {}) {
     // sample the source clip on the source skeleton with a mixer
     const mixer = new THREE.AnimationMixer(srcRoot);
     const action = mixer.clipAction(clip);
+    // LoopOnce + clamp: with the default LoopRepeat, setTime(duration) wraps to frame 0 and every one-shot clip
+    // (death, knockdown, get_up, hits, attacks) would end by popping back to its first pose
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
     action.play();
     const qVals = {}; for (const n of dOrder) qVals[n] = new Float32Array(frames * 4);
     const hipVals = hips && db[hips] ? new Float32Array(frames * 3) : null;

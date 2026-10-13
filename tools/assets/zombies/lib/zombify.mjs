@@ -81,6 +81,8 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
  * @param o.size      albedo size (2048), o.normalSize (1024), o.ormSize (1024)
  * @param o.pallor    0..1 desaturate towards o.tint (linear rgb) ; o.mottle 0..1
  * @param o.veins, o.bruises, o.grime, o.socket, o.lips (0..1 strengths)
+ * @param o.coveredDarken  0..1 skin under the clothes (seen through tears): pigment + shadow (ORM AO 1 - 0.6 cv);
+ *                  o.coveredShade = how much of that shadow is also multiplied into the albedo (default 0.62)
  * @param o.blood     { mouth 0..1, hands 0..1, drips 0..1, splatter 0..1 }
  * @param o.wounds    [{bone, t, dir:[x,y,z], r, kind:'bite'|'gash'|'hole', depth}]
  * @param o.extra     optional (P, N, c(linear rgb, mutable), state{height, rough}) => void for custom effects
@@ -119,7 +121,9 @@ export function paintSkin(human, o = {}) {
         const sc = N3.fbm(P[0] * 30 + 3, P[1] * 30, P[2] * 30, 3);
         over(c, COLORS.bloodDry, smoothstep(0.15, 0.5, sc) * cv * 0.6);
         over(c, COLORS.bruise, smoothstep(0.0, 0.4, -sc) * cv * 0.4);
-        const k = 1 - cv * 0.62; c[0] *= k; c[1] *= k; c[2] *= k;
+        // (the shadow part is also written to the ORM occlusion below: types that export that AO and want it only
+        // there pass a small o.coveredShade so the albedo keeps just the grime / bruise pigment)
+        const k = 1 - cv * (o.coveredShade ?? 0.62); c[0] *= k; c[1] *= k; c[2] *= k;
         ao[i] = 1 - cv * 0.6;
       }
     }
