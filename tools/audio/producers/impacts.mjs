@@ -14,6 +14,12 @@
 // (H.tilt: the Kenney "heavy" punches are ~100 Hz sine booms that vanish on phones and made flesh hits 2-8 dB apart there);
 // resonant rings in bodies that should be noise are notched (H.detone); variants share one length where the
 // loudness meter's 400 ms block grid would otherwise normalise them over different windows (H.trimTails).
+// Mastering review 2 (2026-10-13): one bullet = one strike. 6 of 8 steel hits, 2 wood, 4 water, 2 concrete and a knife
+// hit played as flams (the recordings hold the next strike / plop 40-200 ms later) and several layers started on a soft
+// pre-knock with their real hit 60-200 ms late (H.strike, H.single, re-picked fs:144444 strikes, re-sliced plops); short
+// sounds get one common length per sound (add(): len, H.padTo before shape) so equal LUFS = equal hit level; the fly-by's
+// sine "beep" became a noise band; armour got its plate clack, the kill thud a phone-audible knock, the rocket blast +1 dB.
+// QA helpers: IMPACTS_DEBUG=1 (what single/shape/tilt did), IMPACTS_SLICES=1 (slices that end mid-sound).
 
 import fs from 'node:fs';
 
@@ -42,24 +48,32 @@ export async function produce(lib, ctx) {
   // per-sound provenance: remember which sources each sound's recipe loads (ctx.load records them category-wide)
   const used = new Map(), load0 = ctx.load;
   ctx.load = (id, o) => { used.get(H.cur)?.add(id); return load0(id, o); };
+  // opts.len: every variant is cut (fade) / padded to exactly this many seconds. For a short hit the loudness meter
+  // integrates a sub-400 ms sound over its own length and a 0.40-0.49 s one over its first 400 ms block, so one common
+  // length <= 0.48 s makes "same LUFS" mean "same hit level" for every variant (0.354 vs 0.4 s concrete hits were
+  // 0.9 dB apart at equal LUFS, 0.55 s water hits 2.2 dB, 0.23 vs 0.47 s fly-bys 2.5 dB).
   const add = async (name, variants, opts) => {
     if (!want(name)) return;
     H.cur = name;
     used.set(name, new Set());
-    const list = H.trimTails(await variants(), { uniform: opts.uniform });
-    delete opts.uniform;
-    await cat.add(name, list, { ...opts, sources: [...used.get(name)].sort() });
+    const raw = await variants();
+    const list = opts.len ? H.setLen(raw, opts.len, opts.lenFade) : H.trimTails(raw, { uniform: opts.uniform });
+    const { uniform, len, lenFade, ...rest } = opts;
+    // ceiling -1.05: the writer accepts a decoded true peak up to ceiling + 0.02, and two knife hits shipped at -0.98 /
+    // -0.99 dBTP against the contract's <= -1
+    await cat.add(name, list, { ceiling: -1.05, ...rest, sources: [...used.get(name)].sort() });
   };
 
   // ------------------------------------------------------------------------------------------------ bullet impacts
-  await add('impact_concrete', () => impactConcrete(lib, ctx, H), { target: 'impact', voices: 8, pitch: [0.93, 1.07], range: [2, 45], note: 'bullet into concrete/stone/tile' });
-  await add('impact_metal', () => impactMetal(lib, ctx, H), { target: 'impact', voices: 8, pitch: [0.94, 1.06], range: [2, 55], note: 'bullet into steel (also grates)' });
-  await add('impact_wood', () => impactWood(lib, ctx, H), { target: 'impact', lufs: -19, voices: 6, pitch: [0.93, 1.07], range: [2, 45] });
-  await add('impact_dirt', () => impactDirt(lib, ctx, H), { target: 'impact', lufs: -19, voices: 6, pitch: [0.92, 1.08], range: [2, 40], note: 'dirt and sand' });
-  await add('impact_glass', () => impactGlass(lib, ctx, H), { target: 'impact', uniform: true, voices: 4, pitch: [0.95, 1.05], range: [2, 50] });
-  await add('impact_water', () => impactWater(lib, ctx, H), { target: 'impact', lufs: -19, voices: 4, pitch: [0.92, 1.08], range: [2, 40] });
+  // surface hits share one hit level (momentary ~ -18 LUFS); wood / dirt / water sit ~0.5-1 dB under it (softer media)
+  await add('impact_concrete', () => impactConcrete(lib, ctx, H), { target: 'impact', len: 0.4, voices: 8, pitch: [0.93, 1.07], range: [2, 45], note: 'bullet into concrete/stone/tile' });
+  await add('impact_metal', () => impactMetal(lib, ctx, H), { target: 'impact', len: 0.4, voices: 8, pitch: [0.94, 1.06], range: [2, 55], note: 'bullet into steel (also grates)' });
+  await add('impact_wood', () => impactWood(lib, ctx, H), { target: 'impact', lufs: -18.5, len: 0.32, voices: 6, pitch: [0.93, 1.07], range: [2, 45] });
+  await add('impact_dirt', () => impactDirt(lib, ctx, H), { target: 'impact', lufs: -19, len: 0.4, voices: 6, pitch: [0.92, 1.08], range: [2, 40], note: 'dirt and sand' });
+  await add('impact_glass', () => impactGlass(lib, ctx, H), { target: 'impact', len: 0.48, lenFade: 0.08, voices: 4, pitch: [0.95, 1.05], range: [2, 50] });
+  await add('impact_water', () => impactWater(lib, ctx, H), { target: 'impact', lufs: -18.5, len: 0.48, lenFade: 0.1, voices: 4, pitch: [0.92, 1.08], range: [2, 40] });
   await add('ricochet', () => ricochet(lib, ctx, H), { target: 'impact', lufs: -19, uniform: true, voices: 3, pitch: [0.92, 1.08], range: [3, 60] });
-  await add('bullet_whiz', () => bulletWhiz(lib, ctx, H), { target: 'impact', lufs: -22, voices: 3, pitch: [0.9, 1.1], range: [1, 22], note: 'near-miss fly-by (supersonic snap + doppler whistle)' });
+  await add('bullet_whiz', () => bulletWhiz(lib, ctx, H), { target: 'impact', lufs: -22, len: 0.32, lenFade: 0.1, voices: 3, pitch: [0.9, 1.1], range: [1, 22], note: 'near-miss fly-by (supersonic snap + doppler whoosh)' });
 
   // ------------------------------------------------------------------------------------------------ flesh / gore
   // 0.22 s long: -16 LUFS over its length = -18.4 LUFS over a 400 ms window, i.e. the short-term loudness of the
@@ -71,20 +85,22 @@ export async function produce(lib, ctx) {
   await add('bone_crunch', () => boneCrunch(lib, ctx, H), { target: 'gore', voices: 3, pitch: [0.93, 1.07], range: [2, 30] });
   await add('knife_hit_flesh', () => knifeFlesh(lib, ctx, H), { target: 'impact', voices: 3, pitch: [0.94, 1.06], range: [2, 30] });
   await add('knife_hit_wall', () => knifeWall(lib, ctx, H), { target: 'impact', voices: 3, pitch: [0.94, 1.06], range: [2, 30] });
-  await add('melee_heavy_hit', () => meleeHeavy(lib, ctx, H), { target: 'impact', lufs: -17, voices: 3, pitch: [0.94, 1.06], range: [2, 40] });
+  await add('melee_heavy_hit', () => meleeHeavy(lib, ctx, H), { target: 'impact', lufs: -17, len: 0.38, voices: 3, pitch: [0.94, 1.06], range: [2, 40] });
   await add('armor_hit', () => armorHit(lib, ctx, H), { target: 'impact', voices: 3, pitch: [0.95, 1.05], range: [2, 30], note: 'armour absorbing a hit (player plate carrier / armoured zombies)' });
   await add('body_fall', () => bodyFall(lib, ctx, H), { target: 'impact', lufs: -19, voices: 4, pitch: [0.92, 1.06], range: [3, 40] });
   await add('kill_confirm_thud', () => killThud(lib, ctx, H), { target: 'ui', bus: 'ui', spatial: false, channels: 1, voices: 2, pitch: [0.98, 1.02], range: [1, 1], note: 'subtle low thump layered under the kill marker' });
 
   // ------------------------------------------------------------------------------------------------ explosives
-  // Integrated -16 / -15 LUFS over 2-3.7 s still peaks at about -11 LUFS momentary (400 ms), a few dB above a -12 LUFS
+  // Integrated -16 / -14 LUFS over 2-3.7 s peaks at about -11 LUFS momentary (400 ms), a few dB above a -12 LUFS
   // gunshot close layer (-13..-15 momentary). Pushing them louder only clipped the blast into a flat block. Their size
   // over distance comes from a larger ref distance instead: full level within 15 / 18 m, -6 dB at 30 / 36 m, and at the
-  // 40 m hand-over to explosion_far the two are within ~1.5 dB of each other.
+  // 40 m hand-over to explosion_far the grenade and its far layer are within ~1.5 dB of each other.
+  // Mastering review: at -15 the rocket / barrel blast (heavier sub, longer rumble) hit 0.6 dB softer than a frag grenade
+  // over its loudest 400 ms and 1.3 dB softer on a phone; at -14 it lands level with / above it (momentary -10.8 vs -11.0).
   await add('explosion_small', () => explosionSmall(lib, ctx, H), { target: 'explosion', lufs: -16, voices: 4, pitch: [0.95, 1.04], range: [15, 220], priority: 3, note: 'frag grenade' });
-  await add('explosion_large', () => explosionLarge(lib, ctx, H), { target: 'explosion', lufs: -15, voices: 3, pitch: [0.95, 1.03], range: [18, 300], priority: 3, note: 'rocket / barrel / boss crash' });
+  await add('explosion_large', () => explosionLarge(lib, ctx, H), { target: 'explosion', lufs: -14, voices: 3, pitch: [0.95, 1.03], range: [18, 300], priority: 3, note: 'rocket / barrel / boss crash' });
   await add('explosion_far', () => explosionFar(lib, ctx, H), { target: 'explosionFar', voices: 3, pitch: [0.94, 1.04], range: [40, 600], priority: 2 });
-  await add('grenade_bounce', () => grenadeBounce(lib, ctx, H), { target: 'foley', lufs: -20, voices: 4, pitch: [0.92, 1.08], range: [2, 30] });
+  await add('grenade_bounce', () => grenadeBounce(lib, ctx, H), { target: 'foley', lufs: -20, len: 0.28, voices: 4, pitch: [0.92, 1.08], range: [2, 30] });
   await add('fire_burst', () => fireBurst(lib, ctx, H), { target: 'impact', lufs: -16, voices: 3, pitch: [0.95, 1.05], range: [4, 70], note: 'molotov: bottle smash + ignition' });
   await add('debris_fall', () => debrisFall(lib, ctx, H), { target: 'impact', lufs: -19, voices: 3, pitch: [0.94, 1.06], range: [4, 60] });
 
@@ -114,7 +130,14 @@ function helpers(lib, ctx) {
       let b = await ctx.load(id, { start: s, end: e });
       b = H.mono(b, ch);
       if (hp) b = lib.hp(b, hp, 2);
-      return b;
+      if (process.env.IMPACTS_SLICES) { // QA: does the slice stop mid-sound? (its last 10 ms vs its peak)
+        const x = b.data[0], n = Math.min(480, x.length); let t = 0; for (let i = x.length - n; i < x.length; i++) t += x[i] * x[i];
+        const tail = lib.lin2db(Math.sqrt(t / n)) - lib.lin2db(lib.peak(b));
+        if (tail > -40) ctx.log(`    slice ${H.cur}: ${id} ${s}-${e} ends at ${tail.toFixed(0)} dB re its peak`);
+      }
+      // a slice that ends mid-sound must not stop dead: the shaper/clipper later lifts a -35 dB hiss tail by 10+ dB, and a
+      // 0.15 s stone-hit slice (fs:321478) then ended every variant's top octave on one sample
+      return lib.fadeOut(b, Math.min(0.03, b.duration * 0.2), 'sine');
     },
     /** Start right at the transient (1.5 ms pre-roll); threshold relative to the slice's peak. */
     align(b, threshDb = -36) { return lib.trimSilence(b, { threshDb, pre: 0.0015, end: false, fadeInSec: 0.0008 }); },
@@ -168,6 +191,87 @@ function helpers(lib, ctx) {
         const L = Math.min(len, own);
         return b.length > L + Math.round(0.005 * sr) ? lib.fadeOut(lib.sliceSamples(b, 0, L), fade, 'sine') : b;
       });
+    },
+    /**
+     * Zero-pad to `sec` s BEFORE shape(): shape() budgets the peak-to-loudness ratio on the buffer it is given, and a
+     * sub-400 ms hit padded afterwards measures quieter (same energy over a longer time), so mastering would lift it into
+     * the limiter.
+     */
+    padTo(b, sec) { const n = Math.round(sec * b.sampleRate); return b.length < n ? lib.pad(b, 0, (n - b.length) / b.sampleRate) : b; },
+    /** Cut (with a `fade` s sine release) or zero-pad every variant to exactly `sec` seconds. */
+    setLen(list, sec, fade = 0.06) {
+      const n = Math.round(sec * list[0].sampleRate);
+      return list.map((b) => {
+        if (b.length > n) return lib.fadeOut(lib.sliceSamples(b, 0, n), Math.min(fade, sec * 0.5), 'sine');
+        return b.length < n ? lib.pad(b, 0, (n - b.length) / b.sampleRate) : b;
+      });
+    },
+    /** 2 ms-frame peak levels (dB) of the > `hp` Hz band: transient bookkeeping for strike() / single(). */
+    frames(b, hp = 300) {
+      const h = lib.hp(b, hp, 2), fr = Math.round(0.002 * b.sampleRate), nF = Math.floor(b.length / fr);
+      const pk = new Float64Array(nF);
+      for (let k = 0; k < nF; k++) {
+        let m = 0;
+        for (const d of h.data) for (let i = k * fr; i < (k + 1) * fr; i++) { const a = Math.abs(d[i]); if (a > m) m = a; }
+        pk[k] = 20 * Math.log10(m + 1e-9);
+      }
+      return { pk, fr };
+    },
+    /**
+     * Start at the strike: the first 2 ms frame within `lead` dB of the slice's loudest frame (minus `pre` s). align()
+     * keys on a -30 dB threshold, which a noisy pre-roll (fs:806423: 30 ms of hiss before the pane cracks) or a swell
+     * into the hit (knife thrusts, a rock plopping into water after its splash-in) passes long before the strike.
+     */
+    strike(b, { lead = -10, pre = 0.0015, hp = 300 } = {}) {
+      const { pk, fr } = H.frames(b, hp);
+      let top = -Infinity; for (const v of pk) top = Math.max(top, v);
+      let k = 0; while (k < pk.length && pk[k] < top + lead) k++;
+      const i0 = Math.max(0, k * fr - Math.round(pre * b.sampleRate));
+      return i0 > 0 ? lib.fadeIn(lib.sliceSamples(b, i0, b.length), Math.min(pre, 0.001) || 0.0005, 'sine') : b;
+    },
+    /**
+     * One strike per slice. Recorded impact takes often hold the NEXT strike 40-200 ms later (burst-fire recordings, a
+     * stone that bounces, two plops), which turns one bullet into a flam. After `hold` s, any 2 ms frame that jumps more
+     * than `rise` dB above the quietest of the previous 10 ms while still within `within` dB of the opening strike is
+     * brought back towards `allow` dB above the median of those 10 ms (at most `maxCut` dB per re-attack), and the rest
+     * of the slice stays down by the same amount: the second strike's decay simply continues the first one's. The step
+     * ramps in over the quiet 2-10 ms before the re-attack (deeper cuts ramp longer), never as a gate: a 40 dB step in
+     * 2 ms chopped the low rumble of a water plop off mid-decay. Sources whose next strike sits in silence are better
+     * sliced before it; this is the safety net.
+     */
+    single(b, { hold = 0.03, rise = 10, within = -14, allow = 1.5, maxCut = 15, hp = 300 } = {}) {
+      const { pk, fr } = H.frames(b, hp), nF = pk.length;
+      const k0 = Math.min(nF, Math.ceil(hold / 0.002));
+      let top = -Infinity; for (let k = 0; k < k0; k++) top = Math.max(top, pk[k]);
+      const g = new Float64Array(nF + 1);
+      let cur = 0, steps = 0, total = 0;
+      for (let k = 0; k < nF; k++) {
+        if (k >= k0) {
+          const prev = []; for (let j = Math.max(0, k - 5); j < k; j++) prev.push(pk[j] + g[j]);
+          prev.sort((u, v) => u - v);
+          const lvl = pk[k] + cur;
+          if (prev.length && lvl > top + within && lvl - prev[0] > rise) {
+            const d = Math.min(maxCut, lvl - (prev[prev.length >> 1] + allow));
+            if (d > 0) { cur -= d; steps++; total += d; }
+          }
+        }
+        g[k] = cur;
+      }
+      g[nF] = cur;
+      if (!steps) return b;
+      if (process.env.IMPACTS_DEBUG) ctx.log(`    single ${H.cur}: ${steps} re-attack(s) ducked, ${total.toFixed(1)} dB in all`);
+      // gain (dB) at every frame boundary; a step into frame k ramps linearly over the R frames before it
+      const gb = Float64Array.from(g);
+      for (let k = 1; k <= nF; k++) {
+        const d = g[k - 1] - g[k];
+        if (d <= 0) continue;
+        const R = Math.max(1, Math.min(5, Math.round(d / 3)));
+        for (let r = 1; r < R && k - r >= 0; r++) gb[k - r] = Math.min(gb[k - r], g[k - 1] - d * (R - r) / R);
+      }
+      const n = b.length, gain = new Float32Array(n);
+      for (let k = 0; k < nF; k++) for (let i = 0; i < fr; i++) gain[k * fr + i] = lib.db2lin(gb[k] + (gb[k + 1] - gb[k]) * (i / fr));
+      for (let i = nF * fr; i < n; i++) gain[i] = lib.db2lin(gb[nF]);
+      return new lib.Buf(b.data.map((d) => { const o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = d[i] * gain[i]; return o; }), b.sampleRate);
     },
     /**
      * Phone-speaker loss (dB): integrated loudness minus the loudness through a phone-like response (4th-order 200 Hz
@@ -269,13 +373,16 @@ function helpers(lib, ctx) {
 async function impactConcrete(lib, ctx, H) {
   // recorded stone/concrete hits carry the material; a synthetic crack + chip + grit + dust make it a bullet strike
   const bodies = [
-    ['fs:569510', 0, 0.38], ['fs:321477', 0, 0.45], ['fs:476117', 0, 0.45], ['fs:321478', 0, 0.6],
-    ['fs:476117', 1.0, 1.45], ['fs:513694', 0.08, 0.5], ['fs:476117', 2.0, 2.4], ['fs:569510', 0, 0.38],
+    ['fs:569510', 0, 0.38], ['fs:321477', 0, 0.45], ['fs:476117', 0, 0.45], ['fs:321478', 0.44, 0.68], // its hit is at 0.448 s
+    ['fs:476117', 1.0, 1.45], ['fs:513694', 0.136, 0.5], ['fs:476117', 2.0, 2.4], ['fs:569510', 0, 0.38],
   ];
   const out = [];
   for (const [k, [id, s, e]] of bodies.entries()) {
     const r = ctx.rng(`concrete${k}`);
-    let body = H.align(await H.load(id, s, e, { hp: 130 }), -30);
+    // fs:321477 strikes twice (79 ms apart); fs:513694 is a rubble cluster (pre-hits at 0.10 / 0.114 s, the main strike at
+    // 0.144, more at 0.176 / 0.25): start at its main strike, and one bullet = one strike. The clipper in shape() later
+    // takes ~6 dB off the opening peak, so a re-attack is judged against it with that margin (-16, not -10)
+    let body = H.single(H.align(await H.load(id, s, e, { hp: 130 }), -30), { within: -16, hold: 0.024 });
     if (id === 'fs:569510') body = lib.eq(body, [{ type: 'peak', f: 1900, gain: -9, q: 5 }]); // tame the stone's 1.9 kHz ring
     body = lib.varispeedSemis(body, k === 7 ? 3.2 : r.range(-1.5, 1.5));
     body = lib.eq(body, [{ type: 'hp', f: 160, order: 2 }, { type: 'lowshelf', f: 300, gain: -2 }, { type: 'peak', f: r.range(1800, 2800), gain: 3, q: 1 }]);
@@ -288,19 +395,23 @@ async function impactConcrete(lib, ctx, H) {
       { buf: H.norm(H.puff(`cp${k}`, { dur: 0.35, decay: 0.22, hp: 500, lp: 3500 })), at: 0.002, gain: -21 },
       { buf: H.norm(H.thud(`cl${k}`, { f0: r.range(240, 300), f1: r.range(120, 150), decay: 0.05 })), gain: -13 },
     ]);
-    out.push(H.shape(H.fit(v, 0.4, 0.28), -18, { sustain: 6 }));
+    out.push(H.shape(H.padTo(H.fit(v, 0.4, 0.28), 0.4), -18, { sustain: 6 }));
   }
   return out;
 }
 
 async function impactMetal(lib, ctx, H) {
   // real bullet strikes on steel (fs:144444, clipped transients -> soft-clipped) + an inharmonic plate ring for the
-  // characteristic "ptang"; two variants use the heavy ping recording instead of the synthetic ring
-  const times = [6.587, 7.12, 8.896, 9.251, 10.966, 11.985, 7.437, 8.173];
+  // characteristic "ptang"; two variants use the heavy ping recording instead of the synthetic ring.
+  // The recording is burst fire: most strikes have the next one 40-180 ms behind them (6.587, 8.896, 10.966, 11.985 and
+  // 7.437 all played as flams). These are the strikes with nothing within -8 dB for >= 220 ms (2 ms-frame onset scan);
+  // single() still ducks whatever follows.
+  const times = [7.124, 9.256, 8.474, 3.524, 11.07, 12.218, 6.092, 7.644];
   const out = [];
   for (const [k, t] of times.entries()) {
     const r = ctx.rng(`metal${k}`);
-    let body = H.align(await H.load('fs:144444', t - 0.006, t + 0.42, { hp: 180 }), -24);
+    let body = H.align(await H.load('fs:144444', t - 0.004, t + 0.42, { hp: 180 }), -24);
+    body = H.single(body, { within: -14, hold: 0.025 });
     body = H.fit(body, 0.4, 0.3);
     body = lib.softClip(H.norm(body), { threshold: -6, ceiling: -0.5 });
     const base = r.range(1700, 3300);
@@ -313,7 +424,7 @@ async function impactMetal(lib, ctx, H) {
       { buf: H.norm(ring), at: 0.0015, gain: k % 4 === 3 ? -5 : r.range(-13, -10) },
       { buf: H.norm(H.grit(`mg${k}`, { dur: 0.25, density: 200, decay: 0.15, hp: 4000 })), at: 0.003, gain: -20 },
     ]);
-    out.push(H.shape(H.fit(lib.eq(v, [{ type: 'hp', f: 220, order: 2 }]), 0.5, 0.35), -18));
+    out.push(H.shape(H.padTo(H.fit(lib.eq(v, [{ type: 'hp', f: 220, order: 2 }]), 0.4, 0.3), 0.4), -18));
   }
   return out;
 }
@@ -331,10 +442,11 @@ async function impactWood(lib, ctx, H) {
   for (const [k, [id, s, e, semis]] of prim.entries()) {
     const r = ctx.rng(`wood${k}`);
     const raw = await H.load(id, s, e, { hp: 120 });
-    let body = k === 6 ? H.fromPeak(raw, 0.006) : H.align(raw, -30);
+    let body = H.single(k === 6 ? H.fromPeak(raw, 0.006) : H.align(raw, -30), { within: -16 });
     body = lib.varispeedSemis(body, semis + r.range(-0.8, 0.8));
     const knock = H.align(await H.load(H.kenney(`impactWood_light_00${k % 5}`), 0, 0.27, { hp: 150 }), -30);
-    const splinter = k % 3 === 2 ? branch : lib.hp(H.sliceRand(splinterSrc, 0.16, r), 1500, 2);
+    // the branch snaps twice (~110 ms apart) and a random crackle slice can hold a louder crack mid-way: keep one
+    const splinter = H.single(k % 3 === 2 ? branch : lib.hp(H.sliceRand(splinterSrc, 0.16, r), 1500, 2), { within: -10, hold: 0.02 });
     const v = H.mix([
       { buf: H.norm(lib.eq(body, [{ type: 'peak', f: r.range(700, 1100), gain: 3, q: 1.2 }])), gain: 0 },
       { buf: H.norm(knock), gain: r.range(-9, -6) },
@@ -342,7 +454,7 @@ async function impactWood(lib, ctx, H) {
       { buf: H.norm(lib.fadeOut(lib.fadeIn(splinter, 0.004), 0.06, 'exp')), at: r.range(0.004, 0.012), gain: r.range(-14, -10) },
       { buf: H.norm(H.grit(`wg${k}`, { dur: 0.3, density: 160, decay: 0.15, hp: 2000, lp: 9000 })), at: 0.006, gain: -20 },
     ]);
-    out.push(H.shape(H.fit(lib.eq(v, [{ type: 'hp', f: 130, order: 2 }]), 0.32, 0.22), -19));
+    out.push(H.shape(H.padTo(H.fit(lib.eq(v, [{ type: 'hp', f: 130, order: 2 }]), 0.32, 0.22), 0.32), -18.5));
   }
   return out;
 }
@@ -356,7 +468,7 @@ async function impactDirt(lib, ctx, H) {
   const out = [];
   for (const [k, [id, s, e]] of thuds.entries()) {
     const r = ctx.rng(`dirt${k}`);
-    let body = H.align(await H.load(id, s, e, { hp: 70 }), -30);
+    let body = H.single(H.align(await H.load(id, s, e, { hp: 70 }), -30), { within: -10, hold: 0.035 }); // fs:445109 thumps 3x
     body = lib.varispeedSemis(body, r.range(-2, 1));
     const v = H.mix([
       { buf: H.norm(lib.eq(body, [{ type: 'peak', f: 300, gain: 2, q: 0.8 }])), gain: 0 },
@@ -365,7 +477,7 @@ async function impactDirt(lib, ctx, H) {
       { buf: H.norm(H.puff(`dp${k}`, { dur: 0.35, decay: 0.2, hp: 250, lp: 2600 })), at: 0.002, gain: -11 },
       { buf: H.norm(H.grit(`dg${k}`, { dur: 0.5, density: r.range(250, 400), decay: r.range(0.3, 0.42), hp: 1200, lp: 7000, attack: 0.02 })), at: 0.012, gain: -13 },
     ]);
-    out.push(H.shape(H.tilt(H.weight(H.fit(v, 0.5, 0.35), 120, -8), 2.5), -19, { sustain: 5 }));
+    out.push(H.shape(H.padTo(H.tilt(H.weight(H.fit(v, 0.4, 0.3), 120, -8), 2.5), 0.4), -19, { sustain: 5 }));
   }
   return out;
 }
@@ -380,35 +492,44 @@ async function impactGlass(lib, ctx, H) {
   const out = [];
   for (const [k, [id, s, e]] of cracks.entries()) {
     const r = ctx.rng(`glass${k}`);
-    let crack = H.align(await H.load(id, s, e, { hp: id.startsWith('kenney') ? 1000 : 400 }), -30);
+    // start AT the crack (fs:806423 has 30 ms of hiss before the pane breaks), and one crack per variant
+    let crack = H.single(H.strike(await H.load(id, s, e, { hp: id.startsWith('kenney') ? 1000 : 400 }), { lead: -12 }), { within: -10, hold: 0.05 });
     // Kenney's heavy glass is a bottle: its 620-650 Hz "clunk" note dominated two variants (a window pane is all clink)
     if (id.startsWith('kenney')) crack = H.detone(lib.hp(crack, 1500, 4), { fmin: 300, fmax: 1600, minProm: 8 });
-    const sh = H.sliceRand(shatterBufs[k % 3], 0.45, r, 0.05);
+    // a random 0.45 s shatter slice can hold a bigger burst 100 ms in (glass_6 came back as a second hit at -2 dB)
+    const sh = H.single(H.sliceRand(shatterBufs[k % 3], 0.45, r, 0.05), { within: -10, hold: 0.04 });
     const light = H.align(await H.load(H.kenney(`impactGlass_light_00${k % 5}`), 0, 0.21, { hp: 1500 }), -30);
     const v = H.mix([
       { buf: lib.softClip(H.norm(crack), { threshold: -6, ceiling: -0.5 }), gain: 0 },
       { buf: H.norm(H.crack(`gc${k}`, { hp: 4000, decay: 0.003 })), gain: -6 },
       // the de-clunked Kenney cracks are thinner: sit their shatter lower so the crack still leads
       { buf: H.norm(lib.fadeOut(lib.fadeIn(sh, 0.01), 0.25, 'exp')), at: r.range(0.012, 0.03), gain: r.range(-9, -6) - (id.startsWith('kenney') ? 3 : 0) },
-      { buf: H.norm(tinkle), at: r.range(0.16, 0.3), gain: -15 },
-      { buf: H.norm(light), at: r.range(0.08, 0.2), gain: -14 },
+      // falling shards: small and late (at -14 / -15 they came back after the clipper at -3 dB under the hit: a 2nd hit)
+      { buf: H.norm(tinkle), at: r.range(0.16, 0.3), gain: -20 },
+      { buf: H.norm(light), at: r.range(0.09, 0.2), gain: -20 },
     ]);
-    out.push(H.shape(H.fit(lib.eq(v, [{ type: 'hp', f: 350, order: 2 }]), 0.7, 0.45), -18));
+    out.push(H.shape(H.padTo(H.fit(lib.eq(v, [{ type: 'hp', f: 350, order: 2 }]), 0.48, 0.3), 0.48), -18));
   }
   return out;
 }
 
 async function impactWater(lib, ctx, H) {
   // "thwip/plup" entry + spray + a bubble blip
-  const plops = [['fs:672574', 0, 0.16], ['fs:178732', 0.86, 1.13], ['fs:672574', 0, 0.16], ['fs:178732', 1.235, 1.48], ['fs:737232', 0, 0.42], ['fs:321490', 0.16, 0.74]];
-  const spray = [['fs:398032', 0.02, 0.6], ['fs:321490', 0.16, 0.74], ['fs:212143', 0.0, 0.6]];
+  // every source here plops or splashes more than once (fs:178732: two rocks at 0.858 / 0.958 s, its second take swells
+  // for 80 ms into a double plop; fs:321490 drips at 0.166 / 0.204 s before its splash at 0.262, again at 0.452 / 0.48;
+  // spray fs:398032 at +78 / +152 ms, fs:212143 at +147 ms): each plop is sliced on its own (ending before the next one)
+  // and starts at the plop (strike); the spray starts at its splash and single() tames its re-splashes. The spray sits
+  // 5-8 dB under a body that the clipper then flattens, so its re-splashes are judged with that margin (-20).
+  // Otherwise one bullet into water lands two or three times.
+  const plops = [['fs:672574', 0, 0.16], ['fs:178732', 0.85, 0.953], ['fs:672574', 0, 0.16], ['fs:178732', 0.95, 1.16], ['fs:737232', 0, 0.42], ['fs:321490', 0.255, 0.445]];
+  const spray = [['fs:398032', 0.02, 0.6], ['fs:321490', 0.255, 0.74], ['fs:212143', 0.0, 0.6]];
   const sprayBufs = [];
-  for (const [id, s, e] of spray) sprayBufs.push(H.align(await H.load(id, s, e, { hp: 700 }), -30));
+  for (const [id, s, e] of spray) sprayBufs.push(H.single(H.strike(await H.load(id, s, e, { hp: 700 }), { lead: -12 }), { within: -20, hold: 0.04 }));
   const out = [];
   for (const [k, [id, s, e]] of plops.entries()) {
     const r = ctx.rng(`water${k}`);
-    let body = H.align(await H.load(id, s, e, { hp: 120 }), -30);
-    body = lib.varispeedSemis(body, k === 2 ? -3 : r.range(-1.5, 1.5));
+    let body = H.single(H.strike(await H.load(id, s, e, { hp: 120 }), { lead: -12 }), { within: -14, hold: 0.035 });
+    body = lib.fadeOut(lib.varispeedSemis(body, k === 2 ? -3 : r.range(-1.5, 1.5)), Math.min(0.05, body.duration * 0.45), 'exp');
     const f0 = r.range(450, 700);
     const blip = lib.applyEnv(lib.tone(0.06, { type: 'sine', freq: [[0, f0], [0.05, f0 * r.range(2.2, 2.8)]] }), lib.expEnv(0.06, { attack: 0.002, t60: 0.05 }));
     const v = H.mix([
@@ -418,7 +539,7 @@ async function impactWater(lib, ctx, H) {
       { buf: H.norm(blip), at: r.range(0.02, 0.05), gain: -15 },
       { buf: H.norm(H.thud(`wl${k}`, { f0: 200, f1: 110, decay: 0.05 })), gain: -14 },
     ]);
-    out.push(H.shape(H.fit(v, 0.55, 0.4), -19, { sustain: 5 }));
+    out.push(H.shape(H.padTo(H.fit(v, 0.48, 0.34), 0.48), -18.5, { sustain: 5 }));
   }
   return out;
 }
@@ -473,15 +594,20 @@ async function bulletWhiz(lib, ctx, H) {
     const env = new Float32Array(wh.length);
     for (let i = 0; i < env.length; i++) { const t = i / 48000; env[i] = t < peakT ? (t / peakT) ** 2 : Math.exp(-(t - peakT) * 14); }
     wh = lib.applyEnv(wh, env);
-    const ws = lib.applyEnv(lib.tone(T, { type: 'sine', freq: [[0, fA * 0.55], [peakT, fA * 0.5], [peakT + 0.05, fB * 0.8], [T, fB * 0.7]] }), env);
+    // the "zing": a narrow band of noise riding the doppler glide (a pure sine here held a flat 1.4 kHz beep for the
+    // last 150 ms of every synthetic variant: the cheapest-sounding thing in the category)
+    const zf = (t) => (t < peakT ? fA * 0.5 : fB * 0.7 + (fA * 0.5 - fB * 0.7) * Math.exp(-(t - peakT) / 0.03));
+    const ws = lib.applyEnv(lib.sweep(lib.noise(T, { color: 'white', seed: `wz${k}` }), 'bp', zf, { q: 12 }), env);
     const v = H.mix([
       k === 1 ? { buf: H.norm(real), gain: 0 } : { buf: H.norm(nwave), at: peakT * 0.6, gain: k === 3 ? -6 : 0 },
       k !== 1 && { buf: H.norm(H.crack(`wk${k}`, { dur: 0.02, decay: 0.006, hp: 1800, lp: 12000 })), at: peakT * 0.6, gain: k === 3 ? -8 : -2 },
       { buf: H.norm(wh), gain: k === 3 ? -10 : -8 },
-      { buf: H.norm(ws), gain: -20 },
+      { buf: H.norm(ws), gain: -17 },
       k === 3 && { buf: H.norm(subsonic), gain: 0 },
     ]);
-    out.push(H.shape(H.fit(v, k === 3 ? 0.5 : T, 0.15), -22, { sustain: 0 })); // keep the snap: a quieter whoosh, not a flattened crack
+    // keep the snap: a quieter whoosh, not a flattened crack. All four are padded / cut to 0.32 s (= the longest
+    // synthetic one; add(): len), the recorded subsonic fly-by fades out over its last 0.16 s
+    out.push(H.shape(H.padTo(H.fit(v, k === 3 ? 0.32 : T, k === 3 ? 0.16 : 0.15), 0.32), -22, { sustain: 0 }));
   }
   return out;
 }
@@ -512,7 +638,8 @@ async function impactFlesh(lib, ctx, H) {
     // stop before the next designed hit's pre-swell creeps in (~170 ms after each hit)
     let wet = lib.eq(lib.fadeOut(H.align(lib.slice(visc, t - 0.012, t + 0.16), -24), 0.05, 'exp'), [{ type: 'hp', f: 110, order: 2 }, { type: 'peak', f: r.range(1500, 2400), gain: 3, q: 1 }]);
     wet = H.detone(wet, { minProm: 12 });
-    const smack = lib.eq(H.align(await smacks[k](), -30), [{ type: 'hp', f: 180, order: 2 }, { type: 'peak', f: r.range(700, 1100), gain: 3, q: 0.9 }]);
+    // fs:779805 slaps twice 90 ms apart, the punch take holds the next punch's swing: one smack per hit
+    const smack = lib.eq(H.single(H.align(await smacks[k](), -30), { within: -14 }), [{ type: 'hp', f: 180, order: 2 }, { type: 'peak', f: r.range(700, 1100), gain: 3, q: 0.9 }]);
     const body = H.fit(H.align(await H.load(H.kenney(bodies[k]), 0, 0.3, { hp: 110 }), -30), 0.16, 0.12);
     const sp = H.align(await H.load(...splats[k], { hp: 250 }), -30);
     const v = H.mix([
@@ -537,10 +664,13 @@ async function headshot(lib, ctx, H) {
   const out = [];
   for (let k = 0; k < 4; k++) {
     const r = ctx.rng(`head${k}`);
-    const snap = H.align(await H.load(...snaps[k], { hp: 400 }), -24);
-    const pop = H.align(await H.load(...pops[k], { hp: 250 }), -24);
-    const wet = H.align(await H.load(...wets[k], { hp: 150 }), -24);
-    const low = H.align(await H.load('fs:511194', 0.04, 0.5, { hp: 40 }), -30);
+    // every layer starts AT its strike: fs:574752 @1.18 has a -23 dB crackle 64 ms before its snap and fs:144159 two
+    // softer knocks 84 / 156 ms before its pop, so align() put headshot_3's crack 60 ms late, behind its own splat
+    const snap = H.single(H.strike(await H.load(...snaps[k], { hp: 400 }), { lead: -8 }), { within: -12, hold: 0.025 });
+    const pop = H.single(H.strike(await H.load(...pops[k], { hp: 250 }), { lead: -3 }), { within: -10 });
+    // the splat may crackle, but no droplet may out-shout the opening crack
+    const wet = H.single(H.align(await H.load(...wets[k], { hp: 150 }), -24), { within: -6, hold: 0.03, maxCut: 8 });
+    const low = H.strike(await H.load('fs:511194', 0.04, 0.5, { hp: 40 }), { lead: -6 });
     const v = H.mix([
       { buf: H.norm(lib.eq(snap, [{ type: 'peak', f: 3200, gain: 3, q: 1 }])), gain: 0 },
       { buf: H.norm(H.crack(`hc${k}`, { hp: 3500, decay: 0.004, dur: 0.02 })), gain: -5 },
@@ -567,8 +697,9 @@ async function gib(lib, ctx, H) {
   for (let k = 0; k < 4; k++) {
     const r = ctx.rng(`gib${k}`);
     const sp = H.align(await H.load(...splats[k], { hp: 80 }), -24);
-    const sn = H.align(await H.load(...snaps[k], { hp: 400 }), -24);
-    const ex = H.align(await H.load(...extra[k], { hp: 200 }), -30);
+    const sn = H.strike(await H.load(...snaps[k], { hp: 400 }), { lead: -8 }); // fs:574752 @3.59 crackles ~200 ms before its snap
+    let ex = H.align(await H.load(...extra[k], { hp: 200 }), -30);
+    if (k === 3) ex = H.detone(ex, { fmin: 2500, fmax: 12000, minProm: 9, maxCuts: 4, q: 10 }); // fs:504615: blade ring
     const t = ripT[k % ripT.length];
     const tear = lib.hp(H.align(lib.slice(rip, t - 0.02, t + 0.4), -30), 200, 2);
     const v = H.mix([
@@ -609,8 +740,9 @@ async function boneCrunch(lib, ctx, H) {
   ];
   const out = [];
   for (const [k, [a, b, g]] of sets.entries()) {
-    const A = H.align(await H.load(...a, { hp: 120 }), -30);
-    const B = H.align(await H.load(...b, { hp: 300 }), -24);
+    // both layers start at their crack (fs:355052, fs:192146, fs:215140 and fs:144159 knock softly 70-150 ms before it)
+    const A = H.strike(await H.load(...a, { hp: 120 }), { lead: -8 });
+    const B = H.strike(await H.load(...b, { hp: 300 }), { lead: -8 });
     const v = H.mix([
       { buf: H.norm(A), gain: 0 },
       { buf: H.norm(B), at: 0.002, gain: g },
@@ -628,7 +760,9 @@ async function knifeFlesh(lib, ctx, H) {
     const r = ctx.rng(`kf${k}`);
     // slash recordings swell into their hit: start a few ms before the peak (the swing is its own sound)
     const raw = await H.load(...s, { hp: 120 });
-    const stab = k >= 2 ? H.fromPeak(raw, 0.008) : H.align(raw, -30);
+    let stab = k >= 2 ? H.fromPeak(raw, 0.008) : H.align(raw, -30);
+    // fs:504615 rings at 5-6.5 kHz for 350 ms like a struck blade on steel: a stab into a body does not ring
+    if (k === 2) stab = H.detone(stab, { fmin: 2500, fmax: 12000, minProm: 9, maxCuts: 4, q: 10 });
     const punch = H.align(await H.load(H.kenney(`impactPunch_medium_00${k}`), 0, 0.4, { hp: 50 }), -30);
     const v = H.mix([
       { buf: lib.softClip(H.norm(stab), { threshold: -8, ceiling: -1 }), gain: 0 },
@@ -644,9 +778,11 @@ async function knifeFlesh(lib, ctx, H) {
 async function knifeWall(lib, ctx, H) {
   // steel blade into concrete: a recorded thrust/stone hit + a short blade "tink" + chips
   const out = [];
-  const thrust = H.align(await H.load('fs:504618', 0.1, 0.77, { hp: 120 }), -30);
+  // the thrust swells for ~35 ms into its hit (start at the hit: a melee hit must land on the frame it connects) and
+  // fs:321477 strikes twice, 79 ms apart
+  const thrust = H.strike(await H.load('fs:504618', 0.1, 0.77, { hp: 120 }), { lead: -6 });
   const stone = H.align(await H.load('fs:569510', 0, 0.3, { hp: 200 }), -30);
-  const conc = H.align(await H.load('fs:321477', 0, 0.4, { hp: 150 }), -30);
+  const conc = H.single(H.align(await H.load('fs:321477', 0, 0.4, { hp: 150 }), -30), { within: -16, hold: 0.024 });
   const blades = [H.kenney('impactMetal_light_001'), H.kenney('impactMetal_light_003'), H.kenney('impactMetal_light_000')];
   for (let k = 0; k < 3; k++) {
     const r = ctx.rng(`kw${k}`);
@@ -673,7 +809,9 @@ async function meleeHeavy(lib, ctx, H) {
   const out = [];
   for (const [k, s] of sets.entries()) {
     const r = ctx.rng(`mh${k}`);
-    const hit = H.align(await H.load(...s, { hp: 60 }), -30);
+    // fs:399183 swells 40 ms into its smack (start at the hit); fs:779805 slaps again 90 ms later (tame it, keep the meat)
+    const raw = await H.load(...s, { hp: 60 });
+    const hit = H.single(k === 0 ? H.strike(raw, { lead: -6 }) : H.align(raw, -30), { within: -10, rise: 8, maxCut: 9 });
     const body = H.align(await H.load(bodies[k], 0, 0.5, { hp: 45 }), -30);
     // weight comes from a SHORT pitched thump + harmonics; the mid "smack" of the recording stays on top
     const v = H.mix([
@@ -684,7 +822,7 @@ async function meleeHeavy(lib, ctx, H) {
       { buf: H.norm(lib.noiseBurst({ dur: 0.06, decay: 0.035, bp: r.range(700, 1100), q: 0.7, seed: `ms${k}` })), gain: -8 },
       { buf: H.norm(H.puff(`mp${k}`, { dur: 0.12, decay: 0.06, hp: 1500, lp: 6000 })), gain: -16 },
     ]);
-    out.push(H.shape(H.tilt(H.weight(H.fit(lib.eq(v, [{ type: 'hp', f: 55, order: 2 }]), 0.38, 0.26), 120, -4), 2.5), -17));
+    out.push(H.shape(H.padTo(H.tilt(H.weight(H.fit(lib.eq(v, [{ type: 'hp', f: 55, order: 2 }]), 0.38, 0.26), 120, -4), 2.5), 0.38), -17));
   }
   return out;
 }
@@ -699,15 +837,18 @@ async function armorHit(lib, ctx, H) {
     const plate = H.align(await H.load(H.kenney(plates[k]), 0, 0.5, { hp: 120 }), -30);
     // the plate's hard "thwack" leads (mid-range reads on phones); the padded body is only a short low support
     const soft = H.fit(H.align(await H.load(H.kenney(softs[k]), 0, 0.5, { hp: 150 }), -30), 0.2, 0.15);
+    // Mastering review: the plate read as a padded 450-550 Hz thump (centroid ~500 Hz, 1-3 kHz band 9-12 dB under the
+    // low-mids): duller than a bare flesh hit, so "the armour took it" did not sound harder than "it hit you". The plate
+    // now carries its 1-3 kHz clack, the padding sits lower and the ceramic tick / fabric burst come up.
     const v = H.mix([
-      { buf: H.norm(lib.eq(H.fit(plate, 0.28, 0.2), [{ type: 'peak', f: r.range(900, 1400), gain: 3, q: 0.8 }])), gain: 0 },
-      { buf: H.norm(soft), gain: -5 },
+      { buf: H.norm(lib.eq(H.fit(plate, 0.28, 0.2), [{ type: 'lowshelf', f: 350, gain: -5 }, { type: 'peak', f: r.range(1500, 2200), gain: 5, q: 0.9 }])), gain: 0 },
+      { buf: H.norm(soft), gain: -8 },
       { buf: H.norm(lib.noiseBurst({ dur: 0.05, decay: 0.03, bp: r.range(900, 1500), q: 0.7, seed: `as${k}` })), gain: -7 },
-      { buf: H.norm(lib.noiseBurst({ dur: 0.08, decay: 0.045, bp: r.range(2200, 3200), q: 0.8, seed: `af${k}` })), at: 0.003, gain: -12 },
-      { buf: H.norm(H.ring(`ar${k}`, r.range(2200, 2800), [[1, 1, 0.05], [2.3, 0.5, 0.03]], 0.1)), gain: -17 },
-      { buf: H.norm(H.thud(`al${k}`, { f0: 170, f1: 95, decay: 0.05, drive: 1.5 })), gain: -13 },
+      { buf: H.norm(lib.noiseBurst({ dur: 0.08, decay: 0.045, bp: r.range(2200, 3200), q: 0.8, seed: `af${k}` })), at: 0.003, gain: -9 },
+      { buf: H.norm(H.ring(`ar${k}`, r.range(2200, 2800), [[1, 1, 0.05], [2.3, 0.5, 0.03]], 0.1)), gain: -13 },
+      { buf: H.norm(H.thud(`al${k}`, { f0: 170, f1: 95, decay: 0.05, drive: 1.5 })), gain: -14 },
     ]);
-    out.push(H.shape(H.fit(lib.eq(v, [{ type: 'hp', f: 100, order: 2 }]), 0.3, 0.2), -18));
+    out.push(H.shape(H.fit(lib.eq(v, [{ type: 'hp', f: 100, order: 2 }, { type: 'peak', f: 300, gain: -4, q: 1 }]), 0.3, 0.2), -18));
   }
   return out;
 }
@@ -743,8 +884,12 @@ async function killThud(lib, ctx, H) {
     const v = H.mix([
       { buf: H.norm(t), gain: 0 },
       { buf: H.norm(H.puff(`kp${k}`, { dur: 0.12, decay: 0.07, hp: 120, lp: 900 })), gain: -16 },
+      // a short low-mid knock (drum-shell partials): the 135-150 Hz thump alone lost 8-9 dB through a phone speaker
+      { buf: H.norm(H.ring(`kk${k}`, k ? 300 : 270, [[1, 1, 0.08], [1.58, 0.45, 0.05], [2.4, 0.25, 0.035]], 0.2)), at: 0.001, gain: -5 },
+      { buf: H.norm(H.tock(`kc${k}`, k ? 900 : 800, { q: 2, decay: 0.02 })), gain: -14 },
     ]);
-    out.push(H.shape(H.weight(H.fit(v, 0.28, 0.2), 130, -2), -22));
+    // ...and the low shelf comes down until a phone keeps all but 5 dB of it (the thump stays felt on headphones)
+    out.push(H.shape(H.tilt(H.weight(H.fit(v, 0.28, 0.2), 130, -2), 5, { f: 180, maxCut: -12 }), -22));
   }
   return out;
 }
@@ -803,7 +948,7 @@ async function explosionLarge(lib, ctx, H) {
       k !== 1 && { buf: H.norm(lib.saturate(fire, { drive: 6, type: 'tube' })), at: 0.04, gain: -10 }, // fireball roar
     ]);
     const room = lib.reverb(v, 'urban', { wet: 0.14, seed: `exlr${k}`, channels: 1, length: 2.2 });
-    out.push(H.shape(H.tilt(H.weight(H.fit(room, 3.8, 2.6), 110, -2), 6, { f: 120, maxCut: -9 }), -15, { sustain: 1 }));
+    out.push(H.shape(H.tilt(H.weight(H.fit(room, 3.8, 2.6), 110, -2), 6, { f: 120, maxCut: -9 }), -14, { sustain: 1 }));
   }
   return out;
 }
@@ -849,7 +994,7 @@ async function grenadeBounce(lib, ctx, H) {
       { buf: H.norm(H.crack(`gbc${k}`, { hp: 2500, decay: 0.003, dur: 0.015 })), gain: -10 },
     ]);
     const v = k === 2 ? H.mix([{ buf: one }, { buf: lib.varispeedSemis(one, 1.2), at: r.range(0.09, 0.12), gain: -9 }]) : one;
-    out.push(H.shape(H.fit(v, 0.32, 0.22), -20));
+    out.push(H.shape(H.padTo(H.fit(v, 0.28, 0.2), 0.28), -20));
   }
   return out;
 }
@@ -880,7 +1025,8 @@ async function fireBurst(lib, ctx, H) {
       { buf: H.norm(lib.fadeIn(H.sliceRand(crack, 1.8, r), 0.3, 'sine')), at: 0.35, gain: -10 },
       { buf: H.norm(H.grit(`fg${k}`, { dur: 1.8, density: 45, decay: 1.6, hp: 1500, lp: 9000, tick: 0.004 })), at: 0.2, gain: -14 },
     ]);
-    out.push(H.shape(H.weight(H.fit(v, 2.3, 1.4), 120, -3), -16));
+    // variant 3's smash is buried under its fwoomp: 4.2 dB phone loss vs 0.2-2.1 for the others (3 dB quieter on a phone)
+    out.push(H.shape(H.tilt(H.weight(H.fit(v, 2.3, 1.4), 120, -3), 2.5, { f: 140, maxCut: -9 }), -16));
   }
   return out;
 }

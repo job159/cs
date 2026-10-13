@@ -1,0 +1,1359 @@
+{
+  "sounds": {
+    "acid_splash": {
+      "files": [
+        "creatures/acid_splash_1.ogg",
+        "creatures/acid_splash_2.ogg",
+        "creatures/acid_splash_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        35
+      ],
+      "loop": false
+    },
+    "bloater_attack": {
+      "files": [
+        "creatures/bloater_attack_1.ogg",
+        "creatures/bloater_attack_2.ogg",
+        "creatures/bloater_attack_3.ogg",
+        "creatures/bloater_attack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        36
+      ],
+      "loop": false
+    },
+    "bloater_death": {
+      "files": [
+        "creatures/bloater_death_1.ogg",
+        "creatures/bloater_death_2.ogg",
+        "creatures/bloater_death_3.ogg",
+        "creatures/bloater_death_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        36
+      ],
+      "loop": false
+    },
+    "bloater_gurgle": {
+      "files": [
+        "creatures/bloater_gurgle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        20
+      ],
+      "loop": true
+    },
+    "bloater_idle": {
+      "files": [
+        "creatures/bloater_idle_1.ogg",
+        "creatures/bloater_idle_2.ogg",
+        "creatures/bloater_idle_3.ogg",
+        "creatures/bloater_idle_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        34
+      ],
+      "loop": false
+    },
+    "bloater_pain": {
+      "files": [
+        "creatures/bloater_pain_1.ogg",
+        "creatures/bloater_pain_2.ogg",
+        "creatures/bloater_pain_3.ogg",
+        "creatures/bloater_pain_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        32
+      ],
+      "loop": false
+    },
+    "bloater_pop": {
+      "files": [
+        "creatures/bloater_pop_1.ogg",
+        "creatures/bloater_pop_2.ogg",
+        "creatures/bloater_pop_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        5,
+        75
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "breath_tired": {
+      "files": [
+        "creatures/breath_tired.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "voice",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true
+    },
+    "brute_attack": {
+      "files": [
+        "creatures/brute_attack_1.ogg",
+        "creatures/brute_attack_2.ogg",
+        "creatures/brute_attack_3.ogg",
+        "creatures/brute_attack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false
+    },
+    "brute_charge": {
+      "files": [
+        "creatures/brute_charge_1.ogg",
+        "creatures/brute_charge_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "brute_death": {
+      "files": [
+        "creatures/brute_death_1.ogg",
+        "creatures/brute_death_2.ogg",
+        "creatures/brute_death_3.ogg",
+        "creatures/brute_death_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        4,
+        55
+      ],
+      "loop": false
+    },
+    "brute_idle": {
+      "files": [
+        "creatures/brute_idle_1.ogg",
+        "creatures/brute_idle_2.ogg",
+        "creatures/brute_idle_3.ogg",
+        "creatures/brute_idle_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        4,
+        45
+      ],
+      "loop": false
+    },
+    "brute_pain": {
+      "files": [
+        "creatures/brute_pain_1.ogg",
+        "creatures/brute_pain_2.ogg",
+        "creatures/brute_pain_3.ogg",
+        "creatures/brute_pain_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        4,
+        45
+      ],
+      "loop": false
+    },
+    "brute_roar": {
+      "files": [
+        "creatures/brute_roar_1.ogg",
+        "creatures/brute_roar_2.ogg",
+        "creatures/brute_roar_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        8,
+        110
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "brute_stomp": {
+      "files": [
+        "creatures/brute_stomp_1.ogg",
+        "creatures/brute_stomp_2.ogg",
+        "creatures/brute_stomp_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        75
+      ],
+      "loop": false,
+      "priority": 1.5
+    },
+    "crawler_attack": {
+      "files": [
+        "creatures/crawler_attack_1.ogg",
+        "creatures/crawler_attack_2.ogg",
+        "creatures/crawler_attack_3.ogg",
+        "creatures/crawler_attack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.08
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        32
+      ],
+      "loop": false
+    },
+    "crawler_death": {
+      "files": [
+        "creatures/crawler_death_1.ogg",
+        "creatures/crawler_death_2.ogg",
+        "creatures/crawler_death_3.ogg",
+        "creatures/crawler_death_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "crawler_idle": {
+      "files": [
+        "creatures/crawler_idle_1.ogg",
+        "creatures/crawler_idle_2.ogg",
+        "creatures/crawler_idle_3.ogg",
+        "creatures/crawler_idle_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.08
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        28
+      ],
+      "loop": false
+    },
+    "crawler_pain": {
+      "files": [
+        "creatures/crawler_pain_1.ogg",
+        "creatures/crawler_pain_2.ogg",
+        "creatures/crawler_pain_3.ogg",
+        "creatures/crawler_pain_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.08
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        28
+      ],
+      "loop": false
+    },
+    "crawler_screech": {
+      "files": [
+        "creatures/crawler_screech_1.ogg",
+        "creatures/crawler_screech_2.ogg",
+        "creatures/crawler_screech_3.ogg",
+        "creatures/crawler_screech_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        45
+      ],
+      "loop": false,
+      "priority": 1.5
+    },
+    "crawler_skitter": {
+      "files": [
+        "creatures/crawler_skitter.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        18
+      ],
+      "loop": true
+    },
+    "footstep_concrete": {
+      "files": [
+        "creatures/footstep_concrete_1.ogg",
+        "creatures/footstep_concrete_2.ogg",
+        "creatures/footstep_concrete_3.ogg",
+        "creatures/footstep_concrete_4.ogg",
+        "creatures/footstep_concrete_5.ogg",
+        "creatures/footstep_concrete_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "footstep_dirt": {
+      "files": [
+        "creatures/footstep_dirt_1.ogg",
+        "creatures/footstep_dirt_2.ogg",
+        "creatures/footstep_dirt_3.ogg",
+        "creatures/footstep_dirt_4.ogg",
+        "creatures/footstep_dirt_5.ogg",
+        "creatures/footstep_dirt_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "footstep_grate": {
+      "files": [
+        "creatures/footstep_grate_1.ogg",
+        "creatures/footstep_grate_2.ogg",
+        "creatures/footstep_grate_3.ogg",
+        "creatures/footstep_grate_4.ogg",
+        "creatures/footstep_grate_5.ogg",
+        "creatures/footstep_grate_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "footstep_metal": {
+      "files": [
+        "creatures/footstep_metal_1.ogg",
+        "creatures/footstep_metal_2.ogg",
+        "creatures/footstep_metal_3.ogg",
+        "creatures/footstep_metal_4.ogg",
+        "creatures/footstep_metal_5.ogg",
+        "creatures/footstep_metal_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "footstep_water": {
+      "files": [
+        "creatures/footstep_water_1.ogg",
+        "creatures/footstep_water_2.ogg",
+        "creatures/footstep_water_3.ogg",
+        "creatures/footstep_water_4.ogg",
+        "creatures/footstep_water_5.ogg",
+        "creatures/footstep_water_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "footstep_wood": {
+      "files": [
+        "creatures/footstep_wood_1.ogg",
+        "creatures/footstep_wood_2.ogg",
+        "creatures/footstep_wood_3.ogg",
+        "creatures/footstep_wood_4.ogg",
+        "creatures/footstep_wood_5.ogg",
+        "creatures/footstep_wood_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "heartbeat": {
+      "files": [
+        "creatures/heartbeat.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true
+    },
+    "hound_attack": {
+      "files": [
+        "creatures/hound_attack_1.ogg",
+        "creatures/hound_attack_2.ogg",
+        "creatures/hound_attack_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        36
+      ],
+      "loop": false
+    },
+    "hound_bark": {
+      "files": [
+        "creatures/hound_bark_1.ogg",
+        "creatures/hound_bark_2.ogg",
+        "creatures/hound_bark_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false
+    },
+    "hound_growl": {
+      "files": [
+        "creatures/hound_growl_1.ogg",
+        "creatures/hound_growl_2.ogg",
+        "creatures/hound_growl_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "jump": {
+      "files": [
+        "creatures/jump_1.ogg",
+        "creatures/jump_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "land": {
+      "files": [
+        "creatures/land_1.ogg",
+        "creatures/land_2.ogg",
+        "creatures/land_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "land_heavy": {
+      "files": [
+        "creatures/land_heavy_1.ogg",
+        "creatures/land_heavy_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        22
+      ],
+      "loop": false
+    },
+    "player_death": {
+      "files": [
+        "creatures/player_death_1.ogg",
+        "creatures/player_death_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        36
+      ],
+      "loop": false
+    },
+    "player_downed": {
+      "files": [
+        "creatures/player_downed_1.ogg",
+        "creatures/player_downed_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        40
+      ],
+      "loop": false
+    },
+    "player_pain": {
+      "files": [
+        "creatures/player_pain_1.ogg",
+        "creatures/player_pain_2.ogg",
+        "creatures/player_pain_3.ogg",
+        "creatures/player_pain_4.ogg",
+        "creatures/player_pain_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "revive": {
+      "files": [
+        "creatures/revive_1.ogg",
+        "creatures/revive_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "riot_armor_clank": {
+      "files": [
+        "creatures/riot_armor_clank_1.ogg",
+        "creatures/riot_armor_clank_2.ogg",
+        "creatures/riot_armor_clank_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        26
+      ],
+      "loop": false
+    },
+    "runner_attack": {
+      "files": [
+        "creatures/runner_attack_1.ogg",
+        "creatures/runner_attack_2.ogg",
+        "creatures/runner_attack_3.ogg",
+        "creatures/runner_attack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.06
+      ],
+      "voices": 4,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        36
+      ],
+      "loop": false
+    },
+    "runner_breath": {
+      "files": [
+        "creatures/runner_breath.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        22
+      ],
+      "loop": true
+    },
+    "runner_death": {
+      "files": [
+        "creatures/runner_death_1.ogg",
+        "creatures/runner_death_2.ogg",
+        "creatures/runner_death_3.ogg",
+        "creatures/runner_death_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        34
+      ],
+      "loop": false
+    },
+    "runner_idle": {
+      "files": [
+        "creatures/runner_idle_1.ogg",
+        "creatures/runner_idle_2.ogg",
+        "creatures/runner_idle_3.ogg",
+        "creatures/runner_idle_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.08
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "runner_pain": {
+      "files": [
+        "creatures/runner_pain_1.ogg",
+        "creatures/runner_pain_2.ogg",
+        "creatures/runner_pain_3.ogg",
+        "creatures/runner_pain_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.07
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        32
+      ],
+      "loop": false
+    },
+    "runner_scream": {
+      "files": [
+        "creatures/runner_scream_1.ogg",
+        "creatures/runner_scream_2.ogg",
+        "creatures/runner_scream_3.ogg",
+        "creatures/runner_scream_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false,
+      "priority": 1.5
+    },
+    "screamer_attack": {
+      "files": [
+        "creatures/screamer_attack_1.ogg",
+        "creatures/screamer_attack_2.ogg",
+        "creatures/screamer_attack_3.ogg",
+        "creatures/screamer_attack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        40
+      ],
+      "loop": false
+    },
+    "screamer_chant": {
+      "files": [
+        "creatures/screamer_chant.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        30
+      ],
+      "loop": true
+    },
+    "screamer_death": {
+      "files": [
+        "creatures/screamer_death_1.ogg",
+        "creatures/screamer_death_2.ogg",
+        "creatures/screamer_death_3.ogg",
+        "creatures/screamer_death_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        45
+      ],
+      "loop": false
+    },
+    "screamer_idle": {
+      "files": [
+        "creatures/screamer_idle_1.ogg",
+        "creatures/screamer_idle_2.ogg",
+        "creatures/screamer_idle_3.ogg",
+        "creatures/screamer_idle_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        36
+      ],
+      "loop": false
+    },
+    "screamer_pain": {
+      "files": [
+        "creatures/screamer_pain_1.ogg",
+        "creatures/screamer_pain_2.ogg",
+        "creatures/screamer_pain_3.ogg",
+        "creatures/screamer_pain_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.06
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        3,
+        36
+      ],
+      "loop": false
+    },
+    "screamer_scream": {
+      "files": [
+        "creatures/screamer_scream_1.ogg",
+        "creatures/screamer_scream_2.ogg",
+        "creatures/screamer_scream_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "spitter_attack": {
+      "files": [
+        "creatures/spitter_attack_1.ogg",
+        "creatures/spitter_attack_2.ogg",
+        "creatures/spitter_attack_3.ogg",
+        "creatures/spitter_attack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        34
+      ],
+      "loop": false
+    },
+    "spitter_death": {
+      "files": [
+        "creatures/spitter_death_1.ogg",
+        "creatures/spitter_death_2.ogg",
+        "creatures/spitter_death_3.ogg",
+        "creatures/spitter_death_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        34
+      ],
+      "loop": false
+    },
+    "spitter_gurgle": {
+      "files": [
+        "creatures/spitter_gurgle_1.ogg",
+        "creatures/spitter_gurgle_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "spitter_idle": {
+      "files": [
+        "creatures/spitter_idle_1.ogg",
+        "creatures/spitter_idle_2.ogg",
+        "creatures/spitter_idle_3.ogg",
+        "creatures/spitter_idle_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        32
+      ],
+      "loop": false
+    },
+    "spitter_pain": {
+      "files": [
+        "creatures/spitter_pain_1.ogg",
+        "creatures/spitter_pain_2.ogg",
+        "creatures/spitter_pain_3.ogg",
+        "creatures/spitter_pain_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.07
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "spitter_spit": {
+      "files": [
+        "creatures/spitter_spit_1.ogg",
+        "creatures/spitter_spit_2.ogg",
+        "creatures/spitter_spit_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        36
+      ],
+      "loop": false
+    },
+    "zombie_alert": {
+      "files": [
+        "creatures/zombie_alert_1.ogg",
+        "creatures/zombie_alert_2.ogg",
+        "creatures/zombie_alert_3.ogg",
+        "creatures/zombie_alert_4.ogg",
+        "creatures/zombie_alert_5.ogg",
+        "creatures/zombie_alert_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        38
+      ],
+      "loop": false
+    },
+    "zombie_attack": {
+      "files": [
+        "creatures/zombie_attack_1.ogg",
+        "creatures/zombie_attack_2.ogg",
+        "creatures/zombie_attack_3.ogg",
+        "creatures/zombie_attack_4.ogg",
+        "creatures/zombie_attack_5.ogg",
+        "creatures/zombie_attack_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 4,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        34
+      ],
+      "loop": false
+    },
+    "zombie_death": {
+      "files": [
+        "creatures/zombie_death_1.ogg",
+        "creatures/zombie_death_2.ogg",
+        "creatures/zombie_death_3.ogg",
+        "creatures/zombie_death_4.ogg",
+        "creatures/zombie_death_5.ogg",
+        "creatures/zombie_death_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        34
+      ],
+      "loop": false
+    },
+    "zombie_eat": {
+      "files": [
+        "creatures/zombie_eat.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        20
+      ],
+      "loop": true
+    },
+    "zombie_footstep": {
+      "files": [
+        "creatures/zombie_footstep_1.ogg",
+        "creatures/zombie_footstep_2.ogg",
+        "creatures/zombie_footstep_3.ogg",
+        "creatures/zombie_footstep_4.ogg",
+        "creatures/zombie_footstep_5.ogg",
+        "creatures/zombie_footstep_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 8,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        18
+      ],
+      "loop": false
+    },
+    "zombie_idle": {
+      "files": [
+        "creatures/zombie_idle_1.ogg",
+        "creatures/zombie_idle_2.ogg",
+        "creatures/zombie_idle_3.ogg",
+        "creatures/zombie_idle_4.ogg",
+        "creatures/zombie_idle_5.ogg",
+        "creatures/zombie_idle_6.ogg",
+        "creatures/zombie_idle_7.ogg",
+        "creatures/zombie_idle_8.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 4,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        32
+      ],
+      "loop": false
+    },
+    "zombie_pain": {
+      "files": [
+        "creatures/zombie_pain_1.ogg",
+        "creatures/zombie_pain_2.ogg",
+        "creatures/zombie_pain_3.ogg",
+        "creatures/zombie_pain_4.ogg",
+        "creatures/zombie_pain_5.ogg",
+        "creatures/zombie_pain_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 3,
+      "bus": "voice",
+      "spatial": true,
+      "range": [
+        2,
+        32
+      ],
+      "loop": false
+    },
+    "zombie_run_step": {
+      "files": [
+        "creatures/zombie_run_step_1.ogg",
+        "creatures/zombie_run_step_2.ogg",
+        "creatures/zombie_run_step_3.ogg",
+        "creatures/zombie_run_step_4.ogg",
+        "creatures/zombie_run_step_5.ogg",
+        "creatures/zombie_run_step_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 8,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        1,
+        24
+      ],
+      "loop": false
+    }
+  }
+}

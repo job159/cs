@@ -150,7 +150,7 @@
         "weapons/cloth_4.ogg",
         "weapons/cloth_5.ogg"
       ],
-      "vol": 1,
+      "vol": 0.8,
       "pitch": [
         0.96,
         1.04
@@ -331,7 +331,7 @@
         "weapons/knife_far_1.ogg",
         "weapons/knife_far_2.ogg"
       ],
-      "vol": 1,
+      "vol": 0.4,
       "pitch": [
         0.94,
         1.06
@@ -350,7 +350,7 @@
         "weapons/knife_tail_1.ogg",
         "weapons/knife_tail_2.ogg"
       ],
-      "vol": 1,
+      "vol": 0.25,
       "pitch": [
         0.95,
         1.05
@@ -454,7 +454,7 @@
         "weapons/magRelease_3.ogg",
         "weapons/magRelease_4.ogg"
       ],
-      "vol": 1,
+      "vol": 0.9,
       "pitch": [
         0.96,
         1.04
@@ -988,7 +988,7 @@
         "weapons/pouch_2.ogg",
         "weapons/pouch_3.ogg"
       ],
-      "vol": 1,
+      "vol": 0.9,
       "pitch": [
         0.96,
         1.04

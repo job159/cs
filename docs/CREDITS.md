@@ -174,7 +174,7 @@ Keyframed clips (`attack_b`, `attack_lunge`, `bite`, `hit_front`, `hit_back`, `h
 Shipped sounds in `game/assets/audio/` are produced by `tools/audio/producers/*.mjs` from the CC0 recordings below
 (downloaded by `tools/audio/fetch.mjs` into the gitignored `tools/audio/src/`, licence re-checked on each source page) and from
 sounds synthesized from scratch. Every source here is CC0 1.0 (public domain); attribution is not required, listed for provenance.
-Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
+Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 
 | Pack | Author | Source page | License (verified) | Files | Used by categories |
 |---|---|---|---|---|---|
@@ -210,6 +210,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 35213 | slashkut.wav | Abyssmal | [link](https://freesound.org/people/Abyssmal/sounds/35213/) | CC0-1.0 | - |
 | 35716 | scream.wav | analogchill | [link](https://freesound.org/people/analogchill/sounds/35716/) | CC0-1.0 | creatures/screamer_scream |
 | 42201 | snarl.wav | SmallQuadruped | [link](https://freesound.org/people/SmallQuadruped/sounds/42201/) | CC0-1.0 | - |
+| 45664 | Zildjian A Custom Hi-Hat Cymbals Closed Hit.WAV | pjcohen | [link](https://freesound.org/people/pjcohen/sounds/45664/) | CC0-1.0 | - |
 | 50723 | Footsteps Metallic Muffled.wav | RutgerMuller | [link](https://freesound.org/people/RutgerMuller/sounds/50723/) | CC0-1.0 | - |
 | 50724 | Footsteps Metallic Muffled Louder.wav | RutgerMuller | [link](https://freesound.org/people/RutgerMuller/sounds/50724/) | CC0-1.0 | - |
 | 54545 | distant_dog.wav | Heigh-hoo | [link](https://freesound.org/people/Heigh-hoo/sounds/54545/) | CC0-1.0 | - |
@@ -311,7 +312,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 211617 | Far Away Rocket Launch | qubodup | [link](https://freesound.org/people/qubodup/sounds/211617/) | CC0-1.0 | - |
 | 212143 | SPLASH (by blaukreuz) | qubodup | [link](https://freesound.org/people/qubodup/sounds/212143/) | CC0-1.0 | creatures/acid_splash, impacts/impact_water |
 | 213509 | Zombie Attack | soykevin | [link](https://freesound.org/people/soykevin/sounds/213509/) | CC0-1.0 | - |
-| 213566 | Gurgling | Woodylein | [link](https://freesound.org/people/Woodylein/sounds/213566/) | CC0-1.0 | creatures/bloater_gurgle, creatures/spitter_idle, creatures/zombie_eat, creatures/zombie_idle |
+| 213566 | Gurgling | Woodylein | [link](https://freesound.org/people/Woodylein/sounds/213566/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain |
 | 215140 | Bones Cracking | Firestorm002 | [link](https://freesound.org/people/Firestorm002/sounds/215140/) | CC0-1.0 | impacts/bone_crunch, impacts/gib |
 | 218895 | human grunts 3 | Halgrimm | [link](https://freesound.org/people/Halgrimm/sounds/218895/) | CC0-1.0 | creatures/brute_pain, creatures/player_pain |
 | 219856 | Scream | claracarpintero | [link](https://freesound.org/people/claracarpintero/sounds/219856/) | CC0-1.0 | - |
@@ -421,7 +422,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 353799 | Footsteps_6_Dirt_shoe.wav | monte32 | [link](https://freesound.org/people/monte32/sounds/353799/) | CC0-1.0 | creatures/footstep_dirt |
 | 355052 | Bone Crunch.wav | GreatNate98 | [link](https://freesound.org/people/GreatNate98/sounds/355052/) | CC0-1.0 | creatures/bloater_pop, impacts/bone_crunch, impacts/headshot |
 | 360633 | Stronger wind at a marina, rattling at masts and rigging of the yachts. | Pfannkuchn | [link](https://freesound.org/people/Pfannkuchn/sounds/360633/) | CC0-1.0 | ui_amb/amb_harbor_wind |
-| 361798 | Bag of chainmail chunks | kermite607 | [link](https://freesound.org/people/kermite607/sounds/361798/) | CC0-1.0 | creatures/land_heavy, creatures/riot_armor_clank |
+| 361798 | Bag of chainmail chunks | kermite607 | [link](https://freesound.org/people/kermite607/sounds/361798/) | CC0-1.0 | creatures/land_heavy, creatures/player_downed, creatures/riot_armor_clank |
 | 363092 | Fire Crackle and Flames 002 | TheWoodlandNomad | [link](https://freesound.org/people/TheWoodlandNomad/sounds/363092/) | CC0-1.0 | ui_amb/amb_fire |
 | 363093 | Fire Crackle and Flames 001 | TheWoodlandNomad | [link](https://freesound.org/people/TheWoodlandNomad/sounds/363093/) | CC0-1.0 | - |
 | 363168 | Machine gun reload | SamsterBirdies | [link](https://freesound.org/people/SamsterBirdies/sounds/363168/) | CC0-1.0 | weapons/beltIn, weapons/coverClose, weapons/coverOpen, weapons/drawHeavy, weapons/mg556_mech, weapons/mg762_mech, weapons/minigun_spindown, weapons/rocketIn, weapons/sniper50_mech |
@@ -433,6 +434,147 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 370345 | Mosin Nagant Bolt Action Cycle | Zott820 | [link](https://freesound.org/people/Zott820/sounds/370345/) | CC0-1.0 | weapons/boltDown, weapons/boltUp |
 | 370710 | Vomiting on the ground - Remixed | Podsburgh | [link](https://freesound.org/people/Podsburgh/sounds/370710/) | CC0-1.0 | creatures/bloater_death, creatures/spitter_death, creatures/spitter_spit |
 | 372086 | Distant Explosion | Mr_KeybOred | [link](https://freesound.org/people/Mr_KeybOred/sounds/372086/) | CC0-1.0 | - |
+| 372765 | Cello Section - spiccato - C2 (spic_C1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372765/) | CC0-1.0 | - |
+| 372766 | Cello Section - spiccato - C4 (spic_C3_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372766/) | CC0-1.0 | - |
+| 372767 | Cello Section - spiccato - D3 (spic_D2_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372767/) | CC0-1.0 | - |
+| 372769 | Cello Section - spiccato - E2 (spic_E1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372769/) | CC0-1.0 | - |
+| 372771 | Cello Section - spiccato - E#3 (spic_F2_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372771/) | CC0-1.0 | - |
+| 372773 | Cello Section - spiccato - F#2 (spic_G1_v1_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372773/) | CC0-1.0 | - |
+| 372775 | Cello Section - spiccato - A3 (spic_A2_v2_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372775/) | CC0-1.0 | - |
+| 372776 | Cello Section - spiccato - B2 (spic_B1_v2_RR1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372776/) | CC0-1.0 | - |
+| 372793 | Cello Section - spiccato - D3 (spic_D2_v1_RR2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372793/) | CC0-1.0 | - |
+| 372828 | Cello Section - vibrato sustain - A3 (susvib_A2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372828/) | CC0-1.0 | - |
+| 372829 | Cello Section - vibrato sustain - B2 (susvib_B1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372829/) | CC0-1.0 | - |
+| 372831 | Cello Section - vibrato sustain - C2 (susvib_C1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372831/) | CC0-1.0 | - |
+| 372832 | Cello Section - vibrato sustain - C4 (susvib_C3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372832/) | CC0-1.0 | - |
+| 372833 | Cello Section - vibrato sustain - D3 (susvib_D2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372833/) | CC0-1.0 | - |
+| 372835 | Cello Section - vibrato sustain - E2 (susvib_E1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372835/) | CC0-1.0 | - |
+| 372836 | Cello Section - vibrato sustain - E4 (susvib_E3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372836/) | CC0-1.0 | - |
+| 372837 | Cello Section - vibrato sustain - E#3 (susvib_F2_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372837/) | CC0-1.0 | - |
+| 372839 | Cello Section - vibrato sustain - F#2 (susvib_G1_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372839/) | CC0-1.0 | - |
+| 372840 | Cello Section - vibrato sustain - F#4 (susvib_G3_v3_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372840/) | CC0-1.0 | - |
+| 372841 | Cello Section - tremolo - A3 (trem_A2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372841/) | CC0-1.0 | - |
+| 372845 | Cello Section - tremolo - D3 (trem_D2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372845/) | CC0-1.0 | - |
+| 372847 | Cello Section - tremolo - E2 (trem_E1_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372847/) | CC0-1.0 | - |
+| 372849 | Cello Section - tremolo - E#3 (trem_F2_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372849/) | CC0-1.0 | - |
+| 372856 | Cello Section - tremolo - C2 (trem_C1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/372856/) | CC0-1.0 | - |
+| 373080 | Solo Contrabass - spiccato - A2 (BKCtbss_Spic_A1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373080/) | CC0-1.0 | - |
+| 373083 | Solo Contrabass - spiccato - C2 (BKCtbss_Spic_C1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373083/) | CC0-1.0 | - |
+| 373084 | Solo Contrabass - spiccato - D2 (BKCtbss_Spic_D1_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373084/) | CC0-1.0 | - |
+| 373085 | Solo Contrabass - spiccato - E1 (BKCtbss_Spic_E0_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373085/) | CC0-1.0 | - |
+| 373088 | Solo Contrabass - spiccato - F1 (BKCtbss_Spic_F#0_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373088/) | CC0-1.0 | - |
+| 373093 | Solo Contrabass - spiccato - A#1 (BKCtbss_Spic_A#0_v3_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373093/) | CC0-1.0 | - |
+| 373095 | Solo Contrabass - spiccato - D2 (BKCtbss_Spic_D1_v3_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373095/) | CC0-1.0 | - |
+| 373129 | Solo Contrabass - vibrato sustain - A2 (BKCtbss_SusVib_A1_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373129/) | CC0-1.0 | - |
+| 373133 | Solo Contrabass - vibrato sustain - D2 (BKCtbss_SusVib_D1_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373133/) | CC0-1.0 | - |
+| 373136 | Solo Contrabass - vibrato sustain - F1 (BKCtbss_SusVib_F#0_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373136/) | CC0-1.0 | - |
+| 373141 | Solo Contrabass - vibrato sustain - A#1 (BKCtbss_SusVib_A#0_v3_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373141/) | CC0-1.0 | - |
+| 373225 | F Horn - staccato - A#2 (MOHorn_stac_A#1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373225/) | CC0-1.0 | - |
+| 373226 | F Horn - staccato - A3 (MOHorn_stac_A2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373226/) | CC0-1.0 | - |
+| 373228 | F Horn - staccato - C4 (MOHorn_stac_C3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373228/) | CC0-1.0 | - |
+| 373230 | F Horn - staccato - D3 (MOHorn_stac_D2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373230/) | CC0-1.0 | - |
+| 373231 | F Horn - staccato - D5 (MOHorn_stac_D4_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373231/) | CC0-1.0 | - |
+| 373232 | F Horn - staccato - E#3 (MOHorn_stac_F2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373232/) | CC0-1.0 | - |
+| 373234 | F Horn - staccato - F#2 (MOHorn_stac_G1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373234/) | CC0-1.0 | - |
+| 373248 | F Horn - sustain - D5 (MOHorn_sus_D4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373248/) | CC0-1.0 | - |
+| 373250 | F Horn - sustain - E#5 (MOHorn_sus_F4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373250/) | CC0-1.0 | - |
+| 373252 | F Horn - sustain - A#2 (MOHorn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373252/) | CC0-1.0 | - |
+| 373253 | F Horn - sustain - A3 (MOHorn_sus_A2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373253/) | CC0-1.0 | - |
+| 373255 | F Horn - sustain - C4 (MOHorn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373255/) | CC0-1.0 | - |
+| 373256 | F Horn - sustain - D#2 (MOHorn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373256/) | CC0-1.0 | - |
+| 373257 | F Horn - sustain - D3 (MOHorn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373257/) | CC0-1.0 | - |
+| 373258 | F Horn - sustain - E#3 (MOHorn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373258/) | CC0-1.0 | - |
+| 373259 | F Horn - sustain - F#2 (MOHorn_sus_G1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373259/) | CC0-1.0 | - |
+| 373910 | Timpani - A#2 (Timpani2_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373910/) | CC0-1.0 | - |
+| 373911 | Timpani - C#3 (Timpani3_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373911/) | CC0-1.0 | - |
+| 373919 | Timpani - A#2 (Timpani2_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373919/) | CC0-1.0 | - |
+| 373920 | Timpani - C#3 (Timpani3_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373920/) | CC0-1.0 | - |
+| 373921 | Timpani - E3 (Timpani4_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373921/) | CC0-1.0 | - |
+| 373922 | Timpani - F3 (Timpani5_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373922/) | CC0-1.0 | - |
+| 373928 | Timpani - F2 (Timpani1_Hit_v3_rr2_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373928/) | CC0-1.0 | - |
+| 373943 | Timpani - rolls - F2 (Timpani1_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373943/) | CC0-1.0 | - |
+| 373944 | Timpani - rolls - A#2 (Timpani2_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373944/) | CC0-1.0 | - |
+| 374013 | Tenor Trombone - sustain - A#1 (tenortbn_sus_A#0_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374013/) | CC0-1.0 | - |
+| 374014 | Tenor Trombone - sustain - A#2 (tenortbn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374014/) | CC0-1.0 | - |
+| 374017 | Tenor Trombone - sustain - C4 (tenortbn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374017/) | CC0-1.0 | - |
+| 374018 | Tenor Trombone - sustain - D#2 (tenortbn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374018/) | CC0-1.0 | - |
+| 374020 | Tenor Trombone - sustain - D3 (tenortbn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374020/) | CC0-1.0 | - |
+| 374021 | Tenor Trombone - sustain - E#2 (tenortbn_sus_F1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374021/) | CC0-1.0 | - |
+| 374022 | Tenor Trombone - sustain - E#3 (tenortbn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374022/) | CC0-1.0 | - |
+| 374225 | Tuba - staccato - A#1 (Tuba3_stac_A#0_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374225/) | CC0-1.0 | - |
+| 374226 | Tuba - staccato - A#2 (Tuba3_stac_A#1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374226/) | CC0-1.0 | - |
+| 374228 | Tuba - staccato - D#2 (Tuba3_stac_D#1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374228/) | CC0-1.0 | - |
+| 374229 | Tuba - staccato - D3 (Tuba3_stac_D2_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374229/) | CC0-1.0 | - |
+| 374231 | Tuba - staccato - E#2 (Tuba3_stac_F1_v2_rr3_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374231/) | CC0-1.0 | - |
+| 374255 | Tuba - sustain - E#1 (Tuba3_sus_F0_v1_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374255/) | CC0-1.0 | - |
+| 374258 | Tuba - sustain - A#1 (Tuba3_sus_A#0_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374258/) | CC0-1.0 | - |
+| 374259 | Tuba - sustain - A#2 (Tuba3_sus_A#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374259/) | CC0-1.0 | - |
+| 374261 | Tuba - sustain - D#2 (Tuba3_sus_D#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374261/) | CC0-1.0 | - |
+| 374262 | Tuba - sustain - D3 (Tuba3_sus_D2_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374262/) | CC0-1.0 | - |
+| 374263 | Tuba - sustain - E#2 (Tuba3_sus_F1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374263/) | CC0-1.0 | - |
+| 374273 | Tubular Bells - C4 (TB_hit_C4_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374273/) | CC0-1.0 | - |
+| 374274 | Tubular Bells - C5 (TB_hit_C5_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374274/) | CC0-1.0 | - |
+| 374325 | Upright Piano - A1 (Player_dyn3_rr1_006.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374325/) | CC0-1.0 | - |
+| 374326 | Upright Piano - C#2 (Player_dyn3_rr1_008.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374326/) | CC0-1.0 | - |
+| 374327 | Upright Piano - E#2 (Player_dyn3_rr1_010.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374327/) | CC0-1.0 | - |
+| 374328 | Upright Piano - A2 (Player_dyn3_rr1_012.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374328/) | CC0-1.0 | - |
+| 374329 | Upright Piano - C#3 (Player_dyn3_rr1_014.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374329/) | CC0-1.0 | - |
+| 374330 | Upright Piano - E#3 (Player_dyn3_rr1_016.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374330/) | CC0-1.0 | - |
+| 374333 | Upright Piano - E#4 (Player_dyn3_rr1_022.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374333/) | CC0-1.0 | - |
+| 374335 | Upright Piano - C#5 (Player_dyn3_rr1_026.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374335/) | CC0-1.0 | - |
+| 374336 | Upright Piano - E#5 (Player_dyn3_rr1_028.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374336/) | CC0-1.0 | - |
+| 374337 | Upright Piano - A5 (Player_dyn3_rr1_030.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374337/) | CC0-1.0 | - |
+| 374419 | Viola Section - spiccato - C5 (Violas_spic_C4_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374419/) | CC0-1.0 | - |
+| 374420 | Viola Section - spiccato - D4 (Violas_spic_D3_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374420/) | CC0-1.0 | - |
+| 374422 | Viola Section - spiccato - E3 (Violas_spic_E2_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374422/) | CC0-1.0 | - |
+| 374424 | Viola Section - spiccato - E#4 (Violas_spic_F3_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374424/) | CC0-1.0 | - |
+| 374425 | Viola Section - spiccato - F#3 (Violas_spic_G2_v1_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374425/) | CC0-1.0 | - |
+| 374427 | Viola Section - spiccato - A4 (Violas_spic_A3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374427/) | CC0-1.0 | - |
+| 374428 | Viola Section - spiccato - B3 (Violas_spic_B2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374428/) | CC0-1.0 | - |
+| 374430 | Viola Section - spiccato - C3 (Violas_spic_C2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374430/) | CC0-1.0 | - |
+| 374432 | Viola Section - spiccato - D4 (Violas_spic_D3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374432/) | CC0-1.0 | - |
+| 374534 | Violin Section - spiccato - A4 (VlnEns_Spic_A3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374534/) | CC0-1.0 | - |
+| 374537 | Violin Section - spiccato - C5 (VlnEns_Spic_C4_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374537/) | CC0-1.0 | - |
+| 374538 | Violin Section - spiccato - D4 (VlnEns_Spic_D3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374538/) | CC0-1.0 | - |
+| 374539 | Violin Section - spiccato - D6 (VlnEns_Spic_D5_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374539/) | CC0-1.0 | - |
+| 374540 | Violin Section - spiccato - E5 (VlnEns_Spic_E4_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374540/) | CC0-1.0 | - |
+| 374541 | Violin Section - spiccato - F4 (VlnEns_Spic_F#3_v1_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374541/) | CC0-1.0 | - |
+| 374549 | Violin Section - spiccato - D4 (VlnEns_Spic_D3_v2_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374549/) | CC0-1.0 | - |
+| 374579 | Violin Section - vibrato sustain - B3 (VlnEns_susVib_B2_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374579/) | CC0-1.0 | - |
+| 374581 | Violin Section - vibrato sustain - C5 (VlnEns_susVib_C4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374581/) | CC0-1.0 | - |
+| 374582 | Violin Section - vibrato sustain - D4 (VlnEns_susVib_D3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374582/) | CC0-1.0 | - |
+| 374583 | Violin Section - vibrato sustain - D6 (VlnEns_susVib_D5_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374583/) | CC0-1.0 | - |
+| 374600 | Violin Section - tremolo - A4 (VlnEns_Trem_A3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374600/) | CC0-1.0 | - |
+| 374601 | Violin Section - tremolo - B3 (VlnEns_Trem_B2_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374601/) | CC0-1.0 | - |
+| 374603 | Violin Section - tremolo - C5 (VlnEns_Trem_C4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374603/) | CC0-1.0 | - |
+| 374604 | Violin Section - tremolo - D4 (VlnEns_Trem_D3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374604/) | CC0-1.0 | - |
+| 374605 | Violin Section - tremolo - D6 (VlnEns_Trem_D5_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374605/) | CC0-1.0 | - |
+| 374606 | Violin Section - tremolo - E5 (VlnEns_Trem_E4_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374606/) | CC0-1.0 | - |
+| 374607 | Violin Section - tremolo - F4 (VlnEns_Trem_F#3_v1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374607/) | CC0-1.0 | - |
+| 374731 | OldTrombone - G2 (Trombone_Buzz_G2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374731/) | CC0-1.0 | - |
+| 374752 | OldTrombone - G1 (Trombone_Fall_G1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374752/) | CC0-1.0 | - |
+| 375259 | Bass drum (bdrum_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375259/) | CC0-1.0 | - |
+| 375260 | Bass drum (bdrum_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375260/) | CC0-1.0 | - |
+| 375261 | Bass drum (bdrum_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375261/) | CC0-1.0 | - |
+| 375264 | Bass drum (bdrum_muted_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375264/) | CC0-1.0 | - |
+| 375265 | Bass drum (bdrum_muted_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375265/) | CC0-1.0 | - |
+| 375266 | Bass drum (bdrum_muted_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375266/) | CC0-1.0 | - |
+| 375282 | Bass drum (bdrum_roll1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375282/) | CC0-1.0 | - |
+| 375368 | Snare (snare1_fff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375368/) | CC0-1.0 | - |
+| 375369 | Snare (snare1_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375369/) | CC0-1.0 | - |
+| 375378 | Snare (snare1_nosnare_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375378/) | CC0-1.0 | - |
+| 375404 | Snare (snare2_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375404/) | CC0-1.0 | - |
+| 375433 | Snare (snare2_rimshot_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375433/) | CC0-1.0 | - |
+| 375497 | Cymbals (crash_hit_fff_loose_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375497/) | CC0-1.0 | - |
+| 375498 | Cymbals (crash_hit_mp_loose.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375498/) | CC0-1.0 | - |
+| 375506 | Cymbals (susp_hit_hardmall_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375506/) | CC0-1.0 | - |
+| 375512 | Cymbals (susp_hit_metal_2_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375512/) | CC0-1.0 | - |
+| 375519 | Cymbals (susp_hit_softmall_roll2_cresc.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375519/) | CC0-1.0 | - |
+| 375521 | Cymbals (susp_hit_softmall_roll4_fff_long.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375521/) | CC0-1.0 | - |
+| 375531 | Gong (gong_hit_ff_hard.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375531/) | CC0-1.0 | - |
+| 375532 | Gong (gong_hit_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375532/) | CC0-1.0 | - |
+| 375550 | Gong (gong_scrape_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375550/) | CC0-1.0 | - |
+| 375553 | Gong (gong_smack_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375553/) | CC0-1.0 | - |
 | 376809 | MUDDY AND WET FOOTSTEPS.wav | Alex_hears_things | [link](https://freesound.org/people/Alex_hears_things/sounds/376809/) | CC0-1.0 | - |
 | 377145 | Pistol Draw Unholster | nioczkus | [link](https://freesound.org/people/nioczkus/sounds/377145/) | CC0-1.0 | weapons/draw |
 | 380769 | BS _Swarm of roaches.wav | szczur_banshee | [link](https://freesound.org/people/szczur_banshee/sounds/380769/) | CC0-1.0 | creatures/crawler_skitter |
@@ -481,7 +623,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 422622 | Bones and Flesh movement | Aurelon | [link](https://freesound.org/people/Aurelon/sounds/422622/) | CC0-1.0 | - |
 | 423301 | VisceralBulletImpacts.wav | u1769092 | [link](https://freesound.org/people/u1769092/sounds/423301/) | CC0-1.0 | impacts/impact_flesh |
 | 423644 | City at Night_Ambience.wav | YellowJacketStudios | [link](https://freesound.org/people/YellowJacketStudios/sounds/423644/) | CC0-1.0 | - |
-| 423959 | Bubbling | pillwave | [link](https://freesound.org/people/pillwave/sounds/423959/) | CC0-1.0 | creatures/bloater_gurgle, creatures/spitter_idle, creatures/zombie_eat, creatures/zombie_idle |
+| 423959 | Bubbling | pillwave | [link](https://freesound.org/people/pillwave/sounds/423959/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain |
 | 426628 | Zombie Moan.wav | mrh4hn | [link](https://freesound.org/people/mrh4hn/sounds/426628/) | CC0-1.0 | creatures/zombie_idle |
 | 426637 | Zombie Choking.wav | mrh4hn | [link](https://freesound.org/people/mrh4hn/sounds/426637/) | CC0-1.0 | creatures/crawler_death, creatures/crawler_idle, creatures/spitter_death, creatures/spitter_gurgle |
 | 427592 | 9mm pistol shot | michorvath | [link](https://freesound.org/people/michorvath/sounds/427592/) | CC0-1.0 | - |
@@ -509,7 +651,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 448133 | Circular Saw | derjuli | [link](https://freesound.org/people/derjuli/sounds/448133/) | CC0-1.0 | - |
 | 451864 | footsteps shoes metal stairs up down resonate.flac | kyles | [link](https://freesound.org/people/kyles/sounds/451864/) | CC0-1.0 | - |
 | 452421 | Metal Stairs Foot Steps | sagamusix | [link](https://freesound.org/people/sagamusix/sounds/452421/) | CC0-1.0 | - |
-| 454622 | gore_blood_flesh_gurgle.wav | EricsSoundschmiede | [link](https://freesound.org/people/EricsSoundschmiede/sounds/454622/) | CC0-1.0 | creatures/bloater_gurgle, creatures/spitter_idle, creatures/zombie_eat, creatures/zombie_idle |
+| 454622 | gore_blood_flesh_gurgle.wav | EricsSoundschmiede | [link](https://freesound.org/people/EricsSoundschmiede/sounds/454622/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain |
 | 454623 | boots_water_step_creaky_dirt_gravel.wav | EricsSoundschmiede | [link](https://freesound.org/people/EricsSoundschmiede/sounds/454623/) | CC0-1.0 | creatures/footstep_water |
 | 454822 | Ambience city night DPA semibinaural | Nimlos | [link](https://freesound.org/people/Nimlos/sounds/454822/) | CC0-1.0 | - |
 | 456037 | heavy breathing while running | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/456037/) | CC0-1.0 | - |
@@ -522,7 +664,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 463721 | Burp Monster Zombie groan moan | EricsSoundschmiede | [link](https://freesound.org/people/EricsSoundschmiede/sounds/463721/) | CC0-1.0 | creatures/bloater_gurgle, creatures/bloater_idle, creatures/spitter_idle |
 | 463811 | Footsteps on Metal Floor | nate_asdfg | [link](https://freesound.org/people/nate_asdfg/sounds/463811/) | CC0-1.0 | - |
 | 464486 | Male Grunting In Pain | elynch0901 | [link](https://freesound.org/people/elynch0901/sounds/464486/) | CC0-1.0 | creatures/player_pain |
-| 465299 | Concrete Footsteps | SoftDistortionFX | [link](https://freesound.org/people/SoftDistortionFX/sounds/465299/) | CC0-1.0 | creatures/footstep_concrete, creatures/jump, creatures/land_heavy, creatures/zombie_footstep |
+| 465299 | Concrete Footsteps | SoftDistortionFX | [link](https://freesound.org/people/SoftDistortionFX/sounds/465299/) | CC0-1.0 | creatures/footstep_concrete, creatures/jump, creatures/land, creatures/land_heavy, creatures/zombie_footstep |
 | 466122 | Windy night trees rustling heavy.wav | franciscopcoutinho | [link](https://freesound.org/people/franciscopcoutinho/sounds/466122/) | CC0-1.0 | - |
 | 469141 | Ghost Scream | onderwish | [link](https://freesound.org/people/onderwish/sounds/469141/) | CC0-1.0 | - |
 | 469363 | Distant Ambulance Siren | brunoboselli | [link](https://freesound.org/people/brunoboselli/sounds/469363/) | CC0-1.0 | - |
@@ -534,6 +676,8 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 483176 | Aggressive Barking Dog - 1.wav | SpaceJoe | [link](https://freesound.org/people/SpaceJoe/sounds/483176/) | CC0-1.0 | creatures/hound_bark |
 | 483190 | Growling Dog 2.wav | SpaceJoe | [link](https://freesound.org/people/SpaceJoe/sounds/483190/) | CC0-1.0 | creatures/hound_growl |
 | 485421 | Footsteps on wood floor | IENBA | [link](https://freesound.org/people/IENBA/sounds/485421/) | CC0-1.0 | creatures/footstep_wood |
+| 486140 | taiko.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486140/) | CC0-1.0 | - |
+| 486141 | taiko2.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486141/) | CC0-1.0 | - |
 | 488659 | Bone Fracture | Fission9 | [link](https://freesound.org/people/Fission9/sounds/488659/) | CC0-1.0 | impacts/headshot |
 | 494797 | Jacket/Cloth Rustle 9 | brandondelehoy | [link](https://freesound.org/people/brandondelehoy/sounds/494797/) | CC0-1.0 | ui_amb/ui_equip, weapons/cloth, weapons/drawHeavy, weapons/pouch |
 | 495117 | Wet Splat 2.mp3 | nebulasnails | [link](https://freesound.org/people/nebulasnails/sounds/495117/) | CC0-1.0 | creatures/acid_splash, impacts/blood_splat, impacts/impact_flesh |
@@ -556,7 +700,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 513694 | impact-stone-heavy.wav | kasparsj | [link](https://freesound.org/people/kasparsj/sounds/513694/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/impact_concrete |
 | 514228 | Sniper Rifle | SuperPhat | [link](https://freesound.org/people/SuperPhat/sounds/514228/) | CC0-1.0 | - |
 | 516914 | Explosion, Medium Blast | Kinoton | [link](https://freesound.org/people/Kinoton/sounds/516914/) | CC0-1.0 | impacts/explosion_large |
-| 517150 | gear-friction.wav | isbeorn | [link](https://freesound.org/people/isbeorn/sounds/517150/) | CC0-1.0 | creatures/jump, creatures/riot_armor_clank |
+| 517150 | gear-friction.wav | isbeorn | [link](https://freesound.org/people/isbeorn/sounds/517150/) | CC0-1.0 | creatures/jump, creatures/land, creatures/land_heavy, creatures/player_downed, creatures/revive, creatures/riot_armor_clank |
 | 521377 | Rocket Launch | Jarusca | [link](https://freesound.org/people/Jarusca/sounds/521377/) | CC0-1.0 | weapons/rocket_close, weapons/rocket_far, weapons/rocket_tail |
 | 521590 | Hiking Boot Footsteps on Stone | Fission9 | [link](https://freesound.org/people/Fission9/sounds/521590/) | CC0-1.0 | - |
 | 521820 | Polar Wind | Fission9 | [link](https://freesound.org/people/Fission9/sounds/521820/) | CC0-1.0 | - |
@@ -589,7 +733,6 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 555426 | Zombie Pain 5.wav | tonsil5 | [link](https://freesound.org/people/tonsil5/sounds/555426/) | CC0-1.0 | creatures/zombie_pain |
 | 556715 | Walking on Metal Floor | NachtmahrTV | [link](https://freesound.org/people/NachtmahrTV/sounds/556715/) | CC0-1.0 | creatures/footstep_metal |
 | 556976 | Male Screams [1] | marc3122 | [link](https://freesound.org/people/marc3122/sounds/556976/) | CC0-1.0 | creatures/runner_attack, creatures/runner_death, creatures/runner_pain, creatures/runner_scream |
-| 560592 | Z-Fem 02b - Grunt.wav | angelkunev | [link](https://freesound.org/people/angelkunev/sounds/560592/) | CC0-1.0 | - |
 | 562187 | snd_box_pieces_splatter.wav | gristi | [link](https://freesound.org/people/gristi/sounds/562187/) | CC0-1.0 | - |
 | 563010 | Explosion.mp3 | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/563010/) | CC0-1.0 | impacts/explosion_large |
 | 563765 | Fire Auto - car on fire | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/563765/) | CC0-1.0 | impacts/fire_burst, ui_amb/amb_fire |
@@ -621,6 +764,7 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 641046 | Gore Impact - "LOT OF HEART" | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/641046/) | CC0-1.0 | creatures/bloater_pop, impacts/gib, impacts/headshot |
 | 668071 | 50 cal shot.wav | ajhartman42295 | [link](https://freesound.org/people/ajhartman42295/sounds/668071/) | CC0-1.0 | weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
 | 672574 | Water Bullet 2.wav | Teaganbear | [link](https://freesound.org/people/Teaganbear/sounds/672574/) | CC0-1.0 | impacts/impact_water |
+| 674296 | Hi-Hat Closed Hit - Clean | TheEndOfACycle | [link](https://freesound.org/people/TheEndOfACycle/sounds/674296/) | CC0-1.0 | - |
 | 674742 | AK-47 Assault Rifle being unloaded and reloaded | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674742/) | CC0-1.0 | weapons/coverClose, weapons/drawHeavy, weapons/magIn, weapons/magOut |
 | 674744 | Browning Hi-Power handgun being cocked 5x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674744/) | CC0-1.0 | weapons/pistol45_mech, weapons/slideRelease |
 | 675008 | AK-47 assault rifle being cocked 3x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/675008/) | CC0-1.0 | weapons/boltBack, weapons/boltForward, weapons/breakClose, weapons/mg556_mech, weapons/rifle762_mech, weapons/shotgunAuto_mech, weapons/sniper50_mech |
@@ -632,9 +776,9 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 686762 | abandoned building ext [smoketown] | cyntrix | [link](https://freesound.org/people/cyntrix/sounds/686762/) | CC0-1.0 | - |
 | 688765 | Unholster Gun | qubodup | [link](https://freesound.org/people/qubodup/sounds/688765/) | CC0-1.0 | weapons/draw |
 | 693125 | 22lr Revolver ejecting bullets from cylinder | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/693125/) | CC0-1.0 | weapons/shellsDrop |
-| 696003 | Angry stomach growls, nonstop, churning hunger, tummy monster burps and bubbles, deep and steady | SamanthaCastleberry | [link](https://freesound.org/people/SamanthaCastleberry/sounds/696003/) | CC0-1.0 | creatures/bloater_gurgle, creatures/bloater_idle |
+| 696003 | Angry stomach growls, nonstop, churning hunger, tummy monster burps and bubbles, deep and steady | SamanthaCastleberry | [link](https://freesound.org/people/SamanthaCastleberry/sounds/696003/) | CC0-1.0 | creatures/bloater_attack, creatures/bloater_death, creatures/bloater_gurgle, creatures/bloater_idle, creatures/bloater_pain |
 | 696374 | Walking on metal | Sanderboah | [link](https://freesound.org/people/Sanderboah/sounds/696374/) | CC0-1.0 | creatures/footstep_metal |
-| 696405 | Long intense stomach growl 10 | SamanthaCastleberry | [link](https://freesound.org/people/SamanthaCastleberry/sounds/696405/) | CC0-1.0 | creatures/bloater_gurgle, creatures/bloater_idle |
+| 696405 | Long intense stomach growl 10 | SamanthaCastleberry | [link](https://freesound.org/people/SamanthaCastleberry/sounds/696405/) | CC0-1.0 | creatures/bloater_attack, creatures/bloater_death, creatures/bloater_gurgle, creatures/bloater_idle, creatures/bloater_pain |
 | 697829 | SKULLCRUSH | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/697829/) | CC0-1.0 | impacts/headshot |
 | 698697 | Footsteps on Metal | IENBA | [link](https://freesound.org/people/IENBA/sounds/698697/) | CC0-1.0 | creatures/footstep_grate |
 | 703247 | Big falling debris (crash) | xkeril | [link](https://freesound.org/people/xkeril/sounds/703247/) | CC0-1.0 | impacts/debris_fall, impacts/explosion_large |
@@ -649,6 +793,11 @@ Inventory: 788 files from 15 packs, generated 2026-10-13T05:39:34.414Z.
 | 737232 | Short Water Squish | qubodup | [link](https://freesound.org/people/qubodup/sounds/737232/) | CC0-1.0 | creatures/acid_splash, creatures/spitter_spit, impacts/impact_water |
 | 740037 | chainmail on metal | itinerantmonk108 | [link](https://freesound.org/people/itinerantmonk108/sounds/740037/) | CC0-1.0 | - |
 | 758580 | Rubble Trouble | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/758580/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/debris_fall |
+| 764329 | CRWDSing_Ahh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764329/) | CC0-1.0 | - |
+| 764330 | CRWDSing_Ahh Vowel Sung Near F 02_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764330/) | CC0-1.0 | - |
+| 764339 | CRWDSing_O Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764339/) | CC0-1.0 | - |
+| 764341 | CRWDSing_U Ooh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764341/) | CC0-1.0 | - |
+| 764343 | CRWDSing_Uh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764343/) | CC0-1.0 | - |
 | 770124 | Big Character Grunts | IENBA | [link](https://freesound.org/people/IENBA/sounds/770124/) | CC0-1.0 | creatures/brute_pain, creatures/player_pain |
 | 779805 | Meaty Damage Impact | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/779805/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit |
 | 786977 | Metal Grate Running | Oilcan03 | [link](https://freesound.org/people/Oilcan03/sounds/786977/) | CC0-1.0 | creatures/footstep_grate |

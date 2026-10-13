@@ -1,0 +1,100 @@
+{
+  "sounds": {
+    "dp_end": {
+      "files": [
+        "antical/dp_end_1.ogg",
+        "antical/dp_end_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        30
+      ],
+      "loop": false
+    },
+    "dp_engage": {
+      "files": [
+        "antical/dp_engage_1.ogg",
+        "antical/dp_engage_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        45
+      ],
+      "loop": false
+    },
+    "dp_lock": {
+      "files": [
+        "antical/dp_lock_1.ogg",
+        "antical/dp_lock_2.ogg",
+        "antical/dp_lock_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        25
+      ],
+      "loop": false
+    },
+    "dp_vent": {
+      "files": [
+        "antical/dp_vent_1.ogg",
+        "antical/dp_vent_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        25
+      ],
+      "loop": false
+    },
+    "ready_dualphase": {
+      "files": [
+        "antical/ready_dualphase_1.ogg",
+        "antical/ready_dualphase_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    }
+  }
+}

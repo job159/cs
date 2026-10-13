@@ -1,0 +1,558 @@
+{
+  "sounds": {
+    "achievement": {
+      "files": [
+        "ui_amb/achievement.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "amb_city_dead": {
+      "files": [
+        "ui_amb/amb_city_dead.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "amb",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10
+    },
+    "amb_fire": {
+      "files": [
+        "ui_amb/amb_fire.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "amb",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10
+    },
+    "amb_harbor_wind": {
+      "files": [
+        "ui_amb/amb_harbor_wind.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "amb",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10
+    },
+    "amb_rain": {
+      "files": [
+        "ui_amb/amb_rain.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "amb",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10
+    },
+    "amb_warehouse": {
+      "files": [
+        "ui_amb/amb_warehouse.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "amb",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": true,
+      "priority": 10
+    },
+    "boss_warning": {
+      "files": [
+        "ui_amb/boss_warning.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "countdown_tick": {
+      "files": [
+        "ui_amb/countdown_tick.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "headshot_kill": {
+      "files": [
+        "ui_amb/headshot_kill_1.ogg",
+        "ui_amb/headshot_kill_2.ogg",
+        "ui_amb/headshot_kill_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "hitmarker": {
+      "files": [
+        "ui_amb/hitmarker_1.ogg",
+        "ui_amb/hitmarker_2.ogg",
+        "ui_amb/hitmarker_3.ogg",
+        "ui_amb/hitmarker_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.985,
+        1.015
+      ],
+      "voices": 3,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "hitmarker_head": {
+      "files": [
+        "ui_amb/hitmarker_head_1.ogg",
+        "ui_amb/hitmarker_head_2.ogg",
+        "ui_amb/hitmarker_head_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.985,
+        1.015
+      ],
+      "voices": 3,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "killmark_ding": {
+      "files": [
+        "ui_amb/killmark_ding.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "killmarker": {
+      "files": [
+        "ui_amb/killmarker_1.ogg",
+        "ui_amb/killmarker_2.ogg",
+        "ui_amb/killmarker_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "level_up": {
+      "files": [
+        "ui_amb/level_up.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "money": {
+      "files": [
+        "ui_amb/money_1.ogg",
+        "ui_amb/money_2.ogg",
+        "ui_amb/money_3.ogg",
+        "ui_amb/money_4.ogg",
+        "ui_amb/money_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "objective": {
+      "files": [
+        "ui_amb/objective_1.ogg",
+        "ui_amb/objective_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "revive_done": {
+      "files": [
+        "ui_amb/revive_done.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "round_lose": {
+      "files": [
+        "ui_amb/round_lose.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "round_start": {
+      "files": [
+        "ui_amb/round_start.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "round_win": {
+      "files": [
+        "ui_amb/round_win.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "supply_drop": {
+      "files": [
+        "ui_amb/supply_drop_1.ogg",
+        "ui_amb/supply_drop_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        20,
+        300
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "ui_back": {
+      "files": [
+        "ui_amb/ui_back_1.ogg",
+        "ui_amb/ui_back_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "ui_buy": {
+      "files": [
+        "ui_amb/ui_buy_1.ogg",
+        "ui_amb/ui_buy_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "ui_click": {
+      "files": [
+        "ui_amb/ui_click_1.ogg",
+        "ui_amb/ui_click_2.ogg",
+        "ui_amb/ui_click_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "ui_deny": {
+      "files": [
+        "ui_amb/ui_deny.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "ui_equip": {
+      "files": [
+        "ui_amb/ui_equip_1.ogg",
+        "ui_amb/ui_equip_2.ogg",
+        "ui_amb/ui_equip_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "ui_open": {
+      "files": [
+        "ui_amb/ui_open_1.ogg",
+        "ui_amb/ui_open_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "xh_node": {
+      "files": [
+        "ui_amb/xh_node.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 2
+    }
+  }
+}

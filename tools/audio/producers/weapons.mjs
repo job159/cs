@@ -23,12 +23,21 @@
 // peak-to-loudness ratio -> codec-aware pre-master (encode/decode probe; the take that Vorbis needs the least extra
 // limiting for wins), so the shipped, DECODED file sits at -12 LUFS / <= -1 dBTP with ~0-3 dB of limiting (capped, see
 // codecSafe; close layers are encoded at q0.6, see CLOSE_QUALITY).
+//
+// Review fixes (mastering pass): burst takes are cut before their next round (nextRoundAt), multi-shot / mid-distance
+// / clanking sources never feed tails (noTail), tails' discrete slap echoes are held >= ~10 dB under the blast
+// (tameSlaps), tails / far layers drop what is left under -60 dB (trimEnd; not closes — see designClose), cut foley
+// ends on an exponential ring-out, and every foley file sits in the -20..-24 LUFS window except the shell tinkles.
 
 const SR = 48000;
 // Close layers (the loudest, most transient files in the game) are encoded at Vorbis q0.6 instead of q0.5: q0.5 put
 // 0.6-1.3 dB of inter-sample overshoot on their crack (decoded true peak), which had to be bought back with limiting;
 // at q0.6 it is 0.0-0.3 dB on most takes, for ~1 KB more per file. Everything else stays at q0.5.
 const CLOSE_QUALITY = 0.6;
+// Tail slap ceiling: the loudest ~5 ms RMS (louder channel) of a _tail may reach this many dBFS at -20 LUFS. The close
+// layers' blast is ~-6.5 dBFS (10 ms RMS) at -12 LUFS and the tail plays at 0.9: discrete echoes land >= ~11 dB under
+// the blast (were 4.6-9 dB), while the tail's early energy (60-400 ms) moves by < 1.5 dB.
+const SLAP_CEIL = -16;
 
 // ---------------------------------------------------------------------------------------------- sources
 const F = {
@@ -159,7 +168,9 @@ export const GUNS = [
   }),
   P({
     name: 'rifle556', // Sentry-4 / Falcon-L / Aquila (M4 / SCAR / AUG): sharper, brighter crack, tighter low end
-    near: [[F.ar, 0.704], [F.ar, 5.647], [F.m16, 0.000], [F.arMid, 0.584], [F.savage, 4.968, { semis: 1 }]],
+    // (fs:238916 is a semi-auto STRING — rounds at +0.29/0.55/0.78/1.07 s — and D_24P a mid-distance take: both fine
+    // for a 0.24 s close, but as tails they put phantom shots / a distant direct blast into every 3rd rifle shot)
+    near: [[F.ar, 0.704], [F.ar, 5.647], [F.m16, 0.000, { noTail: true }], [F.arMid, 0.584, { noTail: true }], [F.savage, 4.968, { semis: 1 }]],
     mid: [[F.arMid, 0.584], [F.arMid, 3.910], [F.ar50y, 0.596]],
     close: { bal: { sub: -15, low: -8, lowMid: -7.5, mid: -4.5, high: -7.5, air: -11 }, n: 5, direct: 0.09, len: 0.24, hp: 60, eq: [{ type: 'peak', f: 240, gain: 1.5, q: 1 }, { type: 'peak', f: 450, gain: -1.5, q: 1.2 }, { type: 'peak', f: 1900, gain: 1, q: 1 }, { type: 'peak', f: 3800, gain: 2.5, q: 1.1 }],
       crack: -6, body: { f0: 275, f1: 132, sweep: 0.013, decay: 0.065, gain: -9 }, sub: { f0: 110, f1: 55, decay: 0.08, gain: -14 }, room: 0.14, width: 0.32,
@@ -235,7 +246,9 @@ export const GUNS = [
   }),
   P({
     name: 'sniper50', // Anvil-50 (Barrett .50): muzzle-brake blast, massive low end, heavy action slam
-    near: [[F.cal50, 0.010, { ch: 0 }], [F.tikka, 0.577, { semis: -2.5, ch: 0 }], [F.m1917, 1.308, { semis: -2.5, ch: 1 }], [F.cal50mg, 0.002, { burst: true, ch: 0 }], [F.tikka, 5.665, { semis: -2.5, ch: 1 }]],
+    // (cal50mg is an M2 burst: its 2nd round at +112 ms is cut by the burst guard in designClose; cal50 has a bolt /
+    // brass clank at +0.75 s, so it feeds the close layer only)
+    near: [[F.cal50, 0.010, { ch: 0, noTail: true }], [F.tikka, 0.577, { semis: -2.5, ch: 0 }], [F.m1917, 1.308, { semis: -2.5, ch: 1 }], [F.cal50mg, 0.002, { burst: true, ch: 0 }], [F.tikka, 5.665, { semis: -2.5, ch: 1 }]],
     mid: [[F.tikkaMid, 0.755, { semis: -2.5 }], [F.m1917Mid, 0.607, { semis: -2.5 }], [F.mosinMid, 1.138, { semis: -2 }]],
     close: { bal: { sub: -7, low: -4, lowMid: -6, mid: -6, high: -11, air: -14 }, n: 5, direct: 0.16, len: 0.5, hp: 36, eq: [{ type: 'peak', f: 110, gain: 3, q: 0.8 }, { type: 'peak', f: 300, gain: 1.5, q: 1 }, { type: 'peak', f: 2200, gain: 2, q: 1 }],
       crack: -5, blast: -3, body: { f0: 155, f1: 64, sweep: 0.022, decay: 0.18, gain: -3 }, sub: { f0: 72, f1: 38, decay: 0.3, gain: -6.5 }, room: 0.22, width: 0.32, plr: 11.4 },
@@ -280,8 +293,8 @@ const FOLEY = {
     [[F.cloth1, 0.3, 1.0, { maxLen: 0.45 }], [F.mgReload, 0.05, 0.28, { mode: 'peak', post: 0.2, semis: -2, at: 0.1, gain: -2 }]],
     [[F.jacket, 0, 0.34], [F.akReload, 0.84, 1.27, { mode: 'peak', post: 0.18, semis: -2, at: 0.08, gain: -3 }]],
   ] },
-  cloth: { lufs: -26, variants: [[[F.cloth1, 0.47, 1.0, { maxLen: 0.42 }]], [[F.clothHeavy, 0.1, 0.5]], [[F.jacket, 0, 0.34]], [[F.fabric, 0, 0.48]], [[F.cloth2, 0.0, 0.46, { fadeIn: 0.025, fadeOut: 0.14 }]]] },
-  magRelease: { lufs: -24, variants: [[[F.arHardware, 13.43, 13.56, { mode: 'peak', pre: 0.004, post: 0.07 }]], [[F.arHardware, 15.08, 15.21, { mode: 'peak', pre: 0.004, post: 0.08 }]], [[F.glock, 5.87, 5.95, { mode: 'peak', pre: 0.004, post: 0.06 }]], [[F.glock, 26.95, 27.03, { mode: 'peak', pre: 0.004, post: 0.06 }]]] },
+  cloth: { lufs: -24, vol: 0.8, variants: [[[F.cloth1, 0.47, 1.0, { maxLen: 0.42 }]], [[F.clothHeavy, 0.1, 0.5]], [[F.jacket, 0, 0.34]], [[F.fabric, 0, 0.48]], [[F.cloth2, 0.0, 0.46, { fadeIn: 0.025, fadeOut: 0.14 }]]] },
+  magRelease: { lufs: -23, vol: 0.9, variants: [[[F.arHardware, 13.43, 13.56, { mode: 'peak', pre: 0.004, post: 0.07 }]], [[F.arHardware, 15.08, 15.21, { mode: 'peak', pre: 0.004, post: 0.08 }]], [[F.glock, 5.87, 5.95, { mode: 'peak', pre: 0.004, post: 0.06 }]], [[F.glock, 26.95, 27.03, { mode: 'peak', pre: 0.004, post: 0.06 }]]] },
   magOut: { lufs: -22, variants: [[[F.m16reload, 0.38, 0.78]], [[F.arReload, 0.02, 0.39]], [[F.akReload, 0.14, 0.45]], [[F.uzi, 0.03, 0.5]]] },
   magIn: { lufs: -21, variants: [[[F.m16reload, 2.0, 2.84, { mode: 'peak', pre: 0.16, post: 0.2 }]], [[F.arReload, 0.57, 0.93, { mode: 'peak', pre: 0.12, post: 0.2 }]], [[F.akReload, 0.84, 1.28, { mode: 'peak', pre: 0.06, post: 0.2 }]], [[F.arReload2, 1.04, 1.47, { mode: 'peak', pre: 0.08, post: 0.2 }]]] },
   magDrop: { lufs: -21, spatial: true, range: [1.5, 25], voices: 3, pitch: [0.92, 1.08], variants: [
@@ -290,7 +303,7 @@ const FOLEY = {
     [[K_('impactMetal_light_001'), 0, 1, { semis: -3 }], [K_('impactGeneric_light_003'), 0, 1, { at: 0.05, gain: -6 }]],
     [[K_('impactPlate_medium_001'), 0, 1, { semis: 2 }], [K_('impactPlate_light_004'), 0, 1, { at: 0.09, gain: -9, semis: 3 }]],
   ] },
-  pouch: { lufs: -25, variants: [
+  pouch: { lufs: -24, vol: 0.9, variants: [
     [[F.fabric, 0, 0.48], [K_('impactSoft_medium_000'), 0, 1, { at: 0.06, gain: -6 }]],
     [[F.jacket, 0, 0.34], [K_('impactSoft_medium_002'), 0, 1, { at: 0.04, gain: -6 }]],
     [[F.cloth1, 0.4, 0.8], [K_('impactSoft_medium_003'), 0, 1, { at: 0.05, gain: -5 }]],
@@ -330,15 +343,19 @@ const FOLEY = {
     [(k, r, lib, kit) => kit.scrape(0.28, 1000, 3000, `rk_${k}`), [K_('impactPlate_heavy_002'), 0, 1, { semis: -4, at: 0.25 }], [K_('impactMetal_heavy_004'), 0, 1, { semis: -5, at: 0.26, gain: -7 }]],
   ] },
   swing: { lufs: -22, spatial: true, range: [2, 30], voices: 3, pitch: [0.93, 1.07], variants: [
-    [[F.swing1, 0, 1.1, { mode: 'peak', pre: 0.22, post: 0.14, hp: 250 }]], [[F.swooshFast, 0, 0.92, { mode: 'peak', pre: 0.2, post: 0.15, hp: 250 }]], [[F.sword, 0, 0.56, { hp: 350 }]], [(k, r, lib, kit) => kit.swish(0.28, 900, 4200, `sw_${k}`)], [(k, r, lib, kit) => kit.swish(0.32, 700, 3200, `sw_${k}`)],
+    [[F.swing1, 0, 1.1, { mode: 'peak', pre: 0.22, post: 0.14, hp: 250 }]], [[F.swooshFast, 0, 0.92, { mode: 'peak', pre: 0.2, post: 0.15, hp: 250 }]],
+    // (was the sword take fs:60024: a tonal 200-400 Hz bat 'whoom', 98 % of its energy under 600 Hz — not a knife)
+    [[F.knifeWhoosh, 0.3, 0.95, { mode: 'peak', pre: 0.15, post: 0.16, hp: 450, eq: [{ type: 'highshelf', f: 7000, gain: -5 }] }], (k, r, lib, kit) => ({ buf: kit.swish(0.27, 1100, 4800, `sw_${k}`), gain: -3, at: 0.02 })], [(k, r, lib, kit) => kit.swish(0.28, 900, 4200, `sw_${k}`)], [(k, r, lib, kit) => kit.swish(0.32, 700, 3200, `sw_${k}`)],
   ] },
   swingHeavy: { lufs: -20, spatial: true, range: [3, 40], voices: 3, pitch: [0.94, 1.06], variants: [
     [[F.swing2, 0, 0.83, { semis: -3, hp: 150 }], (k, r, lib, kit) => ({ buf: kit.swish(0.5, 260, 1400, `swh_${k}`), gain: -3 })],
     [[F.swing1, 0, 1.1, { mode: 'peak', pre: 0.3, post: 0.2, semis: -4, hp: 150 }], (k, r, lib, kit) => ({ buf: kit.swish(0.55, 220, 1200, `swh_${k}`), gain: -3 })],
-    [[F.swoosh, 0, 0.7, { mode: 'peak', pre: 0.25, post: 0.2, semis: -3, hp: 150 }], (k, r, lib, kit) => ({ buf: kit.swish(0.5, 240, 1300, `swh_${k}`), gain: -3 })],
+    [[F.swoosh, 0, 0.7, { mode: 'peak', pre: 0.25, post: 0.2, semis: -3, hp: 150, eq: [{ type: 'highshelf', f: 2500, gain: 6 }] }], (k, r, lib, kit) => ({ buf: kit.swish(0.5, 300, 2600, `swh_${k}`), gain: -3 })],
   ] },
   dryfire: { lufs: -23, variants: [[[F.revolverDry, 8.55, 8.66, { mode: 'peak', post: 0.06 }]], [[F.revolverDry, 14.89, 14.99, { mode: 'peak', post: 0.06 }]], [[F.revolverDry, 8.81, 9.04, { mode: 'peak', post: 0.08 }]], [[F.arHardware, 1.60, 1.65, { gain: 0 }], (k, r, lib, kit) => kit.tick(`dry_${k}`, 3400)]] },
   lowAmmo: { lufs: -24, variants: [[(k, r, lib, kit) => kit.hollowClick(`low_${k}`, 1)], [(k, r, lib, kit) => kit.hollowClick(`low_${k}`, 1.06)], [(k, r, lib, kit) => kit.hollowClick(`low_${k}`, 0.95)]] },
+  // Shell tinkles stay under the -20..-24 foley window on purpose: they are 5 ms metal ticks with a 25-30 dB crest, and
+  // reaching -24 LUFS took 4-9 dB of limiting (dull 'tk' instead of a ring). Their level is the TP ceiling's limit.
   shell_brass: { lufs: -27, spatial: true, range: [1, 14], voices: 6, pitch: [0.9, 1.1], variants: [
     [[F.casing30, 0.45, 1.3, { maxLen: 0.7 }]], [[F.casing30, 2.88, 3.7, { maxLen: 0.7 }]], [[F.casing30, 7.07, 7.95, { maxLen: 0.7 }]],
     [[F.casings, 4.66, 5.27, { maxLen: 0.6 }]], [[F.casings, 11.18, 11.94, { maxLen: 0.7 }]], [[F.casingDrop, 9.92, 10.82, { maxLen: 0.7 }]],
@@ -443,13 +460,40 @@ export function makeKit(lib, ctx) {
     return best.o;
   }
 
+  /**
+   * Time (s) of the next round in a burst recording: the first frame after `from` whose 2 ms RMS above 400 Hz rises
+   * >= jumpDb within 6 ms to within 24 dB of the take's max (the decaying blast never does that; a new round does).
+   * Walks back to where that rise starts. null when the take holds one round only.
+   */
+  function nextRoundAt(buf, { from = 0.035, jumpDb = 10 } = {}) {
+    const x = lib.eq(lib.toMono(buf), [{ type: 'hp', f: 400, order: 4 }]).data[0];
+    const sr = buf.sampleRate, w = Math.round(0.002 * sr), hop = Math.round(0.001 * sr), e = [];
+    for (let i = 0; i + w <= x.length; i += hop) { let q = 0; for (let j = 0; j < w; j++) q += x[i + j] * x[i + j]; e.push(10 * Math.log10(q / w + 1e-20)); }
+    let mx = -Infinity; for (const v of e) if (v > mx) mx = v;
+    for (let i = Math.round(from * 1000); i < e.length; i++) {
+      let prev = Infinity; for (let j = Math.max(0, i - 6); j < i; j++) if (e[j] < prev) prev = e[j];
+      if (e[i] - prev >= jumpDb && e[i] > mx - 24) { let j = i; while (j > 1 && e[j - 1] > prev + 3) j--; return (j * hop) / sr; }
+    }
+    return null;
+  }
+
+  /** Cut what is left after the sound has decayed below `db` re its peak (short fade): no inaudible seconds held in
+   * decoded memory and in the voice pool (tails/far layers carried 0.5-0.9 s under -60 dB). */
+  const trimEnd = (buf, db = -60) => lib.trimSilence(buf, { threshDb: db, start: false, post: 0.012, fadeOutSec: 0.012 });
+
   // -------------------------------------------------------------------------------------------- close layer
-  function designClose(G, shot, k, ch) {
+  function designClose(G, shot, k, ch, { burst = false } = {}) {
     const C = G.close, r = ctx.rng(`${G.name}_close_${k}`);
     let d = chan(shot, ch ?? k % 2);
     const js = r.range(-0.25, 0.25);
     if (Math.abs(js) > 0.02) d = lib.varispeedSemis(d, js);
     d = lib.slice(d, 0, C.direct + 0.03);
+    // burst takes: end the recorded blast before the next round (rifle762_close_5 had the AK's 2nd round at +80 ms,
+    // sniper50_close_4 the M2's at +112 ms — a double-tap on every 5th shot)
+    if (burst) {
+      const g = nextRoundAt(d);
+      if (g != null) { d = lib.fadeOut(lib.slice(d, 0, Math.max(0.03, g - 0.002)), 0.008, 'sine'); if (k < 101) ctx.log(`  ${G.name} close ${k}: burst take cut before the next round at ${(g * 1000).toFixed(0)} ms`); }
+    }
     d = lib.eq(d, [{ type: 'hp', f: C.hp ?? 50, order: 4 }, ...(C.eq || [])]);
     d = lib.automate(d, (t) => (t < C.direct * 0.45 ? 1 : Math.exp(-(((t - C.direct * 0.45) / (C.direct * 0.32)) ** 1.5))));
     // clip the recorded transient FIRST (the source spikes are already clipped; shaving them buys loudness and
@@ -493,6 +537,8 @@ export function makeKit(lib, ctx) {
     if (C.bal) m = balance(m, C.bal, C.balAmount ?? 0.75);
     // 3 ms of lead-in: the mastering stage's click-guard fade never touches the crack, and Vorbis' pre-echo of the
     // crack (half a short block) stays off sample 0 of the decoded file
+    // (no end trim here: a close layer is shorter than one 400 ms block, so its loudness is integrated over its own
+    // length — trimming its quiet end would raise the measurement and the -12 LUFS stage would turn the gun DOWN)
     return lib.pad(clipToPLR(m, C.plr ?? 10.3, { min: C.minDrive ?? 3, max: C.maxDrive ?? 22, threshold: C.clipTh ?? -16 }), C.leadIn ?? 0.003, 0);
   }
 
@@ -570,7 +616,24 @@ export function makeKit(lib, ctx) {
     const g = rmsOf(syn) / Math.max(1e-9, rmsOf(rec)) * lib.db2lin(T.rec ?? 0);
     let t = lib.mix([{ buf: syn }, { buf: rec, gainLin: g, at: Math.max(0, from - 0.015) }], { length: L, channels: 2 });
     t = lib.automate(t, (x) => (x < L * 0.45 ? 1 : Math.cos(((x - L * 0.45) / (L * 0.55)) * Math.PI / 2) ** 2));
-    return t;
+    return trimEnd(tameSlaps(t, { ceil: T.slapCeil ?? SLAP_CEIL }));
+  }
+
+  /**
+   * Discrete slap echoes in the recorded reflections (a wall at the range) came out 4.6-8 dB under the blast once the
+   * tail was normalised to -20 LUFS — heard as a flam / second shot 75-160 ms after the first (mg762, pistol, smg9,
+   * pistol45). Compress the tail's 10 ms RMS (linked, look-ahead) above `ceil` dBFS as it will sit at -20 LUFS; the
+   * loudness stage then lifts the diffuse decay instead: same tail loudness, no double shot. Iterated because each
+   * pass lowers the loudness the next normalisation gives back.
+   */
+  function tameSlaps(buf, { lufs = -20, ceil = SLAP_CEIL, iters = 3 } = {}) {
+    let b = buf;
+    for (let it = 0; it < iters; it++) {
+      const g = lufs - lib.lufs(b);
+      const c = lib.compress(lib.gain(b, g), { threshold: ceil, ratio: 6, attack: 0.0015, release: 0.045, knee: 4, detector: 'rms', rmsWindow: 0.005, lookahead: 0.004 });
+      b = lib.gain(c, -g);
+    }
+    return b;
   }
 
   // -------------------------------------------------------------------------------------------- far layer
@@ -591,7 +654,7 @@ export function makeKit(lib, ctx) {
     out = lib.automate(out, (x) => (x < L * 0.4 ? 1 : Math.cos(((x - L * 0.4) / (L * 0.6)) * Math.PI / 2) ** 2));
     // tame the first transient so the -22 LUFS stage does not lean on the limiter; 5 ms lead-in keeps the codec's
     // pre-echo of the distant blast off sample 0 (a step there clicks; 5 ms is nothing next to 120 ms+ of travel time)
-    return lib.pad(clipToPLR(out, Fr.plr ?? 19, { min: 0, max: 12 }), 0.005, 0);
+    return lib.pad(trimEnd(clipToPLR(out, Fr.plr ?? 19, { min: 0, max: 12 })), 0.005, 0);
   }
 
   // -------------------------------------------------------------------------------------------- clips (foley)
@@ -615,10 +678,14 @@ export function makeKit(lib, ctx) {
     b = lib.trimSilence(b, { threshDb: o.trimDb ?? -48, pre: 0.002, post: 0.03, fadeOutSec: 0.015 });
     if (o.semis) b = lib.varispeedSemis(b, o.semis);
     if (o.maxLen && b.duration > o.maxLen) b = lib.fadeOut(lib.slice(b, 0, o.maxLen), Math.min(0.12, o.maxLen * 0.35), 'exp');
-    b = lib.eq(b, [{ type: 'hp', f: o.hp ?? 70, order: 2 }, ...(o.lp ? [{ type: 'lp', f: o.lp, order: 2 }] : [])]);
+    b = lib.eq(b, [{ type: 'hp', f: o.hp ?? 70, order: 2 }, ...(o.lp ? [{ type: 'lp', f: o.lp, order: 2 }] : []), ...(o.eq || [])]);
     // fade-out scaled to the clip (a fixed 12 ms fade on a clip cut while still sounding ends with an audible chop)
+    // 'peak' / 'first' cuts end while the part is still ringing: a 12 ms equal-power fade left them chopped (last 5 ms
+    // only 20-38 dB under the clip's max on 17 mech/foley files) — an exponential fade over ~1/3 of the clip decays
+    // like the real ring-out instead
+    const cut = o.mode === 'peak' || o.mode === 'first';
     if (o.fadeIn) b = lib.fadeIn(b, o.fadeIn, 'sine');
-    b = lib.fade(b, 0.001, o.fadeOut ?? Math.min(0.06, Math.max(0.012, b.duration * 0.18)));
+    b = lib.fadeOut(lib.fadeIn(b, 0.001, 'sine'), o.fadeOut ?? (cut ? Math.min(0.08, Math.max(0.02, b.duration * 0.45)) : Math.min(0.06, Math.max(0.012, b.duration * 0.18))), 'exp');
     return lib.normalizePeak(b, -1);
   }
 
@@ -677,7 +744,7 @@ export function makeKit(lib, ctx) {
     return lib.eq(lib.mix([{ buf: clk }, { buf: ping, gain: -9, at: 0.001 }, { buf: tok, gain: -7 }]), [{ type: 'hp', f: 300, order: 2 }]);
   }
 
-  return { codecLog, onsetIdx, chan, loadShot, crack, nWave, rmsOf, clipToPLR, balance, codecSafe, designClose, designTail, designFar, grab, layered, jingle, scrape, swish, tick, hollowClick };
+  return { codecLog, trimEnd, onsetIdx, chan, loadShot, crack, nWave, rmsOf, clipToPLR, balance, codecSafe, designClose, designTail, designFar, grab, layered, jingle, scrape, swish, tick, hollowClick };
 }
 
 // ---------------------------------------------------------------------------------------------- specials
@@ -749,8 +816,8 @@ async function rocketSet(lib, ctx, cat, K) {
     m = K.balance(m, { sub: -12, low: -6, lowMid: -5, mid: -5, high: -10, air: -15 }, 0.6);
     closes.push(await K.codecSafe(lib.pad(K.clipToPLR(m, 11.5), 0.003, 0), -12)); // lead-in: codec pre-echo off sample 0
     const head = lib.slice(lib.toMono(m), 0, 0.25);
-    tails.push(lib.automate(lib.gunTail(head, { env: 'urban', length: 2.2, head: 0.2, seed: `rk_tail_${k}`, darken: 40 }), (x) => (x < 1 ? 1 : Math.cos(((x - 1) / 1.2) * Math.PI / 2) ** 2)));
-    fars.push(lib.pad(K.clipToPLR(lib.farLayer(lib.slice(lib.toMono(m), 0, 0.6), { distance: 200, env: 'urban', seed: `rk_far_${k}`, length: 2.4 }), 19, { min: 0, max: 12 }), 0.005, 0));
+    tails.push(K.trimEnd(lib.automate(lib.gunTail(head, { env: 'urban', length: 2.2, head: 0.2, seed: `rk_tail_${k}`, darken: 40 }), (x) => (x < 1 ? 1 : Math.cos(((x - 1) / 1.2) * Math.PI / 2) ** 2))));
+    fars.push(lib.pad(K.trimEnd(K.clipToPLR(lib.farLayer(lib.slice(lib.toMono(m), 0, 0.6), { distance: 200, env: 'urban', seed: `rk_far_${k}`, length: 2.4 }), 19, { min: 0, max: 12 })), 0.005, 0));
   }
   const srcs = launches.map((l) => l[0]);
   await cat.add('rocket_close', closes, { target: 'gunClose', quality: CLOSE_QUALITY, limiter: { release: 0.02 }, spatial: true, range: [12, 60], channels: 2, voices: 2, pitch: [0.97, 1.03], priority: 3, maxLimitDb: 6, sources: srcs });
@@ -770,7 +837,8 @@ async function rocketSet(lib, ctx, cat, K) {
 /** Knife set (remote players' melee "shots" use <sound>_close/_far; the local knife plays swing/swingHeavy). */
 async function knifeSet(lib, ctx, cat, K) {
   const closes = [], tails = [], fars = [];
-  const clips = [[F.knifeWhoosh, 0, 1.32], [F.sword, 0, 0.56], [F.swooshFast, 0, 0.92], [F.swing1, 0, 1.1]];
+  // (the sword take fs:60024 was a 200-400 Hz 'whoom' — 98 % of its energy under 600 Hz; Woosh 2 is a light blade)
+  const clips = [[F.knifeWhoosh, 0, 1.32], [F.swing2, 0, 0.83], [F.swooshFast, 0, 0.92], [F.swing1, 0, 1.1]];
   for (let k = 0; k < clips.length; k++) {
     const [id, a, z] = clips[k];
     const w = await K.grab(id, a, z, { maxLen: 0.4, hp: 200 });
@@ -783,8 +851,10 @@ async function knifeSet(lib, ctx, cat, K) {
   }
   const srcs = clips.map((c) => c[0]);
   await cat.add('knife_close', closes, { lufs: -22, spatial: true, channels: 1, range: [2, 30], voices: 3, pitch: [0.94, 1.06], sources: srcs });
-  await cat.add('knife_tail', tails, { lufs: -32, spatial: false, channels: 1, voices: 2, pitch: [0.95, 1.05], maxHeadMs: 40, sources: srcs });
-  await cat.add('knife_far', fars, { lufs: -30, spatial: true, channels: 1, range: [10, 40], voices: 2, pitch: [0.94, 1.06], sources: srcs });
+  // files sit at the contract's tail / far loudness; how quiet a knife's room / distant swish plays is a mix decision
+  // (vol): -20 LUFS x 0.25 ~ -32, -22 LUFS x 0.4 ~ -30
+  await cat.add('knife_tail', tails, { target: 'gunTail', vol: 0.25, spatial: false, channels: 1, voices: 2, pitch: [0.95, 1.05], maxHeadMs: 40, sources: srcs });
+  await cat.add('knife_far', fars, { target: 'gunFar', vol: 0.4, spatial: true, channels: 1, range: [10, 40], voices: 2, pitch: [0.94, 1.06], sources: srcs });
 }
 
 // ---------------------------------------------------------------------------------------------- producer
@@ -816,7 +886,7 @@ export async function produce(lib, ctx) {
       let best = null;
       for (let a = 0; a < 4; a++) {
         K.codecLog.length = 0;
-        const m = await K.codecSafe(K.designClose(G, shot, base + a * 101, ch), closeLufs);
+        const m = await K.codecSafe(K.designClose(G, shot, base + a * 101, ch, { burst: !!s.burst }), closeLufs);
         const info = K.codecLog[0];
         const score = info.limitedDb + Math.max(0, info.decTp + 1.3) * 3 + (Math.abs(info.lufs - closeLufs) > 0.25 ? 50 : 0);
         if (!best || score < best.score) best = { m, info, score, a };
@@ -827,7 +897,7 @@ export async function produce(lib, ctx) {
       srcIds.add(s.id); if (s.stack) srcIds.add(s.stack[0]);
     }
     // tails from single shots only (bursts would carry the next rounds)
-    const singles = near.filter((s) => !s.burst);
+    const singles = near.filter((s) => !s.burst && !s.noTail);
     for (let k = 0; k < (wantLayer('tail') ? G.tail.n : 0); k++) {
       const s = singles[k % singles.length];
       const shot = await K.loadShot(s.id, s.t, G.close.direct + G.tail.len + 0.1, { semis: s.semis || 0, stack: s.stack });
@@ -853,7 +923,7 @@ export async function produce(lib, ctx) {
     // refDistance 12 m: at 40 m the inverse model gives -10.5 dB, i.e. -12 LUFS - 10.5 ~ the -22 LUFS _far layer
     // (ref 30-50 m) the game switches to there, so crossing 40 m does not jump in level.
     if (closes.length) await cat.add(`${G.name}_close`, closes, { lufs: closeLufs, quality: CLOSE_QUALITY, maxLimitDb: 6, limiter: { release: 0.02 }, spatial: true, range: M.closeRange ?? [12, 60], channels: 2, voices: M.voices ?? 6, pitch: M.pitch ?? [0.97, 1.03], vol: M.vol ?? 1, priority: 3, sources });
-    if (tails.length) await cat.add(`${G.name}_tail`, tails, { target: 'gunTail', spatial: false, channels: 2, voices: M.tailVoices ?? 3, pitch: [0.98, 1.02], sources });
+    if (tails.length) await cat.add(`${G.name}_tail`, tails, { target: 'gunTail', vol: M.tailVol ?? 1, spatial: false, channels: 2, voices: M.tailVoices ?? 3, pitch: [0.98, 1.02], sources });
     if (fars.length) await cat.add(`${G.name}_far`, fars, { target: 'gunFar', spatial: true, range: M.farRange ?? [40, 450], voices: 4, pitch: [0.95, 1.04], priority: 2, sources });
     // mech: action clack, 10 ms after the shot (under the blast's decay, where the ear catches it)
     if (G.mech && wantLayer('mech')) {
@@ -883,7 +953,7 @@ export async function produce(lib, ctx) {
         for (const s of specs) if (Array.isArray(s)) srcs.add(s[0]);
       }
       await cat.add(name, vars, {
-        lufs: S.lufs, spatial: !!S.spatial, channels: 1, range: S.range ?? [1, 1], voices: S.voices ?? 2,
+        lufs: S.lufs, vol: S.vol ?? 1, spatial: !!S.spatial, channels: 1, range: S.range ?? [1, 1], voices: S.voices ?? 2,
         pitch: S.pitch ?? [0.96, 1.04], sources: [...srcs], maxLimitDb: 5, limiter: { release: 0.012 },
       });
     }

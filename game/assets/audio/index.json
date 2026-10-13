@@ -1,6 +1,9 @@
 {
   "manifests": [
+    "manifest.antical.json",
+    "manifest.creatures.json",
     "manifest.impacts.json",
+    "manifest.ui_amb.json",
     "manifest.weapons.json"
   ]
 }

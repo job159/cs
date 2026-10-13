@@ -1,0 +1,117 @@
+{
+  "category": "ui_amb",
+  "producer": "ui_amb",
+  "sounds": {
+    "achievement": [],
+    "amb_city_dead": [
+      "fs:427841",
+      "fs:117611",
+      "fs:22331",
+      "fs:568814",
+      "fs:572365",
+      "fs:440865",
+      "fs:333988",
+      "fs:703248",
+      "oga_distant_explosion/NenadSimic - Muffled Distant Explosion",
+      "ffsl/AK-47/C_36P",
+      "ffsl/PPSh/P_22P",
+      "ffsl/SKS/U_19P",
+      "ffsl/Mosin Nagant/M_26P"
+    ],
+    "amb_fire": [
+      "fs:563765",
+      "fs:414767",
+      "fs:363092",
+      "fs:532191"
+    ],
+    "amb_harbor_wind": [
+      "fs:360633",
+      "fs:342878",
+      "fs:443019",
+      "fs:352356",
+      "fs:500008",
+      "fs:555134",
+      "fs:32930"
+    ],
+    "amb_rain": [
+      "fs:200273",
+      "fs:265627",
+      "fs:234554"
+    ],
+    "amb_warehouse": [
+      "fs:434507",
+      "fs:240895",
+      "fs:234554",
+      "fs:496836",
+      "fs:238289",
+      "fs:500008",
+      "fs:333988"
+    ],
+    "boss_warning": [
+      "fs:324276",
+      "fs:201094"
+    ],
+    "countdown_tick": [],
+    "headshot_kill": [],
+    "hitmarker": [],
+    "hitmarker_head": [],
+    "killmark_ding": [],
+    "killmarker": [],
+    "level_up": [],
+    "money": [
+      "fs:174629",
+      "fs:184372"
+    ],
+    "objective": [],
+    "revive_done": [],
+    "round_lose": [
+      "kenney_impact/Audio/impactMetal_heavy_001"
+    ],
+    "round_start": [
+      "fs:201094"
+    ],
+    "round_win": [],
+    "supply_drop": [
+      "fs:546806",
+      "fs:640204",
+      "kenney_impact/Audio/impactPlate_heavy_000",
+      "kenney_impact/Audio/impactPlate_heavy_001",
+      "kenney_impact/Audio/impactMetal_medium_002",
+      "kenney_impact/Audio/impactMetal_medium_003",
+      "kenney_impact/Audio/impactTin_medium_000",
+      "kenney_impact/Audio/impactTin_medium_001"
+    ],
+    "ui_back": [],
+    "ui_buy": [
+      "fs:632822",
+      "fs:184372"
+    ],
+    "ui_click": [],
+    "ui_deny": [],
+    "ui_equip": [
+      "fs:494797",
+      "fs:393732"
+    ],
+    "ui_open": [],
+    "xh_node": []
+  },
+  "loaded": [
+    "fs:174629",
+    "fs:184372",
+    "fs:201094",
+    "fs:324276",
+    "fs:393732",
+    "fs:494797",
+    "fs:546806",
+    "fs:632822",
+    "fs:640204",
+    "kenney_impact/Audio/impactMetal_heavy_001",
+    "kenney_impact/Audio/impactMetal_medium_002",
+    "kenney_impact/Audio/impactMetal_medium_003",
+    "kenney_impact/Audio/impactPlate_heavy_000",
+    "kenney_impact/Audio/impactPlate_heavy_001",
+    "kenney_impact/Audio/impactTin_medium_000",
+    "kenney_impact/Audio/impactTin_medium_001"
+  ],
+  "original": false
+}
