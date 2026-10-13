@@ -1,0 +1,13 @@
+{
+  "category": "antical",
+  "producer": "antical",
+  "sounds": {
+    "dp_end": [],
+    "dp_engage": [],
+    "dp_lock": [],
+    "dp_vent": [],
+    "ready_dualphase": []
+  },
+  "loaded": [],
+  "original": true
+}

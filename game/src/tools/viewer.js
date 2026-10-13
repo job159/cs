@@ -5,11 +5,13 @@
 //   &counter=<kills>[&boss=1] mounts a 斬數計.
 // Premium presets (§1.5) on any model: &pv=auto | <matKey>:<preset>,... | all:<preset>  &remap=<key>:<newKey>,...
 //   &elem=<element> &charge=0..1 &ready=1 &t=<time s> &dissolve=0..1 &core=<mode> &pvp=<json per-preset params>
+//   A weapon whose def has a `premium` block shows that look by default (&pv=off for the bare model).
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { instanceGLB } from '../engine/assets.js';
 import { applyHardSurface, materialUniforms } from '../gfx/materials.js';
 import { tickPremium } from '../gfx/premium.js';
+import { WEAPONS } from '../weapons/defs.js';
 
 export async function runViewer(renderer, params) {
   const kind = params.get('view');
@@ -43,11 +45,11 @@ export async function runViewer(renderer, params) {
   const keys = new Set();
   model.traverse((o) => { if (o.isMesh) { const k = o.userData.mat || o.material?.name; if (remap[k]) o.userData.mat = remap[k]; keys.add(o.userData.mat || k); } });
   let premium;
-  if (params.get('pv')) {
+  if (params.get('pv') && params.get('pv') !== 'off') {
     const presets = {};
     for (const [k, p] of list('pv')) { if (k === 'all') for (const kk of keys) presets[kk] = p; else if (p) presets[k] = p; }
     premium = { element: params.get('elem') || 'radiant', presets, pv: JSON.parse(params.get('pvp') || '{}'), seed: +(params.get('kiln') || 0) };
-  }
+  } else if (!params.get('pv') && kind === 'weapon') premium = Object.values(WEAPONS).find((w) => (w.model || w.id) === id && w.premium)?.premium;
   const sfx = params.get('sfx') ? Object.fromEntries(list('sfx').map(([k, v]) => [k, k === 'glitter' ? { amt: +(v || 0.8), scale: 1000, rainbow: 0.2 } : +(v || 0.2)])) : undefined;
   const fl = params.get('float') ?? (params.get('fwear') ? +params.get('fwear') / 2 : null);
   applyHardSurface(model, {

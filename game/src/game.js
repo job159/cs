@@ -7,6 +7,7 @@ import { Viewmodel } from './player/viewmodel.js';
 import { FX } from './fx/fx.js';
 import { Projectiles } from './weapons/ballistics.js';
 import { Arsenal } from './weapons/arsenal.js';
+import './weapons/premium/chiwen.js';   // M07 螭吻．吞潮 (registers its special, skills, clips, crosshair, kill mark)
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';

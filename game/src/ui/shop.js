@@ -88,7 +88,7 @@ export class Shop {
     this.grid.innerHTML = list.map((w) => `<div class="card${owned.has(w.id) ? ' owned' : ''}" data-id="${w.id}">
       <img alt=""><div class="cn">${w.zh} <small>${w.en}</small></div>
       <div class="cs">${stats(w).map(([k, v]) => `<div><span>${k}</span><i style="width:${(v * 100).toFixed(0)}%"></i></div>`).join('')}</div>
-      <div class="cm">${w.mag ? `${w.mag} / ${w.reserve}` : '—'}　${CATS[w.cat]?.zh || ''}</div>
+      <div class="cm">${w.mag ? `${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}` : '—'}　${CATS[w.cat]?.zh || ''}</div>
       <button data-buy="${w.id}" ${owned.has(w.id) || (m?.money ?? 0) < w.price ? 'disabled' : ''}>${owned.has(w.id) ? '已擁有' : '$' + w.price}</button></div>`).join('');
     for (const card of this.grid.querySelectorAll('[data-id]')) {
       weaponIcon(g.renderer, card.dataset.id).then((u) => { if (u) card.querySelector('img').src = u; });

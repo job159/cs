@@ -191,7 +191,8 @@ export class AudioEngine {
     handle.setVolume = (v) => { if (handle.gain) handle.gain.gain.setTargetAtTime((def.vol ?? 1) * v, ctx.currentTime, 0.03); };
     handle.setRate = (r) => { if (handle.src) handle.src.playbackRate.setTargetAtTime(r, ctx.currentTime, 0.03); };
     this.voices.push(handle);
-    if (buf) startWith(buf);
+    // a sample still decoding is a Promise in the cache: wait for it (a second play during the load used to throw)
+    if (buf && !(buf instanceof Promise)) startWith(buf);
     else if (buf === undefined || buf instanceof Promise) this._load(file).then(startWith);
     return handle;
   }

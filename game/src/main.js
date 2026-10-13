@@ -6,6 +6,7 @@
 //
 // Dev URL params (skip the menus and start a match directly, like before the front-end existed):
 //   ?w=<weapon> ?zombies=N&ztype=a,b ?match=0 (free roam) ?diff=<id> ?map=<id> ?vmdebug ?hip
+//   (without ?map the match runs on DEFAULT_MAP = the newest ready chapter, Lost Town; ?map=test = proving ground)
 //   ?host=1 / ?join=<code> [&name=X&relay=1] (direct multiplayer, used by tools/mp-test.mjs)
 // Always available: ?q=<low|medium|high|ultra> (locks quality) ?touch=0|1 ?view=... (asset viewers)
 //   ?menu=1 forces the menus even with the params above; ?map=<id> then picks the menu map.
@@ -15,6 +16,7 @@ import { Input } from './engine/input.js';
 import { AudioEngine } from './engine/audio.js';
 import { loadGLB } from './engine/assets.js';
 import { Game } from './game.js';
+import './weapons/premium/bifang.js';          // M03 畢方 / 鬼車: special, skills, clips, crosshair, kill marks (after the engine)
 import { HUD } from './ui/hud.js';
 import { TouchControls } from './ui/touch.js';
 import { Shop, PerkPicker } from './ui/shop.js';
@@ -626,7 +628,7 @@ class App {
 
   /** Dev params: straight into a match (solo, or the old direct ?host / ?join multiplayer). */
   async devStart() {
-    const map = this.dev.map || (hasMap('test') ? 'test' : DEFAULT_MAP);
+    const map = this.dev.map || DEFAULT_MAP;   // Lost Town (newest ready chapter); ?map=test for the quick-loading proving ground
     const difficulty = params.get('diff') || 'normal';
     if (params.get('host') || params.get('join')) {
       const { hostRoom, joinRoom } = await import('./net/session.js');

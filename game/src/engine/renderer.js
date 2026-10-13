@@ -6,6 +6,9 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
+// colour-grade uniforms a map may set (Renderer.setGrade)
+const GRADE_KEYS = ['saturation', 'contrast', 'shadowTint', 'highlightTint', 'lift', 'gamma', 'gain'];
+
 export const QUALITY = {
   low:    { label: '低',   dpr: 1.0, shadows: 0,    msaa: 0, bloomMips: 3, minScale: 0.6, maxLights: 2, decals: 60,  particles: 1200, gore: 1 },
   medium: { label: '中',   dpr: 1.5, shadows: 1024, msaa: 2, bloomMips: 4, minScale: 0.65, maxLights: 4, decals: 120, particles: 2500, gore: 2 },
@@ -210,6 +213,9 @@ export class Renderer {
       edge: 0, edgeColor: new THREE.Color(0, 0, 0),   // BORDER: alpha 0..0.35 + linear colour (setEdge)
     };
     this.edgeEnabled = true;                            // settings switch (§1.14 #6)
+    // per-map colour grade (map.json `grade`, applied by World.load via setGrade); these are the neutral values
+    this._gradeDefaults = { exposure: 1.0 };
+    for (const k of GRADE_KEYS) { const v = this.post[k]; this._gradeDefaults[k] = v?.clone ? v.clone() : v; }
     const u = {};
     for (const [k, v] of Object.entries(this.post)) u[k] = { value: v };
     u.tScene = { value: null }; u.tBloom = { value: null }; u.time = { value: 0 }; u.sceneTexel = { value: new THREE.Vector2() };
@@ -218,6 +224,26 @@ export class Renderer {
     this.compMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: COMPOSITE_FRAG, uniforms: u, depthTest: false, depthWrite: false });
     this.quad = new FullScreenQuad(this.downMat);
     this.setQuality('high');
+  }
+
+  /**
+   * Map colour grade: { saturation, contrast, shadowTint, highlightTint, lift, gamma, gain } (tints / CDL vectors as
+   * [r, g, b] linear multipliers or '#rrggbb'), plus the map's exposure. Keys left out (or grade = null) go back to
+   * the neutral defaults, so every map load starts from a clean grade. Overlay effects add deltas on top.
+   */
+  setGrade(grade, exposure = 1) {
+    const g = grade && typeof grade === 'object' ? grade : {};
+    const D = this._gradeDefaults;
+    for (const k of GRADE_KEYS) {
+      const v = g[k] ?? D[k];
+      if (this.post[k]?.isVector3) {
+        if (typeof v === 'string') { const c = new THREE.Color(v); this.post[k].set(c.r, c.g, c.b); }
+        else if (Array.isArray(v)) this.post[k].set(v[0], v[1], v[2]);
+        else if (typeof v === 'number') this.post[k].setScalar(v);
+        else this.post[k].copy(v);
+      } else if (typeof v === 'number') this.post[k] = v;
+    }
+    this.post.exposure = exposure ?? D.exposure;
   }
 
   /** BORDER: element-colour screen frame. color: hex / THREE.Color (sRGB), alpha 0..0.35 (0 = off). */

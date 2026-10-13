@@ -1,38 +1,68 @@
-// In-game HUD (DOM, CS2-inspired): dynamic crosshair, hit / kill markers, damage-direction arcs, vitals,
-// ammo, money, round banner, kill feed, boss bar, XP bar, toasts and optional floating damage numbers.
+// In-game HUD (DOM, CS2-inspired with the CSO zombie-mode layer): SVG crosshair registry (hit-reactive for premium
+// tiers), skill meters around the crosshair, hit / kill markers, damage-direction wedges, vitals, ammo, money,
+// round banner, kill feed, boss bar, XP bar, toasts, two-tier floating damage numbers, kill marks + streak, the
+// skill dock (desktop ★/Q), skill CARD, ready border pulse, skill hint card, crisis-armour and aura chips.
 // DOM writes are batched: text only changes when the value changes.
+//
+// Hooks other systems call (all optional-chained by callers):
+//   onHit(info, res, target)              every damaging hit by us
+//   killFeed(killer, weaponId, victim, head)   ('你' = a local kill: kill mark, streak, badge)
+//   onSkillReady(ws) / readyPulse(ws) / onSkillDenied(ws, slot, c) / onSkillCast(ws, slot, sk, inst) / onCrisis(ws, cfg)
+//   card(text, { color, sub })            招式名卡 CARD (§1.7.5): brush reveal 0.8 s, hold 1.2 s, fade 0.3 s at 22 % height
+//   border(color, alpha <= 0.35, dur)     element screen border (DOM; §1.9 #4)
+//   banner(text, { kind, sub })           chrome banner (round clear / boss / wipe)
+//   showSkillHint(ws, force)              技能提示卡 (§1.9 #11)
+//   clipEvent(id, o)                      clip 'hud' events: card | border | banner | hint | toast
 import { weaponIcon } from './icons.js';
-import { specialOf } from '../weapons/specials.js';
+import * as SP from '../weapons/specials.js';
+import { specialOf, hudInfo, auraState, paletteOf } from '../weapons/specials.js';
+import { WEAPONS } from '../weapons/defs.js';
+import { CrosshairView, MeterView, StarView, tierShape, injectCSS, registerCrosshair, CROSSHAIRS } from './crosshairs.js';
+import { DamageNumbers } from './dmgnums.js';
+import { KillLayer, registerKillMark, bakeKillMark } from './killmarks.js';
 
 const el = (cls, parent, html = '') => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; parent?.appendChild(d); return d; };
 
 const ICON_HP = '<svg viewBox="0 0 24 24"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z"/></svg>';
 const ICON_ARMOR = '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5.2-3.4 9.6-8 11-4.6-1.4-8-5.8-8-11V5z"/></svg>';
 const ICON_HEAD = '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M6 17h12v3H6z"/><circle cx="9.5" cy="9" r="1.6" fill="#000"/><circle cx="14.5" cy="9" r="1.6" fill="#000"/></svg>';
+const AURA_ICON = { dmg: '<path d="M4 20L16 8l2-4 2 2-4 2L4 20z"/>', reloadSpeed: '<path d="M18 9a7 7 0 1 0 1 6" fill="none" stroke-width="2.6"/><path d="M19 3v6h-6"/>', regen: '<path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>' };
+// crosshair by tier when the weapon names none (§1.9 #2: exotic and up get their own)
+const TIER_XH = { exotic: 'xh_ring', legacy: 'xh_ring', mythic: 'xh_gem' };
+const skinOf = (def) => def?.premium?.dmgSkin || ({ anti: 'anti', exotic: 'exotic', legacy: 'exotic', mythic: 'mythic' }[def?.tier || (def?.special ? 'anti' : '')] || 'standard');
 
 export class HUD {
   constructor(game, root = document.getElementById('hud')) {
     this.game = game;
     this.root = root;
     root.innerHTML = '';
-    this.settings = { crosshairColor: '#4dff6a', crosshairGap: 4, crosshairLen: 9, crosshairThick: 2, dot: false, hitmarker: true, damageNumbers: false };
+    // headless QA: castSkill, hudInfo, meterAdd, startSkill... and the HUD registries
+    if (game.debug) { game.debug.specials = SP; game.debug.hudkit = { registerCrosshair, registerKillMark, bakeKillMark }; }
+    // damage numbers are on by default (the CSO feel); readyReminder = the 2.5 s ready reminder (§1.7.1);
+    // screenBorder = element screen borders (§1.14 #6)
+    this.settings = { crosshairColor: '#4dff6a', crosshairGap: 4, crosshairLen: 9, crosshairThick: 2, dot: false, hitmarker: true, damageNumbers: true, readyReminder: true, screenBorder: true };
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem('cf.hud') || '{}')); } catch { /* defaults */ }
-    // crosshair
-    this.xh = el('xh', root);
-    this.xhLines = ['t', 'b', 'l', 'r'].map((k) => el('xh-l xh-' + k, this.xh));
-    this.xhDot = el('xh-dot', this.xh);
+    // ready border pulse + buff border sit under everything else
+    this.borderEl = el('skborder', root);
+    // crosshair + its meters
+    this.xh = new CrosshairView(root);
+    this.mts = el('mts', root);
+    this.meterViews = []; this.meterKey = '';
     this.hit = el('hitmark', root, '<i></i><i></i><i></i><i></i>');
     this.headIcon = el('hit-head', root, ICON_HEAD);
-    // damage direction
-    this.dirCv = document.createElement('canvas');
-    this.dirCv.className = 'dmgdir';
-    root.appendChild(this.dirCv);
-    this.dirCtx = this.dirCv.getContext('2d');
-    // vitals
+    // damage direction wedges (06b §9.3.5)
+    this.dirEl = el('dmgdir2', root);
+    this.dirWedges = [];
+    // vitals + crisis armour / aura chips
     this.vitals = el('vitals', root, `<div class="hp">${ICON_HP}<b>100</b></div><div class="ar">${ICON_ARMOR}<b>0</b></div>`);
     this.hpEl = this.vitals.querySelector('.hp b');
     this.arEl = this.vitals.querySelector('.ar b');
     this.hpBox = this.vitals.querySelector('.hp');
+    this.chips = el('skchips', root);
+    this.crisisEl = el('crisis', this.chips, `<svg viewBox="-14 -14 28 28">${tierShape('legacy', 12, 'class="cr-bg"')}<clipPath id="crClip"><rect class="cr-clip" x="-14" y="14" width="28" height="28"/></clipPath>${tierShape('legacy', 12, 'class="cr-fill" clip-path="url(#crClip)"')}${tierShape('legacy', 12, 'class="cr-edge"')}</svg><span></span>`);
+    this.crisisClip = this.crisisEl.querySelector('.cr-clip');
+    this.crisisLabel = this.crisisEl.querySelector('span');
+    this.auraEl = el('auras', this.chips);
     // ammo
     this.ammo = el('ammo', root, '<div class="mag"><b>0</b><span>/ 0</span></div><div class="wname"></div><img class="wicon" alt="">');
     this.magEl = this.ammo.querySelector('b');
@@ -43,7 +73,11 @@ export class HUD {
     this.meterLabel = this.meter.querySelector('span');
     this.meterFill = this.meter.querySelector('i');
     this.meterWin = this.meter.querySelector('u');
-    // money, round, feed, boss, xp, toast, prompt, numbers
+    // desktop skill dock: ★ (Q) face + ◎ alt state; touch shows these on its buttons instead
+    this.dock = el('skdock', root, '<div class="sk-star"></div><div class="sk-alt"><b>◎</b><small>右鍵</small></div>');
+    this.star = new StarView(this.dock.querySelector('.sk-star'), { key: 'Q' });
+    this.altEl = this.dock.querySelector('.sk-alt');
+    // money, round, feed, boss, xp, toast, prompt
     this.money = el('money', root, '<span>$</span><b>0</b>');
     this.moneyEl = this.money.querySelector('b');
     this.round = el('roundbar', root, '<div class="rt"></div><div class="rs"></div>');
@@ -61,12 +95,20 @@ export class HUD {
     this.prompt = el('prompt', root);
     this.spec = el('prompt', root);   // spectating line while bled out, above the spectated teammate
     this.spec.style.top = '22%';
-    this.nums = el('dmgnums', root);
+    // CSO layer: numbers, kill marks / streak / badges / banners, skill CARD, hint card
+    this.nums = new DamageNumbers(root, game);
+    this.kills = new KillLayer(root, game);
+    this.cardEl = el('skcard', root, '<b></b><svg viewBox="0 0 200 14" preserveAspectRatio="none"><path d="M4 9 C40 2 90 12 130 6 S180 4 196 8"/></svg><small></small>');
+    this.hintEl = el('skhint', root);
     this.cache = {};
     this.hitT = 0; this.hitKill = false; this.headT = 0;
     this.feedItems = [];
     this.bossLagV = 1;
     this.visible = true;
+    this.borderT = 0; this.borderDur = 0; this.borderA = 0;
+    this.cardT = 0; this.hintT = 0; this.hintPending = null;
+    this._sndAt = -1;
+    this._pred = [];
   }
 
   _set(key, node, value, prop = 'textContent') {
@@ -78,6 +120,12 @@ export class HUD {
   weaponChanged(ws) {
     this._set('wname', this.wnameEl, `${ws.def.zh} ${ws.def.en}`);
     weaponIcon(this.game.renderer, ws.def.model || ws.def.id).then((url) => { if (url && this.game.arsenal.current === ws) this.wiconEl.src = url; });
+    // the first 3 times a premium weapon comes out, its controls card follows once the fight lets up (§1.9 #11)
+    if (ws.def.special?.skills || ws.def.special?.hint) {
+      let n = 0;
+      try { n = +(localStorage.getItem('cf.hint.' + ws.def.id) || 0); } catch { /* private mode */ }
+      if (n < 3) this.hintPending = ws;
+    }
   }
   ammoChanged() { /* picked up by update() */ }
 
@@ -91,30 +139,61 @@ export class HUD {
   /** Bottom-centre hint; `use` = it asks for the use key (touch shows its use button while one is up). */
   setPrompt(text, use = true) { this._set('prompt', this.prompt, text || ''); this.prompt.classList.toggle('on', !!text); this.promptUse = !!text && use; }
 
-  /** Called by weapons for every damaging hit. */
+  /** Called by weapons and skills for every damaging hit. */
   onHit(info, res, target) {
+    const g = this.game;
+    this.xh.hit();
+    // melee hits report no point: the target's centre stands in
+    const point = info.point || (this.settings.damageNumbers ? target?.center?.() : null);
+    if (this.settings.damageNumbers && point) {
+      const def = WEAPONS[info.weapon] || g.arsenal?.def;
+      const n = res?.damage ?? info.amount;
+      if (n > 0.5) this.nums.add(point, n, { head: !!info.headshot, crit: n >= 120, armored: !!info.armored, elem: info.elem || (info.burn ? 'fire' : null), skin: skinOf(def), hex: def?.special ? paletteOf(def) : null, target: target?.zombie || target });
+    }
+    // our kill as we see it (instant; guests predict): kill mark / streak / badge -- the host's later kill feed line
+    // for it is then skipped (_pred), kills no hit reported (grenades, fire) come through killFeed
+    if (res?.killed) {
+      const z = target?.zombie || target;
+      this._pred.push(g.time);
+      this._localKill(WEAPONS[info.weapon] || g.arsenal?.def, info.weapon, z?.def?.zh, !!info.headshot, { knife: !!info.melee, explosive: !!info.explosive });
+    }
     if (!this.settings.hitmarker) return;
     this.hitT = 1;
     if (res?.killed) this.hitKill = true;
     if (info.headshot) this.headT = 1;
-    if (this.settings.damageNumbers && info.point) this._number(info.point, Math.round(res?.damage ?? info.amount), info.headshot);
-    this.game.audio?.play(res?.killed ? (info.headshot ? 'headshot_kill' : 'killmarker') : info.headshot ? 'hitmarker_head' : 'hitmarker', { volume: 0.7 });
-  }
-
-  _number(point, n, head) {
-    const d = el('dn' + (head ? ' head' : ''), this.nums, String(n));
-    d._p = point.clone(); d._t = 0; d._dx = (Math.random() - 0.5) * 30;
-    this._numsList = this._numsList || [];
-    this._numsList.push(d);
-    if (this._numsList.length > 24) this._numsList.shift().remove();
+    // one marker sound per 30 ms (area skills hit many at once)
+    if (g.time - this._sndAt > 0.03 || res?.killed) {
+      this._sndAt = g.time;
+      g.audio?.play(res?.killed ? (info.headshot ? 'headshot_kill' : 'killmarker') : info.headshot ? 'hitmarker_head' : 'hitmarker', { volume: 0.7 });
+    }
   }
 
   killFeed(killer, weaponId, victim, headshot) {
     const item = el('fi', null, `<span class="k">${killer}</span><img alt="">${headshot ? `<i class="hs">${ICON_HEAD}</i>` : ''}<span class="v">${victim}</span>`);
-    weaponIcon(this.game.renderer, weaponId, { w: 160, h: 60 }).then((u) => { if (u) item.querySelector('img').src = u; });
+    const def = WEAPONS[weaponId];
+    if (def?.tier === 'mythic') item.classList.add('mythic');   // gold-edged weapon silhouette (§1.9 #10)
+    weaponIcon(this.game.renderer, def?.model || weaponId, { w: 160, h: 60 }).then((u) => { if (u) item.querySelector('img').src = u; });
     this.feed.prepend(item);
     this.feedItems.unshift({ el: item, t: 6 });
     while (this.feedItems.length > 5) this.feedItems.pop().el.remove();
+    if (killer === '你') {
+      while (this._pred.length && this.game.time - this._pred[0] > 2.5) this._pred.shift();
+      if (this._pred.length) this._pred.shift();
+      else this._localKill(def, weaponId, victim, headshot);
+    }
+  }
+
+  /** Our kill: kill mark (exotic and up), streak marks, badge; the wave's last zombie / a boss = final version. */
+  _localKill(def, weaponId, victim, head, how = {}) {
+    const g = this.game, m = g.match;
+    const tier = def?.tier;
+    const boss = !!m && !!victim && (victim === m.boss?.zombie?.def?.zh || victim === m.boss?.name || victim === m.bossName);
+    const left = m ? (m.isMirror ? (m.left ?? 9) - 1 : (m.queue?.length ?? 1) + (g.zombies?.alive ?? 1)) : 1;
+    const final = boss || !!m && m.state === 'round' && left <= 0;
+    const mark = def?.premium?.killMark || (tier === 'exotic' || tier === 'mythic' || tier === 'legacy' ? 'km_generic' : null);
+    const explosive = how.explosive || !!def && (def.projectile || def.cat === 'heavy' || def.cat === 'grenade') || weaponId === 'he' || weaponId === 'fire';
+    this.kills.kill({ mark, tint: def?.special ? paletteOf(def).core : '#ffc74a', gold: tier === 'mythic', head, knife: how.knife || def?.cat === 'melee', explosive: explosive && !head, final });
+    if (boss) this.kills.banner('BOSS 擊破！', { kind: 'boss', sub: victim });
   }
 
   setRound(title, sub) { this._set('rt', this.roundT, title || ''); this._set('rs', this.roundS, sub || ''); }
@@ -128,6 +207,75 @@ export class HUD {
     this.bossLag.style.width = (this.bossLagV * 100).toFixed(1) + '%';
   }
 
+  // ---------------------------------------------------------------- premium skill presentation
+  /** 招式名卡: "〔主名〕．〔招式名〕" brush-written at 22 % height, never over the centre. */
+  card(text, { color = '#ffc74a', sub = '' } = {}) {
+    const b = this.cardEl.querySelector('b');
+    b.innerHTML = [...text].map((ch, i) => `<i style="--i:${i}">${ch === ' ' ? '&nbsp;' : ch}</i>`).join('');
+    this.cardEl.querySelector('small').textContent = sub;
+    this.cardEl.style.setProperty('--cc', color);
+    this.cardEl.classList.remove('on'); void this.cardEl.offsetWidth; this.cardEl.classList.add('on');
+    this.cardT = 2.3;
+  }
+  /** Element-coloured screen border (buffs; alpha capped at 0.35, from 45 % of the screen radius). */
+  border(color, alpha = 0.3, dur = 1) {
+    if (this.settings.screenBorder === false) return;   // its own comfort toggle (§1.14 #6)
+    this.borderEl.style.setProperty('--bc', color);
+    this.borderA = Math.min(0.35, alpha); this.borderDur = dur; this.borderT = dur;
+  }
+  /** Ready reminder (every 2.5 s while ready): a 0.3 s border flash at alpha 0.08 (§1.7.1 beat 7). */
+  readyPulse(ws) { if (this.borderT <= 0) this.border(paletteOf(ws.def).rim, 0.08, 0.3); this.star.burst(4); }
+  onSkillReady(ws) {
+    const hex = paletteOf(ws.def);
+    this.xh.el.style.setProperty('--rc', hex.rim);
+    // the 4 crosshair nodes light 80 ms apart with 4 rising tones (§1.9 #2); shape + sound + haptic, not colour alone
+    [1, 1.122, 1.26, 1.498].forEach((p, i) => setTimeout(() => this.game.audio?.play('xh_node', { volume: 0.4, pitch: p }), i * 80));
+    this.border(hex.rim, 0.1, 0.3);
+    this.star.burst(10);
+    this.game.touch?.skillReady?.(ws);
+  }
+  onSkillDenied(ws, slot, c) {
+    this.star.shake();
+    this.game.touch?.skillDenied?.(ws, slot, c);
+    if (c.why === 'hold') this.toast('長按 ★ 施放大招', 900);
+    else if (c.why === 'meter') this.toast(`${slot === 'ult' ? '大招' : '技能'}計量不足　${Math.ceil(c.need * 100)}%`, 800);
+    else if (c.why === 'cd') this.toast('技能冷卻中', 700);
+  }
+  onSkillCast(ws, slot, sk) {
+    this.star.burst(slot === 'ult' ? 10 : 6);
+    this.game.touch?.skillCast?.(ws, slot, sk);
+    this.hintEl.classList.remove('on'); this.hintT = 0;
+  }
+  onCrisis(ws, cfg) {
+    this.crisisEl.classList.remove('shatter'); void this.crisisEl.offsetWidth; this.crisisEl.classList.add('shatter');
+    this.card(cfg.name || '危機護甲', { color: paletteOf(ws.def).rim });
+  }
+  banner(text, opts) { this.kills.banner(text, opts); }
+  /** Clip 'hud' events from the Arsenal (anim track). */
+  clipEvent(id, o = {}) {
+    const ws = this.game.arsenal?.current, hex = ws ? paletteOf(ws.def) : {};
+    if (id === 'card') this.card(o.text || '', { color: o.color || hex.rim, sub: o.sub });
+    else if (id === 'border') this.border(o.color || hex.rim, o.a ?? 0.25, o.dur ?? 1);
+    else if (id === 'banner') this.banner(o.text || '', o);
+    else if (id === 'hint' && ws) this.showSkillHint(ws, true);
+    else if (o.text) this.toast(o.sub ? `${o.text}　${o.sub}` : o.text, (o.dur ?? 1.6) * 1000);
+  }
+
+  /** 技能提示卡: ◎ / ★ tap / ★ hold rows + the meter sources, beside the ★ key, 4 s, α <= 0.6 (§1.9 #11). */
+  showSkillHint(ws, force = false) {
+    // v1 series specials describe their controls in special.hint { tap / alt / hold: { zh, desc }, src }
+    const sk = ws?.def.special?.skills || ws?.def.special?.hint;
+    if (!sk) return;
+    const name = (s, slot) => s && (s.zh || s.id) ? `<li class="h-${slot}"><i></i><b>${{ alt: '◎', tap: '★ 點按', hold: '★ 長按', ult: '★ 長按' }[slot]}</b><span>${s.zh || s.id}${s.desc ? `<small>${s.desc}</small>` : ''}</span></li>` : '';
+    const srcs = ws.def.special.hint?.src ? [ws.def.special.hint.src] : Object.values(ws.def.special.meters || {}).map((c) => c.src || c.label || c.zh).filter(Boolean);
+    this.hintEl.innerHTML = `<h4>${ws.def.zh}</h4><ul>${name(sk.alt, 'alt')}${name(sk.tap, 'tap')}${name(sk.hold, 'hold')}${name(sk.ult, 'ult')}</ul>${srcs.length ? `<p>計量：${srcs.join('／')}</p>` : ''}`;
+    this.hintEl.style.setProperty('--hc', paletteOf(ws.def).rim);
+    this.hintEl.classList.add('on');
+    this.hintT = 4;
+    if (!force) { try { localStorage.setItem('cf.hint.' + ws.def.id, String(+(localStorage.getItem('cf.hint.' + ws.def.id) || 0) + 1)); } catch { /* private mode */ } }
+  }
+
+  // ---------------------------------------------------------------- frame
   update(dt) {
     const g = this.game;
     const st = g.status;
@@ -138,27 +286,22 @@ export class HUD {
     const dead = st?.alive === false;
     this._set('spec', this.spec, dead ? (g.spectating ? `觀戰：${g.spectating}　開火切換` : '你已陣亡　等待回合結束') : '');
     this.spec.classList.toggle('on', dead);
+    const ws = ar?.current, def = ar?.def;
+    const info = ws ? hudInfo(ws, g) : null;
     // crosshair: gap follows the real spread cone
-    const def = ar?.def;
     const scoped = g.renderer.post.scopeMask > 0;
     const aim = g.vm?.aim ?? 0;
-    const showXh = !dead && def && !scoped && def.cat !== 'melee' && aim < 0.6;
-    this.xh.style.opacity = showXh ? 1 : 0;
-    if (showXh) {
-      const H = window.innerHeight;
-      const focal = (H / 2) / Math.tan((g.camera.fov * Math.PI) / 360);
-      const gapPx = Math.max(this.settings.crosshairGap, Math.tan((ar.spreadDeg() * Math.PI) / 180) * focal * 0.6);
-      const s = this.settings, gp = Math.round(gapPx);
-      const k = `${gp}|${s.crosshairColor}|${s.crosshairLen}|${s.crosshairThick}`;
-      if (this.cache.xh !== k) {
-        this.cache.xh = k;
-        const [t, b, l, r] = this.xhLines;
-        const L = s.crosshairLen, T = s.crosshairThick;
-        const put = (n, w, h, x, y) => Object.assign(n.style, { width: w + 'px', height: h + 'px', left: x + 'px', top: y + 'px', background: s.crosshairColor });
-        put(t, T, L, -T / 2, -gp - L); put(b, T, L, -T / 2, gp); put(l, L, T, -gp - L, -T / 2); put(r, L, T, gp, -T / 2);
-        this.xhDot.style.cssText = `display:${s.dot ? 'block' : 'none'};background:${s.crosshairColor}`;
-      }
-    }
+    const showXh = !dead && !!def && !scoped && def.cat !== 'melee' && aim < 0.6;
+    const H = window.innerHeight;
+    const focal = (H / 2) / Math.tan((g.camera.fov * Math.PI) / 360);
+    const gapPx = ar?.current ? Math.max(this.settings.crosshairGap, Math.tan((ar.spreadDeg() * Math.PI) / 180) * focal * 0.6) : this.settings.crosshairGap;
+    const tier = info?.tier || def?.tier || 'standard';
+    // a weapon's own xh_* until it is registered: its tier's generic one
+    const xhId = (CROSSHAIRS[info?.crosshair] ? info.crosshair : TIER_XH[tier]) || 'xh_default';
+    this.xh.update(dt, { id: xhId, gap: gapPx, settings: this.settings, color: xhId === 'xh_default' ? this.settings.crosshairColor : info?.hex.core || '#fff',
+      color2: info?.hex.rim, hitColor: info?.hex.core || '#ffffff', react: !!info, ready: !!(info?.ready || info?.star?.tap && info.v1), active: !!info?.star?.active,
+      nodes: !!info?.star?.has, visible: showXh });
+    this._meters(info, !dead && !scoped);
     // hit marker
     this.hitT = Math.max(0, this.hitT - dt * 5);
     this.hit.style.opacity = this.hitT.toFixed(2);
@@ -173,14 +316,14 @@ export class HUD {
       this._set('ar', this.arEl, String(Math.ceil(st.armor)));
       this.hpBox.classList.toggle('low', st.hp < 30);
     }
+    this._chips(info);
     // ammo
-    const ws = ar?.current;
     if (ws) {
       const melee = ws.def.cat === 'melee';
       this.ammo.classList.toggle('melee', melee);
       const inf = !melee && g.arsenal._mods?.(ws).infinite;
       this._set('mag', this.magEl, melee || inf ? '∞' : String(ws.ammo));
-      this._set('res', this.resEl, melee ? '' : '/ ' + ws.reserve);
+      this._set('res', this.resEl, melee ? '' : '/ ' + (Number.isFinite(ws.reserve) ? ws.reserve : '∞'));
       this.magEl.classList.toggle('low', !melee && ws.ammo <= Math.ceil(ws.def.mag * 0.25));
       const m = specialOf(ws)?.meter?.(ws, g);
       this.meter.style.display = m ? '' : 'none';
@@ -189,9 +332,18 @@ export class HUD {
         this.meterFill.style.width = (Math.max(0, Math.min(1, m.value)) * 100).toFixed(1) + '%';
         this.meterFill.style.background = m.color;
         this.meter.classList.toggle('ready', !!m.ready);
-        if (m.window) { this.meterWin.style.display = ''; this.meterWin.style.left = (m.window[0] * 100) + '%'; this.meterWin.style.width = ((m.window[1] - m.window[0]) * 100) + '%'; }
+        if (m.window && !Array.isArray(m.window[0])) { this.meterWin.style.display = ''; this.meterWin.style.left = (m.window[0] * 100) + '%'; this.meterWin.style.width = ((m.window[1] - m.window[0]) * 100) + '%'; }
         else this.meterWin.style.display = 'none';
       }
+    }
+    // desktop skill dock
+    const dockOn = !dead && !!(info?.star?.has || info?.alt?.has);
+    if (this.cache.dock !== dockOn) { this.cache.dock = dockOn; this.dock.classList.toggle('on', dockOn); }
+    if (dockOn) {
+      this.star.update(info.star, info.hex, tier);
+      this.altEl.style.display = info.alt?.has ? '' : 'none';
+      this.altEl.classList.toggle('act', !!info.alt?.active);
+      this.altEl.classList.toggle('dim', !!info.alt && !info.alt.ok && !info.alt.active);
     }
     this._set('money', this.moneyEl, String(g.match?.money ?? 0));
     if (g.match) {
@@ -206,43 +358,135 @@ export class HUD {
       if (it.t < 0.5) it.el.style.opacity = Math.max(0, it.t * 2).toFixed(2);
       if (it.t <= 0) { it.el.remove(); this.feedItems.splice(i, 1); }
     }
-    this._drawDirs(st);
-    this._updateNumbers(dt);
+    // border / card / hint timers
+    if (this.borderT > 0) {
+      this.borderT = Math.max(0, this.borderT - dt);
+      const u = this.borderDur > 0 ? this.borderT / this.borderDur : 0, edge = Math.min(1, (1 - u) / 0.15, u / 0.3);
+      this.borderEl.style.opacity = (this.borderA * Math.max(0, edge)).toFixed(3);
+    } else if (this.borderEl.style.opacity !== '0') this.borderEl.style.opacity = '0';
+    if (this.cardT > 0 && (this.cardT -= dt) <= 0) this.cardEl.classList.remove('on');
+    if (this.hintT > 0 && (this.hintT -= dt) <= 0) this.hintEl.classList.remove('on');
+    // pending hint card: only out of combat (no shot fired / hit taken for 2 s) and with the weapon still in hand
+    if (this.hintPending) {
+      if (ar?.current !== this.hintPending || dead) this.hintPending = null;
+      else if ((ar.sinceShot ?? 9) > 2 && g.time - (st?.lastHitAt ?? -9) > 2 && this.cardT <= 0) { this.showSkillHint(this.hintPending); this.hintPending = null; }
+    }
+    if (this.hintT > 0 && ((ar?.sinceShot ?? 9) < 0.1 || g.time - (st?.lastHitAt ?? -9) < 0.1)) { this.hintT = 0; this.hintEl.classList.remove('on'); }
+    this._drawDirs(st, dt);
+    this.nums.update(dt);
+    this.kills.update(dt);
   }
 
-  _drawDirs(st) {
-    const cv = this.dirCv;
-    const W = window.innerWidth, H = window.innerHeight;
-    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
-    const ctx = this.dirCtx;
-    if (!st || !st.hitDirs.length) { if (this._dirsDrawn) { ctx.clearRect(0, 0, W, H); this._dirsDrawn = false; } return; }
-    ctx.clearRect(0, 0, W, H);
-    this._dirsDrawn = true;
-    const r = Math.min(W, H) * 0.22;
-    for (const d of st.hitDirs) {
-      const a = -d.angle - Math.PI / 2;
-      ctx.strokeStyle = `rgba(230,30,20,${Math.min(1, d.t).toFixed(2)})`;
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.arc(W / 2, H / 2, r, a - 0.32, a + 0.32);
-      ctx.stroke();
+  /** Crosshair-anchored meters (60 % opacity mirrors); a new view set whenever the weapon or the meter types change. */
+  _meters(info, show) {
+    const list = show && info ? info.meters.filter((m) => m.type && m.type !== 'bar') : [];
+    const key = list.map((m) => m.type).join(',');
+    if (key !== this.meterKey) {
+      this.meterKey = key;
+      this.mts.innerHTML = '';
+      const seen = {};
+      this.meterViews = list.map((m) => { const v = new MeterView(m.type, seen[m.type] = (seen[m.type] ?? -1) + 1); this.mts.appendChild(v.el); return v; });
+    }
+    for (let i = 0; i < list.length; i++) this.meterViews[i].set(list[i]);
+  }
+
+  /** Crisis armour (shield: progress fill, ready glow, shatter on trigger) and active team auras. */
+  _chips(info) {
+    const c = info?.crisis, on = !!c?.has;
+    if (this.cache.cr !== on) { this.cache.cr = on; this.crisisEl.style.display = on ? 'block' : 'none'; }   // (the sheet hides it by default)
+    if (on) {
+      const k = `${Math.round(c.frac * 50)}|${c.ready}|${c.used}`;
+      if (this.cache.crk !== k) {
+        this.cache.crk = k;
+        this.crisisClip.setAttribute('y', (12 - c.frac * 24).toFixed(1));
+        this.crisisEl.classList.toggle('ready', c.ready);
+        this.crisisEl.classList.toggle('used', c.used);
+        this.crisisEl.style.setProperty('--crc', info.hex.rim);
+        this.crisisLabel.textContent = c.used ? '已觸發' : c.ready ? '護甲' : Math.floor(c.frac * 100) + '%';
+      }
+    }
+    const a = auraState(this.game);
+    const k = Object.entries(a).map(([t, v]) => `${t}:${t === 'regen' ? v.toFixed(1) : Math.round((v - 1) * 100)}`).join(',');
+    if (this.cache.aura !== k) {
+      this.cache.aura = k;
+      this.auraEl.innerHTML = Object.entries(a).filter(([t, v]) => t === 'regen' ? v > 0 : Math.abs(v - 1) > 0.005).map(([t, v]) =>
+        `<i class="au"><svg viewBox="0 0 24 24">${AURA_ICON[t] || '<circle cx="12" cy="12" r="6"/>'}</svg>${t === 'regen' ? '+' + v.toFixed(0) + '/s' : (v > 1 ? '+' : '') + Math.round((t === 'reloadSpeed' ? v - 1 : v - 1) * 100) + '%'}</i>`).join('');
     }
   }
 
-  _updateNumbers(dt) {
-    if (!this._numsList?.length) return;
-    const cam = this.game.camera;
-    const W = window.innerWidth, H = window.innerHeight;
-    for (let i = this._numsList.length - 1; i >= 0; i--) {
-      const d = this._numsList[i];
-      d._t += dt;
-      if (d._t > 0.9) { d.remove(); this._numsList.splice(i, 1); continue; }
-      const p = d._p.clone().project(cam);
-      if (p.z > 1) { d.style.display = 'none'; continue; }
-      d.style.display = '';
-      const x = (p.x * 0.5 + 0.5) * W + d._dx * d._t, y = (-p.y * 0.5 + 0.5) * H - d._t * 50;
-      d.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${(1 + Math.max(0, 0.25 - d._t) * 2).toFixed(2)})`;
-      d.style.opacity = Math.min(1, (0.9 - d._t) * 3).toFixed(2);
+  /** Red trapezoid wedges on a 110 px circle toward the attacker, 0.85 -> 0 over 1 s (06b §9.3.5). */
+  _drawDirs(st, dt) {
+    const dirs = st?.hitDirs || [];
+    while (this.dirWedges.length < dirs.length) {
+      const w = el('dw', this.dirEl, '<svg viewBox="0 0 64 14"><path d="M2 0H62L54 14H10Z"/></svg>');
+      this.dirWedges.push(w);
+    }
+    for (let i = 0; i < this.dirWedges.length; i++) {
+      const w = this.dirWedges[i], d = dirs[i];
+      if (!d) { if (w.style.display !== 'none') w.style.display = 'none'; continue; }
+      w.style.display = '';
+      const deg = (-d.angle * 180) / Math.PI;
+      w.style.transform = `rotate(${deg.toFixed(1)}deg) translateY(-110px)`;
+      w.style.opacity = (Math.min(1, d.t) * 0.85).toFixed(2);
     }
   }
 }
+
+injectCSS('cf-hud2', `
+.skborder { position: fixed; inset: 0; opacity: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 45%, var(--bc, #ffc74a) 115%); }
+.dmgdir2 { position: fixed; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.dmgdir2 .dw { position: absolute; left: -32px; top: -7px; width: 64px; height: 14px; transform-origin: 32px 7px; }
+.dmgdir2 .dw svg { width: 100%; height: 100%; display: block; }
+.dmgdir2 .dw path { fill: #e61e14; stroke: rgba(0,0,0,.5); stroke-width: 1; }
+.skchips { position: fixed; left: calc(18px + var(--safe-left, 0px)); bottom: calc(88px + var(--safe-bottom, 0px)); display: flex; gap: 8px; align-items: center; pointer-events: none; }
+body.touch .skchips { bottom: calc(72px + var(--safe-bottom, 0px)); }
+body.lefty.touch .skchips { left: auto; right: calc(18px + var(--safe-right, 0px)); }
+.crisis { position: relative; width: 30px; height: 30px; display: none; }
+.crisis svg { width: 30px; height: 30px; overflow: visible; }
+.crisis .cr-bg { fill: rgba(0,0,0,.45); stroke: none; } .crisis .cr-fill { fill: var(--crc, #ffc74a); opacity: .55; } .crisis .cr-edge { fill: none; stroke: #fff; stroke-width: 1.4; opacity: .7; }
+.crisis.ready .cr-fill { opacity: .95; } .crisis.ready svg { filter: drop-shadow(0 0 4px var(--crc)); animation: pulse 1.2s infinite; }
+.crisis.used { opacity: .35; }
+.crisis span { position: absolute; left: 34px; top: 7px; font: 700 12px var(--font); white-space: nowrap; color: #eee; }
+.crisis.shatter svg { animation: crShatter .5s ease-out; }
+@keyframes crShatter { 0% { transform: scale(1); } 30% { transform: scale(1.5) rotate(-8deg); filter: brightness(3); } 100% { transform: scale(1); } }
+.auras { display: flex; gap: 6px; }
+.auras .au { display: flex; align-items: center; gap: 2px; font: 700 12px var(--num); font-style: normal; color: #9ff7c8; background: rgba(0,0,0,.45); padding: 1px 5px 1px 3px; border-radius: 2px; }
+.auras .au svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; }
+.skdock { position: fixed; right: calc(200px + var(--safe-right, 0px)); bottom: calc(22px + var(--safe-bottom, 0px)); display: none; align-items: center; gap: 14px; pointer-events: none; }
+.skdock.on { display: flex; }
+body.touch .skdock { display: none !important; }
+.skdock .sk-star { width: 44px; height: 44px; border-radius: 50%; background: rgba(10,12,14,.45); }
+.skdock .sk-star::before { content: '★'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 20px; color: #fff; }
+.skdock .sk-alt { display: flex; flex-direction: column; align-items: center; font: 700 18px var(--num); color: #fff; opacity: .9; }
+.skdock .sk-alt small { font: 600 10px var(--font); color: #bbb; }
+.skdock .sk-alt.act { color: #ffd27a; text-shadow: 0 0 6px #ffb43a; } .skdock .sk-alt.dim { opacity: .35; }
+.skcard { position: fixed; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; }
+.skcard.on { animation: cardLife 2.3s linear both; }
+@keyframes cardLife { 0% { opacity: 1; } 87% { opacity: 1; } 100% { opacity: 0; } }
+.skcard b { display: block; white-space: nowrap; font: 900 clamp(30px, 7.5vh, 56px)/1.1 "Noto Serif TC", "Source Han Serif TC", "Songti TC", "PMingLiU", serif; letter-spacing: .08em;
+  color: #fff8ec; -webkit-text-stroke: 1.5px #1a0d08; paint-order: stroke fill; text-shadow: 0 0 14px var(--cc), 0 2px 0 rgba(0,0,0,.6); }
+.skcard b i { font-style: normal; display: inline-block; clip-path: inset(0 0 100% 0); }
+.skcard.on b i { animation: cardInk .32s calc(var(--i) * 75ms) cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes cardInk { 0% { clip-path: inset(0 0 100% 0); transform: translateY(-6px) scale(1.15); filter: blur(2px); } 100% { clip-path: inset(0 0 -10% 0); transform: none; filter: none; } }
+.skcard svg { display: block; width: 80%; height: 12px; margin: 2px auto 0; overflow: visible; }
+.skcard svg path { fill: none; stroke: var(--cc); stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 220; stroke-dashoffset: 220; filter: drop-shadow(0 0 4px var(--cc)); }
+.skcard.on svg path { animation: cardSwash .5s .5s ease-out forwards; }
+@keyframes cardSwash { to { stroke-dashoffset: 0; } }
+.skcard small { display: block; margin-top: 2px; font: 600 12px var(--num); letter-spacing: .3em; color: #e8d6a8; text-shadow: 0 1px 2px #000; }
+.skhint { position: fixed; right: calc(14px + var(--safe-right, 0px)); top: 16%; width: min(250px, 30vw); padding: 8px 12px 9px; background: rgba(8,10,12,.6); border: 1px solid var(--hc, #ffc74a);
+  border-left-width: 3px; border-radius: 3px; font-family: var(--font); color: #eee; opacity: 0; transform: translateX(14px); transition: opacity .35s, transform .35s; pointer-events: none; }
+.skhint.on { opacity: .95; transform: none; }
+body.touch .skhint { top: 12%; right: calc(4% + var(--safe-right, 0px)); }
+.skhint h4 { margin: 0 0 5px; font-size: 13px; letter-spacing: .12em; color: var(--hc); }
+.skhint ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.skhint li { display: grid; grid-template-columns: 14px 64px 1fr; align-items: center; gap: 6px; font-size: 12px; }
+.skhint li i { width: 10px; height: 10px; border: 1.5px solid var(--hc); border-radius: 50%; }
+.skhint li.h-tap i { animation: hTap 1s infinite; } .skhint li.h-ult i, .skhint li.h-hold i { border-radius: 50%; background: conic-gradient(var(--hc) 0 var(--p, 0%), transparent 0); animation: hHold 1.2s infinite; }
+.skhint li.h-alt i { border-radius: 2px; transform: rotate(45deg); }
+@keyframes hTap { 0%, 100% { transform: scale(1); } 20% { transform: scale(.6); } }
+@property --p { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+@keyframes hHold { 0% { --p: 0%; } 60%, 100% { --p: 100%; } }
+.skhint li b { font: 700 12px var(--num); color: #fff; } .skhint li small { display: block; color: #aaa; font-size: 11px; }
+.skhint p { margin: 6px 0 0; font-size: 11px; color: #bbb; }
+.feed .fi.mythic img { filter: drop-shadow(0 0 1px #e8b54a) drop-shadow(0 0 1px #e8b54a); }
+`);

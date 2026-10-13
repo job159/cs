@@ -279,7 +279,7 @@ export class Armory extends Screen {
     // bars never drop below a sliver, so a weak stat still reads as a (short) bar rather than a missing one
     det.innerHTML = `<div class="ad-img ar-img big"><img alt=""><i class="ar-ph"></i></div>
       <div class="ad-n"><b>${esc(w.zh)}</b><small>${esc(w.en)}</small></div>
-      <div class="ad-tags"><span>${CATS[w.cat]?.zh || ''}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${w.mag ? `<span>彈匣 ${w.mag} / ${w.reserve}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
+      <div class="ad-tags"><span>${CATS[w.cat]?.zh || ''}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${w.mag ? `<span>彈匣 ${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
       <div class="ad-cols">
         <div class="ad-stats">${w.cat === 'melee' ? '' : weaponStats(w).map(([k, v]) => `<div><span>${k}</span><i><u style="width:${(Math.max(0.06, v) * 100).toFixed(0)}%"></u></i></div>`).join('')}</div>
         <div class="ad-nums">${weaponNums(w).map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>

@@ -205,7 +205,8 @@ staggered kick up dust at their feet automatically (`knockDust()` for manual use
 Weapon definitions can opt in without touching code: `def.fx = { ramp: RAMP.blue, flashScale: 1.2,
 tracer: { color: [2, 3.5, 9], glow: [0.6, 1, 3], width: 0.03, length: 4 }, tracerEvery: 1 }` and
 `def.suppressed = true` (gas puff, no tracer, tiny light). Special modes (`specials.js` modifiers) set
-`flash: 'energy' | 'magma'` and `tracer: [r, g, b]`.
+`flash: 'energy' | 'magma'`, `flashScale` and `tracer: [r, g, b]` — or a list of colours the split rounds cycle
+through (雙相 overphase: cyan / amber, its hexagonal muzzle crown is `weapons/antical.js` phaseCrown).
 
 Recipes (from 06b): Thunderbolt = `beam` (core [2.5,3.5,8], glow [0.6,0.5,2.2], wCore 0.02, wGlow 0.16, life 0.6,
 shrink 0.4) + blue `sparkBurst` at the hit; JANUS lightning = `bolt` with col [6,3.6,0.6], glow [2.2,1,0.1],

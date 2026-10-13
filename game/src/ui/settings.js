@@ -12,7 +12,7 @@ export const DEFAULTS = {
   touchSens: 1.0, mouseSens: 1.0, adsSens: 1.0, gyro: 'off', gyroSens: 1.0, fov: 96, leftHanded: false, haptics: true,
   hudScale: 100, hudAlpha: 100,
   quality: 'auto', showFps: false,
-  xhColor: '#4dff6a', xhSize: 9, xhGap: 4, xhThick: 2, xhDot: false, hitmarker: true, damageNumbers: false,
+  xhColor: '#4dff6a', xhSize: 9, xhGap: 4, xhThick: 2, xhDot: false, hitmarker: true, damageNumbers: true,
   master: 90, sfx: 100, music: 55,
 };
 
@@ -33,7 +33,7 @@ export class Settings {
       // older per-feature keys (HUD crosshair, touch sensitivity) seed the first load
       const hud = JSON.parse(localStorage.getItem('cf.hud') || 'null');
       if (hud) Object.assign(this.v, { xhColor: hud.crosshairColor ?? this.v.xhColor, xhGap: hud.crosshairGap ?? this.v.xhGap, xhSize: hud.crosshairLen ?? this.v.xhSize,
-        xhThick: hud.crosshairThick ?? this.v.xhThick, xhDot: hud.dot ?? this.v.xhDot, hitmarker: hud.hitmarker ?? true, damageNumbers: hud.damageNumbers ?? false });
+        xhThick: hud.crosshairThick ?? this.v.xhThick, xhDot: hud.dot ?? this.v.xhDot, hitmarker: hud.hitmarker ?? true, damageNumbers: hud.damageNumbers ?? true });
       const ts = localStorage.getItem('cf.touchSens');
       if (ts) this.v.touchSens = +ts || 1;
       Object.assign(this.v, JSON.parse(localStorage.getItem(KEY) || '{}'));

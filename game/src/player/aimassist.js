@@ -28,6 +28,7 @@ export class AimAssist {
     cam.getWorldDirection(_f);
     const def = g.arsenal?.def;
     if (!def || def.cat === 'melee') { this._release(s); return; }
+    const str = this.strength * (def.assist ?? 1);   // a weapon's own pull (M07 螭吻: +20 %)
     // best target: smallest angle to the chest (or head if close), within range and a cone
     let best = null, bestAng = 0.2, bestPoint = null;
     for (const z of g.zombies.list) {
@@ -44,7 +45,7 @@ export class AimAssist {
     if (!best) { this._release(s); return; }
     if (this.enabled) {
       // friction: slow the look while over a target
-      const fr = 1 - 0.38 * this.strength;
+      const fr = 1 - Math.min(0.6, 0.38 * str);
       s.lookX *= fr; s.lookY *= fr;
       // magnetism: pull toward the target only while the player turns or shoots (never steals aim at rest)
       const active = Math.abs(s.lookX) + Math.abs(s.lookY) > 1e-4 || s.held.fire;
@@ -53,7 +54,7 @@ export class AimAssist {
         const dx = bestPoint.x - cam.position.x, dy = bestPoint.y - cam.position.y, dz = bestPoint.z - cam.position.z;
         const wantYaw = Math.atan2(-dx, -dz), wantPitch = -Math.atan2(dy, Math.hypot(dx, dz));
         let dyaw = wantYaw - p.yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
-        const k = Math.min(1, dt * 3.2 * this.strength);
+        const k = Math.min(1, dt * 3.2 * str);
         s.lookX -= dyaw * k * 0.5;
         s.lookY += (wantPitch - p.pitch) * k * 0.35;
       }

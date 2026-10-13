@@ -57,7 +57,7 @@ export function haptic(ms) {
 //   hud      { id, ... }                          -> game.hud.clipEvent(id, arg) (fallback: toast of arg.text)
 // Unknown events go to the special: onClipEvent(ws, name, arg, game) (parry windows, custom hits...).
 /** Comfort switches (§1.14 #6) for the clip-driven screen effects; settings may flip them. */
-export const clipComfort = { shake: true, fov: true, overlay: true, hitstop: true };
+export const clipComfort = { shake: true, fov: true, overlay: true, hitstop: true, aberration: true };
 // premium kit components: id -> [fx module, method, call(module, P, opts, arsenal)]; P = Arsenal._fxPlace()
 const KIT_FX = {
   RING: ['sigils', 'ring', (m, P, o) => m.ring(P.pos, o)],
@@ -450,7 +450,9 @@ export class Arsenal {
         // def.fx (premium look, docs/FX.md): { tracer: glowTracer opts, tracerEvery, ramp, flashScale }
         const every = mods.tracer ? 1 : def.suppressed ? 0 : def.fx?.tracerEvery ?? TRACER_EVERY[def.cat] ?? (def.tracer ? 1 : 0);
         if (every > 0 && (ws.shots - 1) % every === 0 && (pellets === 1 || i < 3)) {
-          if (mods.tracer) g.fx?.glowTracer(muzzleApparent, res.end, { color: mods.tracer, glow: mods.tracer.map((c) => c * 0.4) });
+          // a list of colours: the split rounds cycle through it (雙相 cyan / amber)
+          const tc = mods.tracer && (Array.isArray(mods.tracer[0]) ? mods.tracer[i % mods.tracer.length] : mods.tracer);
+          if (tc) g.fx?.glowTracer(muzzleApparent, res.end, { color: tc, glow: tc.map((c) => c * 0.4) });
           else if (def.fx?.tracer) g.fx?.glowTracer(muzzleApparent, res.end, def.fx.tracer);
           else g.fx?.tracer(muzzleApparent, res.end, { cls: def.cat });
         }
@@ -476,7 +478,7 @@ export class Arsenal {
       const dirW = this.vm.socketDir('muzzle', new THREE.Vector3());
       // mz is the TRUE position of the first-person muzzle: the flash is drawn in viewmodel space and its light
       // sits at the real gun so the handguard / sights / glove flash orange (CS2). Special modes recolour it.
-      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, weapon: def.id, lightPos: mz, suppressed: !!def.suppressed, scale: (def.fx?.flashScale ?? 1) * (this.vm.weapon?.dual && this.vm.weapon.side === 'l' ? 0.85 : 1),
+      g.fx?.muzzle(def.flash, mz, dirW, { vm: true, weapon: def.id, lightPos: mz, suppressed: !!def.suppressed, scale: (def.fx?.flashScale ?? 1) * (mods.flashScale ?? 1) * (this.vm.weapon?.dual && this.vm.weapon.side === 'l' ? 0.85 : 1),
         ramp: mods.flash === 'energy' ? RAMP.blue : mods.flash === 'magma' ? RAMP.red : def.fx?.ramp ?? null });
     }
     if (def.shell && def.mode !== 'pump' && def.mode !== 'bolt') this._ejectShell(def.shell);
@@ -583,9 +585,10 @@ export class Arsenal {
     }
     this.shellReload = false;
     const t = (empty ? def.reloadEmpty ?? def.reload : def.reload) * this.reloadMul;
-    let clip = reloadClipFor(this.vm, style, empty), total = t;
-    // rare reload (§1.7.1, §2.25): 1 in premium.rareReloadEvery (8), at most 0.2 s longer, ammo lands on the same frame
+    // premium.reload: the weapon's own reload clip (§1.7.1: a reload shows something not seen otherwise)
     const pr = def.premium;
+    let clip = (pr?.reload && clipFor(pr.reload, this.vm, { def, empty, style })) || reloadClipFor(this.vm, style, empty), total = t;
+    // rare reload (§1.7.1, §2.25): 1 in premium.rareReloadEvery (8), at most 0.2 s longer, ammo lands on the same frame
     ws.reloads = (ws.reloads || 0) + 1;
     if (pr?.rareReload && ws.reloads % (pr.rareReloadEvery ?? 8) === 0) {
       const rare = clipFor(pr.rareReload, this.vm, { def, empty, style });

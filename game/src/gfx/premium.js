@@ -120,17 +120,21 @@ export function runeTexture() {
 /** Material-level defaults (spec defaults in parentheses of §1.5.3), overridable per weapon / per part. */
 const PARAM_DEFAULTS = {
   rimPower: 3.5, veinFreq: 12, veinSpeed: 0.5, veinAxis: 0, shine: 2, sweepT: 4, leaf: 0, leafScale: 180,
-  shardScale: 0, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, gem: 1, coreSkin: 0, runeSpeed: 0.15,
-  runeAxis: 0, runeOrigin: [0, 0, 0], runeWidth: 0.006, flashMask: 1, coreMode: -1,
+  shardScale: 0, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, iridCool: 0, gem: 1, coreSkin: 0, runeSpeed: 0.15,
+  runeAxis: 0, runeOrigin: [0, 0, 0], runeWidth: 0.006, flashMask: 1, coreMode: -1, coreScale: 1,
 };
 const KEY_DEFAULTS = {
   gold_leaf: { leaf: 1 }, crystal: { irid: 0.22 }, bronze_aged: { shine: 1.4 }, black_chrome: { shine: 2.6 },
   porcelain: { shine: 1.6 }, glaze_black: { irid: 0.12 },
 };
 
-/** Parameters for one material: defaults < key defaults < weapon cfg.pv[preset] < part extras.pv. */
+/**
+ * Parameters for one material: defaults < key defaults < weapon cfg.pv[preset] < weapon cfg.pvKey[material key]
+ * < part extras.pv. pvKey gives each glaze its own values (M07 開片: shardPal = the glaze's own colour x4, so the
+ * crackle shows only its lines on cobalt and white scales alike).
+ */
 export function premiumParams(preset, key, cfg = {}, part = {}) {
-  return { ...PARAM_DEFAULTS, ...(KEY_DEFAULTS[key] || {}), ...((cfg.pv || {})[preset] || {}), ...part };
+  return { ...PARAM_DEFAULTS, ...(KEY_DEFAULTS[key] || {}), ...((cfg.pv || {})[preset] || {}), ...((cfg.pvKey || {})[key] || {}), ...part };
 }
 
 /** Uniform objects for a material (material-level params + the instance's shared state uniforms). */
@@ -140,13 +144,15 @@ export function premiumUniforms(state, prm) {
   return {
     pCharge: u.pCharge, pFlash: u.pFlash, pRimStr: u.pRimStr, pBreath: u.pBreath, pTwin: u.pTwin, pGlowMul: u.pGlowMul,
     pSeed: u.pSeed, pRimColor: u.pRimColor, pTwinColor: u.pTwinColor, pDissolve: u.pDissolve, pOpacity: u.pOpacity,
-    pCoreTint: u.pCoreTint, pHoloColor: u.pHoloColor, pEdgeColor: u.pEdgeColor, pRuneColor: u.pRuneColor, pPal: u.pPal,
+    // coreTint per part: one weapon can hold a gold-orange focus gem and a furnace capsule of another colour (M03)
+    pCoreTint: prm.coreTint ? f(C(prm.coreTint)) : u.pCoreTint, pHoloColor: u.pHoloColor, pEdgeColor: u.pEdgeColor, pRuneColor: u.pRuneColor,
+    pPal: prm.shardPal ? f(prm.shardPal.map((h) => C(h))) : u.pPal, pIridCool: f(prm.iridCool),
     pGrout: prm.grout ? f(C(prm.grout)) : u.pGrout, pCoreMode: prm.coreMode >= 0 ? f(prm.coreMode) : u.pCoreMode,
     pBox: f(new THREE.Vector4(-0.5, 0.2, -0.15, 0.1)),
     pRimPower: f(prm.rimPower), pVeinFreq: f(prm.veinFreq), pVeinSpeed: f(prm.veinSpeed), pVeinAxis: f(prm.veinAxis),
     pShine: f(prm.shine), pSweepT: f(prm.sweepT), pLeaf: f(prm.leaf), pLeafScale: f(prm.leafScale),
     pShardScale: f(prm.shardScale), pGroutW: f(prm.groutW), pGroutMetal: f(prm.groutMetal), pIrid: f(prm.irid),
-    pIridScale: f(prm.iridScale), pGem: f(prm.gem), pCoreSkin: f(prm.coreSkin), pRuneSpeed: f(prm.runeSpeed),
+    pIridScale: f(prm.iridScale), pGem: f(prm.gem), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pRuneSpeed: f(prm.runeSpeed),
     pRuneAxis: f(prm.runeAxis), pRuneOrigin: f(new THREE.Vector3(...prm.runeOrigin)), pRuneWidth: f(prm.runeWidth),
     pFlashMask: f(prm.flashMask), pDpr: f(Math.min(3, globalThis.devicePixelRatio || 1)), tRunes: f(runeTexture()),
   };
@@ -212,7 +218,9 @@ export class PremiumState {
   update(dt) {
     const u = this.u;
     // charge / rim targets
-    let charge = this.skill || this.ready ? 1 : 0.35 + 0.4 * this.meter;
+    // cfg.idle.charge [base, slope]: anti-calamity series keep their glow low until ready (§1.4 ③: ≤ 5 %)
+    const ic = this.cfg.idle?.charge;
+    let charge = this.skill || this.ready ? 1 : (ic?.[0] ?? 0.35) + (ic?.[1] ?? 0.4) * this.meter;
     let rim = this.skill ? 2.5 : this.ready ? 2.0 : 0.8;
     let k = 6;
     if (this.reloading === 1) { charge = 0.2; rim = 0.6; k = 30; }
@@ -342,7 +350,7 @@ uniform vec3 pPal[4];
 uniform vec3 pGrout;
 #endif
 #ifdef PREMIUM_IRID
-uniform float pIrid, pIridScale;
+uniform float pIrid, pIridScale, pIridCool;
 #endif
 #ifdef PREMIUM_GEM
 uniform float pGem;
@@ -354,7 +362,7 @@ uniform sampler2D tRunes;
 uniform vec3 pCoreTint;
 #endif
 #ifdef PREMIUM_CORE
-uniform float pCoreMode, pCoreSkin;
+uniform float pCoreMode, pCoreSkin, pCoreScale;   // pCoreScale: pattern density (small capsules want finer water / lava)
 vec3 pCoreLayer(vec2 uv, float i) {
   float t = time;
   vec3 c = vec3(0.0);
@@ -403,7 +411,7 @@ uniform vec3 pRuneOrigin, pRuneColor;
 /** Albedo stage (end of map_fragment, after the finish block). Leaves pRoughMix / pMetalMix for later. */
 export const PREMIUM_ALBEDO = /* glsl */`
 #ifdef PREMIUM
-  float pRoughMix = 0.0, pRoughTo = 0.0, pMetalMix = 0.0, pMetalTo = 0.0, pCell = 0.0, pLeafId = 0.0, pDisE = 1.0;
+  float pRoughMix = 0.0, pRoughTo = 0.0, pMetalMix = 0.0, pMetalTo = 0.0, pCell = 0.0, pLeafId = 0.0, pDisE = 1.0, pShardMono = 0.0;
   #ifdef PREMIUM_DISSOLVE
   {
     // grunge fbm, biased bottom -> top so spirits build up from the ground (§1.7.3 ③)
@@ -417,20 +425,28 @@ export const PREMIUM_ALBEDO = /* glsl */`
   #endif
   #ifdef PREMIUM_SHARD
   if (pShardScale > 0.0) {
-    // 剪黏 / cloisonné / crackle: biplanar Voronoi shards, one palette colour each, grout lines (absolute scale)
-    vec3 sv = pBiVor(vRest * pShardScale + pSeed * 7.13, vObjNor);
+    // 剪黏 / cloisonné / crackle: biplanar Voronoi shards, one palette colour each, grout lines (absolute scale).
+    // A one-colour palette = crackle glaze (開片, M07): warped (irregular) cells that do not vary, hairline cracks
+    // of uneven width and darkness UNDER a continuous glossy glaze (no matte grout, no per-shard facets)
+    float mono = step(length(pPal[0] - pPal[1]) + length(pPal[0] - pPal[2]) + length(pPal[0] - pPal[3]), 1e-3);
+    vec3 sp = vRest * pShardScale + pSeed * 7.13;
+    sp += mono * 0.42 * sin(sp.yzx * 0.53 + sp.zxy * 0.31);
+    vec3 sv = pBiVor(sp, vObjNor);
     pCell = sv.z;
     float k = floor(sv.z * 4.0);
     vec3 sc = k < 0.5 ? pPal[0] : k < 1.5 ? pPal[1] : k < 2.5 ? pPal[2] : pPal[3];
-    sc *= 0.88 + 0.24 * fract(sv.z * 13.7);
-    float gw = pGroutW * 0.001 * pShardScale;
+    sc *= 1.0 + (0.24 - 0.21 * mono) * (fract(sv.z * 13.7) - 0.5);
+    float gw = pGroutW * 0.001 * pShardScale * mix(1.0, 0.45 + 1.1 * fract(sv.z * 7.31), mono);
     float aa = fwidth(sv.y) * 1.5 + 1e-4;
-    float far = smoothstep(0.35, 0.8, length(fwidth(vRest * pShardScale)));   // cells < ~2 px: fade to flat
+    float far = smoothstep(0.35, 0.8, length(fwidth(sp)));   // cells < ~2 px: fade to flat
     float grout = (1.0 - smoothstep(gw - aa, gw + aa, sv.y)) * (1.0 - far);
+    grout *= mix(1.0, 0.35 + 0.5 * fract(sv.z * 3.17), mono);
     diffuseColor.rgb = mix(sc, pGrout, grout);
-    // glazed shards are glossy dielectrics whatever the part's base material; grout is matte (or gold wire)
-    pRoughMix = 1.0; pRoughTo = mix(0.17, pGroutMetal > 0.5 ? 0.28 : 0.85, grout);
+    // glazed shards are glossy dielectrics whatever the part's base material; grout is matte (or gold wire);
+    // crackle lines lie under the glaze, so the surface stays glossy
+    pRoughMix = 1.0; pRoughTo = mix(0.17, pGroutMetal > 0.5 ? 0.28 : 0.85, grout * (1.0 - mono));
     pMetalMix = 1.0; pMetalTo = grout * pGroutMetal;
+    pShardMono = mono;
   }
   #endif
   #ifdef PREMIUM_LEAF
@@ -461,7 +477,7 @@ export const PREMIUM_NORMAL = /* glsl */`
   if (pLeaf > 0.0) { vec3 tl = (pH33(vec3(pLeafId * 97.0, pSeed * 13.0, 3.1)) - 0.5) * 0.32 * pLeaf; normal = normalize(normal + mat3(viewMatrix) * (mat3(modelMatrix) * tl)); }
   #endif
   #ifdef PREMIUM_SHARD
-  if (pShardScale > 0.0) { vec3 tl = (pH33(vec3(pCell * 113.0, 7.7, pSeed * 5.0)) - 0.5) * 0.1; normal = normalize(normal + mat3(viewMatrix) * (mat3(modelMatrix) * tl)); }
+  if (pShardScale > 0.0 && pShardMono < 0.5) { vec3 tl = (pH33(vec3(pCell * 113.0, 7.7, pSeed * 5.0)) - 0.5) * 0.1; normal = normalize(normal + mat3(viewMatrix) * (mat3(modelMatrix) * tl)); }
   #endif
   float pNdv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
   #ifdef PREMIUM_IRID
@@ -470,6 +486,7 @@ export const PREMIUM_NORMAL = /* glsl */`
     float cell = pCell;
     if (cell == 0.0) { vec2 q = vec2(-vRest.z, vRest.y) * pIridScale; cell = pH21(floor(vec2(q.x + q.y, q.x - q.y))); pCell = cell; }
     vec3 ir = 0.5 + 0.5 * cos(6.2831853 * (vec3(0.0, 0.33, 0.67) + (1.0 - pNdv) * 1.1 + cell * 0.35 + pSeed * 0.21));
+    ir.r *= 1.0 - 0.8 * pIridCool;   // iridCool 1: cyan-green-blue sheen only, never pink (frost, §1.6 v1.2)
     float l = max(0.3, dot(diffuseColor.rgb, vec3(0.333)));
     diffuseColor.rgb = mix(diffuseColor.rgb, ir * l * 1.5, pIrid);
   }
@@ -535,12 +552,12 @@ export const PREMIUM_EMIT = /* glsl */`
       // 2-3 parallax layers in the part's rest (-Z, Y) plane, looked at through the capsule wall
       vec3 vd = -normalize(vViewPosition);
       vec3 od = inverseTransformDirection(inverseTransformDirection(vd, viewMatrix), modelMatrix);
-      vec2 base = vec2(-vObjPos.z, vObjPos.y);
+      vec2 base = vec2(-vObjPos.z, vObjPos.y) * pCoreScale;
       vec2 off = vec2(-od.z, od.y) / max(0.3, abs(od.x));
       vec3 cc = vec3(0.0);
       for (int i = 0; i < 3; i++) {
         float fi = float(i);
-        cc += pCoreLayer(base + off * (0.004 + 0.006 * fi), fi) * (1.0 - 0.3 * fi);
+        cc += pCoreLayer(base + off * (0.004 + 0.006 * fi) * pCoreScale, fi) * (1.0 - 0.3 * fi);
       }
       if (pCoreSkin > 0.5) {
         // backlit skin (drum hide, paper lantern): pattern shows through, rune marks stay as silhouettes
