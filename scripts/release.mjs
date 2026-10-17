@@ -52,7 +52,7 @@ if (exists) {
   console.log(`Release ${tag} exists: replacing its APK.`);
   run(['release', 'upload', tag, APK, '--clobber']);
 } else {
-  const notes = args.notes || `災厄前線 CALAMITY FRONT ${tag}\n\n下載下方的 CalamityFront.apk 安裝（Android 8.0 以上），或在瀏覽器直接玩：${pkg.homepage}play/`;
+  const notes = args.notes || `災厄前線 CALAMITY FRONT ${tag}\n\n下載下方的 CalamityFront.apk 安裝（Android 8.0 以上），或在瀏覽器直接玩：${pkg.homepage}`;
   run(['release', 'create', tag, APK, '--title', `災厄前線 ${tag}`, '--notes', notes, ...(args.draft ? ['--draft'] : ['--latest'])]);
 }
 console.log(`Done: ${pkg.homepage}`);

@@ -2,6 +2,8 @@
   "name": "calamity-front",
   "version": "0.1.0",
   "private": true,
+  "repository": { "type": "git", "url": "https://github.com/job159/cs.git" },
+  "homepage": "https://job159.github.io/cs/",
   "description": "災厄前線 CALAMITY FRONT - 1-4 player co-op zombie horde FPS for Android (WebView) and browsers",
   "license": "MIT",
   "type": "module",
@@ -12,7 +14,7 @@
     "build:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-apk.ps1",
     "build": "npm run build:web && npm run build:apk",
     "serve": "node scripts/serve.mjs",
-    "build:site": "node scripts/build-site.mjs",
+    "build:site": "npm run build:web && node scripts/build-site.mjs",
     "release": "node scripts/release.mjs",
     "build:anims": "node tools/assets/zombies/anim/fetch.mjs && node tools/assets/zombies/anim/build.mjs && node tools/assets/zombies/anim/check.mjs"
   },

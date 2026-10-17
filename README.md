@@ -5,6 +5,16 @@
 
 > 所有名稱、造型、模型、材質與音效皆為原創或 CC0 素材，只借鏡原作的玩法與氛圍（不拆取任何遊戲檔案）。
 
+## 直接在瀏覽器遊玩
+
+**遊戲網址：https://job159.github.io/cs/**
+
+手機或電腦開啟網址即可進入遊戲選單，不需要安裝 APK，也不需要與開發電腦連同一個 Wi-Fi。網站由 GitHub Pages 提供，開發電腦關機後仍可使用；需要可連上網站的網路及支援 WebGL 2 的瀏覽器。首次開啟會下載遊戲素材，請等待載入完成。
+
+單人模式可直接開始；多人模式可建立房間，讓朋友使用相同網址並輸入房號。多人連線使用 WebRTC 與公共 MQTT 中繼，能否連線仍取決於雙方網路及中繼服務狀態。
+
+推送到 `master` 後，GitHub Actions 會執行 `npm ci`、`npm run build:site`，將 `dist/site/` 發佈到 GitHub Pages。Pages 的來源需設為 **GitHub Actions**。也可在 Actions 手動執行 **Deploy browser game**。APK 下載頁保留在 [download.html](https://job159.github.io/cs/download.html)，舊的 `/play/` 網址會轉到遊戲首頁並保留網址參數。
+
 ## 特色
 
 | | |
@@ -33,6 +43,7 @@
 | `npm install` | 安裝相依套件 |
 | `npm run dev` | 開發伺服器 http://127.0.0.1:5190 （改程式自動重建） |
 | `npm run build:web` | 網頁版 → `dist/www/`（含所有遊戲資產） |
+| `npm run build:site` | 建置網頁版及公開網站 → `dist/site/`（首頁直接遊玩） |
 | `npm run build:apk` | 打包並簽署 `dist/CalamityFront.apk`（`-- -Debug` 可用 chrome://inspect 除錯） |
 | `npm run build` | 以上兩者 |
 | `npm run serve` | 區網下載頁＋QR Code |

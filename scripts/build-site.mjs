@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Builds the public static site (GitHub Pages) into dist/site/:
-//   index.html   download page: APK from the latest GitHub Release, install steps, QR code of this page
-//   play/        the web build (dist/www) for playing in a browser
+//   index.html   the playable web build (dist/www), with all assets beside it
+//   download.html optional Android download page
+//   play/        redirect for previously shared browser-play links
 //
 // Run `node scripts/build-web.mjs` first. The repository (owner/name) comes from $GITHUB_REPOSITORY
 // (set by GitHub Actions) or the "repository" field of package.json. Nothing here needs updating per
@@ -87,19 +88,25 @@ ${emblemSvg({ className: 'emblem' })}
 <h2>安裝步驟</h2>
 ${INSTALL_STEPS}
 </section>
-<a class="play" href="play/">在瀏覽器直接玩 →</a>
+<a class="play" href="./">在瀏覽器直接玩 →</a>
 <section class="panel scan">
 <div class="qr">${qr}</div>
-<p>在電腦上？用手機相機掃描 QR Code 開啟這個下載頁：<br><code>${esc(SITE_URL)}</code></p>
+<p>在電腦上？用手機相機掃描 QR Code 直接開啟遊戲：<br><code>${esc(SITE_URL)}</code></p>
 </section>
 <footer>需要 Android 8.0 以上 · 任何網路皆可下載<br><a href="${esc(REPO_URL)}">原始碼（MIT 授權）</a> · <a href="${esc(REPO_URL)}/releases">所有版本</a></footer>
 </main>
 <script>${SCRIPT}</script>`, 'favicon.svg');
 
 await fs.rm(OUT, { recursive: true, force: true });
-await fs.mkdir(OUT, { recursive: true });
-await fs.writeFile(path.join(OUT, 'index.html'), html);
+await fs.cp(WWW, OUT, { recursive: true });
+const gameHtml = await fs.readFile(path.join(OUT, 'index.html'), 'utf8');
+await fs.writeFile(path.join(OUT, 'index.html'), gameHtml.replace('</head>', '<link rel="icon" href="favicon.svg" type="image/svg+xml">\n</head>'));
+await fs.writeFile(path.join(OUT, 'download.html'), html);
 await fs.writeFile(path.join(OUT, 'favicon.svg'), emblemSvg({ background: true }));
 await fs.writeFile(path.join(OUT, '.nojekyll'), '');
-await fs.cp(WWW, path.join(OUT, 'play'), { recursive: true });
+await fs.mkdir(path.join(OUT, 'play'), { recursive: true });
+await fs.writeFile(path.join(OUT, 'play', 'index.html'), `<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>災厄前線</title>
+<script>location.replace('../' + location.search + location.hash);</script>
+</head><body><a href="../">開啟遊戲</a></body></html>`);
 console.log(`site -> ${path.relative(ROOT, OUT)}  (${SITE_URL})`);
