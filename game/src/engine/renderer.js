@@ -9,11 +9,14 @@ import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 // colour-grade uniforms a map may set (Renderer.setGrade)
 const GRADE_KEYS = ['saturation', 'contrast', 'shadowTint', 'highlightTint', 'lift', 'gamma', 'gain'];
 
+// Tiers: low / medium are the phone tiers; high is the desktop default and ultra what the desktop benchmark
+// (ui/settings.js calibrateQuality) picks on strong GPUs, so those two carry the bigger effect / decal budgets.
+// particles also scales how many particles each effect spawns (fx.k = particles / 4000, capped at 1.5).
 export const QUALITY = {
   low:    { label: '低',   dpr: 1.0, shadows: 0,    msaa: 0, bloomMips: 3, minScale: 0.6, maxLights: 2, decals: 60,  particles: 1200, gore: 1 },
   medium: { label: '中',   dpr: 1.5, shadows: 1024, msaa: 2, bloomMips: 4, minScale: 0.65, maxLights: 4, decals: 120, particles: 2500, gore: 2 },
-  high:   { label: '高',   dpr: 2.0, shadows: 2048, msaa: 4, bloomMips: 5, minScale: 0.7, maxLights: 6, decals: 200, particles: 4000, gore: 3 },
-  ultra:  { label: '極致', dpr: 2.5, shadows: 4096, msaa: 4, bloomMips: 5, minScale: 0.8, maxLights: 8, decals: 320, particles: 6000, gore: 3 },
+  high:   { label: '高',   dpr: 2.0, shadows: 2048, msaa: 4, bloomMips: 5, minScale: 0.7, maxLights: 6, decals: 260, particles: 5000, gore: 3 },
+  ultra:  { label: '極致', dpr: 2.5, shadows: 4096, msaa: 4, bloomMips: 5, minScale: 0.8, maxLights: 8, decals: 420, particles: 8000, gore: 3 },
 };
 
 const VERT = /* glsl */`

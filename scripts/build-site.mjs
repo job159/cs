@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 // Builds the public static site (GitHub Pages) into dist/site/:
-//   index.html   the playable web build (dist/www), with all assets beside it
-//   download.html optional Android download page
-//   play/        redirect for previously shared browser-play links
+//   index.html    the playable web build (dist/www) with all assets beside it, plus the favicon, share preview tags
+//                 and the bundle size for the boot loader's progress bar (game/index.html data-size)
+//   download.html redirect to the game: the Android APK is shelved (desktop web is the platform), but links to the
+//                 old download page keep working
+//   play/         redirect for previously shared browser-play links
 //
-// Run `node scripts/build-web.mjs` first. The repository (owner/name) comes from $GITHUB_REPOSITORY
-// (set by GitHub Actions) or the "repository" field of package.json. Nothing here needs updating per
-// release: the page links to /releases/latest/download/CalamityFront.apk and reads the version from the API.
+// Run `node scripts/build-web.mjs` first. The repository (owner/name) comes from $GITHUB_REPOSITORY (set by GitHub
+// Actions) or the "repository" field of package.json.
+// Caching: GitHub Pages serves everything with ETags and a 10-minute max-age, so repeat visits revalidate cheaply and
+// a new deploy is picked up within minutes. There is deliberately no service worker: the assets are not
+// content-hashed, and a stale worker could pair an old game.js with new models / maps.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import QRCode from 'qrcode';
-import { esc, emblemSvg, page, DOWNLOAD_CSS, DOWNLOAD_ICON, INSTALL_STEPS } from './site-common.mjs';
+import { esc, emblemSvg } from './site-common.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const WWW = path.join(ROOT, 'dist', 'www');
@@ -27,9 +30,8 @@ if (!owner || !repo) {
   process.exit(1);
 }
 const SITE_URL = `https://${owner.toLowerCase()}.github.io/${repo}/`;
-const APK_URL = `https://github.com/${owner}/${repo}/releases/latest/download/CalamityFront.apk`;
-const REPO_URL = `https://github.com/${owner}/${repo}`;
-const API_URL = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+const TITLE = '災厄前線 CALAMITY FRONT';
+const DESC = '1–4 人合作的回合制殭屍防禦 FPS。打開網頁直接遊玩，支援鍵盤＋滑鼠、單人 AI 隊友與多人連線。';
 
 try {
   await fs.access(path.join(WWW, 'index.html'));
@@ -38,75 +40,39 @@ try {
   process.exit(1);
 }
 
-const qr = await QRCode.toString(SITE_URL, { type: 'svg', errorCorrectionLevel: 'M', margin: 1, color: { dark: '#05060f', light: '#ffffff' } });
-
-const SITE_CSS = `${DOWNLOAD_CSS}
-.scan{display:none;margin-top:22px;padding:16px;align-items:center;gap:16px}
-.scan .qr{flex:none;width:132px;background:#fff;padding:8px;border-radius:12px;box-shadow:0 0 0 2px rgba(34,230,255,.8),0 0 24px rgba(34,230,255,.4)}
-.scan .qr svg{display:block;width:100%;height:auto}
-.scan p{margin:0;font-size:14px;line-height:1.6;color:var(--muted)}
-.scan code{font-size:12px;overflow-wrap:anywhere}
-@media (min-width:700px) and (hover:hover){.scan{display:flex}}
-`;
-
-// The latest release is looked up in the browser so this page never goes stale; if the API is unreachable
-// (rate limit, offline) the button still works because the /latest/download/ link always resolves.
-const SCRIPT = `
-(async () => {
-  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-  try {
-    const r = await fetch(${JSON.stringify(API_URL)}, { headers: { Accept: 'application/vnd.github+json' } });
-    if (r.status === 404) {
-      const b = document.getElementById('dl');
-      b.classList.add('off');
-      b.textContent = 'APK 準備中，請稍後再來';
-      return;
-    }
-    if (!r.ok) return;
-    const rel = await r.json();
-    const apk = (rel.assets || []).find((a) => /\\.apk$/i.test(a.name));
-    set('ver', rel.tag_name || '最新版');
-    if (apk) {
-      const mb = apk.size / 1048576;
-      set('size', mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(apk.size / 1024) + ' KB');
-      set('dlsize', 'CalamityFront.apk · ' + document.getElementById('size').textContent);
-    }
-    if (rel.published_at) set('date', '發佈於 ' + new Date(rel.published_at).toLocaleDateString('zh-TW'));
-  } catch (e) { /* keep the static defaults */ }
-})();
-`;
-
-const html = page('災厄前線 CALAMITY FRONT · 下載', SITE_CSS, `<main>
-<header class="hero">
-${emblemSvg({ className: 'emblem' })}
-<h1>災厄前線</h1>
-<p class="sub">CALAMITY FRONT</p>
-</header>
-<div class="meta"><span class="chip" id="ver">最新版</span><span class="chip" id="size">Android APK</span><span class="chip" id="date">免費 · 開源</span></div>
-<a class="download" id="dl" href="${esc(APK_URL)}">${DOWNLOAD_ICON}<span>下載 APK<small id="dlsize">CalamityFront.apk</small></span></a>
-<section class="panel">
-<h2>安裝步驟</h2>
-${INSTALL_STEPS}
-</section>
-<a class="play" href="./">在瀏覽器直接玩 →</a>
-<section class="panel scan">
-<div class="qr">${qr}</div>
-<p>在電腦上？用手機相機掃描 QR Code 直接開啟遊戲：<br><code>${esc(SITE_URL)}</code></p>
-</section>
-<footer>需要 Android 8.0 以上 · 任何網路皆可下載<br><a href="${esc(REPO_URL)}">原始碼（MIT 授權）</a> · <a href="${esc(REPO_URL)}/releases">所有版本</a></footer>
-</main>
-<script>${SCRIPT}</script>`, 'favicon.svg');
+/** A tiny page that forwards to the game, keeping the query (dev params, ?join=) and hash. */
+const redirect = (to) => `<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>${esc(TITLE)}</title>
+<meta name="robots" content="noindex">
+<script>location.replace(${JSON.stringify(to)} + location.search + location.hash);</script>
+</head><body><a href="${to}">開啟遊戲</a></body></html>`;
 
 await fs.rm(OUT, { recursive: true, force: true });
 await fs.cp(WWW, OUT, { recursive: true });
-const gameHtml = await fs.readFile(path.join(OUT, 'index.html'), 'utf8');
-await fs.writeFile(path.join(OUT, 'index.html'), gameHtml.replace('</head>', '<link rel="icon" href="favicon.svg" type="image/svg+xml">\n</head>'));
-await fs.writeFile(path.join(OUT, 'download.html'), html);
+
+const bundle = await fs.stat(path.join(OUT, 'game.js'));
+const thumb = 'assets/maps/losttown/thumb.jpg';
+const hasThumb = await fs.access(path.join(OUT, thumb)).then(() => true, () => false);
+const head = [
+  '<link rel="icon" href="favicon.svg" type="image/svg+xml">',
+  `<link rel="canonical" href="${esc(SITE_URL)}">`,
+  '<meta property="og:type" content="website">',
+  `<meta property="og:title" content="${esc(TITLE)}">`,
+  `<meta property="og:description" content="${esc(DESC)}">`,
+  `<meta property="og:url" content="${esc(SITE_URL)}">`,
+  hasThumb ? `<meta property="og:image" content="${esc(SITE_URL + thumb)}">` : '',
+  '<meta name="twitter:card" content="summary_large_image">',
+].filter(Boolean).join('\n');
+let gameHtml = await fs.readFile(path.join(OUT, 'index.html'), 'utf8');
+if (!gameHtml.includes('<script data-size="0">')) {
+  console.error('game/index.html: the boot loader (<script data-size="0">) is missing.');
+  process.exit(1);
+}
+gameHtml = gameHtml.replace('</head>', `${head}\n</head>`).replace('<script data-size="0">', `<script data-size="${bundle.size}">`);
+await fs.writeFile(path.join(OUT, 'index.html'), gameHtml);
+await fs.writeFile(path.join(OUT, 'download.html'), redirect('./'));
 await fs.writeFile(path.join(OUT, 'favicon.svg'), emblemSvg({ background: true }));
 await fs.writeFile(path.join(OUT, '.nojekyll'), '');
 await fs.mkdir(path.join(OUT, 'play'), { recursive: true });
-await fs.writeFile(path.join(OUT, 'play', 'index.html'), `<!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><title>災厄前線</title>
-<script>location.replace('../' + location.search + location.hash);</script>
-</head><body><a href="../">開啟遊戲</a></body></html>`);
-console.log(`site -> ${path.relative(ROOT, OUT)}  (${SITE_URL})`);
+await fs.writeFile(path.join(OUT, 'play', 'index.html'), redirect('../'));
+console.log(`site -> ${path.relative(ROOT, OUT)}  (${SITE_URL}, game.js ${(bundle.size / 1048576).toFixed(2)} MB)`);

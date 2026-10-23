@@ -106,8 +106,10 @@ export class ButcherBrain extends BossBrain {
 
   /**
    * Rage look: the authored emissive masks (veins radiating from the back tumour, the cleaver's edge and cracks,
-   * the tumour fissures) light up bright orange; the tumour (the rage weak point) pulses. Only the meshes the
+   * the tumour fissures) light up orange over 0.6 s; the tumour (the rage weak point) pulses. Only the meshes the
    * model lists in extras.rage (or, for older models, those with an emissive map) change; the eyes keep their glow.
+   * The body's veins dim with distance (to 40 % by ~36 m): mip-mapped at range they averaged into one orange glow
+   * that, with bloom, turned the whole Butcher into a red blob. The small cleaver edge and the tumour stay bright.
    */
   enrageLook() {
     if (this.enraged) return;
@@ -116,8 +118,8 @@ export class ButcherBrain extends BossBrain {
     const color = new THREE.Color().fromArray(cfg.color || [1, 0.35, 0.08]);
     const meshes = cfg.meshes || null, pulse = cfg.pulse || ['tumour'];
     const intensity = cfg.intensity ?? 2.8;
-    const done = new Map();
-    this.z.root.traverse((o) => {
+    const done = new Map(), z = this.z, t0 = performance.now();
+    z.root.traverse((o) => {
       if (!o.isMesh || !o.material?.emissive) return;
       const base = o.name.replace(/_lod1$/, '');
       if (meshes ? !meshes.includes(base) : (!o.material.emissiveMap || base === 'eyes')) return;
@@ -126,14 +128,19 @@ export class ButcherBrain extends BossBrain {
       if (!m) {
         m = o.material.userData?.zshell ? o.material : o.material.clone();
         m.emissive.copy(color);
-        m.emissiveIntensity = (cfg.intensityOf?.[base] ?? 1) * intensity;
+        m.emissiveIntensity = 0;
         done.set(o.material, m);
       }
       o.material = m;
-      if (pulse.includes(base)) {
-        const k0 = m.emissiveIntensity;
-        o.onBeforeRender = () => { m.emissiveIntensity = k0 * (0.72 + 0.38 * Math.sin(performance.now() * 0.0065) ** 2); };
-      }
+      const k0 = (cfg.intensityOf?.[base] ?? 1) * intensity * (base === 'body' ? 0.85 : 1);
+      const beat = pulse.includes(base), veins = base === 'body';
+      o.onBeforeRender = (r, s, cam) => {
+        const now = performance.now(), wake = Math.min(1, (now - t0) / 600);
+        let k = k0 * wake * wake;
+        if (beat) k *= 0.72 + 0.38 * Math.sin(now * 0.0065) ** 2;
+        if (veins && cam) k *= THREE.MathUtils.clamp(1 - (cam.position.distanceTo(z.pos) / Math.max(1, this.g.zoom || 1) - 10) / 26, 0.4, 1);
+        m.emissiveIntensity = k;
+      };
     });
   }
 
@@ -153,6 +160,7 @@ export class ButcherBrain extends BossBrain {
       case 'teleCone': tele?.cone(V(d.p), d.yaw, d.r, d.h, d.t); break;
       case 'teleLine': tele?.line(V(d.p), d.yaw, d.l, d.w, d.t); break;
       case 'teleCircle': tele?.circle(V(d.p), d.r, d.t); break;
+      case 'summonIn': for (const q of d.at) zfx?.summonIn(V(q), [1.6, 0.35, 0.2]); break;
       case 'whoosh': g.audio?.play('swingHeavy', { pos: V(d.p), volume: 1.2, pitch: 0.6 }); if (d.yaw !== undefined) zfx?.swipe(V(d.p), d.yaw, 5.4, 0.85); break;
       case 'roar': g.audio?.play('brute_roar', { pos: V(d.p), volume: 1.3, pitch: 0.8 }); g.addShake(0.25); zfx?.roar(this.z, 1.8); break;
       case 'impact':   // slammed into a wall: stunned, back exposed

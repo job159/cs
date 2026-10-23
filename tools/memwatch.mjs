@@ -4,6 +4,8 @@
 //   node tools/memwatch.mjs [thresholdMB=900]
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const threshold = +(process.argv[2] || 900);
 const logFile = 'build/memwatch.log';
@@ -21,7 +23,24 @@ function headlessRoots() {
   } catch { return []; }
 }
 
+const pidAlive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+
+/** Headless shot browsers whose tools/shot.mjs owner died (killed by an agent's command timeout) never get cleaned up. */
+function killOrphans() {
+  let out = '';
+  try { out = ps("Get-CimInstance Win32_Process -Filter \"name='msedge.exe'\" | Where-Object { $_.CommandLine -match 'cf-shot-[0-9]' -and $_.CommandLine -notmatch '--type=' } | ForEach-Object { '{0} {1} {2}' -f $_.ProcessId, [int]((Get-Date) - $_.CreationDate).TotalSeconds, [regex]::Match($_.CommandLine, 'cf-shot-[0-9]+').Value }"); } catch { return; }
+  for (const l of out.split(/\r?\n/).filter(Boolean)) {
+    const [pid, age, name] = l.trim().split(/\s+/);
+    if (+age < 45 || !name) continue;   // still starting up
+    let owner = 0;
+    try { owner = +fs.readFileSync(path.join(os.tmpdir(), name, 'owner.pid'), 'utf8'); } catch { /* no owner file: launched by an older shot.mjs */ }
+    if (owner ? pidAlive(owner) : +age < 900) continue;
+    try { execFileSync('taskkill', ['/F', '/T', '/PID', pid], { stdio: 'ignore' }); fs.appendFileSync(logFile, `  killed orphan browser ${pid} (age ${age}s, owner ${owner || '?'})\n`); } catch { /* gone */ }
+  }
+}
+
 function tick() {
+  killOrphans();
   const mb = availableMB();
   const line = `${new Date().toISOString()} available=${mb}MB`;
   fs.appendFileSync(logFile, line + '\n');
@@ -34,4 +53,4 @@ function tick() {
   }
 }
 tick();
-setInterval(tick, 30000);
+setInterval(tick, 20000);

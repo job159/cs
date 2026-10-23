@@ -1,5 +1,6 @@
 // AI teammates for solo / short-handed rooms (host only). Each bot follows the squad leader in a loose
-// formation over the nav grid, keeps some distance from zombies, engages the closest visible threat with
+// formation over the nav grid (beside / behind the leader's view, out of its line of fire, and never firing past
+// the leader's head), keeps some distance from zombies, engages the closest visible threat with
 // human-like reaction time and aim error, reloads, buys better guns between rounds, can be downed and
 // revived, and goes to get a downed human teammate back up. Rendered through RemotePlayer so they look
 // exactly like human teammates.
@@ -21,7 +22,24 @@ const N8 = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1
 const _v = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _f = new THREE.Vector3();
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _e = new THREE.Vector3();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _e = new THREE.Vector3(), _o = new THREE.Vector3();
+// Formation around the leader, as bearings from its view direction (rad, 0 = straight ahead, + = to its right):
+// each slot's home (1 back-left, 2 back-right, 3 behind-right), the rear half to choose from (straight behind last:
+// a bot there fires past the leader's head), the front half (last resort)
+const D = Math.PI / 180;
+const BEARING = { 1: -118 * D, 2: 118 * D, 3: 150 * D, 4: -150 * D };
+const REAR = [-100, -115, -130, -145, -160, 160, 145, 130, 115, 100, 180].map((x) => x * D);
+const FRONT = [-82, 82, -66, 66].map((x) => x * D);
+const REAR_FAR = [-95, 95, 180].map((x) => x * D);   // last resort while the leader stands still (instead of FRONT)
+const FIRE_CONE = 34 * D;    // half-angle of the leader's line of fire / central view that bots keep out of
+const VIEW_CONE = 50 * D;    // ... while the leader stands still / aims: its whole view (96° FOV: 48° each side)
+
+/** Is (dx, dz) from the leader inside its forward cone (yaw: the leader's view yaw), within 16 m? pad widens it (m). */
+function inFire(yaw, dx, dz, pad = 0, cone = FIRE_CONE) {
+  const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  const along = dx * fx + dz * fz, lat = Math.abs(dx * -fz + dz * fx);
+  return along > 0.2 && along < 16 && lat < pad + along * Math.tan(cone);
+}
 
 let botId = 1000;
 
@@ -103,7 +121,7 @@ class Bot {
     this.hp = 100; this.alive = true; this.downed = false; this.downT = 0;
     this.weapon = WEAPONS.ump; this.ammo = this.weapon.mag; this.reloadT = 0;
     this.fireCd = 0; this.reaction = 0; this.target = null; this.burst = 0;
-    this.offset = new THREE.Vector3(Math.cos(slot * 2.1) * 3, 0, Math.sin(slot * 2.1) * 3);
+    this.stats = { kills: 0, headshots: 0, damage: 0, bossDamage: 0, downs: 0 };   // results screen (squad table)
     this.thinkT = 0;
     this.rescue = null; this.rescueT = 0;     // downed human (playerList entry) this bot is getting up
     this.stuckP = new THREE.Vector3(); this.stuckT = 0; this.tryT = 0;
@@ -117,7 +135,7 @@ class Bot {
     if (this.downed) { this.downT -= amount * 0.15; return; } // hits on a downed bot shorten its bleed-out
     this.hp -= amount * 0.8;
     this.rescueT = 0; // a hit breaks a revive in progress
-    if (this.hp <= 0) { this.hp = 0; this.downed = true; this.downT = 25; this.rescue = null; this.game.hud?.toast(`${this.name} 倒下了！靠近按 E 救援`, 2000); }
+    if (this.hp <= 0) { this.hp = 0; this.downed = true; this.downT = 25; this.rescue = null; this.stats.downs++; this.game.hud?.toast(`${this.name} 倒下了！靠近按 E 救援`, 2000); }
   }
 
   update(dt, mgr) {
@@ -139,12 +157,15 @@ class Bot {
       let best = null, bd = 42;
       for (const z of g.zombies.list) {
         if (!z.alive) continue;
-        // ranged specials (acid spitters, screamers) first, like a player would: they hang back and wear the squad down
-        const d = z.pos.distanceTo(this.pos) - (z.def.spit || z.def.scream ? 10 : 0);
+        // ranged specials (acid spitters, screamers) first, like a player would: they hang back and wear the squad down;
+        // the ones the leader is shooting last unless they are on top of someone (QA: with a weaker player the bots
+        // took ~95 % of the kills and the player's money and levels stalled)
+        const d = z.pos.distanceTo(this.pos) - (z.def.spit || z.def.scream ? 10 : 0) + (mgr.leaderTarget(z, this.pos) ? 14 : 0);
         if (d < bd && mgr.losFrom(this.pos, z)) { bd = d; best = z; }
       }
       if (best !== this.target) { this.target = best; this.reaction = rand(0.25, 0.55); }
-      this._spot(leader, this.slotGoal);
+      // keep our formation spot while it stays good (looking around must not reshuffle the squad)
+      if (!this._slotOk(leader, this.slotGoal)) this._spot(leader, this.slotGoal);
     }
     // ---- move: formation around the leader (or straight to a downed teammate), back off from close zombies
     const r = this.rescue;
@@ -155,6 +176,19 @@ class Bot {
       const d = t.pos.distanceTo(this.pos);
       if (d < (r ? 3 : 5)) { goal.copy(this.pos).add(_d.subVectors(this.pos, t.pos).setY(0).normalize().multiplyScalar(4)); speed = 4.8; backoff = true; }
     }
+    // backing off must not walk us into the leader's line of fire: slide that step out of its view cone
+    if (backoff && !r) {
+      const yaw = g.player.yaw, gx = goal.x - leader.x, gz = goal.z - leader.z;
+      if (inFire(yaw, gx, gz, 1)) {
+        const fx = -Math.sin(yaw), fz = -Math.cos(yaw), lat = gx * -fz + gz * fx, s = lat < 0 ? -1 : 1, along = gx * fx + gz * fz;
+        const w = 1.2 + along * Math.tan(FIRE_CONE);
+        goal.set(leader.x + fx * along - fz * s * w, goal.y, leader.z + fz * along + fx * s * w);
+      }
+    }
+    // in the leader's line of fire / view (backing off, a revive done, a zombie shoved us): step out sideways now;
+    // the leader in OUR line of fire: sidestep off the line to the target
+    const side = !backoff && (this._outOfFire(leader, _o) || (this.lineT > 0 && t && this._offLine(leader, t, _o)));
+    if (side) { goal.copy(this.pos).addScaledVector(side, 2.5); speed = 5.2; backoff = true; }
     // a boss telegraph under our feet: dive clear of it first (a rescue waits)
     const out = this.squad.escape(this.pos, _e);
     if (out) { goal.copy(this.pos).addScaledVector(out, 4); speed = 5.2; backoff = true; }
@@ -207,7 +241,10 @@ class Bot {
       this.yaw += angleDiff(this.yaw, want) * Math.min(1, dt * 8);
       this.pitch = -Math.atan2(aimP.y - eye.y, Math.hypot(aimP.x - eye.x, aimP.z - eye.z));
       this.reaction -= dt;
-      if (this.reaction <= 0 && this.reloadT <= 0 && this.fireCd <= 0 && Math.abs(angleDiff(this.yaw, want)) < 0.15) {
+      // never fire through / past the leader's head: hold the trigger and sidestep (movement above) instead
+      const inLine = this._leaderInLine(eye, aimP);
+      this.lineT = inLine ? 0.5 : Math.max(0, (this.lineT || 0) - dt);
+      if (this.reaction <= 0 && this.reloadT <= 0 && this.fireCd <= 0 && !inLine && Math.abs(angleDiff(this.yaw, want)) < 0.15) {
         if (this.ammo <= 0) { this.reloadT = this.weapon.reload ?? 2.4; }
         else {
           this.ammo--;
@@ -244,28 +281,94 @@ class Bot {
   }
 
   /**
-   * A standing spot near `a`: our formation slot, else another slot / closer in, else `a`'s own cell. On the
-   * nav grid, level with `a`, in its line of sight and a short walk from it (a bare a + offset is often on
-   * the far side of a wall, outside the map or inside a building). Skips a squadmate's spot (`key`: their
-   * pos when placing, their slotGoal for the formation).
+   * A standing spot near `a` (the leader): beside or behind the leader's view, never in front of it. Candidate
+   * bearings (relative to where the leader looks) start with our slot's side (1 back-left, 2 back-right, 3 behind),
+   * then the rest of the rear half nearest to where we stand (no running across the view to the other side), then
+   * the flanks; spots inside the forward cone (|bearing| < FIRE_CONE) only as a last resort. Each on the nav grid,
+   * level with `a`, in its line of sight and a short walk from it (a bare a + offset is often on the far side of a
+   * wall, outside the map or inside a building). Skips a squadmate's spot (`key`: their pos when placing, their
+   * slotGoal for the formation). QA: on the narrow fort the old world-space ring put bots right in front of the gun.
    */
   _spot(a, out, key = 'slotGoal') {
     const g = this.game, nav = g.zombies?.nav, col = g.world.collision;
-    if (!nav) return out.copy(a).add(this.offset);
+    const yaw = g.player.yaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw);   // leader's forward (xz); right = (-fz, fx)
+    if (!nav) { const b = BEARING[this.slot] ?? Math.PI; return out.set(a.x + (fx * Math.cos(b) - fz * Math.sin(b)) * 3, a.y, a.z + (fz * Math.cos(b) + fx * Math.sin(b)) * 3); }
     const f = this.squad.fieldFor(a);
-    const ay = nav.heightAt(a.x, a.z, a.y), base = this.slot * 2.1;
+    const ay = nav.heightAt(a.x, a.z, a.y);
     _a.set(a.x, ay + 1.5, a.z);
-    for (let n = 0; n < 12; n++) {
-      const rad = n < 6 ? 3 : 1.5, ang = base + (n % 6) * Math.PI / 3;
-      const k = nav.nearestWalkable(a.x + Math.cos(ang) * rad, a.z + Math.sin(ang) * rad, 3);
-      if (k < 0 || Math.abs(nav.heights[k] - ay) > 1 || f.meters(k) > rad * 2.5 + 2) continue;
-      nav.cellCenter(k, out);
-      if (this.squad.bots.some((o) => o !== this && o[key] && Math.hypot(o[key].x - out.x, o[key].z - out.z) < 0.9)) continue;
-      if (col && col.blocked(_a, _b.set(out.x, out.y + 1.5, out.z))) continue;
-      return out;
+    // where we stand now, as a bearing from the leader's view: keep to that side
+    const dx = this.pos.x - a.x, dz = this.pos.z - a.z;
+    const cur = Math.hypot(dx, dz) > 0.5 ? Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz) : BEARING[this.slot] ?? Math.PI;
+    const own = BEARING[this.slot] ?? Math.PI;
+    const cand = REAR.slice().sort((p, q) => Math.abs(angleDiff(p, own)) * 0.6 + Math.abs(angleDiff(p, cur)) - (Math.abs(angleDiff(q, own)) * 0.6 + Math.abs(angleDiff(q, cur))));
+    // the flanks only while the leader moves (a still / aiming leader sees them at the edge of its view, gun side
+    // included: QA had a bot fill a third of the screen at the spawn container), and never closer than 3 m
+    const still = this.squad.leaderStill();
+    for (const b of still ? [...cand, ...REAR_FAR] : [...cand, ...FRONT]) {
+      const dirX = fx * Math.cos(b) - fz * Math.sin(b), dirZ = fz * Math.cos(b) + fx * Math.sin(b);
+      for (const rad of Math.abs(b) < Math.PI / 2 ? [3.4, 4.4] : [3, 2.2, 4.2, 5.5]) {
+        const k = nav.nearestWalkable(a.x + dirX * rad, a.z + dirZ * rad, 1.5);
+        if (k < 0 || Math.abs(nav.heights[k] - ay) > 1 || f.meters(k) > rad * 2.5 + 2) continue;
+        nav.cellCenter(k, out);
+        if (Math.hypot(out.x - a.x, out.z - a.z) < 1.2) continue;   // never in the leader's face
+        if (inFire(yaw, out.x - a.x, out.z - a.z, 0.9, still ? VIEW_CONE : FIRE_CONE)) continue;   // (nearestWalkable may slide it in)
+        if (this.squad.bots.some((o) => o !== this && o[key] && Math.hypot(o[key].x - out.x, o[key].z - out.z) < 1.1)) continue;
+        if (col && col.blocked(_a, _b.set(out.x, out.y + 1.5, out.z))) continue;
+        return out;
+      }
     }
-    const k = nav.nearestWalkable(a.x, a.z, 4);
+    // nowhere out of view (a tight container): stay put rather than step in front of the gun, else behind the leader
+    if (key === 'slotGoal' && Math.hypot(this.pos.x - a.x, this.pos.z - a.z) > 1.2 && !inFire(yaw, this.pos.x - a.x, this.pos.z - a.z, 0.9, still ? VIEW_CONE : FIRE_CONE)) return out.copy(this.pos);
+    const k = nav.nearestWalkable(a.x - fx * 1.6, a.z - fz * 1.6, 4);
     return k >= 0 && Math.abs(nav.heights[k] - ay) < 1 ? nav.cellCenter(k, out) : out.copy(a);
+  }
+
+  /** Is the formation spot `p` still good: near the leader, level, out of its view cone? (hysteresis: no reshuffle per look) */
+  _slotOk(a, p) {
+    const dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz);
+    if (d > 6 || d < 1.1 || Math.abs(p.y - a.y) > 1.2) return false;
+    if (this.squad.bots.some((o) => o !== this && o.slotGoal && Math.hypot(o.slotGoal.x - p.x, o.slotGoal.z - p.z) < 1.1)) return false;
+    return !inFire(this.game.player.yaw, dx, dz, 0.9, this.squad.leaderStill() ? VIEW_CONE : FIRE_CONE);
+  }
+
+  /** Does our shot from `eye` to `aim` pass within ~0.55 m of the leader's body (feet to head)? */
+  _leaderInLine(eye, aim) {
+    const st = this.game.status, p = this.game.player.pos;
+    if (st && !st.alive) return false;
+    _a.subVectors(aim, eye);
+    const L2 = _a.lengthSq();
+    if (L2 < 1e-4) return false;
+    const u = ((p.x - eye.x) * _a.x + (p.y + 1 - eye.y) * _a.y + (p.z - eye.z) * _a.z) / L2;
+    if (u <= 0.01 || u >= 0.99) return false;
+    const cx = eye.x + _a.x * u, cy = eye.y + _a.y * u, cz = eye.z + _a.z * u;
+    return Math.hypot(cx - p.x, cz - p.z) < 0.55 && cy > p.y + 0.1 && cy < p.y + 2;
+  }
+
+  /** Sideways unit step off the line from us to target `t`, away from the leader. */
+  _offLine(a, t, out) {
+    const dx = t.pos.x - this.pos.x, dz = t.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1;
+    const px = -dz / l, pz = dx / l;
+    const s = (this.pos.x - a.x) * px + (this.pos.z - a.z) * pz < 0 ? -1 : 1;
+    return out.set(px * s, 0, pz * s);
+  }
+
+  /**
+   * Standing in the leader's line of fire / view (inside its forward cone, within 16 m)? Returns the sideways unit
+   * step out of it (toward the side we are already on) or null. Not while reviving, not when the leader is down.
+   */
+  _outOfFire(a, out) {
+    const st = this.game.status;
+    if (this.rescue || (st && (!st.alive || st.downed))) return null;
+    const yaw = this.game.player.yaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    const dx = this.pos.x - a.x, dz = this.pos.z - a.z;
+    // a still / aiming leader: its whole view within 6 m (a bot beside the gun fills the screen)
+    const still = this.squad.leaderStill() && Math.hypot(dx, dz) < 6;
+    if (Math.abs(this.pos.y - a.y) > 2.5 || !inFire(yaw, dx, dz, 1, still ? VIEW_CONE : FIRE_CONE)) return null;
+    let lat = dx * -fz + dz * fx;
+    if (Math.abs(lat) < 0.05) lat = (BEARING[this.slot] ?? 1) < 0 ? -1 : 1;
+    const s = lat < 0 ? -1 : 1;
+    // sideways and a little back toward the leader's shoulder line
+    return out.set(-fz * s - fx * 0.35, 0, fx * s - fz * 0.35).normalize();
   }
 
   _placeNear(a) {
@@ -317,6 +420,34 @@ export class BotSquad {
     this.lastState = undefined;
   }
 
+  /**
+   * Is `z` the leader's (the local player's) to finish: under its crosshair (within ~5°, 40 m) or hit by it in the
+   * last 1.5 s, and not a threat yet (over 5 m from `p`, the asking bot, and 4 m from the leader)? Bosses never are.
+   */
+  leaderTarget(z, p) {
+    const g = this.game, me = g.player, st = g.status;
+    if (!me || z.def.boss || (st && (!st.alive || st.downed))) return false;
+    if (z.pos.distanceTo(p) < 5 || z.pos.distanceTo(me.pos) < 4) return false;
+    if (g.zombies.time - (z.localHitAt ?? -9) < 1.5) return true;
+    const cam = g.camera, dx = z.pos.x - cam.position.x, dy = z.pos.y + z.height * 0.6 - cam.position.y, dz = z.pos.z - cam.position.z;
+    const l = Math.hypot(dx, dy, dz);
+    if (l > 40 || l < 1e-3) return false;
+    cam.getWorldDirection(_f);
+    return (dx * _f.x + dy * _f.y + dz * _f.z) / l > 0.996;
+  }
+
+  /** A damaging hit by one of the bots (match.js onDamage): the results screen's squad table. */
+  onDamage(id, dealt, z) {
+    const b = this.bots.find((o) => o.id === id);
+    if (!b) return;
+    b.stats.damage += dealt;
+    if (z?.def?.boss) b.stats.bossDamage += dealt;
+  }
+  onKill(id, head) {
+    const b = this.bots.find((o) => o.id === id);
+    if (b) { b.stats.kills++; if (head) b.stats.headshots++; }
+  }
+
   /** LOS from a point to a zombie (cached per frame by the zombie manager's collision). */
   losFrom(p, z) {
     const col = this.game.world.collision;
@@ -335,6 +466,12 @@ export class BotSquad {
 
   players() {
     return this.bots.map((b) => ({ id: b.id, pos: b.pos, alive: b.alive && !b.downed, downed: b.downed, bot: b }));
+  }
+
+  /** The leader stands (nearly) still or aims down the sights: bots keep out of its whole view, not just the line of fire. */
+  leaderStill() {
+    const g = this.game;
+    return (g.player?.horizontalSpeed ?? 9) < 1.2 || (g.vm?.aim ?? 0) > 0.5;
   }
 
   /**

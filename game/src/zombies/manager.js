@@ -181,9 +181,17 @@ class Zombie {
     }
     amount *= mgr.dmgTakenMul || 1;
     if (this.purgeT > 0) amount *= this.purgeMul || 1.1;
+    // who took how much off it (assists: rules.js assistShare), our own hits (the AI teammates leave those to us),
+    // and the match's damage tallies (results screen)
+    const dealt = Math.min(amount, Math.max(0, this.hp));
+    if (info.shooter !== undefined) {
+      (this.dmgBy || (this.dmgBy = new Map())).set(info.shooter, (this.dmgBy.get(info.shooter) || 0) + dealt);
+      if (info.shooter === g.localId) this.localHitAt = mgr.time;
+      g.match?.onDamage?.(this, dealt, info.shooter);
+    }
     this.hp -= amount;
     this.lastHitAt = mgr.time;
-    if (info.burn) this.zfx?.status(this, 'burning', 0.9);
+    if (info.burn) this.zfx?.status(this, info.burnFx || 'burning', 0.9);   // burnFx: a weapon's own fire look (zfx SHELL)
     const dir = info.dir || _v.set(0, 0, 1);
     // knockback (CSO-style shove) and upper-body flinch
     const kres = 1 - (this.def.knockRes || 0);
@@ -675,7 +683,8 @@ export class ZombieManager {
     this.warm = new THREE.Group();
     this.warm.name = 'zombie-warmup';
     this.warm.visible = false;
-    for (const e of this.models.values()) {
+    const bossModels = new Set(Object.values(ZOMBIES).filter((d) => d.boss).map((d) => d.models[0]));
+    for (const [id, e] of this.models) {
       if (e.missing || e.fallback) continue;
       // the clip retarget too (~0.1-0.3 s per model): a boss entrance must not freeze the round
       if (!e.standin && this.animSrc && !e.retargeted) {
@@ -686,6 +695,7 @@ export class ZombieManager {
         const s = cloneSkinned(src);
         s.traverse((o) => { if (o.isSkinnedMesh) o.frustumCulled = false; });
         patchShell(s);
+        if (bossModels.has(id)) bossFadeable(s);   // the dithered boss variant compiles with the rest
         this.warm.add(s);
       }
     }
@@ -784,6 +794,7 @@ export class ZombieManager {
     if (opts.id) z.id = opts.id;
     z.lod0 = lod0; z.lod1 = lod1;
     z.shell = patchShell(scene);   // per-zombie status-shell uniforms (fx/zfx.js: berserk, healed, burning, elite...)
+    if (def.boss) z.fadeMats = bossFadeable(scene);   // (its own patched material clones: _bossFade)
     z.poseQ = entry.poseQ ? entry.poseQ.map(([b, q]) => [z.bones[b], q]).filter(([b]) => b) : null;
     if (def.boss) { z.height = def.height; z.radius = def.radius; }
     if (opts.puppet) { z.puppet = true; if (opts.running !== undefined) { z.running = opts.running; z.setLoco(z.running); } }
@@ -1043,7 +1054,27 @@ export class ZombieManager {
       }
       const shadow = dist < 18 || z.def.boss;
       if (shadow !== z.castsShadow) { z.castsShadow = shadow; z.root.traverse((o) => { if (o.isSkinnedMesh) o.castShadow = shadow; }); }
+      if (z.fadeMats) this._bossFade(z, cam);
     }
+  }
+
+  /**
+   * A boss right on the camera (a dive landing next to us, the tendril pull, a limb swung through our head): its
+   * materials dither out (alphaHash, set at spawn and in the load-time warm-up, so no shader compile here) from 1.2 m
+   * off its nearest hitbox capsule down to an eighth inside it. QA: the screen was a wall of grey polygons for seconds.
+   */
+  _bossFade(z, cam) {
+    const c = cam.position;
+    let a = 1;
+    if (z.alive && Math.hypot(c.x - z.pos.x, c.z - z.pos.z) < z.radius + z.height && c.y > z.pos.y - 2 && c.y < z.pos.y + z.height * 1.6) {
+      if (z.hbFrame !== this.frame) z.updateHitboxes();
+      let d = 9;
+      for (const h of z.hitboxes) d = Math.min(d, segDist(c, h.p0, h.p1) - h.r);
+      a = Math.round((0.12 + 0.88 * clamp((d - 0.15) / 1.05, 0, 1)) * 20) / 20;
+    }
+    if (z.fadeA === a) return;
+    z.fadeA = a;
+    for (const m of z.fadeMats) m.opacity = a;
   }
 
   // ---------------------------------------------------------------- targets interface
@@ -1201,6 +1232,24 @@ export class ZombieManager {
     this.alive = 0;
     if (this.authority) this.net?.zombiesCleared?.(); // clients drop their puppets
   }
+}
+
+/**
+ * A boss's own (patchShell-cloned) materials switched to alphaHash: opaque at opacity 1, dithered below it, no
+ * sorting (ZombieManager._bossFade drives the opacity). Returns them.
+ */
+function bossFadeable(root) {
+  const mats = new Set();
+  root.traverse((o) => { if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m?.userData.zshell) mats.add(m); });
+  for (const m of mats) { m.alphaHash = true; m.opacity = 1; }
+  return [...mats];
+}
+
+/** Distance from point p to the segment p0-p1. */
+function segDist(p, p0, p1) {
+  const ux = p1.x - p0.x, uy = p1.y - p0.y, uz = p1.z - p0.z, L2 = ux * ux + uy * uy + uz * uz;
+  const t = L2 > 1e-8 ? clamp(((p.x - p0.x) * ux + (p.y - p0.y) * uy + (p.z - p0.z) * uz) / L2, 0, 1) : 0;
+  return Math.hypot(p.x - p0.x - ux * t, p.y - p0.y - uy * t, p.z - p0.z - uz * t);
 }
 
 /** Ray vs capsule (segment p0-p1, radius r): returns entry distance or -1. Approximate at the caps. */

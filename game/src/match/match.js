@@ -1,9 +1,10 @@
-// One chapter run on a map: rounds, the spawn director, economy, XP levels + perks, supply drops,
-// downed / defeat / retry and victory. Host-authoritative in multiplayer (clients mirror state).
+// One chapter run on a map: rounds, the spawn director, the economy (kill / round money, the shop, money
+// upgrades), XP levels + traits, supply drops, downed / defeat / retry and victory. Host-authoritative in
+// multiplayer (clients mirror the flow); money, upgrades and traits are every player's own (rules.js, DESIGN §5).
 import * as THREE from 'three';
-import { ROUNDS, DIFFICULTY, ECONOMY, xpFor, MAX_LEVEL, PERKS } from './rules.js';
+import { ROUNDS, DIFFICULTY, ECONOMY, LOADOUT, xpFor, MAX_LEVEL, PERKS, PERK, PERK_CASH, UPGRADES, UPGRADE, upgradeLevels, upgradePrice, killMoney, killXp, assistShare, priceOf, resourceKind } from './rules.js';
 import { ZOMBIES } from '../zombies/defs.js';
-import { WEAPONS } from '../weapons/defs.js';
+import { WEAPONS, isListed, slotOf } from '../weapons/defs.js';
 import { pick, rand } from '../engine/util.js';
 
 const _v = new THREE.Vector3();
@@ -36,15 +37,24 @@ export class Match {
     this.timer = 6;
     this.money = ECONOMY.startMoney;
     this.xp = 0; this.level = 1; this.xpFrac = 0; this.pendingPerks = 0;
-    this.dmgMul = 1; this.reloadMul = 1; this.knockMul = 1; this.speedMul = 1;
+    this.upgrades = upgradeLevels();   // money upgrades 強化 { atk: level, ... } (rules.js UPGRADES)
+    this.traits = {};                  // level traits 戰技 { id: rank } (rules.js PERKS)
+    this.perkChoices = null;           // the traits offered for the pending point (rolled once per point)
+    this.dmgMul = 1; this.reloadMul = 1; this.moveMul = 1; this.adrenT = 0;
     this.retries = this.diff.retries;
-    this.stats = { kills: 0, headshots: 0, damage: 0, bossDamage: 0, deaths: 0, money: 0 };
+    // deaths: team wipes; downs: our own (player/status.js)
+    this.stats = { kills: 0, headshots: 0, assists: 0, damage: 0, bossDamage: 0, deaths: 0, downs: 0, money: 0, spent: 0 };
     this.queue = [];           // zombie types left to spawn this round
     this.spawnT = 0;
     this.boss = null;
     this.supplies = [];
     this.selfRevives = 2;
+    // starting kit (rules.js LOADOUT): game.js hands out the sidearm, then game.startWeapon (a dev ?w= keeps its own)
+    if (!game.startWeapon) game.startWeapon = LOADOUT.primary || LOADOUT.sidearm;
   }
+
+  /** Movement multiplier read by game.js: the 移動速度 upgrade, x 腎上腺素 for a moment after a kill. */
+  get speedMul() { return this.moveMul * (this.adrenT > 0 ? 1 + 0.06 * (this.traits.adrenaline || 0) : 1); }
 
   get maxAlive() {
     const q = this.game.renderer.qualityName;
@@ -53,9 +63,9 @@ export class Match {
 
   start() {
     this.state = 'warmup';
-    this.timer = 8;
+    this.timer = ECONOMY.warmup;
     this.game.hud?.setRound('準備作戰', '購買裝備');
-    this.game.hud?.toast('購買時間：按 B 或點擊購買', 2600);
+    this.game.hud?.toast('購買時間：按 B 購買武器與強化', 2600);
     this.game.audio?.playMusic?.('calm');
     this.game.audio?.preload?.(['combat_low', 'combat_high']);   // decoded before round 1: the switch stays phase-locked
   }
@@ -64,6 +74,10 @@ export class Match {
   update(dt) {
     const g = this.game;
     this.timer -= dt;
+    this.adrenT = Math.max(0, this.adrenT - dt);
+    if (!this._statsOn && g.arsenal) { this._statsOn = true; this._applyStats(); }   // (the arsenal comes after the match)
+    if (!this._intro) this._shopIntro();
+    this._emptySwitch();
     if (this.isMirror) { this._mirrorUpdate(); this._updateSupplies(dt); return; }
     if (this.state === 'warmup' || this.state === 'buy') {
       g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`);
@@ -77,6 +91,7 @@ export class Match {
       const left = this.queue.length + (g.zombies?.alive || 0);
       const R = ROUNDS[Math.max(0, this.round - 1)];
       g.hud?.setRound(R.title, `剩餘感染者 ${left}`);
+      this._midSupply(left);
       if (this.boss) { const f = Math.max(0, this.boss.hp / this.boss.maxHp); g.hud?.setBoss(this.boss.name, f); this._bossSupply(f); }
       if (left <= 0 && (!this.boss || this.boss.hp <= 0)) this.endRound();
       this._checkDefeat();
@@ -90,7 +105,7 @@ export class Match {
     this.round = n;
     const R = ROUNDS[n - 1];
     this.state = 'round';
-    this._bossCrateRound = 0;   // (a wipe retry gets its boss crate again)
+    this._bossCrateRound = 0; this._midRound = 0;   // (a wipe retry gets its boss / mid-round crate again)
     const scale = (1 + 0.5 * (this.players - 1)) * this.diff.countMul;
     this.queue = [];
     for (const [type, count] of R.mix) for (let i = 0; i < Math.round(count * scale); i++) this.queue.push(type);
@@ -114,20 +129,33 @@ export class Match {
 
   endRound() {
     const g = this.game;
-    const bonus = ECONOMY.roundBonus(this.round);
-    this.addMoney(bonus);
     g.hud?.setBoss(null);
     this.boss = null;
     if (this.round < ROUNDS.length) g.audio?.play('round_win');   // the last one gets the victory cue alone
-    g.hud?.toast(`回合完成　+$${bonus}`, 2400);
-    // everyone back on their feet, a little health and armour back
-    if (g.status) { if (g.status.downed || !g.status.alive) { g.status.alive = true; g.status.revive(50); } g.status.heal(30); }
+    this._roundReward(this.round);
     this._dropSupplies(2);
     if (this.round >= ROUNDS.length) { this.victory(); return; }
     this.state = 'buy';
-    this.timer = 20;
+    this.timer = ECONOMY.buyTime;
     g.audio?.playMusic?.('calm');
     if (ROUNDS[this.round]?.boss) g.audio?.prepareMusic?.('boss');   // decoded during the buy time, on cue at the boss
+  }
+
+  /** A cleared round (host and guests alike): the bonus (+ a boss round's bounty), everyone up, a little health back. */
+  _roundReward(round) {
+    const g = this.game, st = g.status;
+    const bonus = ECONOMY.roundBonus(round), bounty = ECONOMY.bossBounty[ROUNDS[round - 1]?.boss] || 0;
+    if (round < ROUNDS.length) {
+      this.addMoney(bonus);
+      // the reserves come back full for the next round (彈藥容量 included; rules.js ECONOMY)
+      const resupplied = this.resupply();
+      g.hud?.toast(`回合完成　+$${Math.round(bonus * this.diff.moneyMul).toLocaleString('en-US')}${bounty ? '（含首領賞金）' : ''}${resupplied ? '　彈藥已補給' : ''}`, 2400);
+    }
+    if (!st) return;
+    if (st.downed || !st.alive) { st.alive = true; st.revive(50); }
+    const medic = 15 * (this.traits.medic || 0);
+    st.heal(30 + medic);
+    if (medic && st.kevlar) st.armor = Math.min(st.maxArmor, st.armor + medic);
   }
 
   victory() {
@@ -162,12 +190,63 @@ export class Match {
     }
   }
 
-  /** Wipe retry: back on our feet at full health on our own spawn point. */
+  /** Wipe retry: back on our feet at full health on our own spawn point, reserves and magazines full (like the bots). */
   _respawn() {
     const g = this.game, sp = g.world.playerSpawns;
     g.status.alive = true; g.status.revive(g.status.maxHp);
     const p = sp[(g.spawnIndex | 0) % sp.length] || sp[0];
     if (p) { g.player.pos.copy(p); g.player.vel.set(0, 0, 0); }
+    this.resupply(true);
+  }
+
+  /**
+   * Tops every owned weapon's finite reserve (magazine guns, bows) up to its maximum (彈藥容量 included; overstock
+   * bought in the shop is kept); full: the magazines too (wipe retry). Mana / charges / unlimited reserves and melee
+   * are left alone. Returns whether anything was added.
+   */
+  resupply(full = false) {
+    const ar = this.game.arsenal;
+    let added = false;
+    for (const ws of Object.values(ar?.owned || {})) {
+      const d = ws.def, kind = resourceKind(d);
+      if (kind !== 'ammo' && kind !== 'arrows') continue;
+      if (Number.isFinite(d.reserve) && d.reserve > 0) {
+        const max = ar.maxReserve?.(ws) ?? d.reserve;
+        if (ws.reserve < max) { ws.reserve = max; added = true; }
+      }
+      if (full && d.mag > 0 && ws.ammo < d.mag) { ws.ammo = d.mag; ws.needsCycle = false; added = true; }
+    }
+    if (added) this.game.hud?.ammoChanged?.();
+    return added;
+  }
+
+  /**
+   * CS-style auto switch: pulling the trigger on a weapon that is completely dry mid-round (nothing in the magazine,
+   * nothing in reserve) draws the next weapon that still has something to shoot -- the sidearm first. The HUD shows
+   * the same move as a "[2] 副武器" chip before (ui/hud.js).
+   */
+  _emptySwitch() {
+    const g = this.game, ar = g.arsenal, st = g.status, s = g.input?.state;
+    if (this.state !== 'round' || !ar?.current || !s?.pressed.fire || ar.state !== 'idle' || ar.pendingSlot != null) return;
+    if (st && (!st.alive || st.downed)) return;
+    const slot = this.fallbackSlot();
+    if (slot != null && this.dry(ar.current)) ar.select(slot);
+  }
+
+  /** Is this weapon state out of everything it shoots (finite magazine + reserve both empty, no unlimited buff)? */
+  dry(ws) {
+    const d = ws?.def, kind = resourceKind(d);
+    if (!d || (kind !== 'ammo' && kind !== 'arrows') || !(d.mag > 0)) return false;
+    if (this.game.arsenal?._mods?.(ws).infinite) return false;
+    return ws.ammo <= 0 && Number.isFinite(ws.reserve) && ws.reserve <= 0;
+  }
+
+  /** The slot to fall back on when the held weapon is dry: the sidearm, then the others that are not dry; or null. */
+  fallbackSlot() {
+    const ar = this.game.arsenal, cur = ar?.current;
+    if (!cur) return null;
+    const slots = Object.keys(ar.owned).map(Number).sort((a, b) => (a === 2 ? -1 : b === 2 ? 1 : a - b));
+    return slots.find((k) => ar.owned[k] !== cur && k <= 3 && !this.dry(ar.owned[k])) ?? null;
   }
 
   // ---------------------------------------------------------------- spawning
@@ -228,18 +307,69 @@ export class Match {
   }
 
   // ---------------------------------------------------------------- economy / XP
-  addMoney(n) { this.money = Math.min(ECONOMY.maxMoney, this.money + Math.round(n * this.diff.moneyMul)); this.stats.money += n; }
+  /** Earned money (difficulty moneyMul applied here, once); the HUD shows the gain by the money counter. */
+  addMoney(n) {
+    const add = Math.round(n * this.diff.moneyMul);
+    if (add <= 0) return;
+    const before = this.money;
+    this.money = Math.min(ECONOMY.maxMoney, this.money + add);
+    this.stats.money += add;
+    if (this.money > before) this.game.shop?.moneyGain?.(this.money - before);
+  }
+  /** Spends money (purchases): false and a deny sound when short. */
+  spend(n) {
+    if (this.money < n) { this.game.audio?.play('ui_deny'); this.game.hud?.toast('金錢不足'); return false; }
+    this.money -= n;
+    this.stats.spent += n;
+    return true;
+  }
 
   onKill(zombie, info) {
     const g = this.game;
-    if (info?.shooter !== g.localId) return;
-    const d = zombie.def;
-    const head = info.headshot;
+    const d = zombie.def, head = !!info?.headshot, elite = !!zombie.elite;
+    if (info?.shooter !== g.localId) {
+      g.bots?.onKill?.(info?.shooter, head);
+      // finished by someone else (an AI teammate, a guest): our damage share pays an assist
+      const share = assistShare(zombie, g.localId);
+      if (share > 0) this._assist(killMoney(d, head, elite) * share, killXp(d, head, elite) * share);
+      return;
+    }
+    this._reward(killMoney(d, head, elite), killXp(d, head, elite), head);
+    g.hud?.killFeed('你', info.weapon || 'knife', d.zh + (elite ? '（精英）' : ''), head);
+  }
+
+  /** An assist (host: onKill; guests: the host's 'rw' row with a): money (+ 賞金獵人) and XP, no kill traits. */
+  _assist(money, xp) {
+    this.stats.assists++;
+    if (money > 0) this.addMoney(money * (1 + 0.1 * (this.traits.bounty || 0)));
+    if (xp > 0) this.addXp(xp);
+  }
+
+  /**
+   * Every damaging hit on a zombie (zombies/manager.js Zombie.damage, after its multipliers; dealt = what came off
+   * its health): our damage / boss damage for the results, the AI teammates' tallies.
+   */
+  onDamage(zombie, dealt, shooter) {
+    if (!(dealt > 0)) return;
+    const g = this.game;
+    if (shooter === g.localId) {
+      this.stats.damage += dealt;
+      if (zombie.def?.boss) this.stats.bossDamage += dealt;
+    } else g.bots?.onDamage?.(shooter, dealt, zombie);
+  }
+
+  /** Our kill (host: onKill; guests: the host's 'rw' row): money (+ 賞金獵人), XP and the on-kill traits. */
+  _reward(money, xp, head) {
+    const g = this.game, t = this.traits, st = g.status;
     this.stats.kills++;
     if (head) this.stats.headshots++;
-    this.addMoney(d.money * (head ? ECONOMY.headshotMul : 1) * (zombie.elite ? 2 : 1));
-    this.addXp(d.xp * (head ? 1.5 : 1) * (zombie.elite ? 2.5 : 1));
-    g.hud?.killFeed('你', info.weapon || 'knife', d.zh + (zombie.elite ? '（精英）' : ''), head);
+    if (money > 0) this.addMoney(money * (1 + 0.1 * (t.bounty || 0)));
+    this.addXp(xp);
+    if (t.leech && st) st.heal(2 * t.leech * (head ? 2 : 1));
+    if (t.adrenaline) this.adrenT = 2.5;
+    // 戰場回收: rounds straight into the magazine of a gun (not a melee weapon, nothing past a full magazine)
+    const ws = g.arsenal?.current, d = ws?.def;
+    if (t.scavenge && d && d.mag > 0 && d.mode !== 'melee' && ws.ammo < d.mag) { ws.ammo = Math.min(d.mag, ws.ammo + t.scavenge); g.hud?.ammoChanged?.(); }
   }
 
   addXp(n) {
@@ -281,26 +411,119 @@ export class Match {
     this._lvlTimer = setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }, 2500);
   }
 
-  /** Spends a pending perk point; id one of PERKS[].id (auto: alternate attack / health). */
+  // ---------------------------------------------------------------- level traits (戰技)
+  /** The traits offered for the pending point: three not maxed yet (戰場津貼 fills in once they run out). */
+  perkOptions() {
+    if (this.pendingPerks <= 0) return [];
+    if (!this.perkChoices) {
+      const open = PERKS.filter((p) => (this.traits[p.id] || 0) < p.max).map((p) => p.id);
+      for (let i = open.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [open[i], open[j]] = [open[j], open[i]]; }
+      this.perkChoices = open.slice(0, 3);
+      if (this.perkChoices.length < 3) this.perkChoices.push(PERK_CASH.id);
+    }
+    return this.perkChoices;
+  }
+
+  /** Spends a pending trait point on `id` (one of perkOptions(); anything else takes the first). Returns the perk. */
   choosePerk(id) {
-    if (this.pendingPerks <= 0) return;
-    const perk = PERKS.find((p) => p.id === id) || PERKS[(this.level % 2)];
-    perk.apply(this, this.game);
+    if (this.pendingPerks <= 0) return null;
+    const opts = this.perkOptions();
+    const perk = PERK[opts.includes(id) ? id : opts[0]];
+    if (perk === PERK_CASH) this.addMoney(PERK_CASH.money / this.diff.moneyMul);
+    else this.traits[perk.id] = (this.traits[perk.id] || 0) + 1;
     this.pendingPerks--;
-    this.game.arsenal.dmgMul = this.dmgMul;
-    this.game.arsenal.reloadMul = this.reloadMul;
+    this.perkChoices = null;
+    this._applyStats();
+    this.game.shop?.refresh?.();
+    return perk;
+  }
+
+  // ---------------------------------------------------------------- money upgrades (強化)
+  /** Upgrades sell in the buy time only (warmup / between rounds): never mid-round, not even in a buy zone. */
+  canUpgrade() { return (this.state === 'warmup' || this.state === 'buy') && this.canBuy(); }
+
+  /** Why a money upgrade would do nothing yet ('' when it applies): 護甲 needs kevlar, 技能充能 a 克金 weapon. */
+  upgradeNote(id) {
+    const g = this.game;
+    if (id === 'armor' && !g.status?.kevlar) return '需穿戴防彈衣';
+    if (id === 'charge' && !Object.values(g.arsenal?.owned || {}).some((ws) => ws.def.special)) return '需持有克金武器';
+    return '';
+  }
+
+  /** Something waits in the 強化 tab (the HUD's gold dot on [B] 商店): a trait point, or an affordable upgrade that applies. */
+  upgradeWaiting() {
+    if (this.pendingPerks > 0) return true;
+    if (!this.canUpgrade()) return false;
+    return UPGRADES.some((u) => !this.upgradeNote(u.id) && upgradePrice(u.id, this.upgrades[u.id] | 0) <= this.money);
+  }
+
+  /** Buys the next level of a money upgrade (rules.js UPGRADES). */
+  buyUpgrade(id) {
+    const g = this.game, u = UPGRADE[id];
+    if (!u) return false;
+    const lv = this.upgrades[id] | 0;
+    if (!this.canUpgrade()) { g.audio?.play('ui_deny'); g.hud?.toast('強化只在購買時間開放'); return false; }
+    if (lv >= u.max || !this.spend(upgradePrice(id, lv))) { if (lv >= u.max) g.audio?.play('ui_deny'); return false; }
+    this.upgrades[id] = lv + 1;
+    this._applyStats();
+    if (id === 'hp') g.status?.heal(UPGRADE.hp.value(lv + 1) - UPGRADE.hp.value(lv));
+    if (id === 'ammo') {
+      // the extra capacity arrives filled (finite reserves only: arrows, magazines; mana / unlimited stay as they are)
+      const add = u.value(lv + 1) - u.value(lv);
+      for (const ws of Object.values(g.arsenal?.owned || {})) { const r = ws.def.reserve; if (Number.isFinite(r) && r > 0) ws.reserve += Math.round(r * add); }
+    }
+    g.audio?.play('ui_buy');
+    return true;
+  }
+
+  /**
+   * Pushes the money upgrades and the traits into the arsenal (damage, reload, headshot, reserve, meter gain,
+   * knockback, spread) and the player status (health, armour, bleed-out); on every change and once the arsenal
+   * exists. Damage is applied on the shooter's client only (its hits travel to the host as final amounts).
+   */
+  _applyStats() {
+    const g = this.game, t = this.traits, val = (id) => UPGRADE[id].value(this.upgrades[id] | 0);
+    this.dmgMul = val('atk');
+    this.reloadMul = val('reload');
+    this.moveMul = val('speed');
+    const ar = g.arsenal;
+    if (ar) {
+      ar.dmgMul = this.dmgMul; ar.reloadMul = this.reloadMul;   // (premium team auras multiply onto these: specials.js)
+      ar.headMul = val('head'); ar.reserveMul = val('ammo'); ar.chargeMul = val('charge');
+      ar.knockMul = 1 + 0.15 * (t.knock || 0); ar.spreadMul = 1 - 0.08 * (t.steady || 0);
+    }
+    const st = g.status;
+    if (st) {
+      st.maxHp = val('hp'); st.hp = Math.min(st.hp, st.maxHp);
+      const a = val('armor');
+      st.maxArmor = a.max; st.armorRegen = a.regen;
+      st.bleedOut = 20 + 5 * (t.grit || 0); st.reviveBonus = 15 * (t.grit || 0);
+    }
+    g.shop?.badges?.refresh();   // HUD level badges by the vitals
+  }
+
+  /** First two matches: the buy menu opens by itself in the warmup (the starting kit is a sidearm). */
+  _shopIntro() {
+    this._intro = true;
+    const g = this.game;
+    if (this.state !== 'warmup' || !g.shop) return;
+    let n = 9;
+    try { n = +(localStorage.getItem('cf.shopIntro') || 0); localStorage.setItem('cf.shopIntro', String(n + 1)); } catch { /* private mode */ }
+    if (n < 2) setTimeout(() => { if (!g.disposed && this.state === 'warmup' && !g.shop.open) g.shop.show(); }, 900);
   }
 
   // ---------------------------------------------------------------- shop
-  price(id) { return WEAPONS[id]?.price ?? 0; }
+  /** What the shop charges for a weapon (rules.js priceOf: series price bands). */
+  price(id) { return priceOf(WEAPONS[id]); }
+  /** Whether we carry this weapon (it sits in the slot its def takes). */
+  owns(id) { const w = WEAPONS[id], o = w && this.game.arsenal?.owned[slotOf(w)]; return !!o && o.def.id === id; }
 
   buy(id) {
     const g = this.game;
     const w = WEAPONS[id];
-    if (!w) return false;
-    if (!this.canBuy()) { g.hud?.toast('現在不能購買'); return false; }
-    if (this.money < w.price) { g.audio?.play('ui_deny'); g.hud?.toast('金錢不足'); return false; }
-    this.money -= w.price;
+    if (!w || !isListed(w) || this.owns(id)) { g.audio?.play('ui_deny'); return false; }
+    if (!this.canBuy()) { g.audio?.play('ui_deny'); g.hud?.toast('現在不能購買'); return false; }
+    if (!this.spend(this.price(id))) return false;
     g.arsenal.give(id);
     g.audio?.play('ui_buy');
     return true;
@@ -309,21 +532,49 @@ export class Match {
   buyArmor(kind) {
     const g = this.game, st = g.status;
     const price = kind === 'helmet' ? ECONOMY.helmetPrice : ECONOMY.armorPrice;
-    if (!this.canBuy() || this.money < price) { g.audio?.play('ui_deny'); return false; }
-    if (kind === 'helmet') { if (st.helmet) return false; st.helmet = true; } else { if (st.armor >= 100) return false; st.armor = 100; }
-    this.money -= price;
+    const full = kind === 'helmet' ? st.helmet : st.armor >= st.maxArmor;
+    if (!this.canBuy() || full) { g.audio?.play('ui_deny'); return false; }
+    if (!this.spend(price)) return false;
+    if (kind === 'helmet') st.helmet = true; else { st.armor = st.maxArmor; st.kevlar = true; }
     g.audio?.play('ui_buy');
     return true;
   }
 
+  /**
+   * Ammo for one weapon state: { kind, label, price, add, why } (why = why there is nothing to buy, else ''). Not every
+   * weapon is a gun (rules.js resourceKind): bows buy arrows, mana / charges refill themselves, melee spends nothing.
+   */
+  ammoOffer(ws) {
+    const d = ws?.def, ar = this.game.arsenal, kind = resourceKind(d);
+    const label = { arrows: '補充箭矢', mana: '法力', charges: '充能' }[kind] || '補充彈藥';
+    if (!d) return { kind, label, why: '沒有武器' };
+    if (kind === 'none') return { kind, label, why: '近戰武器' };
+    if (kind === 'mana' || kind === 'charges') return { kind, label, why: '自動回復' };
+    if (!Number.isFinite(d.reserve)) return { kind, label, why: '無限備彈' };
+    if (!(d.reserve > 0) || !(d.mag > 0)) return { kind, label, why: '無備彈' };
+    // two magazines, at least a third of the base reserve (a 1-arrow bow refills a quiver, not 2 arrows); stock up
+    // to twice the maximum reserve
+    const max = ar?.maxReserve?.(ws) ?? d.reserve, cap = Math.round(max * 2);
+    const add = Math.min(cap - ws.reserve, Math.max(Math.max(1, d.mag) * 2, Math.ceil(d.reserve / 3)));
+    const price = Math.min(ECONOMY.ammoMax, Math.max(ECONOMY.ammoMin, Math.round(priceOf(d) * ECONOMY.ammoPrice / 10) * 10));
+    return { kind, label, price, add: Math.max(0, add), why: add > 0 ? '' : '備彈已滿' };
+  }
+
   buyAmmo() {
-    const g = this.game, ws = g.arsenal.current;
-    if (!ws || !this.canBuy()) return false;
-    const price = Math.max(50, Math.round(ws.def.price * ECONOMY.ammoPrice));
-    if (this.money < price || ws.reserve >= ws.def.reserve * 2) { g.audio?.play('ui_deny'); return false; }
-    this.money -= price;
-    ws.reserve = Math.min(ws.def.reserve * 2, ws.reserve + ws.def.mag * 2);
+    const g = this.game, ws = g.arsenal.current, o = this.ammoOffer(ws);
+    if (!this.canBuy() || o.why) { g.audio?.play('ui_deny'); return false; }
+    if (!this.spend(o.price)) return false;
+    ws.reserve += o.add;
+    g.hud?.ammoChanged?.();
     g.audio?.play('ui_buy');
+    return true;
+  }
+
+  /** Grenades (weapons/throwables.js prices and limits) through the match purse. */
+  buyThrowable(kind) {
+    const m0 = this.money;
+    if (!this.game.throwables?.buy(kind)) return false;
+    this.stats.spent += m0 - this.money;
     return true;
   }
 
@@ -355,11 +606,29 @@ export class Match {
   _bossSupply(frac) {
     if (frac > 0.5 || frac <= 0 || this._bossCrateRound === this.round) return;
     this._bossCrateRound = this.round;
+    this._nearCrate({ rare: true });
+  }
+
+  /**
+   * Halfway through a long round (round 3 on, no boss): one crate at the supply point nearest us -- the late rounds
+   * outlast a full reserve (QA: ~700 body hits in round 8). `left` = infected left (host: queue + alive; guests: the
+   * host's count); half of the most seen this round. Local, like every crate.
+   */
+  _midSupply(left) {
+    if (this._midRound !== this.round) { this._midRound = this.round; this._midMax = 0; this._midDone = false; }
+    this._midMax = Math.max(this._midMax, left);
+    if (this._midDone || this.round < 3 || ROUNDS[this.round - 1]?.boss || this._midMax < 20 || left > this._midMax / 2) return;
+    this._midDone = true;
+    this._nearCrate();
+  }
+
+  /** A crate at the free supply point nearest us, with the airdrop toast. */
+  _nearCrate(opts = {}) {
     const g = this.game, pts = (g.world.def?.supply || []).map((p) => new THREE.Vector3(...p));
     const me = g.player?.pos;
     if (!pts.length || !me) return;
     pts.sort((a, b) => a.distanceTo(me) - b.distanceTo(me));
-    this.dropSupply(pts.find((p) => !this.supplies.some((s) => s.pos.distanceTo(p) < 1)) || pts[0], { rare: true });
+    this.dropSupply(pts.find((p) => !this.supplies.some((s) => s.pos.distanceTo(p) < 1)) || pts[0], opts);
     g.hud?.toast('補給箱空投！', 2000);
   }
 
@@ -428,13 +697,13 @@ export class Match {
     }
     g.hud?.setPrompt(near ? '按 E 開啟補給箱' : '');
     if (near && g.input.state.pressed.use) {
-      const ws = g.arsenal.current;
-      for (const w of Object.values(g.arsenal.owned)) w.reserve = Math.max(w.reserve, w.def.reserve);
-      g.status.armor = Math.max(g.status.armor, 60);
+      // a full reserve (with the 彈藥容量 upgrade) for every weapon that has a finite one
+      for (const w of Object.values(g.arsenal.owned)) if (Number.isFinite(w.def.reserve)) w.reserve = Math.max(w.reserve, g.arsenal.maxReserve?.(w) ?? w.def.reserve);
+      g.status.armor = Math.max(g.status.armor, Math.min(g.status.maxArmor ?? 100, 60));
+      g.status.kevlar = true;
       g.status.heal(25);
       g.audio?.play('ui_buy');
       g.hud?.toast('補給：彈藥、護甲、生命');
-      void ws;
       near.opened = 0;     // lid pops, sparkles, removed after 0.7 s
       near.glow?.stop(); near.glow = null;
       g.fx?.zfx?.supplyOpen(near.pos, near.rare ? CRATE.gold : [1.2, 2.2, 4.0]);
@@ -469,7 +738,7 @@ export class Match {
     this.state = state;
     const g = this.game;
     if (state === 'round') {
-      this._bossCrateRound = 0;
+      this._bossCrateRound = 0; this._midRound = 0;
       const R = ROUNDS[round - 1];
       g.hud?.toast(R?.intro || R?.title || '', 2400);
       g.audio?.play('round_start');
@@ -483,11 +752,8 @@ export class Match {
       g.audio?.play('round_lose');
       g.audio?.playMusic?.('calm');
     } else if (state === 'buy' && prev === 'round') {
-      const bonus = ECONOMY.roundBonus(round);
-      this.addMoney(bonus);
       g.audio?.play('round_win');
-      g.hud?.toast(`回合完成　+$${bonus}`, 2400);
-      if (g.status) { if (g.status.downed || !g.status.alive) { g.status.alive = true; g.status.revive(50); } g.status.heal(30); }
+      this._roundReward(round);
       this._dropSupplies(1);
       g.audio?.playMusic?.('calm');
       if (ROUNDS[round]?.boss) g.audio?.prepareMusic?.('boss');
@@ -499,19 +765,17 @@ export class Match {
     const g = this.game;
     const R = ROUNDS[Math.max(0, this.round - 1)];
     if (this.state === 'warmup' || this.state === 'buy') { g.hud?.setRound(this.state === 'warmup' ? '準備作戰' : `${ROUNDS[this.round]?.title || ''} 即將開始`, `${Math.max(0, Math.ceil(this.timer))}`); this._countdownTick(); }
-    else if (this.state === 'round') g.hud?.setRound(R?.title || '', `剩餘感染者 ${this.left ?? 0}`);
+    else if (this.state === 'round') { g.hud?.setRound(R?.title || '', `剩餘感染者 ${this.left ?? 0}`); if (this.left != null) this._midSupply(this.left); }
     else if (this.state === 'victory') g.hud?.setRound('任務完成', '');
     else if (this.state === 'defeat') g.hud?.setRound('任務失敗', '');
     g.hud?.setBoss(this.bossFrac >= 0 && this.state === 'round' ? this.bossName : null, Math.max(0, this.bossFrac));
     if (this.bossFrac >= 0 && this.state === 'round') this._bossSupply(this.bossFrac);
   }
 
-  /** Host credited us with a kill. */
+  /** Host credited us with a kill: { m: killMoney (before our moneyMul / traits), x: XP, n, h, w }; a: an assist ({ m, x }). */
   applyReward(r) {
-    this.stats.kills++;
-    if (r.h) this.stats.headshots++;
-    this.addMoney(r.m);
-    this.addXp(r.x);
+    if (r.a) { this._assist(r.m, r.x); return; }
+    this._reward(r.m, r.x, !!r.h);
     this.game.hud?.killFeed('你', r.w, r.n, !!r.h);
   }
 }

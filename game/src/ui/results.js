@@ -1,11 +1,14 @@
-// End-of-match results: victory / defeat banner, round reached, time, own stats (kills, headshots,
-// money earned), per-player table with MVP in multiplayer; play again / back to lobby / main menu.
+// End-of-match results: victory / defeat banner, round reached, time, own stats (kills, headshot rate, assists,
+// downs, damage, boss damage, level, money earned), the squad table with MVP (multiplayer: every player; solo with
+// AI teammates: you and the bots); play again / back to lobby / main menu.
 import { Screen, esc, ICON } from './kit.js';
 import { DIFF_INFO } from './menu.js';
 import { mapInfo } from '../world/maps/index.js';
 import { ROUNDS } from '../match/rules.js';
 
 const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const num = (n) => Math.round(n || 0).toLocaleString('en-US');
+const cash = (n) => '$' + num(n);   // (the shop's format: $14,105)
 
 /** MVP: most kills, then headshots, then money. Returns the row's id or null. */
 export function pickMvp(rows) {
@@ -40,20 +43,32 @@ export class ResultsScreen extends Screen {
     const { stats, mp } = this.data;
     const s = stats || { kills: 0, headshots: 0, money: 0 };
     const hsr = s.kills ? Math.round((s.headshots / s.kills) * 100) : 0;
-    // multiplayer: the table already lists everyone's kills / headshots / money, so the tiles only add
-    // what it does not show (own headshot rate and downs)
+    const squad = !mp && this.data.squad?.length ? this.data.squad : null;
+    // multiplayer: the table already lists everyone's kills / headshots / damage / money, so the tiles only add what
+    // it does not show; solo: the whole line-up (with AI teammates their table follows)
     const tiles = mp
-      ? [['爆頭率', hsr + '%'], ['倒地', s.deaths | 0]]
-      : [['擊殺', s.kills], ['爆頭', s.headshots], ['爆頭率', hsr + '%'], ['賺取金錢', '$' + Math.round(s.money)]];
+      ? [['爆頭率', hsr + '%'], ['助攻', s.assists | 0], ['倒地', s.downs | 0], ['等級', 'Lv ' + (this.data.level || 1)]]
+      : [['擊殺', s.kills | 0], ['爆頭率', hsr + '%'], ['助攻', s.assists | 0], ['倒地', s.downs | 0],
+        ['總傷害', num(s.damage)], ['首領傷害', num(s.bossDamage)], ['等級', 'Lv ' + (this.data.level || 1)], ['賺取金錢', cash(s.money)]];
     let html = `<div class="rs-tiles">${tiles.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+    const row = (r, mvp, cells) => `<div class="rt-r${r.self ? ' self' : ''}${r.id === mvp ? ' mvp' : ''}"><span class="rt-n">${r.id === mvp ? `<i class="rt-mvp">${ICON.star}MVP</i>` : ''}`
+      + `<span class="rt-nm">${esc(r.name)}</span>${r.host ? '<em>房主</em>' : r.ai ? '<em>AI</em>' : ''}</span>${cells.map((c) => `<span>${c}</span>`).join('')}</div>`;
     if (mp) {
       const rows = this.app.coop?.boardRows() || [];
       const mvp = pickMvp(rows);
-      html += `<div class="rs-table"><div class="rt-h"><span>玩家</span><span>擊殺</span><span>爆頭</span><span>金錢</span></div>
-        ${rows.map((r) => `<div class="rt-r${r.self ? ' self' : ''}${r.id === mvp ? ' mvp' : ''}"><span class="rt-n">${r.id === mvp ? `<i class="rt-mvp">${ICON.star}MVP</i>` : ''}<span class="rt-nm">${esc(r.name)}</span>${r.host ? '<em>房主</em>' : ''}</span><span>${r.k}</span><span>${r.h}</span><span>$${Math.round(r.m)}</span></div>`).join('')}</div>`;
+      html += `<div class="rs-table c6"><div class="rt-h"><span>玩家</span><span>擊殺</span><span>爆頭</span><span>傷害</span><span>首領傷害</span><span>金錢</span></div>
+        ${rows.map((r) => row(r, mvp, [r.k, r.h, num(r.d), num(r.b), cash(r.m)])).join('')}</div>`;
+    } else if (squad) {
+      // you + the AI teammates (MVP by kills, then headshots, then damage)
+      const rows = [{ id: 'me', name: this.app.playerName, self: true, k: s.kills | 0, h: s.headshots | 0, d: s.damage || 0, b: s.bossDamage || 0, downs: s.downs | 0 },
+        ...squad.map((b, i) => ({ ...b, id: 'ai' + i, name: b.name.replace(/^［AI］/, ''), ai: true }))];
+      const mvp = pickMvp(rows.map((r) => ({ ...r, m: r.d })));
+      html += `<div class="rs-table c6"><div class="rt-h"><span>隊伍</span><span>擊殺</span><span>爆頭</span><span>傷害</span><span>首領傷害</span><span>倒地</span></div>
+        ${rows.map((r) => row(r, mvp, [r.k, r.h, num(r.d), num(r.b), r.downs | 0])).join('')}</div>`;
     }
     this.$('.rs-mid').innerHTML = html;
     this.el.classList.toggle('mp', !!mp);
+    this.el.classList.toggle('squad', !!squad);
   }
 
   renderBtns() {

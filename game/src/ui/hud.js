@@ -13,6 +13,18 @@
 //   banner(text, { kind, sub })           chrome banner (round clear / boss / wipe)
 //   showSkillHint(ws, force)              技能提示卡 (§1.9 #11)
 //   clipEvent(id, o)                      clip 'hud' events: card | border | banner | hint | toast
+//   setPrompt(text, use) / toast(text)    "按 E" / "按住 E" / "長按 ★" in the text become keycaps of the live bindings
+//
+// Desktop key hints (ui/keyhints.js; settings.keyHints, default on; hidden on touch): [B] 商店 / [Esc] 選單 by the
+// money (a gold dot on 商店 while an upgrade / trait waits in the buy time), [R] 換彈 by a low magazine, [2] 副武器
+// when the held weapon is dry mid-round, [B] 補充彈藥 when the reserve runs short where we can buy, [F] 檢視 by the
+// weapon, [1]-[5] + [G] on the weapon bar (CS2 inventory: owned slots, grenade counts by type), [Q] / 長按 [Q] /
+// mouse buttons with the skill names on the skill dock. The reserve counter pulses under one magazine.
+// What the held weapon spends (ammo panel) -- not every weapon is a gun:
+//   def.resource = 'ammo' | 'arrows' | 'mana' | 'charges' | 'none'  (or { kind, label, color }); by default from the
+//   cat (melee none, bow / crossbow arrows, staff / wand mana, else ammo). Values: ws.ammo of def.mag, ws.reserve,
+//   unless the special reports its own pool: special.resource(ws, g) -> { kind?, value, max, reserve?, label?, color? }.
+// Teammate name tags (player/remote.js .nametag) fade while they sit over a HUD panel.
 import { weaponIcon } from './icons.js';
 import * as SP from '../weapons/specials.js';
 import { specialOf, hudInfo, auraState, paletteOf } from '../weapons/specials.js';
@@ -20,6 +32,7 @@ import { WEAPONS } from '../weapons/defs.js';
 import { CrosshairView, MeterView, StarView, tierShape, injectCSS, registerCrosshair, CROSSHAIRS } from './crosshairs.js';
 import { DamageNumbers } from './dmgnums.js';
 import { KillLayer, registerKillMark, bakeKillMark } from './killmarks.js';
+import { KeyHints, keycap, keyify, esc, bindSig } from './keyhints.js';
 
 const el = (cls, parent, html = '') => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; parent?.appendChild(d); return d; };
 
@@ -30,6 +43,19 @@ const AURA_ICON = { dmg: '<path d="M4 20L16 8l2-4 2 2-4 2L4 20z"/>', reloadSpeed
 // crosshair by tier when the weapon names none (§1.9 #2: exotic and up get their own)
 const TIER_XH = { exotic: 'xh_ring', legacy: 'xh_ring', mythic: 'xh_gem' };
 const skinOf = (def) => def?.premium?.dmgSkin || ({ anti: 'anti', exotic: 'exotic', legacy: 'exotic', mythic: 'mythic' }[def?.tier || (def?.special ? 'anti' : '')] || 'standard');
+const TAG_POS = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/;
+// what a weapon spends when its def names nothing (def.resource)
+const RES_BY_CAT = { melee: 'none', bow: 'arrows', crossbow: 'arrows', staff: 'mana', wand: 'mana' };
+const RES_ICON = {
+  arrows: '<svg viewBox="0 0 24 24"><path d="M4.5 19.5L18 6" fill="none" stroke-width="2"/><path d="M20.5 3.5l-1.6 6.2-4.6-4.6z"/><path d="M4.5 19.5l.6-4.4 1.8 1.8zM4.5 19.5l4.4-.6-1.8-1.8zM7.2 16.8l.6-4.4 1.8 1.8zM7.2 16.8l4.4-.6-1.8-1.8z"/></svg>',
+  mana: '<svg viewBox="0 0 24 24"><path d="M12 2l6.5 9.5L12 22l-6.5-10.5z"/><path d="M12 2v20M5.5 11.5h13" fill="none" stroke-width="1" opacity=".55"/></svg>',
+  charges: '<svg viewBox="0 0 24 24"><path d="M13.5 2L4.5 13.5h6.5L9.5 22l10-12.5h-6.5z"/></svg>',
+};
+const SLOT_ZH = { 1: '主武器', 2: '副武器', 3: '近戰' };
+const GREN_ICON = {
+  frag: '<svg viewBox="0 0 16 20"><path d="M6 3.4h4v2.4H6z"/><path d="M9.6 4.3l3.4-2.5 1 1.3-3.1 2.6z"/><ellipse cx="8" cy="12.7" rx="5.3" ry="6.3"/><path d="M3.2 11.2h9.6M3.2 14.2h9.6" stroke="#000" stroke-opacity=".35" stroke-width=".9"/></svg>',
+  fire: '<svg viewBox="0 0 16 20"><path d="M6.3 5.2h3.4v3.1c1.9.9 2.9 2.4 2.9 4.6V19H3.4v-6.1c0-2.2 1-3.7 2.9-4.6z"/><path class="fl" d="M8 0c1.7 1.5 2.3 2.8 1.1 4.4H6.9C5.8 2.8 6.5 1.4 8 0z"/></svg>',
+};
 
 export class HUD {
   constructor(game, root = document.getElementById('hud')) {
@@ -39,8 +65,8 @@ export class HUD {
     // headless QA: castSkill, hudInfo, meterAdd, startSkill... and the HUD registries
     if (game.debug) { game.debug.specials = SP; game.debug.hudkit = { registerCrosshair, registerKillMark, bakeKillMark }; }
     // damage numbers are on by default (the CSO feel); readyReminder = the 2.5 s ready reminder (§1.7.1);
-    // screenBorder = element screen borders (§1.14 #6)
-    this.settings = { crosshairColor: '#4dff6a', crosshairGap: 4, crosshairLen: 9, crosshairThick: 2, dot: false, hitmarker: true, damageNumbers: true, readyReminder: true, screenBorder: true };
+    // screenBorder = element screen borders (§1.14 #6); keyHints = desktop keycap hints (ui/keyhints.js)
+    this.settings = { crosshairColor: '#4dff6a', crosshairGap: 4, crosshairLen: 9, crosshairThick: 2, dot: true, hitmarker: true, damageNumbers: true, readyReminder: true, screenBorder: true, keyHints: true };
     try { Object.assign(this.settings, JSON.parse(localStorage.getItem('cf.hud') || '{}')); } catch { /* defaults */ }
     // ready border pulse + buff border sit under everything else
     this.borderEl = el('skborder', root);
@@ -63,22 +89,31 @@ export class HUD {
     this.crisisClip = this.crisisEl.querySelector('.cr-clip');
     this.crisisLabel = this.crisisEl.querySelector('span');
     this.auraEl = el('auras', this.chips);
-    // ammo
-    this.ammo = el('ammo', root, '<div class="mag"><b>0</b><span>/ 0</span></div><div class="wname"></div><img class="wicon" alt="">');
-    this.magEl = this.ammo.querySelector('b');
-    this.resEl = this.ammo.querySelector('span');
+    // ammo: what the held weapon spends (magazine / arrows / mana / charges / nothing), name, silhouette
+    this.ammo = el('ammo', root, '<div class="mag"><i class="rk"></i><b>0</b><span>/ 0</span></div><div class="rbar"></div><div class="wname"></div><div class="wrow"><img class="wicon" alt=""></div>');
+    this.magRow = this.ammo.querySelector('.mag');
+    this.magEl = this.magRow.querySelector('b');
+    this.resEl = this.magRow.querySelector('span');
+    this.rkEl = this.magRow.querySelector('.rk');
+    this.rbar = this.ammo.querySelector('.rbar');
     this.wnameEl = this.ammo.querySelector('.wname');
     this.wiconEl = this.ammo.querySelector('.wicon');
     this.meter = el('spmeter', this.ammo, '<span></span><div><i></i><u></u></div>');
     this.meterLabel = this.meter.querySelector('span');
     this.meterFill = this.meter.querySelector('i');
     this.meterWin = this.meter.querySelector('u');
-    // desktop skill dock: ★ (Q) face + ◎ alt state; touch shows these on its buttons instead
-    this.dock = el('skdock', root, '<div class="sk-star"></div><div class="sk-alt"><b>◎</b><small>右鍵</small></div>');
-    this.star = new StarView(this.dock.querySelector('.sk-star'), { key: 'Q' });
+    // desktop skill dock: ★ face + the skill names with their keys ([Q] tap / 長按 [Q] ultimate / mouse alt);
+    // touch shows these on its buttons instead
+    this.dock = el('skdock', root, '<div class="sk-star"></div><div class="sk-lab"><div class="sk-l sk-tap"></div><div class="sk-l sk-ult"></div><div class="sk-l sk-alt"></div></div>');
+    this.star = new StarView(this.dock.querySelector('.sk-star'));
+    this.skTap = this.dock.querySelector('.sk-tap');
+    this.skUlt = this.dock.querySelector('.sk-ult');
     this.altEl = this.dock.querySelector('.sk-alt');
-    // money, round, feed, boss, xp, toast, prompt
-    this.money = el('money', root, '<span>$</span><b>0</b>');
+    // weapon bar (desktop, CS2 inventory): owned slots with their keys + the grenade row; wakes on a switch
+    this.inv = el('inv', root);
+    this.invWake = 0;
+    // money (+ [B] 商店 / [Esc] 選單), round, feed, boss, xp, toast, prompt
+    this.money = el('money', root, '<span>$</span><b>0</b><i class="mkh"></i>');
     this.moneyEl = this.money.querySelector('b');
     this.round = el('roundbar', root, '<div class="rt"></div><div class="rs"></div>');
     this.roundT = this.round.querySelector('.rt');
@@ -93,13 +128,18 @@ export class HUD {
     this.xpFill = this.xp.querySelector('i');
     this.toastEl = el('toast', root);
     this.prompt = el('prompt', root);
-    this.spec = el('prompt', root);   // spectating line while bled out, above the spectated teammate
-    this.spec.style.top = '22%';
+    this.spec = el('spec', root);     // spectating line while bled out (bottom centre, clear of the COMBO)
     // CSO layer: numbers, kill marks / streak / badges / banners, skill CARD, hint card
     this.nums = new DamageNumbers(root, game);
     this.kills = new KillLayer(root, game);
     this.cardEl = el('skcard', root, '<b></b><svg viewBox="0 0 200 14" preserveAspectRatio="none"><path d="M4 9 C40 2 90 12 130 6 S180 4 196 8"/></svg><small></small>');
     this.hintEl = el('skhint', root);
+    this.hints = new KeyHints({ money: this.money.querySelector('.mkh'), mag: this.magRow, weapon: this.ammo.querySelector('.wrow') });
+    this.inspT = 0;
+    // teammate name tags (player/remote.js appends them here); HUD panel rects they fade over, refreshed twice a second
+    this.tagEls = root.getElementsByClassName('nametag');
+    this.tagW = new WeakMap();
+    this.zones = []; this.zoneT = 0;
     this.cache = {};
     this.hitT = 0; this.hitKill = false; this.headT = 0;
     this.feedItems = [];
@@ -119,7 +159,10 @@ export class HUD {
 
   weaponChanged(ws) {
     this._set('wname', this.wnameEl, `${ws.def.zh} ${ws.def.en}`);
-    weaponIcon(this.game.renderer, ws.def.model || ws.def.id).then((url) => { if (url && this.game.arsenal.current === ws) this.wiconEl.src = url; });
+    // (no model yet: no silhouette, not the previous weapon's)
+    weaponIcon(this.game.renderer, ws.def.model || ws.def.id).then((url) => { if (this.game.arsenal.current !== ws) return; if (url) this.wiconEl.src = url; else this.wiconEl.removeAttribute('src'); });
+    // [F] 檢視 shows for a while after each draw; the weapon bar wakes; the panel sizes are measured again
+    this.inspT = 6; this.invWake = 3; this.zoneT = 0;
     // the first 3 times a premium weapon comes out, its controls card follows once the fight lets up (§1.9 #11)
     if (ws.def.special?.skills || ws.def.special?.hint) {
       let n = 0;
@@ -129,15 +172,25 @@ export class HUD {
   }
   ammoChanged() { /* picked up by update() */ }
 
+  /** Desktop key hints on: keycaps in prompts / toasts and the hint chips (settings.keyHints, never on touch). */
+  get keyHints() { return this.settings.keyHints !== false && !document.body.classList.contains('touch'); }
+  /** Text with "按 E" / "長按 ★"... as HTML: keycaps of the live bindings while key hints are on, else escaped. */
+  _keyText(text) { return this.keyHints ? keyify(text) : esc(text); }
+
   toast(text, ms = 1400) {
-    this.toastEl.textContent = text;
+    this.toastEl.innerHTML = this._keyText(text);
     this.toastEl.classList.add('on');
     clearTimeout(this._toastT);
     this._toastT = setTimeout(() => this.toastEl.classList.remove('on'), ms);
   }
 
   /** Bottom-centre hint; `use` = it asks for the use key (touch shows its use button while one is up). */
-  setPrompt(text, use = true) { this._set('prompt', this.prompt, text || ''); this.prompt.classList.toggle('on', !!text); this.promptUse = !!text && use; }
+  setPrompt(text, use = true) {
+    const k = text ? text + '|' + this.keyHints + bindSig() : '';
+    if (this.cache.promptT !== k) { this.cache.promptT = k; this.prompt.innerHTML = text ? this._keyText(text) : ''; }
+    this.prompt.classList.toggle('on', !!text);
+    this.promptUse = !!text && use;
+  }
 
   /** Called by weapons and skills for every damaging hit. */
   onHit(info, res, target) {
@@ -237,8 +290,12 @@ export class HUD {
   onSkillDenied(ws, slot, c) {
     this.star.shake();
     this.game.touch?.skillDenied?.(ws, slot, c);
+    // one line per 1.2 s (mashing the key must not strobe the toast); c.need = the missing fraction of the cost
+    const now = performance.now();
+    if (c.why === this._denyWhy && now - this._denyAt < 1200) return;
+    this._denyWhy = c.why; this._denyAt = now;
     if (c.why === 'hold') this.toast('長按 ★ 施放大招', 900);
-    else if (c.why === 'meter') this.toast(`${slot === 'ult' ? '大招' : '技能'}計量不足　${Math.ceil(c.need * 100)}%`, 800);
+    else if (c.why === 'meter') this.toast(`${slot === 'ult' ? '大招' : '技能'}計量不足（${Math.max(0, Math.floor((1 - c.need) * 100))}%／需 100%）`, 1000);
     else if (c.why === 'cd') this.toast('技能冷卻中', 700);
   }
   onSkillCast(ws, slot, sk) {
@@ -266,7 +323,9 @@ export class HUD {
     // v1 series specials describe their controls in special.hint { tap / alt / hold: { zh, desc }, src }
     const sk = ws?.def.special?.skills || ws?.def.special?.hint;
     if (!sk) return;
-    const name = (s, slot) => s && (s.zh || s.id) ? `<li class="h-${slot}"><i></i><b>${{ alt: '◎', tap: '★ 點按', hold: '★ 長按', ult: '★ 長按' }[slot]}</b><span>${s.zh || s.id}${s.desc ? `<small>${s.desc}</small>` : ''}</span></li>` : '';
+    // controls: the touch glyphs, or the bound keys on desktop
+    const q = keycap('special'), ctl = this.keyHints && q ? { alt: keycap('alt'), tap: `${q} 點按`, hold: `長按 ${q}`, ult: `長按 ${q}` } : { alt: '◎', tap: '★ 點按', hold: '★ 長按', ult: '★ 長按' };
+    const name = (s, slot) => s && (s.zh || s.id) ? `<li class="h-${slot}"><i></i><b>${ctl[slot]}</b><span>${s.zh || s.id}${s.desc ? `<small>${s.desc}</small>` : ''}</span></li>` : '';
     const srcs = ws.def.special.hint?.src ? [ws.def.special.hint.src] : Object.values(ws.def.special.meters || {}).map((c) => c.src || c.label || c.zh).filter(Boolean);
     this.hintEl.innerHTML = `<h4>${ws.def.zh}</h4><ul>${name(sk.alt, 'alt')}${name(sk.tap, 'tap')}${name(sk.hold, 'hold')}${name(sk.ult, 'ult')}</ul>${srcs.length ? `<p>計量：${srcs.join('／')}</p>` : ''}`;
     this.hintEl.style.setProperty('--hc', paletteOf(ws.def).rim);
@@ -284,7 +343,9 @@ export class HUD {
     if (!this.visible) return;
     // bled out: no crosshair, a spectating line instead
     const dead = st?.alive === false;
-    this._set('spec', this.spec, dead ? (g.spectating ? `觀戰：${g.spectating}　開火切換` : '你已陣亡　等待回合結束') : '');
+    const kh = this.keyHints;
+    if (this.cache.kh !== kh) { this.cache.kh = kh; this.root.classList.toggle('kh-off', !kh); }
+    this._set('spec', this.spec, dead ? (g.spectating ? `觀戰　<b>${esc(g.spectating)}</b>${kh ? `<span>${keycap('fire')} 切換</span>` : '<span>開火切換</span>'}` : '你已陣亡　等待回合結束') : '', 'innerHTML');
     this.spec.classList.toggle('on', dead);
     const ws = ar?.current, def = ar?.def;
     const info = ws ? hudInfo(ws, g) : null;
@@ -300,7 +361,7 @@ export class HUD {
     const xhId = (CROSSHAIRS[info?.crosshair] ? info.crosshair : TIER_XH[tier]) || 'xh_default';
     this.xh.update(dt, { id: xhId, gap: gapPx, settings: this.settings, color: xhId === 'xh_default' ? this.settings.crosshairColor : info?.hex.core || '#fff',
       color2: info?.hex.rim, hitColor: info?.hex.core || '#ffffff', react: !!info, ready: !!(info?.ready || info?.star?.tap && info.v1), active: !!info?.star?.active,
-      nodes: !!info?.star?.has, visible: showXh });
+      nodes: !!info?.star?.has, visible: showXh, dot: !dead && !!def && !scoped }); // the centre dot stays for melee / ADS (user: always on)
     this._meters(info, !dead && !scoped);
     // hit marker
     this.hitT = Math.max(0, this.hitT - dt * 5);
@@ -317,14 +378,27 @@ export class HUD {
       this.hpBox.classList.toggle('low', st.hp < 30);
     }
     this._chips(info);
-    // ammo
+    // ammo panel: what the held weapon spends (not every weapon is a gun: arrows, mana, charges, nothing)
+    let low = false, empty = false, reloadable = false, kind = 'none', resLow = 0;
     if (ws) {
-      const melee = ws.def.cat === 'melee';
-      this.ammo.classList.toggle('melee', melee);
-      const inf = !melee && g.arsenal._mods?.(ws).infinite;
-      this._set('mag', this.magEl, melee || inf ? '∞' : String(ws.ammo));
-      this._set('res', this.resEl, melee ? '' : '/ ' + (Number.isFinite(ws.reserve) ? ws.reserve : '∞'));
-      this.magEl.classList.toggle('low', !melee && ws.ammo <= Math.ceil(ws.def.mag * 0.25));
+      const r = this._resource(ws, g);
+      kind = r.kind;
+      if (this.cache.rkind !== kind) { this.cache.rkind = kind; this.ammo.className = 'ammo k-' + kind; this.rkEl.innerHTML = RES_ICON[kind] || ''; this.cache.rbar = null; this.zoneT = 0; }
+      if (kind === 'none') { this._set('mag', this.magEl, ''); this._set('res', this.resEl, ''); }
+      else {
+        const v = Math.max(0, Math.floor(r.value)), max = r.max || 0, pool = kind === 'mana' || kind === 'charges';
+        this._set('mag', this.magEl, r.inf ? '∞' : String(v));
+        this._set('res', this.resEl, pool ? (max ? '/ ' + max : '') : '/ ' + (Number.isFinite(r.reserve) ? r.reserve : '∞'));
+        empty = !r.inf && v <= 0;
+        // (a 1-3 round magazine -- bow, bolt action, double barrel -- is only low when empty)
+        low = !r.inf && (kind === 'mana' ? v < max * 0.25 : kind === 'charges' ? v <= 0 : max > 0 && v <= (max > 3 ? Math.ceil(max * 0.25) : 0));
+        reloadable = !pool && !r.inf && max > 0 && v < max && ws.def.reload > 0 && r.reserve > 0;
+        if (pool) this._resBar(kind, v, max, r.color);
+        // a finite reserve under one magazine pulses (1), an empty one is red (2)
+        else if (!r.inf && max > 0 && Number.isFinite(r.reserve)) resLow = r.reserve <= 0 ? 2 : r.reserve < max ? 1 : 0;
+      }
+      this.magEl.classList.toggle('low', low);
+      if (this.cache.resLow !== resLow) { this.cache.resLow = resLow; this.resEl.classList.toggle('warn', resLow === 1); this.resEl.classList.toggle('out', resLow === 2); }
       const m = specialOf(ws)?.meter?.(ws, g);
       this.meter.style.display = m ? '' : 'none';
       if (m) {
@@ -336,15 +410,39 @@ export class HUD {
         else this.meterWin.style.display = 'none';
       }
     }
-    // desktop skill dock
+    // desktop skill dock: ★ + the skill names with their keys
     const dockOn = !dead && !!(info?.star?.has || info?.alt?.has);
-    if (this.cache.dock !== dockOn) { this.cache.dock = dockOn; this.dock.classList.toggle('on', dockOn); }
+    if (this.cache.dock !== dockOn) { this.cache.dock = dockOn; this.dock.classList.toggle('on', dockOn); this.zoneT = 0; }
     if (dockOn) {
       this.star.update(info.star, info.hex, tier);
-      this.altEl.style.display = info.alt?.has ? '' : 'none';
-      this.altEl.classList.toggle('act', !!info.alt?.active);
-      this.altEl.classList.toggle('dim', !!info.alt && !info.alt.ok && !info.alt.active);
+      this._dockLabels(ws, info);
     }
+    // key hint chips (money, magazine, weapon), the weapon bar, name tags off the panels
+    const m = g.match;
+    this.inspT = Math.max(0, this.inspT - dt);
+    if (kh) {
+      const melee = !dead && kind === 'none' && (def?.cat === 'melee' || def?.mode === 'melee');
+      const canBuy = !!m?.canBuy?.(), buyTime = m?.state === 'warmup' || m?.state === 'buy';
+      // out of everything to shoot: the weapon to fall back on ([2] 副武器), and the shop's refill while it is open to
+      // us (buy time / buy zone: dry, under a magazine, or in the buy time anything short of the full reserve)
+      const dry = !dead && !!ws && !!m?.dry?.(ws);
+      const fb = dry && m.state === 'round' ? m.fallbackSlot?.() : null;
+      let refill = null;
+      if (!dead && ws && canBuy && (resLow || dry || buyTime)) {
+        const o = m.ammoOffer?.(ws);
+        if (o && !o.why && o.price <= m.money && (resLow || dry || ws.reserve < (ar.maxReserve?.(ws) ?? 0))) refill = { label: o.label, hot: dry };
+      }
+      this.hints.update({
+        canBuy, low, empty, reloadable, reloading: ar?.state === 'reload', reloadLabel: kind === 'arrows' ? '裝箭' : '換彈',
+        swap: fb != null ? { action: 'slot' + fb, label: SLOT_ZH[fb] || '切換武器' } : null, refill, shopDot: buyTime && canBuy && !!m?.upgradeWaiting?.(),
+        // [F] 檢視 for a while after each draw and through the calm of the buy phase
+        inspect: !!ws && !dead && ar.state !== 'reload' && (this.inspT > 0 || !m || m.state === 'warmup' || m.state === 'buy'),
+        mode: def?.alt === 'burst' && !info?.star?.has ? (ws.burstMode ? '半自動' : '三連發') : '',
+        melee: melee ? { light: '攻擊', heavy: def.heavy && !info?.alt?.has ? '重擊' : null } : null,
+      });
+    }
+    this._inventory(dt, ar, g);
+    this._tags(dt);
     this._set('money', this.moneyEl, String(g.match?.money ?? 0));
     if (g.match) {
       const lv = g.match.level || 1;
@@ -375,6 +473,112 @@ export class HUD {
     this._drawDirs(st, dt);
     this.nums.update(dt);
     this.kills.update(dt);
+  }
+
+  /** What the held weapon spends: { kind, value, max, reserve, inf, label, color } (resource contract: file header). */
+  _resource(ws, g) {
+    const def = ws.def, r = def.resource, o = specialOf(ws)?.resource?.(ws, g);
+    const kind = o?.kind || (typeof r === 'string' ? r : r?.kind) || RES_BY_CAT[def.cat] || (def.mode === 'melee' ? 'none' : 'ammo');
+    return { kind, value: o?.value ?? ws.ammo, max: o?.max ?? r?.max ?? def.mag, reserve: o?.reserve ?? ws.reserve,
+      inf: kind !== 'none' && !!g.arsenal._mods?.(ws).infinite, label: o?.label || r?.label, color: o?.color || r?.color };
+  }
+  /** Pool bar under the number: a fill for mana, one pip per charge (up to 12). */
+  _resBar(kind, v, max, color) {
+    const pips = kind === 'charges' && max > 0 && max <= 12;
+    if (pips) {
+      const k = `c${v}/${max}`;
+      if (this.cache.rbar !== k) { this.cache.rbar = k; this.rbar.innerHTML = Array.from({ length: max }, (_, i) => `<em${i < v ? ' class="on"' : ''}></em>`).join(''); }
+    } else {
+      if (this.cache.rbar !== 'fill') { this.cache.rbar = 'fill'; this.cache.rw = null; this.rbar.innerHTML = '<i></i>'; }
+      const w = (max > 0 ? Math.min(1, v / max) * 100 : 0).toFixed(1) + '%';
+      if (this.cache.rw !== w) { this.cache.rw = w; this.rbar.firstChild.style.width = w; }
+    }
+    if (this.cache.rcol !== (color || '')) { this.cache.rcol = color || ''; if (color) this.rbar.style.setProperty('--rc', color); else this.rbar.style.removeProperty('--rc'); }
+  }
+
+  /** Skill dock rows: [Q] tap skill, 長按 [Q] ultimate, mouse alt skill -- names from the def's skill data (v2) / hint (v1). */
+  _dockLabels(ws, info) {
+    const sp = ws.def.special || {}, sk = sp.skills || sp.hint || {};
+    const key = ws.def.id + bindSig();
+    if (this.cache.dockK !== key) {
+      this.cache.dockK = key;
+      const row = (pre, action, s) => s?.zh || s?.id ? `${pre ? `<small>${pre}</small>` : ''}${keycap(action)}<span>${esc(s.zh || s.id)}</span>` : '';
+      this.skTap.innerHTML = info.star?.has ? row('', 'special', sk.tap) : '';
+      this.skUlt.innerHTML = info.star?.has ? row('長按', 'special', sk.ult || sk.hold) : '';
+      this.altEl.innerHTML = info.alt?.has ? row('', 'alt', sk.alt?.zh || sk.alt?.id ? sk.alt : { zh: '異能' }) : '';
+    }
+    const st = info.star || {}, alt = info.alt;
+    const tog = (n, c, on) => { if (n.classList.contains(c) !== on) n.classList.toggle(c, on); };
+    tog(this.skTap, 'rdy', !!st.tap && !st.active); tog(this.skTap, 'act', !!st.active && !st.ultActive); tog(this.skTap, 'dim', !st.tap && !st.active);
+    tog(this.skUlt, 'rdy', !!st.ult && !st.ultActive); tog(this.skUlt, 'act', !!st.ultActive); tog(this.skUlt, 'dim', !st.ult && !st.ultActive);
+    if (alt) { tog(this.altEl, 'rdy', !!alt.ok && !alt.active); tog(this.altEl, 'act', !!alt.active); tog(this.altEl, 'dim', !alt.ok && !alt.active); }
+  }
+
+  /** Weapon bar (desktop): owned slots with their keys (the held one lit) + the grenade row; rests dim, wakes on a switch. */
+  _inventory(dt, ar, g) {
+    if (!ar) return;
+    const T = g.throwables;
+    const slots = Object.keys(ar.owned).map(Number).sort((a, b) => a - b);
+    const gk = T ? Object.keys(T.count) : [];
+    const gsel = T && (T.count[T.selected] > 0 ? T.selected : gk.find((k) => T.count[k] > 0));
+    const gkey = gk.map((k) => k + T.count[k]).join(',') + gsel;
+    const key = slots.map((s) => s + ':' + ar.owned[s].def.id).join(',') + '|' + gkey + '|' + bindSig();
+    if (this.cache.inv !== key) {
+      this.cache.inv = key;
+      const rows = slots.map((s) => `<div class="iv" data-s="${s}"><span class="nm">${esc(ar.owned[s].def.zh)}</span><img alt="">${keycap('slot' + s)}</div>`);
+      if (T) rows.push(`<div class="iv ig">${gk.map((k) => `<span class="gk${k === gsel ? ' on' : ''}${T.count[k] ? '' : ' z'}">${GREN_ICON[k] || GREN_ICON.frag}<b>${T.count[k]}</b></span>`).join('')}${keycap('grenade')}</div>`);
+      this.inv.innerHTML = rows.join('');
+      // silhouettes (cached by icons.js); a weapon without a model shows its name instead
+      for (const row of this.inv.querySelectorAll('[data-s]')) {
+        const d = ar.owned[row.dataset.s].def;
+        weaponIcon(g.renderer, d.model || d.id, { w: 160, h: 60 }).then((u) => { if (u && row.isConnected) { row.querySelector('img').src = u; row.classList.add('ic'); } });
+      }
+      this.cache.invCur = null;
+      this.invWake = Math.max(this.invWake, 2.5);   // bought / picked up / thrown: show what changed
+      this.zoneT = 0;
+    }
+    const cur = ar.pendingSlot ?? ar.slot;
+    if (this.cache.invCur !== cur) {
+      this.cache.invCur = cur;
+      for (const row of this.inv.querySelectorAll('[data-s]')) row.classList.toggle('on', +row.dataset.s === cur);
+    }
+    const s = g.input?.state;
+    if (s?.pressed.next || s?.pressed.prev) this.invWake = 3;
+    this.invWake = Math.max(0, this.invWake - dt);
+    const wake = this.invWake > 0;
+    if (this.cache.invW !== wake) { this.cache.invW = wake; this.inv.classList.toggle('wake', wake); }
+  }
+
+  /** Teammate name tags (player/remote.js) fade while over a HUD panel; panel rects re-read twice a second. */
+  _tags(dt) {
+    if ((this.zoneT -= dt) <= 0) this._measure();
+    const tags = this.tagEls;
+    for (let i = 0; i < tags.length; i++) {
+      const t = tags[i];
+      if (t.style.display === 'none') continue;
+      const p = TAG_POS.exec(t.style.transform);
+      if (!p) continue;
+      let w = this.tagW.get(t);
+      if (!w) { w = t.offsetWidth; if (!w) continue; this.tagW.set(t, w); }
+      const x = +p[1], y = +p[2], l = x - w / 2, r = x + w / 2, top = y - 24;   // anchored at its bottom centre
+      let over = false;
+      for (const z of this.zones) if (r > z[0] && l < z[2] && y > z[1] && top < z[3]) { over = true; break; }
+      if (t.classList.contains('occl') !== over) t.classList.toggle('occl', over);
+    }
+  }
+  /** Ammo panel size (the weapon bar sits above it, the skill dock left of it) and, with tags up, the panel rects. */
+  _measure() {
+    this.zoneT = 0.5;
+    const a = this.ammo.getBoundingClientRect();
+    const aw = Math.round(a.width / 4) * 4, ah = Math.round(a.height / 2) * 2;
+    if (aw && this.cache.aw !== aw) { this.cache.aw = aw; this.root.style.setProperty('--ammo-w', aw + 'px'); }
+    if (ah && this.cache.ah !== ah) { this.cache.ah = ah; this.root.style.setProperty('--ammo-h', ah + 'px'); }
+    this.zones.length = 0;
+    if (!this.tagEls.length) return;
+    for (const n of [this.money, this.ammo, this.vitals, this.xp, this.inv, this.dock, this.round, this.feed, this.boss, this.chips, this.prompt, this.spec, document.getElementById('perks')]) {
+      const b = n?.getBoundingClientRect();
+      if (b && b.width > 2 && b.height > 2) this.zones.push([b.left - 6, b.top - 6, b.right + 6, b.bottom + 6]);
+    }
   }
 
   /** Crosshair-anchored meters (60 % opacity mirrors); a new view set whenever the weapon or the meter types change. */
@@ -452,14 +656,21 @@ body.lefty.touch .skchips { left: auto; right: calc(18px + var(--safe-right, 0px
 .auras { display: flex; gap: 6px; }
 .auras .au { display: flex; align-items: center; gap: 2px; font: 700 12px var(--num); font-style: normal; color: #9ff7c8; background: rgba(0,0,0,.45); padding: 1px 5px 1px 3px; border-radius: 2px; }
 .auras .au svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; }
-.skdock { position: fixed; right: calc(200px + var(--safe-right, 0px)); bottom: calc(22px + var(--safe-bottom, 0px)); display: none; align-items: center; gap: 14px; pointer-events: none; }
+.skdock { position: fixed; right: calc(var(--ammo-w, 210px) + 24px + var(--safe-right, 0px)); bottom: calc(14px + var(--safe-bottom, 0px)); display: none; align-items: center; gap: 12px; pointer-events: none;
+  padding: 6px 14px 6px 8px; border-radius: 3px; background: linear-gradient(90deg, rgba(0,0,0,.5), rgba(0,0,0,.42) 75%, rgba(0,0,0,.12)); }
 .skdock.on { display: flex; }
 body.touch .skdock { display: none !important; }
-.skdock .sk-star { width: 44px; height: 44px; border-radius: 50%; background: rgba(10,12,14,.45); }
+.skdock .sk-star { flex: none; width: 44px; height: 44px; border-radius: 50%; background: rgba(10,12,14,.45); }
 .skdock .sk-star::before { content: '★'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 20px; color: #fff; }
-.skdock .sk-alt { display: flex; flex-direction: column; align-items: center; font: 700 18px var(--num); color: #fff; opacity: .9; }
-.skdock .sk-alt small { font: 600 10px var(--font); color: #bbb; }
-.skdock .sk-alt.act { color: #ffd27a; text-shadow: 0 0 6px #ffb43a; } .skdock .sk-alt.dim { opacity: .35; }
+.skdock .sk-lab { display: flex; flex-direction: column; gap: 4px; }
+.skdock .sk-l { display: flex; align-items: center; gap: 5px; white-space: nowrap; font: 600 12px/17px var(--font); letter-spacing: .06em; color: #e4dfd4; transition: opacity .2s, color .2s; }
+.skdock .sk-l:empty { display: none; }
+.skdock .sk-l small { font: 600 11px/17px var(--font); color: #a9a397; letter-spacing: .04em; }
+.skdock .sk-l.dim { opacity: .5; }
+.skdock .sk-l.rdy { color: #fff; }
+.skdock .sk-l.rdy .kc { border-color: rgba(242,181,68,.9); color: #ffe6b0; box-shadow: inset 0 -2px 0 rgba(0,0,0,.38), 0 0 6px rgba(242,181,68,.5); }
+.skdock .sk-l.act { color: #ffd27a; text-shadow: 0 0 6px #ffb43a, 0 1px 2px #000; }
+.skdock .sk-l.act .kc { border-color: #ffd27a; color: #fff; }
 .skcard { position: fixed; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; }
 .skcard.on { animation: cardLife 2.3s linear both; }
 @keyframes cardLife { 0% { opacity: 1; } 87% { opacity: 1; } 100% { opacity: 0; } }

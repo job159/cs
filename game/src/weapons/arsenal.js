@@ -138,6 +138,27 @@ function summonStandIn(g, P, o, col) {
   g.fx.sparkBurst?.(_ta.copy(P.pos).addScaledVector(UP, 0.8), { color: col, color1: col.map((c) => c * 0.3), count: 24, speed: 8, glow: 1 });
 }
 
+// 技能充能 (match money upgrade): meter gain from our own hits / shots, scaled after the special added it. v2 meters
+// live in ws.sp.m (cap: special.meters[k].max), the v1 series in ws.sp.charge / heat / blades.
+const V1_METERS = { charge: (p) => p.hits ?? 60, heat: () => 1, blades: (p) => p.max ?? 12 };
+function meterSnap(ws) {
+  const s = ws.sp;
+  if (!s) return null;
+  if (s.v2) return { ...s.m };
+  const o = {};
+  for (const k in V1_METERS) if (typeof s[k] === 'number') o[k] = s[k];
+  return o;
+}
+function meterBoost(ws, before, mul) {
+  const s = ws.sp, p = ws.def.special || {}, tab = s?.v2 ? s.m : s;
+  if (!tab) return;
+  for (const k in before) {
+    const d = tab[k] - before[k];
+    if (!(d > 0)) continue;   // only gains (spending, drains and resets stay as they are)
+    tab[k] = Math.min(s.v2 ? p.meters?.[k]?.max ?? 100 : V1_METERS[k](p), tab[k] + d * (mul - 1));
+  }
+}
+
 class WeaponState {
   constructor(def) {
     this.def = def;
@@ -168,6 +189,9 @@ export class Arsenal {
     this.sinceShot = 10;
     this.dmgMul = 1;
     this.reloadMul = 1;
+    // match money upgrades / level traits (match.js _applyStats): headshot multiplier, reserve size, premium meter
+    // gain, knockback, spread
+    this.headMul = 1; this.reserveMul = 1; this.chargeMul = 1; this.knockMul = 1; this.spreadMul = 1;
     this.pendingSlot = null;
     this.reloadToken = 0;
     this.lastClick = 0;
@@ -188,6 +212,18 @@ export class Arsenal {
   /** Stat modifiers from the current weapon's signature mechanic. */
   _mods(ws) { return specialOf(ws)?.modifiers?.(ws) || {}; }
 
+  /** A weapon's full reserve with the 彈藥容量 upgrade (unlimited / none / unset stay as the def has them). */
+  maxReserve(ws) { const r = ws.def.reserve; return Number.isFinite(r) && r > 0 ? Math.round(r * this.reserveMul) : r; }
+
+  /** special.onHit / onFire with the 技能充能 upgrade: what the call added to the weapon's meters is scaled by chargeMul. */
+  _special(ws, hook, ...args) {
+    const sp = specialOf(ws), f = sp?.[hook];
+    if (!f) return;
+    const before = this.chargeMul !== 1 ? meterSnap(ws) : null;
+    f.call(sp, ws, ...args);
+    if (before) meterBoost(ws, before, this.chargeMul);
+  }
+
   /** Weapon jam (boss shockwaves): no firing for `t` seconds. */
   jam(t) {
     this.jamT = Math.max(this.jamT || 0, t);
@@ -200,6 +236,7 @@ export class Arsenal {
     const def = WEAPONS[id];
     if (!def) return null;
     const ws = new WeaponState(def);
+    ws.reserve = this.maxReserve(ws);
     ws.game = this.game;
     specialOf(ws)?.init(ws);
     const slot = slotOf(def);
@@ -408,7 +445,7 @@ export class Arsenal {
     if (!p.onGround) a += sp[3];
     if (p.crouching) a *= 0.75;
     a += ws.bloom * (1 - aim * 0.4);
-    return a;
+    return a * this.spreadMul;
   }
 
   _fire(ws) {
@@ -426,7 +463,9 @@ export class Arsenal {
     _up.set(0, 1, 0).applyQuaternion(cam.quaternion);
     const origin = _o.copy(cam.position);
     const pellets = (def.pellets || 1) * (mods.split || 1);
-    const fdef = mods.pierce || mods.dmgMul ? { ...def, pen: (def.pen ?? 1) + (mods.pierce || 0) } : def;
+    // (爆頭傷害 upgrade and 重擊 trait ride on the def's head / knock: ballistics keeps bosses' heads fixed)
+    const fdef = mods.pierce || mods.dmgMul || this.headMul !== 1 || this.knockMul !== 1
+      ? { ...def, pen: (def.pen ?? 1) + (mods.pierce || 0), head: (def.head ?? 4) * this.headMul, knock: (def.knock ?? 1) * this.knockMul } : def;
     let anyHit = false, kills = 0, head = false;
     const muzzleApparent = this.vm.socketApparent('muzzle', _p);
     for (let i = 0; i < pellets; i++) {
@@ -437,7 +476,7 @@ export class Arsenal {
       if (def.projectile) { this._launch(ws, origin, d); continue; }
       const res = fireBullet(g, origin, d, fdef, {
         shooter: g.localId, dmgMul: this.dmgMul * (mods.dmgMul || 1),
-        onHit: (info, r2, target) => { g.hud?.onHit?.(info, r2, target); specialOf(ws)?.onHit?.(ws, info, r2, target); },
+        onHit: (info, r2, target) => { g.hud?.onHit?.(info, r2, target); this._special(ws, 'onHit', info, r2, target); },
       });
       if (res.hits) anyHit = true;
       kills += res.kills;
@@ -458,7 +497,7 @@ export class Arsenal {
         }
       }
     }
-    specialOf(ws)?.onFire?.(ws, { game: g, origin, dir: _dir, end: this._lastEnd });
+    this._special(ws, 'onFire', { game: g, origin, dir: _dir, end: this._lastEnd });
     // ---- feedback
     const rc = def.recoil || {};
     const first = ws.shots <= 1 ? (rc.first ?? 1) : 1;
@@ -995,7 +1034,7 @@ export class Arsenal {
       if (th && !hitTargets.has(th.target)) {
         hitTargets.add(th.target);
         const backstab = th.target.isBackTo?.(g.camera.position) ? 2 : 1;
-        const res = th.target.damage({ amount: dmg * backstab * (th.part === 'head' ? def.head ?? 2 : 1) * this.dmgMul, part: th.part, point: th.point, normal: th.normal, dir: d, dist: th.dist, knock: o.kb ?? def.knock * (heavy ? 2 : 1), stagger: heavy ? 1 : def.stagger, weapon: def.id, shooter: g.localId, melee: true, headshot: th.part === 'head' });
+        const res = th.target.damage({ amount: dmg * backstab * (th.part === 'head' ? (def.head ?? 2) * this.headMul : 1) * this.dmgMul, part: th.part, point: th.point, normal: th.normal, dir: d, dist: th.dist, knock: (o.kb ?? def.knock * (heavy ? 2 : 1)) * this.knockMul, stagger: heavy ? 1 : def.stagger, weapon: def.id, shooter: g.localId, melee: true, headshot: th.part === 'head' });
         if (hitTargets.size === 1) this._trailHit();
         g.hud?.onHit?.({ amount: dmg, part: th.part, headshot: th.part === 'head' }, res, th.target);
         g.audio?.play('knife_hit_flesh', { pos: th.point });

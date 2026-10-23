@@ -1,19 +1,27 @@
 // Local player vitals: health, armour (kevlar absorbs part of every hit and wears down), helmet
 // (reduces hit flinch), status effects (slow), damage feedback (screen, punch, sound, haptics, hit
-// direction for the HUD) and the downed state.
+// direction for the HUD) and the downed state. The match's money upgrades / traits set maxHp, maxArmor,
+// armorRegen, bleedOut and reviveBonus (match.js _applyStats); every player's own client owns its vitals.
 import { clamp } from '../engine/util.js';
 import { haptic } from '../weapons/arsenal.js';
+
+const REGEN_DELAY = 4;        // s without damage before the 護甲 upgrade repairs the kevlar
 
 export class PlayerStatus {
   constructor(game) {
     this.game = game;
     this.maxHp = 100;
     this.hp = 100;
-    this.armor = 0;           // 0..100
+    this.armor = 0;           // 0..maxArmor
+    this.maxArmor = 100;      // kevlar durability (護甲 upgrade: up to 225)
+    this.armorRegen = 0;      // /s once out of combat, only with kevlar bought (護甲 upgrade)
+    this.kevlar = false;      // kevlar worn this match (bought or from a supply crate): the regen needs one
     this.helmet = false;
     this.alive = true;
     this.downed = false;
     this.downT = 0;
+    this.bleedOut = 20;       // s downed before bleeding out (堅毅 trait: longer)
+    this.reviveBonus = 0;     // extra health when revived (堅毅 trait)
     this.slowT = 0;
     this.slowMul = 1;
     this.lastHitAt = -10;
@@ -72,16 +80,21 @@ export class PlayerStatus {
   _down() {
     this.hp = 0;
     this.downed = true;
-    this.downT = 20;
+    this.downT = this.bleedOut;
+    if (this.game.match?.stats) this.game.match.stats.downs = (this.game.match.stats.downs | 0) + 1;   // results screen
     this.game.audio?.play('player_downed');
     this.game.onPlayerDowned?.();
   }
 
-  revive(hp = 30) { this.downed = false; this.hp = hp; this.invuln = 2; this.game.audio?.play('revive'); }
+  revive(hp = 30) { this.downed = false; this.hp = Math.min(this.maxHp, hp + this.reviveBonus); this.invuln = 2; this.game.audio?.play('revive'); }
 
   update(dt) {
     const r = this.game.renderer.post;
     this.invuln = Math.max(0, this.invuln - dt);
+    // 護甲 upgrade: the kevlar repairs itself out of combat (never past its upgraded durability)
+    if (this.armorRegen > 0 && this.kevlar && this.alive && !this.downed && this.armor < this.maxArmor && this.game.time - this.lastHitAt > REGEN_DELAY) {
+      this.armor = Math.min(this.maxArmor, this.armor + this.armorRegen * dt);
+    }
     this.damageFx = Math.max(0, this.damageFx - dt * 1.8);
     if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slowMul = 1; }
     for (let i = this.hitDirs.length - 1; i >= 0; i--) { this.hitDirs[i].t -= dt; if (this.hitDirs[i].t <= 0) this.hitDirs.splice(i, 1); }

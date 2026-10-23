@@ -78,6 +78,9 @@ if (!(await alive())) {
     '--disable-extensions', '--disable-background-networking', '--disable-component-update', '--renderer-process-limit=2',
     `--window-size=${W},${H}`, 'about:blank',
   ], { detached: false, stdio: 'ignore' });
+  // owner pid: when this process is killed hard (an agent's command timeout) the browser survives it; the memory
+  // watchdog (tools/memwatch.mjs) kills browsers whose owner is gone
+  try { fs.mkdirSync(profile, { recursive: true }); fs.writeFileSync(path.join(profile, 'owner.pid'), String(process.pid)); } catch { /* best effort */ }
   for (let i = 0; i < 150 && !(await alive()); i++) await new Promise((r) => setTimeout(r, 200));
 }
 

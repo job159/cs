@@ -159,16 +159,21 @@ export class BossBrain {
   }
   onFx() {}
 
-  /** Adds around the boss, kept on ground the players can reach (pulled in toward the boss, else a spawner). */
+  /**
+   * Adds around the boss, kept on ground the players can reach (pulled in toward the boss, else a spawner). Each one
+   * claws out of the ground with a 'summonIn' burst (zfx.summonIn) on every peer, so it reads as summoned.
+   */
   summon(type, n, radius = 6) {
-    const z = this.z, mgr = this.mgr;
+    const z = this.z, mgr = this.mgr, at = [];
     for (let i = 0; i < n; i++) {
       const a = rand(0, Math.PI * 2);
       let p = null;
       for (let r = radius; !p && r > -1; r -= 3) p = mgr.reachableNear?.(z.pos.x + Math.cos(a) * r, z.pos.z + Math.sin(a) * r, 2);
       if (!p) { const sp = this.g.match?._pickSpawner?.(); p = sp && mgr.reachableNear?.(sp.x, sp.z, 6); }
-      mgr.spawn(type, p || new THREE.Vector3(z.pos.x + Math.cos(a) * radius, z.pos.y, z.pos.z + Math.sin(a) * radius));
+      const o = mgr.spawn(type, p || new THREE.Vector3(z.pos.x + Math.cos(a) * radius, z.pos.y, z.pos.z + Math.sin(a) * radius));
+      if (o) at.push([+o.pos.x.toFixed(2), +o.pos.y.toFixed(2), +o.pos.z.toFixed(2)]);
     }
+    if (at.length) this.fx('summonIn', { at });
   }
 
   ground(p) { return this.mgr.nav ? this.mgr.nav.heightAt(p.x, p.z, p.y) : p.y; }

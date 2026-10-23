@@ -4,15 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<meta name="description" content="災厄前線 CALAMITY FRONT：1–4 人合作的回合制殭屍防禦 FPS，瀏覽器直接遊玩（鍵盤＋滑鼠）。">
 <meta name="mobile-web-app-capable" content="yes">
 <title>災厄前線 CALAMITY FRONT</title>
 <link rel="stylesheet" href="style.css">
+<style>
+#boot .boot-net { min-height: 1.2em; margin-top: .35rem; font-family: "Barlow Condensed", "Bahnschrift", "Arial Narrow", sans-serif; font-size: .8rem; font-weight: 600; letter-spacing: .06em; color: rgba(162,157,146,.72); }
+#boot noscript { margin-top: 1rem; color: #e9e6df; font-size: .9rem; }
+</style>
 </head>
 <body>
 <canvas id="gl"></canvas>
 <div id="hud"></div>
 <div id="ui"></div>
-<div id="boot"><div class="boot-logo">災厄前線</div><div class="boot-sub">CALAMITY FRONT</div><div class="boot-bar"><i></i></div><div class="boot-msg">載入中…</div></div>
-<script src="game.js"></script>
+<div id="boot"><div class="boot-logo">災厄前線</div><div class="boot-sub">CALAMITY FRONT</div><div class="boot-bar"><i></i></div><div class="boot-msg">載入中…</div><div class="boot-net"></div><noscript>請開啟 JavaScript 才能遊玩。</noscript></div>
+<script data-size="0">
+// Loads the game bundle (the first ~2 MB, before anything else can run) with a real progress bar: 0-10 % of the boot
+// bar plus a megabyte line. The published build writes the bundle's size into data-size (scripts/build-site.mjs);
+// without it (dev server) or without streams the plain script tag loads it.
+(function () {
+  window.__shotReady = false; // the page load event fires before the bundle runs: QA tools wait for the game's own flag
+  var size = +document.currentScript.getAttribute('data-size') || 0;
+  var run = function (src) { var s = document.createElement('script'); s.src = src; document.body.appendChild(s); };
+  if (!size || !window.fetch || !window.ReadableStream || !window.Blob) { run('game.js'); return; }
+  var bar = document.querySelector('#boot .boot-bar i'), line = document.querySelector('#boot .boot-net');
+  var MB = function (b) { return (b / 1048576).toFixed(1); };
+  fetch('game.js').then(function (r) {
+    if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
+    var reader = r.body.getReader(), parts = [], got = 0;
+    var pump = function () {
+      return reader.read().then(function (c) {
+        if (c.done) { run(URL.createObjectURL(new Blob(parts, { type: 'text/javascript' }))); return; }
+        parts.push(c.value);
+        got += c.value.length;
+        bar.style.width = (Math.min(1, got / size) * 10).toFixed(1) + '%';
+        line.textContent = '下載遊戲程式 ' + MB(Math.min(got, size)) + ' / ' + MB(size) + ' MB';
+        return pump();
+      });
+    };
+    return pump();
+  }).catch(function () { run('game.js'); });
+})();
+</script>
 </body>
 </html>

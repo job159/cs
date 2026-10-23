@@ -232,6 +232,48 @@ export function rocketReload() {
   };
 }
 
+/**
+ * Quick-throw beats (normalised over THROW.dur s), shared by throwClip and weapons/throwables.js, which shows the
+ * grenade in the hand at `show`, pulls the pin / lights the rag at `pin`, lets go at `release`.
+ */
+export const THROW = { dur: 0.76, show: 0.13, pin: 0.29, cock: 0.34, release: 0.54 };
+
+// left-hand anchors of the throw, written for the RIGHT hand (freeGrip mirrors x for the left): pos = palm centre in
+// camera space, F = fingers, N = palm normal
+const T_HOLD = { pos: [0.025, -0.092, -0.3], F: [-0.3, 0.72, -0.62], N: [-0.88, 0.22, 0.28], pose: 'grenade', palm: [0.03, 0.045] };    // presented to the gun hand
+const T_PIN = { pos: [0.085, -0.118, -0.31], F: [-0.15, 0.7, -0.7], N: [-0.9, 0.1, 0.35], pose: 'grenade', palm: [0.03, 0.045] };       // jerked off the pin
+const T_COCK = { pos: [0.27, 0.025, -0.13], F: [0.15, 0.75, 0.6], N: [-0.2, 0.45, -0.85], pose: 'grenade', palm: [0.03, 0.045] };     // wound up by the ear (off-screen)
+const T_REL = { pos: [0.06, -0.01, -0.5], F: [-0.08, 0.5, -0.86], N: [0.08, -0.86, -0.5], pose: 'palm', palm: [0.02, 0.045] };          // arm out, fingers open
+const T_FOLLOW = { pos: [-0.03, -0.25, -0.4], F: [-0.45, -0.4, -0.8], N: [-0.35, -0.8, 0.45], pose: 'relaxed', palm: [0.02, 0.05] };  // swung down across
+
+/**
+ * Quick-throw (G, weapons/throwables.js; ~0.4 s to the release): the gun ducks down and to the right (it stays in the
+ * right hand), the LEFT hand takes the grenade off the vest, presents it to the gun hand that hooks the pin out (a
+ * molotov's rag is lit instead), cocks back by the head and throws overhand with a follow-through, then returns to
+ * the gun. full: a weapon the left hand holds itself (dual pistols, bows) drops right out of view instead of ducking.
+ */
+export function throwClip(vm, { full = false } = {}) {
+  const r = THROW.release;
+  const lo = full ? [0.06, -0.28, 0.08] : [0.03, -0.075, 0.04];
+  const loR = full ? [-42, 14, 30] : [-16, 8, 13];
+  const kick = (a, k) => a.map((v, i) => v + k[i]);
+  const tracks = {
+    gunPos: [[0, Z3], [0.15, lo, 'out3'], [r - 0.03, kick(lo, [0.004, -0.008, 0.004])], [r + 0.06, kick(lo, [0.012, -0.03, 0.02]), 'out3'],
+      [0.74, lo], [1, Z3, 'inOut']],
+    gunRot: [[0, Z3], [0.15, loR, 'out3'], [r - 0.03, kick(loR, [-2, 1, 2])], [r + 0.06, kick(loR, [-7, 4, 8]), 'out3'], [0.74, loR], [1, Z3, 'inOut']],
+  };
+  const events = [
+    [0, 'anchorL', ['pouch', 0.09]], [0.02, 'poseL', 'magGrab'],
+    [0.12, 'anchorL', [T_HOLD, 0.1]],
+    [THROW.pin - 0.02, 'anchorL', [T_PIN, 0.04]],
+    [THROW.cock, 'anchorL', [T_COCK, 0.1]],
+    [r - 0.04, 'anchorL', [T_REL, 0.06]],
+    [r + 0.05, 'anchorL', [T_FOLLOW, 0.09]],
+    [0.76, 'anchorL', [vm?.defaultLeft?.() || 'rest', 0.15]], [0.82, 'poseL', vm?.supportGrip?.pose || 'cradle'],
+  ];
+  return { duration: THROW.dur, tracks, events };
+}
+
 /** Knife attacks. */
 export function knifeSlash(dir = 1) {
   return {

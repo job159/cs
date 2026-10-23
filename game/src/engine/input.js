@@ -9,12 +9,16 @@
 export const ACTIONS = ['fire', 'alt', 'reload', 'jump', 'crouch', 'use', 'sprint', 'grenade', 'melee', 'inspect',
   'buy', 'score', 'next', 'prev', 'slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'pause', 'special'];
 
-const KEYMAP = {
+// The bindings (KeyboardEvent.code -> action; f b l r = movement). Exported so the HUD key hints (ui/keyhints.js)
+// show the real keys: a rebinding screen edits these maps in place. Mouse: button index -> action, the wheel
+// steps next / prev.
+export const KEYMAP = {
   KeyW: 'f', KeyS: 'b', KeyA: 'l', KeyD: 'r', ArrowUp: 'f', ArrowDown: 'b', ArrowLeft: 'l', ArrowRight: 'r',
   KeyR: 'reload', Space: 'jump', ControlLeft: 'crouch', KeyC: 'crouch', KeyE: 'use', ShiftLeft: 'sprint',
   KeyG: 'grenade', KeyV: 'melee', KeyF: 'inspect', KeyB: 'buy', Tab: 'score', KeyQ: 'special',
   Digit1: 'slot1', Digit2: 'slot2', Digit3: 'slot3', Digit4: 'slot4', Digit5: 'slot5', Escape: 'pause',
 };
+export const MOUSEMAP = { 0: 'fire', 2: 'alt' };
 
 export class Input {
   constructor(el) {
@@ -61,12 +65,10 @@ export class Input {
     this.el.addEventListener('mousedown', (e) => {
       if (!this.enabled || e.pointerType === 'touch') return;
       if (this.wantPointerLock && !this.pointerLocked) { this.el.requestPointerLock?.(); return; }
-      if (e.button === 0) this.press('fire');
-      if (e.button === 2) this.press('alt');
+      if (MOUSEMAP[e.button]) this.press(MOUSEMAP[e.button]);
     });
     window.addEventListener('mouseup', (e) => {
-      if (e.button === 0) this.release('fire');
-      if (e.button === 2) this.release('alt');
+      if (MOUSEMAP[e.button]) this.release(MOUSEMAP[e.button]);
     });
     this.el.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {

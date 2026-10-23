@@ -12,7 +12,7 @@
 //   zombies: bruteCharge, chargeImpact, leapCue, spitWarn, spitTrail, acidSplash, hazard / hazardTick,
 //            bloaterBurst, bloaterDeflate, screamWave, healPulse, smokeBurst, shieldMark
 //   bosses:  bossDeath, roar, quake, swipe, rockTrail, rockImpact, rageAura, stunned, wallSlam, sporeLaunch, sporeTrail,
-//            sporeBurst, breathCharge, breath, wingGust, takeoff, metamorph, crash, tendril, screech
+//            sporeBurst, breathCharge, breath, wingGust, takeoff, metamorph, crash, tendril, screech, summonIn
 //   match:   supplyGlow, supplyLand, supplyOpen, levelUp
 // patchShell(root) (export): per-zombie status-shell material copies, called by ZombieManager.spawn.
 import * as THREE from 'three';
@@ -34,17 +34,26 @@ const _t = new THREE.Vector3();
 const _h = new THREE.Vector3();
 
 // ------------------------------------------------------------------ status shells (06b §9.3.3)
-// col HDR, amt, pulse Hz / depth (flicker = random), fres 0 = CSO flat glow shell .. 1 = rim only, prio, decay
-// (amount follows the remaining time: one-shot flashes)
+// col HDR, amt, pulse Hz / depth (flicker = random), fres 0 = CSO flat glow shell .. 1 = rim only, exp = rim
+// sharpness (default 2; bosses 2.6), prio, decay (amount follows the remaining time: one-shot flashes).
+// Bosses never wear a flat shell (fres >= 0.85) and their rims fade with distance (_rimFar): a 4-7 m model under a
+// flat or wide HDR shell read as one pink blob past 20 m (QA: enraged Butcher, Colossus metamorphosis).
 export const SHELL = {
   kill: { col: [1.2, 1.0, 0.9], amt: 1, fres: 0.6, prio: 9, decay: true },
   healed: { col: [0.4, 2.4, 0.6], amt: 1, fres: 0.8, prio: 8, decay: true },
   hardened: { col: [1.6, 0.2, 0.1], amt: 0.7, fres: 0, prio: 7 },
+  // boss transitions (metamorphosis, crash landing): can't be hurt. A cool violet-white rim that breathes
+  invuln: { col: [0.75, 0.62, 1.35], amt: 0.42, hz: 2.2, depth: 0.3, fres: 1, exp: 3.4, prio: 7 },
+  // the moment a boss enrages: a hot rim flash that settles into `rage`
+  rageFlash: { col: [2.0, 0.42, 0.1], amt: 0.85, fres: 1, exp: 2.2, prio: 7, decay: true },
   berserk: { col: [2.2, 0.15, 0.12], amt: 0.9, hz: 4, depth: 0.3, fres: 0, prio: 6 },
   burning: { col: [2.6, 0.9, 0.15], amt: 0.5, hz: 9, depth: 0.45, flicker: true, fres: 0.6, prio: 5 },
+  // ghost fire (鬼火, M03 鬼車's 灼羽): the burning look in violet / cold teal (hit info.burnFx = 'ghostfire')
+  ghostfire: { col: [1.5, 0.45, 2.7], amt: 0.5, hz: 7, depth: 0.45, flicker: true, fres: 0.7, prio: 5 },
   frozen: { col: [0.8, 1.8, 2.6], amt: 0.5, fres: 1, prio: 5 },
   poisoned: { col: [0.6, 1.6, 0.2], amt: 0.4, hz: 2, depth: 0.3, fres: 0.7, prio: 4 },
-  rage: { col: [2.2, 0.15, 0.12], amt: 0.6, hz: 1.4, depth: 0.25, fres: 1, prio: 3 },
+  // enraged boss: a thin ember-red rim; the readable cue is the model's own vein glow + embers (_rageStep)
+  rage: { col: [1.25, 0.2, 0.06], amt: 0.42, hz: 1.4, depth: 0.3, fres: 1, exp: 3.4, prio: 3 },
   elite: { col: [1.5, 0.45, 2.4], amt: 0.45, hz: 1.2, depth: 0.35, fres: 1, prio: 2 },
 };
 
@@ -52,7 +61,7 @@ const SHELL_FRAG = /* glsl */`
 #include <emissivemap_fragment>
 {
   // zombie status shell (06b §9.1 #2): flat CSO glow (fres 0) .. rim light (fres 1)
-  float zfr = pow(1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0), 2.0);
+  float zfr = pow(1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0), uShellExp);
   totalEmissiveRadiance += uShellCol * uShellAmt * mix(1.0, zfr, uShellFres);
   diffuseColor.rgb *= 1.0 - min(uShellAmt, 1.0) * (1.0 - uShellFres) * 0.5;   // a flat shell reads as one colour
 }`;
@@ -60,10 +69,10 @@ const SHELL_FRAG = /* glsl */`
 /**
  * Gives every lit material under `root` (LOD meshes included) a per-zombie copy carrying the status-shell term.
  * One shared program per material setup (customProgramCacheKey), uniforms per zombie: no extra shader variants
- * once the first zombie compiled. Returns the uniforms { col, amt, fres } that ZFX drives.
+ * once the first zombie compiled. Returns the uniforms { col, amt, fres, exp } that ZFX drives.
  */
 export function patchShell(root) {
-  const U = { col: { value: new THREE.Color(0, 0, 0) }, amt: { value: 0 }, fres: { value: 0 } };
+  const U = { col: { value: new THREE.Color(0, 0, 0) }, amt: { value: 0 }, fres: { value: 0 }, exp: { value: 2 } };
   const done = new Map();
   const patch = (m) => {
     if (!m || !m.emissive || m.userData.zshell) return m;     // unlit / already patched
@@ -73,9 +82,9 @@ export function patchShell(root) {
     const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey();   // keep a patch the template may carry
     c.onBeforeCompile = (sh, r) => {
       prev.call(c, sh, r);
-      sh.uniforms.uShellCol = U.col; sh.uniforms.uShellAmt = U.amt; sh.uniforms.uShellFres = U.fres;
+      sh.uniforms.uShellCol = U.col; sh.uniforms.uShellAmt = U.amt; sh.uniforms.uShellFres = U.fres; sh.uniforms.uShellExp = U.exp;
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform vec3 uShellCol;\nuniform float uShellAmt;\nuniform float uShellFres;')
+        .replace('#include <common>', '#include <common>\nuniform vec3 uShellCol;\nuniform float uShellAmt;\nuniform float uShellFres;\nuniform float uShellExp;')
         .replace('#include <emissivemap_fragment>', SHELL_FRAG);
     };
     c.customProgramCacheKey = () => 'zshell|' + prevKey;
@@ -212,15 +221,26 @@ export class ZFX {
       if (best !== s.cur) {
         s.cur = best;
         U.col.value.setRGB(best.col[0], best.col[1], best.col[2]);
-        // a boss-sized flat shell is one red blob: bosses always get at least a rim look
-        U.fres.value = z.def.boss ? Math.max(0.6, best.fres) : best.fres;
+        // a boss-sized flat shell is one coloured blob: bosses only ever wear a rim, a thin one
+        U.fres.value = z.def.boss ? Math.max(0.85, best.fres) : best.fres;
+        if (U.exp) U.exp.value = best.exp ?? (z.def.boss ? 2.6 : 2);
         if (best.decay) s.amt = target;
       }
     }
     // the berserk ramp takes ~0.3 s (06b §9.5.3), releases are quicker
     s.amt += (target - s.amt) * Math.min(1, dt * (best?.decay ? 60 : target > s.amt ? 7 : 10));
     if (!best && s.amt < 0.004) { s.amt = 0; s.cur = null; }
-    U.amt.value = s.amt;
+    U.amt.value = s.amt * (z.def.boss && s.amt > 0 ? this._rimFar(z) : 1);
+  }
+
+  /**
+   * Boss rim strength by distance: past ~14 m a model shrinks to a few hundred pixels and a fresnel rim covers most
+   * of them (thin limbs are all rim), so it fades to 45 % by ~45 m and the model's albedo / own glow keep reading.
+   */
+  _rimFar(z) {
+    const c = this.game.camera.position;
+    const d = Math.hypot(z.pos.x - c.x, z.pos.y + z.height * 0.5 - c.y, z.pos.z - c.z) / Math.max(1, this.game.zoom || 1);
+    return THREE.MathUtils.clamp(1 - (d - 14) / 34, 0.45, 1);
   }
 
   _derived(z, s) {
@@ -286,7 +306,7 @@ export class ZFX {
       }
       // element statuses: flames licking the body, frost glints, plague bubbles
       if (s.fxT <= 0) {
-        if (s.st.burning) { s.fxT = 0.07 / Math.max(0.5, this.k); this._bodyFlame(z); }
+        if (s.st.burning || s.st.ghostfire) { s.fxT = 0.07 / Math.max(0.5, this.k); this._bodyFlame(z, !s.st.burning); }
         else if (s.st.frozen) { s.fxT = 0.25; this._bodyPoint(z, _v); this.marks.add('glint', { x: _v.x, y: _v.y, z: _v.z, life: 0.35, size: 0.08, size1: 0.02, color: [1.6, 2.6, 3.4, 1], rot: R() * 6 }); }
         else if (z.purgeT > 0 || s.st.poisoned) { s.fxT = 0.35; this._bodyPoint(z, _v); this.marks.add('bubble', { x: _v.x, y: _v.y, z: _v.z, vy: 0.5, life: 0.8, size: 0.07, size1: 0.13, color: [0.6, 1.4, 0.2, 0.9] }); }
         else s.fxT = 0.2;
@@ -306,12 +326,13 @@ export class ZFX {
     return out.set(z.pos.x + rr(-1, 1) * z.radius * 0.8, z.pos.y + rr(0.15, 0.9) * h, z.pos.z + rr(-1, 1) * z.radius * 0.8);
   }
 
-  _bodyFlame(z) {
+  _bodyFlame(z, ghost = false) {
     const p = this._bodyPoint(z, _v);
     const s = (z.def.boss ? 0.8 : 0.32) * rr(0.8, 1.2);
     this.P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vy: rr(0.6, 1.2), life: rr(0.3, 0.45), size: s, size1: s * 1.4, frame: FRAME.fire, frames: 8, fps: 18, frameOffset: R() * 7,
-      ramp: RAMP.flame, heat: 1.0, heat1: 0.2, mode: 'align', dir: UP, aspect: 1.3, anchor: 0.3, mirror: R() < 0.5, color: [1, 1, 1, 0.85], color1: [1, 1, 1, 0], drag: 1 });
-    if (R() < 0.35) this.P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vx: rr(-0.5, 0.5), vy: rr(1, 2.5), vz: rr(-0.5, 0.5), life: rr(0.5, 0.9), size: 0.012, stretch: 0.02, color: [5, 2.2, 0.6, 1], color1: [2, 0.4, 0.05, 1], frame: FRAME.spark, gravity: -0.5, drag: 1 });
+      ramp: ghost ? RAMP.purple : RAMP.flame, heat: 1.0, heat1: 0.2, mode: 'align', dir: UP, aspect: 1.3, anchor: 0.3, mirror: R() < 0.5, color: [1, 1, 1, 0.85], color1: [1, 1, 1, 0], drag: 1 });
+    if (R() < 0.35) this.P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vx: rr(-0.5, 0.5), vy: rr(1, 2.5), vz: rr(-0.5, 0.5), life: rr(0.5, 0.9), size: 0.012, stretch: 0.02,
+      color: ghost ? [0.6, 3.6, 3.4, 1] : [5, 2.2, 0.6, 1], color1: ghost ? [1.6, 0.3, 2.6, 1] : [2, 0.4, 0.05, 1], frame: FRAME.spark, gravity: -0.5, drag: 1 });
   }
 
   // ------------------------------------------------------------------ shared particle recipes
@@ -482,9 +503,10 @@ export class ZFX {
           color: c, color1: [c[0], c[1], c[2], 0], frame: FRAME.smoke + ((R() * 2) | 0), drag: 0.8, ground: h.pos.y, soft: 0.5 });
       }
     }
-    // standing in it: CSO's lime poison frame on our screen (refreshed, never stacked)
+    // standing in it: CSO's lime poison frame on our screen (refreshed, never stacked; a light dose that keeps to the
+    // edges: the boss's pools lie where the fight is)
     v.ov = (v.ov ?? 0) - dt;
-    if (v.ov <= 0) { v.ov = 0.3; if (this._local(h.pos) < h.r) this.overlay('poison', acid ? 0.5 : 0.6, 0.7); }
+    if (v.ov <= 0) { v.ov = 0.3; if (this._local(h.pos) < h.r) this.overlay('poison', acid ? 0.3 : 0.35, 0.5); }
     v.bub -= dt;
     if (v.bub <= 0) {
       v.bub = 0.3 / area;
@@ -635,27 +657,50 @@ export class ZFX {
     this.quake(_t.set(point.x, gy, point.z), r, { scale: 0.7 });
   }
 
-  /** Boss rage aura: red rim shell from now on, steam off the body, a red pulse on the ground; level 2 = frenzy. */
+  /**
+   * Boss rage: a hot rim flash that settles into a thin ember rim (SHELL.rage), steam and rising embers off the
+   * shoulders from now on, a red pulse on the ground; level 2 = frenzy (denser embers, dark heat smoke). The body
+   * itself never washes out: the model's own vein / weak-point glow (brain enrageLook) carries the look up close,
+   * the embers (drawn larger with distance) carry it at range.
+   */
   rageAura(z, level = 1) {
     const s = this._state(z);
     s.rage = level;
-    this.status(z, 'hardened', level === 1 ? 1.6 : 0.4);
+    this.status(z, 'rageFlash', level === 1 ? 1.2 : 0.5);
     const p = _w.set(z.pos.x, z.pos.y + 0.03, z.pos.z).clone();
     for (let i = 0; i < 2; i++) this.after(i * 0.2, () => this.ground.add('shock', p, { r: 1, r1: 9, life: 0.6, col: [2.4, 0.3, 0.15], width: 0.5 }));
-    if (!s.rageGlow) s.rageGlow = this.ground.add('glow', p, { r: z.radius * 3, life: Infinity, col: [0.5, 0.05, 0.02], follow: z, fadeIn: 0.5 });
+    if (!s.rageGlow) s.rageGlow = this.ground.add('glow', p, { r: z.radius * 3, life: Infinity, col: [0.42, 0.05, 0.02], follow: z, fadeIn: 0.5 });
     this.roar(z, 1.6);
+    // a burst of embers off the whole body: the moment reads even from across the map
+    for (let i = 0; i < this._n(26) + 8; i++) {
+      const q = this._bodyPoint(z, _v);
+      _t.set(q.x - z.pos.x, 0, q.z - z.pos.z).normalize();
+      this.P.spawn({ additive: true, x: q.x, y: q.y, z: q.z, vx: _t.x * rr(1, 3), vy: rr(1.5, 4.5), vz: _t.z * rr(1, 3), delay: R() * 0.25, life: rr(0.8, 1.4), size: 0.026, stretch: 0.03,
+        color: [7, 2, 0.5, 1], color1: [2.4, 0.3, 0.05, 1], frame: FRAME.spark, drag: 0.9, gravity: -0.4, far: true });
+    }
     if (this._local(p) < 14) this.overlay('edge', 0.5, 0.6, [1, 0.12, 0.08]);
   }
 
   _rageStep(z, s, dt) {
     s.steamT = (s.steamT ?? 0) - dt;
     if (s.steamT > 0) return;
-    s.steamT = (s.rage > 1 ? 0.12 : 0.2) / Math.max(0.5, this.k);
+    const fr = s.rage > 1;
+    s.steamT = (fr ? 0.09 : 0.14) / Math.max(0.5, this.k);
     const p = this._bodyPoint(z, _v);
     p.y = z.pos.y + z.height * rr(0.55, 0.85);
-    this.P.spawn({ x: p.x, y: p.y, z: p.z, vx: rr(-0.2, 0.2), vy: rr(0.6, 1.1), vz: rr(-0.2, 0.2), life: rr(1.0, 1.4), size: 0.4, size1: 1.4, sizePow: 0.5, fadeIn: 0.1,
-      color: [0.7, 0.7, 0.72, 0.25], color1: [0.72, 0.72, 0.74, 0], frame: FRAME.smoke + ((R() * 2) | 0), drag: 1 });
-    if (s.rage > 1 && R() < 0.5) this.P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vx: rr(-0.6, 0.6), vy: rr(1, 2), vz: rr(-0.6, 0.6), life: 0.7, size: 0.015, stretch: 0.02, color: [5, 1.2, 0.4, 1], color1: [2, 0.2, 0.05, 1], frame: FRAME.spark, drag: 1 });
+    // heat steam off the back
+    if (R() < 0.6) this.P.spawn({ x: p.x, y: p.y, z: p.z, vx: rr(-0.2, 0.2), vy: rr(0.6, 1.1), vz: rr(-0.2, 0.2), life: rr(1.0, 1.4), size: 0.4 * (z.height / 4), size1: 1.4 * (z.height / 4), sizePow: 0.5, fadeIn: 0.1,
+      color: fr ? [0.32, 0.2, 0.18, 0.3] : [0.7, 0.7, 0.72, 0.22], color1: [0.72, 0.7, 0.7, 0], frame: FRAME.smoke + ((R() * 2) | 0), drag: 1 });
+    // embers rising off the shoulders and back (larger with distance: the rage cue that survives 30 m+)
+    for (let i = fr ? 3 : 2; i > 0; i--) {
+      const q = i > 1 ? this._bodyPoint(z, _t) : p;
+      if (i > 1) q.y = z.pos.y + z.height * rr(0.5, 0.9);
+      this.P.spawn({ additive: true, x: q.x, y: q.y, z: q.z, vx: rr(-0.5, 0.5), vy: rr(1.2, 2.6), vz: rr(-0.5, 0.5), life: rr(0.7, 1.2), size: 0.035, stretch: 0.035,
+        color: [6, 1.7, 0.45, 1], color1: [2.2, 0.25, 0.05, 1], frame: FRAME.spark, drag: 0.8, gravity: -0.5, far: true });
+    }
+    // a soft ember glow drifting up off the back now and then (reads as heat at range, never covers the body)
+    if (R() < 0.35) this.P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vx: rr(-0.2, 0.2), vy: rr(0.8, 1.4), vz: rr(-0.2, 0.2), life: rr(0.5, 0.8), size: 0.32, size1: 0.12,
+      color: [1.4, 0.3, 0.06, 0.55], color1: [0.6, 0.08, 0.02, 0], frame: FRAME.glow, drag: 0.6, far: 'sqrt' });
   }
 
   /** Stunned (wall slam): stars circling the head for t seconds. */
@@ -714,11 +759,14 @@ export class ZFX {
     const p = _w.set(point.x, gy + 0.4, point.z).clone();
     this.P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.12, size: 1.2, size1: 3, color: [2.4, 5, 1, 1], color1: [0, 0, 0, 0], frame: FRAME.glow });
     this.ground.add('shock', _v.set(p.x, gy + 0.03, p.z), { r: 0.3, r1: r, life: 0.3, col: [1.0, 2.0, 0.4], width: 0.3 });
-    this._gas(p, this._n(10) + 3, { size: 0.5, size1: 2.6, speed: 4, up: 1.2, life: 1.4, ground: gy });
+    // landing on us: a thinner, lower, faster cloud (it would fill the lens), the splash on screen stays at the edges
+    // (QA: the old cloud + 0.7 / 1.2 s overlay covered ~60 % of the screen in the boss's busiest phase)
+    const d = this._local(p), onUs = d < r;
+    this._gas(p, onUs ? this._n(5) + 2 : this._n(10) + 3, onUs ? { size: 0.4, size1: 1.6, speed: 3, up: 0.5, life: 0.9, col: [0.35, 0.55, 0.08, 0.45], ground: gy }
+      : { size: 0.5, size1: 2.6, speed: 4, up: 1.2, life: 1.4, ground: gy });
     this.acidSplash(_v.set(p.x, gy, p.z), UP, r * 0.6, 6);
     this.fx.lights.flash(_v.set(p.x, gy + 0.8, p.z), 0x9aff60, 60, r * 2.5, 0.2);
-    const d = this._local(p);
-    if (d < r) this.overlay('poison', 0.7, 1.2);
+    if (onUs) this.overlay('poison', 0.35, 0.6);
   }
 
   /** Breath wind-up: green motes sucked into the mouth + a growing glow there for t seconds. */
@@ -768,7 +816,7 @@ export class ZFX {
     const pl = this.game.player;
     if (pl && this._local(p) < Infinity) {
       const dx = pl.pos.x - p.x, dz = pl.pos.z - p.z, along = dx * fx + dz * fz, side = Math.abs(dx * fz - dz * fx);
-      if (along > -1 && along < L + 1 && side < w + 0.8) { this.overlay('poison', 1.0, 1.6); this.overlay('tint', 0.25, 0.8, [0.85, 1.0, 0.8]); }
+      if (along > -1 && along < L + 1 && side < w + 0.8) { this.overlay('poison', 0.7, 1.1); this.overlay('tint', 0.16, 0.6, [0.85, 1.0, 0.8]); }
     }
   }
 
@@ -796,21 +844,60 @@ export class ZFX {
     this._state(z).gustT = 0.6;
   }
 
-  /** Metamorphosis (invulnerable, wings unfold): hardened shell, a dark vortex under it, a violet column, a blast at the end. */
+  /**
+   * Metamorphosis (invulnerable, wings unfold): the invulnerable rim (SHELL.invuln), a violet glyph turning under
+   * it, four thin light columns in a ring well outside the body, violet motes swirling up around it, dark chrysalis
+   * smoke rolling at its feet; a shock ring and a roar as it ends. Nothing additive covers the body: one enveloping
+   * column plus a flat red shell turned the boss (and the crawlers it summons behind it) into pink translucent blobs.
+   */
   metamorph(z, t = 4.5) {
-    this.status(z, 'hardened', t);
+    this.status(z, 'invuln', t);
     const p = _w.set(z.pos.x, z.pos.y + 0.03, z.pos.z).clone();
-    this.ground.add('glyph', p, { r: 7, life: t, col: [1.2, 0.3, 2.0], alpha: 0.9, rotV: 2, fadeIn: 0.6, fadeOut: 0.6 });
-    this.pillars.add(p, { r: z.radius * 1.6, h: z.height * 2.2, col: [0.6, 0.15, 1.1], life: t, taper: 1.6, fadeIn: 0.8 });
-    this.after(t - 0.3, () => { this.ground.add('shock', p, { r: 1, r1: 16, life: 0.6, col: [1.4, 0.4, 2.2], width: 0.6 }); this.roar(z, 2); });
+    const R0 = Math.max(4.2, z.radius * 2.6);
+    this.ground.add('glyph', p, { r: R0 + 1.6, life: t, col: [1.0, 0.28, 1.8], alpha: 0.85, rotV: 2, fadeIn: 0.6, fadeOut: 0.6 });
+    // (Pillars holds 12: supply-crate columns must never be pushed out)
+    for (let i = 0; i < 4 && this.pillars.items.length < this.pillars.max - 2; i++) {
+      const a = (i / 4) * TAU + 0.4;
+      this.pillars.add(_v.set(p.x + Math.cos(a) * R0, p.y, p.z + Math.sin(a) * R0), { r: 0.22, h: z.height * 1.4, col: [0.5, 0.15, 0.95], life: t, taper: 0.2, fadeIn: 0.4 + i * 0.12 });
+    }
+    // motes drawn in along the ring and up (a slow swirl), larger with distance so the transformation reads far away
+    const n = Math.round((t - 0.8) / 0.04 * Math.min(1, this.k + 0.2));
+    for (let i = 0; i < n; i++) {
+      const a = R() * TAU, r0 = R0 * rr(0.8, 1.1), life = rr(1.1, 1.7), sp = rr(1.6, 2.6);
+      const c = Math.cos(a), sn = Math.sin(a);
+      this.P.spawn({ additive: true, x: p.x + c * r0, y: p.y + rr(0.1, 1.2), z: p.z + sn * r0, vx: -sn * sp - c * 1.1, vy: rr(1.8, 3.6), vz: c * sp - sn * 1.1, delay: (i / n) * (t - 0.8), life,
+        size: 0.2, size1: 0.07, color: [1.5, 0.55, 3.0, 1], color1: [0.5, 0.12, 1.2, 0], frame: FRAME.glow, drag: 0.3, far: true });
+    }
+    // dark chrysalis smoke rolling round the feet (kept low: it never hides the body)
+    for (let i = 0; i < this._n(14) + 4; i++) {
+      const a = R() * TAU, r0 = rr(0.5, 1) * z.radius * 1.4;
+      this.P.spawn({ x: p.x + Math.cos(a) * r0, y: p.y + 0.3, z: p.z + Math.sin(a) * r0, vx: -Math.sin(a) * 1.2 + Math.cos(a) * 0.6, vy: rr(0.1, 0.4), vz: Math.cos(a) * 1.2 + Math.sin(a) * 0.6,
+        delay: R() * (t - 1.5), life: rr(1.8, 2.6), size: 1.0, size1: 2.6, sizePow: 0.5, fadeIn: 0.15, color: [0.09, 0.06, 0.12, 0.55], color1: [0.12, 0.09, 0.15, 0], colorPow: 1.3,
+        frame: FRAME.puff + (i & 3), drag: 1.2, spin: (R() - 0.5) * 0.6, ground: p.y, soft: 0.4 });
+    }
+    this.after(t - 0.3, () => {
+      this.ground.add('shock', p, { r: 1, r1: 16, life: 0.6, col: [1.4, 0.4, 2.2], width: 0.6 });
+      this.fx.shockwave(_v.set(p.x, p.y + z.height * 0.6, p.z), { r0: 1, r1: 9, life: 0.5, color: [1.2, 0.5, 2.2], thin: true });
+      this.roar(z, 2);
+    });
     if (this._local(p) < 25) this.overlay('tint', 0.15, 1.2, [0.6, 0.35, 0.9]);
+  }
+
+  /** Adds clawing out of the ground where a boss summons them: a dark burst, dirt clods, a violet ring and cracks. */
+  summonIn(pos, col = [0.9, 0.3, 1.5]) {
+    const gy = this.groundY(pos.x, pos.z, pos.y);
+    this.ground.add('shock', _v.set(pos.x, gy + 0.03, pos.z), { r: 0.5, r1: 1.7, life: 0.4, col: [col[0] * 0.7, col[1] * 0.7, col[2] * 0.7], width: 0.07 });
+    this.ground.add('crack', _v.set(pos.x, gy + 0.02, pos.z), { r: 1.1, life: 5, col: [0.04, 0.035, 0.03], alpha: 0.8, fadeIn: 0.02, fadeOut: 2 });
+    this._dust(pos.x, gy, pos.z, this._n(5) + 2, { r: 0.4, size: 0.35, size1: 1.3, speed: 1.6, up: 0.8, life: 1.1, col: [0.16, 0.13, 0.17], a: 0.55 });
+    this._chunks(_v.set(pos.x, gy, pos.z), 6, [0.28, 0.25, 0.22], 3.5, 0.045);
+    this.P.spawn({ additive: true, x: pos.x, y: gy + 0.4, z: pos.z, life: 0.25, size: 0.8, size1: 1.8, color: [col[0], col[1], col[2], 1], color1: [0, 0, 0, 0], frame: FRAME.glow, far: 'sqrt' });
   }
 
   /** Wings shredded: smoke trails off the body while it falls, then the crash-landing blast when it hits the ground. */
   crash(z) {
     const s = this._state(z);
     s.crashing = true; s.crashT = 0;
-    this.status(z, 'hardened', 2.5);
+    this.status(z, 'invuln', 2.5);
     this._gas(z.center(_v), this._n(8) + 3, { size: 1, size1: 3, speed: 3, up: 0, life: 1.5, col: [0.18, 0.16, 0.15, 0.8], col1: [0.25, 0.24, 0.23, 0] });
   }
 

@@ -8,6 +8,7 @@ import { CATS, listed, tierOf, skillText } from '../weapons/defs.js';
 import { weaponIcon } from './icons.js';
 import { TIERS, tierIcon, injectCSS } from './crosshairs.js';
 import { mapThumb } from './mapthumb.js';
+import { primaryKey, bindLabel } from '../engine/keybinds.js';
 
 /** UI text + colour per difficulty (multipliers come from match/rules.js). */
 export const DIFF_INFO = {
@@ -132,12 +133,27 @@ export function orbitBackdrop(game, info, t) {
 // ---------------------------------------------------------------- main menu
 
 const canExit = () => !!window.NativeBridge?.exitApp;
+const FS_ON = '<svg viewBox="0 0 24 24"><path d="M4 9.5V4h5.5M14.5 4H20v5.5M20 14.5V20h-5.5M9.5 20H4v-5.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+const FS_OFF = '<svg viewBox="0 0 24 24"><path d="M9.5 4v5.5H4M20 9.5h-5.5V4M14.5 20v-5.5H20M4 14.5h5.5V20" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+injectCSS('menu-pc-css', `
+.mm-top { grid-column: 3; grid-row: 1; align-self: start; justify-self: end; display: flex; gap: .45rem; }
+.mm-fs { display: inline-flex; align-items: center; justify-content: center; width: var(--tap); min-height: var(--tap); padding: 0;
+  background: rgba(0,0,0,.45); border: 1px solid var(--fe-line); color: #d8d3c8; transition: border-color .12s, color .12s; }
+.mm-fs:hover { border-color: rgba(255,255,255,.35); color: var(--accent); }
+.mm-fs svg { width: 1.1rem; height: 1.1rem; }
+.mm-nav button { transition: background .15s, padding-left .15s; }
+.map-card.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.diff:focus-visible, .ar-card:focus-visible, .ch-card:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ar-card, .diff, .ch-card { transition: border-color .12s, background .12s; }
+`);
 
 export class MainMenu extends Screen {
   constructor(app) {
+    const fs = !matchMedia('(pointer: coarse)').matches && document.fullscreenEnabled;
     super(app, 'mm fe-shade', `
       <div class="mm-logo"><b>災厄前線</b><span>CALAMITY FRONT</span></div>
-      <button class="mm-name" data-act="name" aria-label="玩家名稱">${ICON.user}<span></span>${ICON.edit}</button>
+      <div class="mm-top">${fs ? `<button class="mm-fs" data-act="fs" aria-label="全螢幕" title="全螢幕">${FS_ON}</button>` : ''}
+        <button class="mm-name" data-act="name" aria-label="玩家名稱">${ICON.user}<span></span>${ICON.edit}</button></div>
       <nav class="mm-nav">
         <button data-act="solo" class="pri"><b>單人遊戲</b><small>SOLO</small></button>
         <button data-act="mp"><b>多人連線</b><small>MULTIPLAYER</small></button>
@@ -148,6 +164,14 @@ export class MainMenu extends Screen {
       <div class="mm-card"></div>
       <div class="mm-foot"><span class="mm-ver"></span></div>`);
     this.$('.mm-ver').textContent = `版本 ${app.version}　·　合作殭屍生存　1–4 人`;
+    document.addEventListener('fullscreenchange', () => {
+      const b = this.$('.mm-fs');
+      if (!b) return;
+      const on = !!document.fullscreenElement;
+      b.innerHTML = on ? FS_OFF : FS_ON;
+      b.title = on ? '離開全螢幕' : '全螢幕';
+      b.setAttribute('aria-label', b.title);
+    });
   }
 
   enter() {
@@ -165,6 +189,7 @@ export class MainMenu extends Screen {
     else if (act === 'mp') app.show('mp');
     else if (act === 'armory') app.show('armory');
     else if (act === 'settings') app.openOverlay('settings');
+    else if (act === 'fs') app.setFullscreen(!document.fullscreenElement);
     else if (act === 'name') app.editName().then(() => this.enter());
     else if (act === 'map') pickMap(app, app.mapId).then((id) => { if (id) { app.mapId = id; this.enter(); } });
     else if (act === 'exit' && canExit()) {
@@ -222,7 +247,27 @@ export class SoloSetup extends Screen {
 
 // ---------------------------------------------------------------- armory
 
-const ARMORY_TABS = ['rifle', 'smg', 'pistol', 'shotgun', 'mg', 'sniper', 'heavy', 'melee'];
+// tab order; categories a later weapon brings (great bows, staffs...) join before melee, unknown ones at the end
+const ARMORY_ORDER = ['rifle', 'smg', 'pistol', 'shotgun', 'mg', 'sniper', 'heavy', 'bow', 'staff', 'melee'];
+const CAT_ZH = { bow: '弓', staff: '法杖', polearm: '長柄', thrown: '投擲武器' };
+const catZh = (c) => CATS[c]?.zh || CAT_ZH[c] || c;
+function armoryTabs() {
+  const cats = new Set(listed().map((w) => w.cat).filter((c) => c && c !== 'grenade'));
+  return [...ARMORY_ORDER.filter((c) => cats.has(c)), ...[...cats].filter((c) => !ARMORY_ORDER.includes(c))];
+}
+// what a weapon fires from: magazines (guns), or a resource (def.resource { kind, max, regen } / def.ammoKind)
+const RES_ZH = { arrow: '箭矢', arrows: '箭矢', mana: '法力', charge: '充能', charges: '充能', energy: '能量', ammo: '彈藥' };
+function ammoTag(w) {
+  const kind = w.resource?.kind || w.ammoKind || (w.cat === 'bow' ? 'arrow' : w.cat === 'staff' ? 'mana' : '');
+  const res = RES_ZH[kind];
+  if (w.cat === 'melee' && !w.resource) return '';
+  if (res) {
+    const max = w.resource?.max ?? w.mag;
+    const regen = w.resource?.regen ? `　回復 ${w.resource.regen}/秒` : '';
+    return max ? `${res} ${max}${w.reserve && !w.resource?.regen ? ` / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}` : ''}${regen}` : res;
+  }
+  return w.mag ? `彈匣 ${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}` : '';
+}
 // premium series: card frame + series tag in the tier colours (crosshairs.js TIERS), the signature skill in the detail
 injectCSS('armory-prem-css', `
 .ar-card.prem { border-color: var(--tc); }
@@ -239,13 +284,15 @@ function tierVars(w) {
   const t = tierOf(w), T = t !== 'standard' && TIERS[t];
   return T ? ` style="--tc:${rgba(T.edge, 0.55)};--tb:${rgba(T.edge, 0.14)};--th:${T.hi}"` : '';
 }
-const MODE_ZH = { auto: '全自動', semi: '半自動', burst: '點放', bolt: '栓動', pump: '泵動', melee: '近戰', single: '單發' };
+const MODE_ZH = { auto: '全自動', semi: '半自動', burst: '點放', bolt: '栓動', pump: '泵動', melee: '近戰', single: '單發',
+  charge: '蓄力', draw: '拉弓', channel: '引導', beam: '光束', throw: '投擲' };
 
 function weaponStats(w) {
-  const dps = (w.dmg * (w.pellets || 1) * (w.rpm || 60)) / 60;
+  const dmg = w.dmg || 0;
+  const dps = (dmg * (w.pellets || 1) * (w.rpm || 60)) / 60;
   const acc = 1 - Math.min(1, ((w.spread?.[0] ?? 2) + (w.spread?.[1] ?? 0.5) * 2) / 9);
   return [
-    ['傷害', Math.min(1, Math.sqrt((w.dmg * (w.pellets || 1)) / 320))],
+    ['傷害', Math.min(1, Math.sqrt((dmg * (w.pellets || 1)) / 320))],
     ['射速', Math.min(1, (w.rpm || 60) / 1200)],
     ['輸出', Math.min(1, dps / 900)],
     ['精準', acc],
@@ -254,7 +301,7 @@ function weaponStats(w) {
 }
 
 function weaponNums(w) {
-  const rows = [['傷害', w.pellets ? `${w.dmg}×${w.pellets}` : String(w.dmg)], ['爆頭倍率', `×${w.head ?? 4}`]];
+  const rows = w.dmg ? [['傷害', w.pellets ? `${w.dmg}×${w.pellets}` : String(w.dmg)], ['爆頭倍率', `×${w.head ?? 4}`]] : [];
   if (w.rpm && w.cat !== 'melee') rows.push(['射速', `${w.rpm} RPM`]);
   if (w.reload) rows.push(['換彈', `${w.reload.toFixed(1)} 秒`]);
   if (w.speed) rows.push(['移動速度', `${w.speed.toFixed(1)} m/s`]);
@@ -285,8 +332,9 @@ export class Armory extends Screen {
   _list() { return listed(this.tab); }
 
   render() {
-    const tabs = ARMORY_TABS.filter((c) => listed(c).length);
-    this.$('.ar-tabs').innerHTML = tabs.map((c) => `<button data-act="tab" data-tab="${c}" class="${c === this.tab ? 'on' : ''}">${CATS[c]?.zh || c}</button>`).join('');
+    const tabs = armoryTabs();
+    if (!tabs.includes(this.tab)) { this.tab = tabs[0]; this.sel = this._list()[0]?.id; }
+    this.$('.ar-tabs').innerHTML = tabs.map((c) => `<button data-act="tab" data-tab="${c}" class="${c === this.tab ? 'on' : ''}">${esc(catZh(c))}</button>`).join('');
     const list = this._list();
     this.$('.ar-grid').innerHTML = list.map((w) => `<button class="ar-card${w.id === this.sel ? ' on' : ''}${tierVars(w) ? ' prem' : ''}" data-act="pick" data-id="${w.id}"${tierVars(w)}>
       ${tierVars(w) ? `<span class="ar-tier">${tierIcon(tierOf(w), 14)}</span>` : ''}<span class="ar-img"><img alt=""><i class="ar-ph"></i></span><b>${esc(w.zh)}</b><small>${esc(w.en)}</small><span class="ar-price">${w.price ? '$' + w.price : '初始裝備'}</span></button>`).join('');
@@ -298,8 +346,8 @@ export class Armory extends Screen {
     const tier = tierOf(w), sk = skillText(w), tv = tierVars(w);
     det.innerHTML = `<div class="ad-img ar-img big"><img alt=""><i class="ar-ph"></i></div>
       <div class="ad-n"><b>${esc(w.zh)}</b><small>${esc(w.en)}</small></div>
-      <div class="ad-tags"${tv}>${tv ? `<span class="tier">${tierIcon(tier, 12)}${TIERS[tier].zh}系列</span>` : ''}<span>${CATS[w.cat]?.zh || ''}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${w.mag ? `<span>彈匣 ${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
-      ${sk ? `<div class="ad-sk"${tv}><b>${sk.key} ${esc(sk.zh)}</b>${esc(sk.desc)}${sk.src ? `<small>充能：${esc(sk.src)}　·　局內按 ${sk.key === '◎' ? '◎ / 右鍵' : '★ / Q'} 發動</small>` : ''}</div>` : ''}
+      <div class="ad-tags"${tv}>${tv ? `<span class="tier">${tierIcon(tier, 12)}${TIERS[tier].zh}系列</span>` : ''}<span>${esc(catZh(w.cat))}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${ammoTag(w) ? `<span>${esc(ammoTag(w))}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
+      ${sk ? `<div class="ad-sk"${tv}><b>${sk.key} ${esc(sk.zh)}</b>${esc(sk.desc)}${sk.src ? `<small>充能：${esc(sk.src)}　·　局內按 ${sk.key === '◎' ? '滑鼠右鍵' : esc(bindLabel(primaryKey('special')) || '★')} 發動</small>` : ''}</div>` : ''}
       <div class="ad-cols">
         <div class="ad-stats">${w.cat === 'melee' ? '' : weaponStats(w).map(([k, v]) => `<div><span>${k}</span><i><u style="width:${(Math.max(0.06, v) * 100).toFixed(0)}%"></u></i></div>`).join('')}</div>
         <div class="ad-nums">${weaponNums(w).map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>

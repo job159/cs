@@ -2,27 +2,35 @@
 //
 // host -> clients
 //   'sn' (unreliable, ~12/s P2P, ~7/s relay)  { t, z: [[id, x, y, z, yaw, st, hp, run]...] (cm / centi-rad / %),
-//                                               p: [[id, x, y, z, yaw, pitch, flags, hp, weapon]...], m: [state, round, timer, left, bossFrac, bossName, retries] }
+//                                               p: [[id, x, y, z, yaw, pitch, flags, hp, weapon, upgrades]...], m: [state, round, timer, left, bossFrac, bossName, retries] }
 //   'ev' (reliable, batched per tick)          [[kind, ...args], ...]  zs spawn, za anim, zl back to loco, zd death, zc clear all,
 //                                               sv sever, fx, sh shot (guests' and the host's own), rv revive [rv, by, target],
 //                                               sk skill event [sk, by, ...encSkill] (premium skills: every client replays the
 //                                               visuals from the seed; damage stays on the caster's normal hit path)
 //   'pd' (reliable, to one player)             { a: direct, d: dot (hazards), f: [x, z], k: [x,y,z]?, o: flags 2 acid 4 explosive,
 //                                               j: [amount, ring y, knock?]? jumpable shockwave: the guest drops it if airborne }
-//   'rw' (reliable, to one player)             { m: money, x: xp, n: victim name, h: headshot, w: weapon }
+//   'rw' (reliable, to one player)             { m: money, x: xp, n: victim name, h: headshot, w: weapon }  m = rules.js killMoney: the
+//                                               guest's own difficulty moneyMul and traits (賞金獵人) apply on its side, once;
+//                                               { m, x, a: 1 } an assist (its damage share: rules.js assistShare)
 // clients -> host
-//   'ps' (unreliable ~15/s)                    { x, y, z, yaw, pitch, w, hp, f: flags }  (a guest counts as playing only while these arrive)
+//   'ps' (unreliable ~15/s)                    { x, y, z, yaw, pitch, w, hp, f: flags, u: upgrades }  (a guest counts as playing only while these arrive)
 //                                               flags (also in 'sn' p rows): 1 alive, 2 downed, 4 crouched, 8 reloading, 16 reviving
 //   'hits' (reliable, batched)                 [[zid, amount, part, box, dx, dy, dz, knock, stagger, head, weapon, explosive, pellets], ...]
 //                                               amount is raw: the host applies the zombie-side multipliers (brain, armour, purge)
+//                                               and nothing of the shooter's: its money upgrades (攻擊力, 爆頭傷害) and traits are
+//                                               already in the amount, applied once on the shooter's client
 //   'sh' (unreliable)                          { w: weapon, n: shots, e: [x,y,z] last bullet end }
 //   'rv' (reliable)                            { t: target id }  held E on a downed teammate; the host checks and broadcasts 'rv'
 //   'sk' (reliable)                            encSkill(ev): a skill this guest cast; the host replays it and relays it as 'sk'
+// Money upgrades: 'u' = rules.js encodeUpgrades (one base-36 level per upgrade) in 'ps' and the 'sn' p rows; every
+// client keeps its own health / armour (upgrades included) and applies the host's 'pd' amounts itself, so the code
+// is for the others' view only: RemotePlayer.upgrades { atk: 3, ... } and .maxHp.
 import * as THREE from 'three';
 import { RemotePlayer } from '../player/remote.js';
 import { ZOMBIES } from '../zombies/defs.js';
 import { WEAPONS } from '../weapons/defs.js';
 import { replaySkill } from '../weapons/specials.js';
+import { killMoney, killXp, assistShare, encodeUpgrades, decodeUpgrades, UPGRADE } from '../match/rules.js';
 
 const ST = { chase: 0, attack: 1, stagger: 2, special: 3, dead: 4 };
 const now = () => performance.now() / 1000;
@@ -110,9 +118,15 @@ export class NetSync {
     const dir = info.dir || { x: 0, z: 1 };
     this.events.push(['zd', z.id, r2(dir.x), r2(dir.z), info.headshot ? 1 : 0, info.explosive ? 1 : 0, info.shooter ?? -1, info.weapon || '']);
     // rewards for remote killers (the local host player is credited by Match.onKill directly)
+    const d = z.def, m = killMoney(d, !!info.headshot, !!z.elite), x = killXp(d, !!info.headshot, !!z.elite);
     if (info.shooter !== undefined && info.shooter !== this.game.localId && this.remotes.has(info.shooter)) {
-      const d = z.def;
-      this.room.send('rw', { m: d.money * (info.headshot ? 1.5 : 1) * (z.elite ? 2 : 1), x: d.xp * (info.headshot ? 1.5 : 1) * (z.elite ? 2.5 : 1), n: d.zh, h: info.headshot ? 1 : 0, w: info.weapon || 'knife' }, { to: info.shooter });
+      this.room.send('rw', { m, x, n: d.zh, h: info.headshot ? 1 : 0, w: info.weapon || 'knife' }, { to: info.shooter });
+    }
+    // assists for the guests that hurt it (the host's own: Match.onKill)
+    for (const id of z.dmgBy?.keys() || []) {
+      if (id === info.shooter || id === this.game.localId || !this.remotes.has(id)) continue;
+      const f = assistShare(z, id);
+      if (f > 0) this.room.send('rw', { m: Math.round(m * f), x: Math.round(x * f), a: 1 }, { to: id });
     }
   }
   fx(kind, data) { this.events.push(['fx', kind, data]); }
@@ -186,7 +200,7 @@ export class NetSync {
       zs.push([z.id, r2(z.pos.x), r2(z.pos.y), r2(z.pos.z), r2(z.yaw), z.alive ? (ST[z.state] ?? 0) : 4, Math.max(0, Math.round((z.hp / z.maxHp) * 100)), z.running ? 1 : 0]);
     }
     const ps = [this._localRow()];
-    for (const r of this.remotes.values()) ps.push([r.id, r2(r.pos.x), r2(r.pos.y), r2(r.pos.z), r2(r.yaw), r2(r.pitch), this._live(r) ? (r.alive ? 1 : 0) | (r.downed ? 2 : 0) | (r.crouch ? 4 : 0) | (r.reloading ? 8 : 0) | (r.reviving ? 16 : 0) : 0, Math.round(r.hp), r.weaponId || '']);
+    for (const r of this.remotes.values()) ps.push([r.id, r2(r.pos.x), r2(r.pos.y), r2(r.pos.z), r2(r.yaw), r2(r.pitch), this._live(r) ? (r.alive ? 1 : 0) | (r.downed ? 2 : 0) | (r.crouch ? 4 : 0) | (r.reloading ? 8 : 0) | (r.reviving ? 16 : 0) : 0, Math.round(r.hp), r.weaponId || '', r.upgradeCode || '']);
     const m = g.match;
     const boss = m?.boss;
     const snap = { t: +now().toFixed(3), z: zs, p: ps, m: m ? [m.state, m.round, +m.timer.toFixed(1), m.queue.length + g.zombies.alive, boss ? +(boss.hp / boss.maxHp).toFixed(3) : -1, boss?.name || '', m.retries] : null };
@@ -200,7 +214,17 @@ export class NetSync {
 
   _localRow() {
     const g = this.game, p = g.player, st = g.status;
-    return [g.localId, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.pitch), this._flags(), Math.round(st.hp), g.arsenal?.def?.id || ''];
+    return [g.localId, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.pitch), this._flags(), Math.round(st.hp), g.arsenal?.def?.id || '', this._upgradeCode()];
+  }
+
+  /** Our money upgrade levels for 'ps' / 'sn' rows ('' before the match exists). */
+  _upgradeCode() { return this.game.match ? encodeUpgrades(this.game.match.upgrades) : ''; }
+  /** A teammate's levels from its rows (decoded only when they change). */
+  _setUpgrades(r, code) {
+    if (!r || typeof code !== 'string' || code === r.upgradeCode) return;
+    r.upgradeCode = code;
+    r.upgrades = decodeUpgrades(code);
+    r.maxHp = UPGRADE.hp.value(r.upgrades.hp);
   }
 
   /** Our player-state bits for 'ps' / 'sn' rows: 1 alive, 2 downed, 4 crouched, 8 reloading, 16 reviving a teammate. */
@@ -211,7 +235,7 @@ export class NetSync {
 
   _clientSend() {
     const g = this.game, room = this.room, p = g.player, st = g.status;
-    room.send('ps', { x: r2(p.pos.x), y: r2(p.pos.y), z: r2(p.pos.z), yaw: r2(p.yaw), pitch: r2(p.pitch), w: g.arsenal?.def?.id || '', hp: Math.round(st.hp), f: this._flags() }, { reliable: false });
+    room.send('ps', { x: r2(p.pos.x), y: r2(p.pos.y), z: r2(p.pos.z), yaw: r2(p.yaw), pitch: r2(p.pitch), w: g.arsenal?.def?.id || '', hp: Math.round(st.hp), f: this._flags(), u: this._upgradeCode() }, { reliable: false });
     if (this.hits.length) room.send('hits', this.hits.splice(0, 120));
     if (this.shots) { room.send('sh', this.shots, { reliable: false }); this.shots = null; }
   }
@@ -222,7 +246,7 @@ export class NetSync {
     if (this.host) {
       if (type === 'ps') {
         const r = this.remotes.get(from);
-        if (r) { r.seenAt = now(); r.push({ x: data.x / 100, y: data.y / 100, z: data.z / 100, yaw: data.yaw / 100, pitch: data.pitch / 100, weapon: data.w, hp: data.hp, alive: !!(data.f & 1), downed: !!(data.f & 2), crouch: !!(data.f & 4), reload: !!(data.f & 8), revive: !!(data.f & 16) }, now()); }
+        if (r) { r.seenAt = now(); r.push({ x: data.x / 100, y: data.y / 100, z: data.z / 100, yaw: data.yaw / 100, pitch: data.pitch / 100, weapon: data.w, hp: data.hp, alive: !!(data.f & 1), downed: !!(data.f & 2), crouch: !!(data.f & 4), reload: !!(data.f & 8), revive: !!(data.f & 16) }, now()); this._setUpgrades(r, data.u); }
       } else if (type === 'rv') {
         this._revive(from, data?.t);
       } else if (type === 'sk') {
@@ -261,6 +285,7 @@ export class NetSync {
         if (!r) { this._addRemote({ id: row[0], name: this.room.peers?.get?.(row[0])?.name || '隊友', slot: this.room.peers?.get?.(row[0])?.slot ?? 0 }); r = this.remotes.get(row[0]); }
         if (r) r.seenAt = now();
         r?.push({ x: row[1] / 100, y: row[2] / 100, z: row[3] / 100, yaw: row[4] / 100, pitch: row[5] / 100, alive: !!(row[6] & 1), downed: !!(row[6] & 2), crouch: !!(row[6] & 4), reload: !!(row[6] & 8), revive: !!(row[6] & 16), hp: row[7], weapon: row[8] }, t);
+        this._setUpgrades(r, row[9]);
       }
       if (data.m) g.match?.mirror(data.m);
     } else if (type === 'ev') {

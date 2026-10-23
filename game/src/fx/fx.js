@@ -626,7 +626,12 @@ export class FX {
   }
 
   // ------------------------------------------------------------------ explosions & grenades
-  /** HE / rocket / bloater explosion. opts: radius (m), scale (visual size), color (tint: green = acid, grey = rubble). */
+  /**
+   * HE / rocket / bloater explosion. opts: radius (m), scale (visual size), color (tint: green = acid, grey = rubble).
+   * Readable at range (QA: an HE beyond 20 m read as a small puff): the flash, the hot core and the air shock ring
+   * grow with the viewer's apparent distance (particles `far`, CS2 impact readability), the fireball and smoke by
+   * its square root; a white-hot star, a ground shock ring the size of the blast and a stronger, wider light flash.
+   */
   explosion(pos, { radius = 5, scale = 1, color = null } = {}) {
     const P = this.particles;
     const s = scale;
@@ -640,9 +645,14 @@ export class FX {
     const col = this.game.world.collision;
     const down = col ? col.raycast(_t.set(pos.x, pos.y + 0.5, pos.z), DOWN, 3) : null;
     const gy = down ? down.point.y : pos.y - 0.3;   // puffs fade softly into the floor instead of being cut by it
-    // 1. flash (1-2 frames): big bright glow + a hot point
-    P.spawn({ additive: true, x: pos.x, y: pos.y + 0.5 * s, z: pos.z, life: 0.07, size: 3.4 * s, size1: 4.6 * s, color: rubble ? [5, 4.2, 3.4, 1] : acid ? [8, 16, 5, 1] : [24, 19, 13, 1], color1: [5, 3, 1.4, 0], frame: FRAME.glow });
-    if (!rubble) P.spawn({ additive: true, x: pos.x, y: pos.y + 0.4 * s, z: pos.z, life: 0.12, size: 1.2 * s, size1: 2.2 * s, color: acid ? [6, 12, 4, 1] : [16, 12, 8, 1], color1: [4, 1.6, 0.4, 0], frame: FRAME.muzzle + ((R() * 4) | 0) * 4, ramp, heat: 1.2, heat1: 0.6, rot: R() * 6.28 });
+    // 1. flash (1-2 frames): big bright glow + a hot point + a white-hot star (drawn larger with distance)
+    P.spawn({ additive: true, x: pos.x, y: pos.y + 0.5 * s, z: pos.z, life: 0.08, size: 3.6 * s, size1: 5 * s, color: rubble ? [5, 4.2, 3.4, 1] : acid ? [8, 16, 5, 1] : [26, 20, 13, 1], color1: [5, 3, 1.4, 0], frame: FRAME.glow, far: !rubble });
+    if (!rubble) {
+      P.spawn({ additive: true, x: pos.x, y: pos.y + 0.4 * s, z: pos.z, life: 0.12, size: 1.3 * s, size1: 2.4 * s, color: acid ? [6, 12, 4, 1] : [16, 12, 8, 1], color1: [4, 1.6, 0.4, 0], frame: FRAME.muzzle + ((R() * 4) | 0) * 4, ramp, heat: 1.2, heat1: 0.6, rot: R() * 6.28, far: true });
+      P.spawn({ additive: true, x: pos.x, y: pos.y + 0.5 * s, z: pos.z, life: 0.06, size: 2.6 * s, size1: 3.4 * s, color: acid ? [8, 14, 6, 1] : [30, 26, 20, 1], color1: [6, 4, 2, 0], frame: FRAME.star4, rot: R() * 6.28, far: true });
+      // air shock: one fast thin ring flicking out (a blink, not a dome)
+      P.spawn({ additive: true, x: pos.x, y: pos.y + 0.5 * s, z: pos.z, life: 0.13, size: 0.5 * s, size1: radius * 1.6, sizePow: 0.4, color: acid ? [1.2, 2.4, 0.9, 0.8] : [1.9, 1.6, 1.25, 0.8], color1: [0.4, 0.3, 0.2, 0], frame: FRAME.thinRing, far: 'sqrt' });
+    }
     // 2. fireball (CS2): one billowy, OPAQUE mass of lit puffs with an emissive temperature core that cools
     //    peach (0.25 s) -> orange (~1 s) -> red-brown (~2 s) -> charcoal smoke; edges cool first (thin = cold)
     const nf = rubble ? 0 : Math.max(8, Math.round(16 * kk));
@@ -657,11 +667,11 @@ export class FX {
       P.spawn({ x: pos.x + _t.x * r0, y: y0, z: pos.z + _t.z * r0, vx: _t.x * sp, vy: base ? 0.25 * s : _t.y * sp * 0.9 + 0.6 * s, vz: _t.z * sp,
         life: rr(2.7, 3.3), size: rr(0.8, 1.1) * s, size1: rr(2.4, 3.2) * s, sizePow: 0.3, fadeIn: 0.015,
         color: acid ? [0.1, 0.13, 0.06, 0.97] : [0.11, 0.09, 0.08, 0.97], color1: [0.17, 0.16, 0.15, 0], colorPow: 2.6,
-        frame: FRAME.puff + (i % 4), lit: true, ramp, heat: rr(0.76, 0.86), heat1: 0, heatPow: 0.8, drag: 2.6, gravity: -0.45, spin: (R() - 0.5) * 0.8, ground: gy, soft: 0.2 * s });
+        frame: FRAME.puff + (i % 4), lit: true, ramp, heat: rr(0.76, 0.86), heat1: 0, heatPow: 0.8, drag: 2.6, gravity: -0.45, spin: (R() - 0.5) * 0.8, ground: gy, soft: 0.2 * s, far: 'sqrt' });
     }
     // flame licks inside the fireball for the first ~0.4 s (additive flipbook flames)
     if (!rubble) for (let i = 0; i < 4; i++) P.spawn({ additive: true, x: pos.x + (R() - 0.5) * 0.6 * s, y: pos.y + 0.3 * s, z: pos.z + (R() - 0.5) * 0.6 * s, vx: (R() - 0.5) * 2, vy: rr(1.5, 3) * s, vz: (R() - 0.5) * 2,
-      life: rr(0.35, 0.5), size: 1.0 * s, size1: 1.9 * s, frame: FRAME.fire, frames: 8, fps: 16, frameOffset: R() * 7, ramp, heat: 1.05, heat1: 0.2, mode: 'align', dir: UP, aspect: 1.3, anchor: 0.35, mirror: R() < 0.5, color: [1, 1, 1, 0.9], color1: [1, 1, 1, 0], drag: 2 });
+      life: rr(0.35, 0.5), size: 1.0 * s, size1: 1.9 * s, frame: FRAME.fire, frames: 8, fps: 16, frameOffset: R() * 7, ramp, heat: 1.05, heat1: 0.2, mode: 'align', dir: UP, aspect: 1.3, anchor: 0.35, mirror: R() < 0.5, color: [1, 1, 1, 0.9], color1: [1, 1, 1, 0], drag: 2, far: 'sqrt' });
     // 3. smoke column: charcoal (rubble: grey-brown dust) puffs rising behind the fireball, lingering
     const nsm = Math.max(4, Math.round((rubble ? 12 : 7) * kk));
     for (let i = 0; i < nsm; i++) {
@@ -670,7 +680,7 @@ export class FX {
       P.spawn({ x: pos.x + Math.cos(a) * 0.5 * s, y: pos.y + (rubble ? rr(0.6, 1.6) : rr(1.8, 2.8)) * s, z: pos.z + Math.sin(a) * 0.5 * s, vx: Math.cos(a) * sp, vy: rr(0.8, 1.8) * s, vz: Math.sin(a) * sp,
         delay: rubble ? R() * 0.08 : rr(1.0, 1.6), life: rr(3.5, 5.5), size: 1.4 * s, size1: rr(4.2, 5.2) * s, sizePow: 0.5, fadeIn: 0.12,
         color: [dark[0], dark[1], dark[2], rubble ? 0.75 : 0.8], color1: [dark[0] * 1.25, dark[1] * 1.25, dark[2] * 1.25, 0], colorPow: 1.4,
-        frame: FRAME.puff + (i % 4), lit: true, drag: 1.1, gravity: -0.3, spin: (R() - 0.5) * 0.6 });
+        frame: FRAME.puff + (i % 4), lit: true, drag: 1.1, gravity: -0.3, spin: (R() - 0.5) * 0.6, far: 'sqrt' });
     }
     // 4. dark debris specks + 5. sparks / embers
     for (let i = 0; i < Math.round(rr(16, 24) * kk); i++) {
@@ -682,7 +692,7 @@ export class FX {
       const sp = rr(5, 16) * Math.sqrt(s);
       _t.set(R() - 0.5, R() * 0.8 + 0.1, R() - 0.5).normalize();
       P.spawn({ additive: true, x: pos.x, y: pos.y + 0.3, z: pos.z, vx: _t.x * sp, vy: _t.y * sp, vz: _t.z * sp, life: rr(0.5, 1.2), size: rr(0.012, 0.02), stretch: 0.025,
-        color: acid ? [2, 5, 0.8, 1] : [6, 3, 0.8, 1], color1: acid ? [0.5, 1.5, 0.1, 1] : [3, 0.6, 0.1, 1], frame: FRAME.spark, gravity: 9.8, drag: 0.6, collide: true, bounce: 0.3 });
+        color: acid ? [2, 5, 0.8, 1] : [6, 3, 0.8, 1], color1: acid ? [0.5, 1.5, 0.1, 1] : [3, 0.6, 0.1, 1], frame: FRAME.spark, gravity: 9.8, drag: 0.6, collide: true, bounce: 0.3, far: true });
     }
     // 6. ground dust ring + 7. shock ring + scorch
     if (down) {
@@ -691,11 +701,14 @@ export class FX {
         P.spawn({ x: pos.x, y: gy + 0.25, z: pos.z, vx: Math.cos(a) * sp, vy: 0.3, vz: Math.sin(a) * sp, life: rr(1.2, 1.8), size: 0.5 * s, size1: 1.8 * s, sizePow: 0.5, color: [0.5, 0.47, 0.42, 0.55], color1: [0.5, 0.47, 0.42, 0], frame: FRAME.dusty + (i & 1), lit: true, drag: 3, ground: gy, soft: 0.3 });
       }
       P.spawn({ x: pos.x, y: gy + 0.06, z: pos.z, mode: 'flat', dir: [0, 1, 0], life: 0.4, size: 0.6, size1: radius * 1.8, sizePow: 0.5, color: [0.55, 0.52, 0.47, 0.35], color1: [0.55, 0.52, 0.47, 0], frame: FRAME.ring });
+      // the blast radius on the ground: a hot shock ring rolling out to it (reads from rooftops; rubble blasts come
+      // with zfx.quake's own ring)
+      if (!rubble) this.ground?.add('shock', _v.set(pos.x, gy + 0.04, pos.z), { r: 0.4, r1: radius * 1.05, life: 0.38, col: acid ? [0.8, 2, 0.5] : [2.6, 1.7, 0.9], width: Math.min(0.9, 0.12 + radius * 0.05), ease: 0.35 });
       this.decals.add(down.point, down.normal, { frame: DECAL.scorch, size: Math.min(2.2, radius * 0.35 + 0.4) * Math.max(0.6, s), alpha: 0.95, fit: false });
     }
     // 8. light (orange, ~0.35 s; a weaker glow lingers while the fireball burns), smoke interaction, screen kick
     const lc = acid ? 0x9aff60 : rubble ? 0xffe0b0 : 0xffa050;
-    this.lights.flash(_t.set(pos.x, pos.y + 1, pos.z), lc, (rubble ? 120 : 400) * s, Math.max(10, radius * 2), 0.35);
+    this.lights.flash(_t.set(pos.x, pos.y + 1, pos.z), lc, (rubble ? 120 : 470) * s, Math.max(12, radius * (rubble ? 2 : 2.5)), 0.35);
     if (!rubble) this.lights.flash(_t.set(pos.x, pos.y + 1.4 * s, pos.z), acid ? 0x9aff60 : 0xff7a30, 40 * s, Math.max(8, radius * 1.6), 1.1, 0.15);
     this.smokes.blast(pos, Math.max(2.5, radius * 0.5), 1.5);
     const dc = pos.distanceTo(this.game.camera.position);

@@ -89,7 +89,7 @@ export class Coop {
   // ---------------------------------------------------------------- stats board
   _own() {
     const s = this.app.game?.match?.stats || this.lastOwn || { kills: 0, headshots: 0, money: 0 };
-    return { k: s.kills | 0, h: s.headshots | 0, m: Math.round(s.money || 0) };
+    return { k: s.kills | 0, h: s.headshots | 0, m: Math.round(s.money || 0), d: Math.round(s.damage || 0), b: Math.round(s.bossDamage || 0) };
   }
 
   /** Called every frame while a multiplayer match (or its results) is up. */
@@ -117,16 +117,16 @@ export class Coop {
   _boardData() {
     const own = this._own();
     return this.room.players().map((p) => {
-      const s = p.self ? own : this.stats.get(p.id) || { k: 0, h: 0, m: 0 };
-      return [p.id, p.name, p.slot, s.k, s.h, s.m];
+      const s = p.self ? own : this.stats.get(p.id) || { k: 0, h: 0, m: 0, d: 0, b: 0 };
+      return [p.id, p.name, p.slot, s.k, s.h, s.m, s.d, s.b];
     });
   }
 
-  /** Rows for the results table: { id, name, slot, k, h, m, self, host }. */
+  /** Rows for the results table: { id, name, slot, k, h, m, d (damage), b (boss damage), self, host }. */
   boardRows() {
     const room = this.room;
     const data = room.isHost ? this._boardData() : this.board;
-    const rows = data.map(([id, name, slot, k, h, m]) => ({ id, name, slot, k, h, m, self: id === room.selfId, host: slot === 0 }));
+    const rows = data.map(([id, name, slot, k, h, m, d = 0, b = 0]) => ({ id, name, slot, k, h, m, d, b, self: id === room.selfId, host: slot === 0 }));
     if (!room.isHost) {
       const own = this._own();
       const me = rows.find((r) => r.self);
@@ -141,7 +141,7 @@ export class Coop {
     if (room.isHost) {
       if (type === 'ready' && data?.n === this.n) { this.ready.add(from); this._wake?.(); }
       else if (type === 'st' && data) {
-        this.stats.set(from, { k: data.k | 0, h: data.h | 0, m: data.m | 0 });
+        this.stats.set(from, { k: data.k | 0, h: data.h | 0, m: data.m | 0, d: data.d | 0, b: data.b | 0 });
         if (app.state === 'results') app.screens.results?.refresh();
       }
       return;

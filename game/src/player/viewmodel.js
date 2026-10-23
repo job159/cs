@@ -20,6 +20,7 @@ import { rightGrip, mirrorGrip, LEFT_GRIPS, FREE_GRIPS, freeGrip } from './grips
 import { Spring3, damp, clamp, lerp, ease } from '../engine/util.js';
 
 const D = Math.PI / 180;
+const ADS_FOV = 52;   // the viewmodel FOV the ADS framing was tuned at (minus 8 / 12 with an optic at full aim)
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
@@ -130,7 +131,10 @@ export class Viewmodel {
     this.gunRoot = new THREE.Group();
     this.container.add(this.gunRoot);
     this.vmCam = new THREE.PerspectiveCamera(52, 1, 0.01, 20);
+    // hip-fire viewmodel FOV + offset (camera space, m): the player's CS2-style preset (settings 操作 › 武器位置);
+    // aiming down the sights always ends on the tuned ADS framing (ADS_FOV), whatever these are
     this.fov = 52;
+    this.userOffset = new THREE.Vector3();
     this.arms = null;
     this.weapon = null;
     this.aim = 0;            // 0 hip .. 1 ADS (smoothed)
@@ -398,6 +402,27 @@ export class Viewmodel {
   /** Hides the gun (mode 1) or gun + arms (mode 2) for sec seconds, independent of clips (summons). */
   hideFor(sec, mode = 1) { this.hideT = sec; this.hideMode = mode; }
 
+  /**
+   * Something held in a hand outside the weapon (the quick-throw grenade, weapons/throwables.js): `obj` (viewmodel
+   * materials) rides on that hand's wrist every frame, `offset` (m) and `rot` (quaternion) in the hand frame
+   * (-Z = fingers, -Y = palm normal); `vm.held.show = false` keeps it hidden while still riding along. hold(null)
+   * lets go of it (the caller reuses the object).
+   */
+  hold(obj, side = 'L', { offset = [0, -0.062, -0.045], rot = null } = {}) {
+    if (this.held && this.held.obj !== obj) this.held.obj.removeFromParent();
+    if (!obj) { this.held = null; return; }
+    if (obj.parent !== this.container) this.container.add(obj);
+    this.held = { obj, side, offset: new THREE.Vector3(offset[0], offset[1], offset[2]), rot: rot || new THREE.Quaternion(), show: true };
+    this._placeHeld();
+  }
+
+  _placeHeld() {
+    const h = this.held, q = this.handQuat[h.side];
+    h.obj.position.copy(h.offset).applyQuaternion(q).add(this.handPos[h.side]);
+    h.obj.quaternion.copy(q).multiply(h.rot);
+    h.obj.visible = h.show && this.arms?.model.visible !== false;
+  }
+
   /** Puts the current gun's shared materials back and clears per-weapon premium state. */
   _resetPremium() {
     for (const g of this.weapon?.glowMats || []) g.m.emissiveIntensity = g.base;
@@ -508,7 +533,8 @@ export class Viewmodel {
       const ph = this.time * 2 * Math.PI * (L.jitterHz ?? 0.5), j = (L.jitterDeg ?? 0.6) * D * rw * hipW;
       rx += Math.sin(ph) * j; ry += Math.sin(ph * 1.31 + 1.7) * j * 0.7; rz += Math.sin(ph * 0.77 + 0.4) * j * 0.5;
     }
-    this._swayOff.set(ox, oy, oz);
+    const uw = 1 - ease.inOutQuad(aim), uo = this.userOffset;   // player offset (none at full ADS: the sights stay centred)
+    this._swayOff.set(ox + uo.x * uw, oy + uo.y * uw, oz + uo.z * uw);
     if (this.clipWeight > 0.001) {
       const cw = this.clipWeight;
       const p = this.clip.sample('gunPos', _arr);
@@ -526,7 +552,7 @@ export class Viewmodel {
     const gr = this.gunRoot;
     gr.quaternion.copy(offQ).multiply(baseQ);
     gr.position.copy(basePos).sub(pivotCam).applyQuaternion(offQ).add(pivotCam);
-    gr.position.x += ox; gr.position.y += oy; gr.position.z += oz;
+    gr.position.x += ox + uo.x * uw; gr.position.y += oy + uo.y * uw; gr.position.z += oz + uo.z * uw;
     gr.updateMatrix();
     // gun acceleration in camera space (pendulum parts swing from it)
     if (this._gunPrev && dt > 1e-4) {
@@ -546,13 +572,15 @@ export class Viewmodel {
     // viewmodel projection
     const cam = this.camera;
     this.vmCam.aspect = cam.aspect;
-    this.vmCam.fov = this.fov - aim * (this.weapon.has('optic') ? 12 : 8);
+    const adsFov = ADS_FOV - (this.weapon.has('optic') ? 12 : 8);
+    this.vmCam.fov = this.fov + (adsFov - this.fov) * aim;
     this.vmCam.updateProjectionMatrix();
     materialUniforms.vmProj.value.copy(this.vmCam.projectionMatrix);
     this.container.visible = this.visible;
     const hide = Math.max(this.clipHide, this.hideT > 0 ? this.hideMode : 0);
     gr.visible = hide < 1;
     this.arms.model.visible = hide < 2;
+    if (this.held) this._placeHeld();   // (after the hands: the quick-throw grenade rides on the posed wrist)
     this.afterUpdate?.(dt);
   }
 

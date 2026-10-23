@@ -56,9 +56,10 @@ export class ColossusBrain extends BossBrain {
         start(a) { this.z.playOnce('attack_a', { speed: 0.5 }); this.fx('tendril', { id: this.z.id, t: 2.6 }); this.g.hud?.toast('觸手拉扯！往外跑！', 1600); },
         update(dt, a) {
           if (a.t < 2.6) {
+            // reeled in to the sweep's reach, never into the body (QA: the camera ended up inside the mesh)
             for (const p of this.players()) {
               const d = p.pos.distanceTo(this.z.pos);
-              if (d < 24 && d > 3) this.g.pushPlayer?.(p, _v.copy(this.z.pos).sub(p.pos).setY(0).normalize().multiplyScalar(5.5 * dt * 6));
+              if (d < 24 && d > this.z.radius + 4) this.g.pushPlayer?.(p, _v.copy(this.z.pos).sub(p.pos).setY(0).normalize().multiplyScalar(5.5 * dt * 6));
             }
           }
           return 0;
@@ -90,7 +91,7 @@ export class ColossusBrain extends BossBrain {
             this.fx('pools', { at, r: 2.2, t: 7, dps: 9, k: 'acid' });
           }]] },
       { id: 'dive', w: 2, cd: 11, phase: 1, until: 2, dur: 9.0, recover: 0.5,
-        start(a, t) { a.data.to = new THREE.Vector3(t.pos.x, this.ground(t.pos), t.pos.z); this.fx('teleCircle', { p: a.data.to.toArray(), r: 6.5, t: 1.6 }); this.fx('screech', { p: this.z.pos.toArray() }); },
+        start(a, t) { a.data.to = this.diveSpot(t.pos); this.fx('teleCircle', { p: a.data.to.toArray(), r: 6.5, t: 1.6 }); this.fx('screech', { p: this.z.pos.toArray() }); },
         update(dt, a) {
           if (a.t < 1.6) { this.face(a.data.to, dt, 4); return 0; }
           if (!a.data.landed) {
@@ -99,6 +100,7 @@ export class ColossusBrain extends BossBrain {
             if (u >= 1) {
               a.data.landed = true; this.flying = false;
               this.hurtCircle(a.data.to, 6.5, 40, { knock: 12, lift: 6, explosive: true });
+              this.shove(this.z.radius + 3, 9);   // whoever is still under it is thrown clear of the body
               this.fx('quake', { p: a.data.to.toArray(), r: 6.5 });
               this.z.playOnce(this.z.actions.stagger ? 'stagger' : 'idle', { speed: 0.6 });
               this.weakMul = 2.6;
@@ -130,12 +132,37 @@ export class ColossusBrain extends BossBrain {
     // fall onto ground the players can reach (not a crate top / past the arena wall); attacks wait for the landing
     const p = this.z.pos, q = this.mgr.reachableNear?.(p.x, p.z, 30) || this.mgr.reachableNear?.(this.arena.x, this.arena.z, 30);
     if (q && Math.hypot(q.x - p.x, q.z - p.z) > 0.3) this.landAt = q;
+    else this.shove(this.z.radius + 3, 9);
     this.globalCd = Math.max(this.globalCd, 1.6);
     this.fx('crash', { id: this.z.id, p: this.z.pos.toArray() });
     this.g.hud?.toast('雙翼撕裂！最終決戰！', 2600);
   }
 
   onSummon() { this.z.playOnce('scream', { speed: 0.8 }); this.fx('screech', { p: this.z.pos.toArray() }); this.summon(this.phase >= 1 ? 'runner' : 'crawler', 4 + this.phase * 2, 9); }
+
+  /**
+   * Where a dive lands: 4.5 m short of the target on the boss's side (reachable ground), so the impact ring still
+   * catches a player who stands still but the ~7 m body comes down in front of them, not on their camera.
+   */
+  diveSpot(tp) {
+    const p = this.z.pos, dx = p.x - tp.x, dz = p.z - tp.z, l = Math.hypot(dx, dz) || 1;
+    const x = tp.x + (dx / l) * 4.5, z = tp.z + (dz / l) * 4.5;
+    const q = this.mgr.reachableNear?.(x, z, 3);
+    const out = new THREE.Vector3(q ? q.x : x, tp.y, q ? q.z : z);
+    out.y = this.ground(out);
+    return out;
+  }
+
+  /** Pushes every player within r (m) of the body out to its rim (speed m/s): never stand inside the mesh. */
+  shove(r, speed) {
+    const c = this.z.pos;
+    for (const p of this.players()) {
+      const dx = p.pos.x - c.x, dz = p.pos.z - c.z, d = Math.hypot(dx, dz);
+      if (d >= r || Math.abs(p.pos.y - c.y) > 3) continue;
+      const k = d > 0.05 ? 1 / d : 0, ux = k ? dx * k : Math.sin(this.z.yaw), uz = k ? dz * k : Math.cos(this.z.yaw);
+      this.g.pushPlayer?.(p, _v.set(ux * speed * (1 - d / r + 0.3), 1.5, uz * speed * (1 - d / r + 0.3)));
+    }
+  }
 
   /** Default arena: shrink the orbit until its whole ring hangs over ground the players can reach. */
   _fitArena() {
@@ -154,7 +181,7 @@ export class ColossusBrain extends BossBrain {
     if (this.landAt) {
       const p = this.z.pos, q = this.landAt, k = Math.min(1, dt * 4);
       p.x += (q.x - p.x) * k; p.z += (q.z - p.z) * k;
-      if (Math.hypot(q.x - p.x, q.z - p.z) < 0.1) { p.x = q.x; p.z = q.z; this.landAt = null; }
+      if (Math.hypot(q.x - p.x, q.z - p.z) < 0.1) { p.x = q.x; p.z = q.z; this.landAt = null; this.shove(this.z.radius + 3, 9); }
     }
     if (this.flyIn > 0) {
       this.flyIn -= dt;
@@ -189,6 +216,7 @@ export class ColossusBrain extends BossBrain {
       case 'teleCircle': tele?.circle(V(d.p), d.r, d.t); break;
       // ground hazards: pushed on every peer so clients see them (only the host's _updateHazards deals the dps)
       case 'pools': for (const q of d.at) this.mgr.hazards.push({ pos: V(q), r: d.r, t: d.t, dps: d.dps, kind: d.k }); break;
+      case 'summonIn': for (const q of d.at) zfx?.summonIn(V(q), [0.9, 0.3, 1.5]); break;
       case 'screech': g.audio?.play('screamer_scream', { pos: V(d.p), volume: 1.4, pitch: 0.55 }); g.addShake(0.2); zfx?.screech(this.z); break;
       case 'quake': {
         const p = V(d.p);
