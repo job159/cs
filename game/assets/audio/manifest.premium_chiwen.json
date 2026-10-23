@@ -1,0 +1,929 @@
+{
+  "sounds": {
+    "chiwen_barrier": {
+      "files": [
+        "premium_chiwen/chiwen_barrier_1.ogg",
+        "premium_chiwen/chiwen_barrier_2.ogg",
+        "premium_chiwen/chiwen_barrier_3.ogg"
+      ],
+      "vol": 1.25,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false
+    },
+    "chiwen_bead": {
+      "files": [
+        "premium_chiwen/chiwen_bead_1.ogg",
+        "premium_chiwen/chiwen_bead_2.ogg",
+        "premium_chiwen/chiwen_bead_3.ogg",
+        "premium_chiwen/chiwen_bead_4.ogg"
+      ],
+      "vol": 1.35,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        35
+      ],
+      "loop": false
+    },
+    "chiwen_bubble": {
+      "files": [
+        "premium_chiwen/chiwen_bubble_1.ogg",
+        "premium_chiwen/chiwen_bubble_2.ogg",
+        "premium_chiwen/chiwen_bubble_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_close": {
+      "files": [
+        "premium_chiwen/chiwen_close_1.ogg",
+        "premium_chiwen/chiwen_close_2.ogg",
+        "premium_chiwen/chiwen_close_3.ogg",
+        "premium_chiwen/chiwen_close_4.ogg",
+        "premium_chiwen/chiwen_close_5.ogg",
+        "premium_chiwen/chiwen_close_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chiwen_crisis": {
+      "files": [
+        "premium_chiwen/chiwen_crisis_1.ogg",
+        "premium_chiwen/chiwen_crisis_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_draw_first": {
+      "files": [
+        "premium_chiwen/chiwen_draw_first_1.ogg",
+        "premium_chiwen/chiwen_draw_first_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_eyes": {
+      "files": [
+        "premium_chiwen/chiwen_eyes.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_far": {
+      "files": [
+        "premium_chiwen/chiwen_far_1.ogg",
+        "premium_chiwen/chiwen_far_2.ogg",
+        "premium_chiwen/chiwen_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        480
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "chiwen_final": {
+      "files": [
+        "premium_chiwen/chiwen_final_1.ogg",
+        "premium_chiwen/chiwen_final_2.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        5,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_fire": {
+      "files": [
+        "premium_chiwen/chiwen_fire_1.ogg",
+        "premium_chiwen/chiwen_fire_2.ogg",
+        "premium_chiwen/chiwen_fire_3.ogg",
+        "premium_chiwen/chiwen_fire_4.ogg",
+        "premium_chiwen/chiwen_fire_5.ogg",
+        "premium_chiwen/chiwen_fire_6.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_fire_searing": {
+      "files": [
+        "premium_chiwen/chiwen_fire_searing_1.ogg",
+        "premium_chiwen/chiwen_fire_searing_2.ogg",
+        "premium_chiwen/chiwen_fire_searing_3.ogg",
+        "premium_chiwen/chiwen_fire_searing_4.ogg",
+        "premium_chiwen/chiwen_fire_searing_5.ogg",
+        "premium_chiwen/chiwen_fire_searing_6.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_frost_kill": {
+      "files": [
+        "premium_chiwen/chiwen_frost_kill_1.ogg",
+        "premium_chiwen/chiwen_frost_kill_2.ogg",
+        "premium_chiwen/chiwen_frost_kill_3.ogg",
+        "premium_chiwen/chiwen_frost_kill_4.ogg",
+        "premium_chiwen/chiwen_frost_kill_5.ogg"
+      ],
+      "vol": 1.45,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_gurgle": {
+      "files": [
+        "premium_chiwen/chiwen_gurgle_1.ogg",
+        "premium_chiwen/chiwen_gurgle_2.ogg",
+        "premium_chiwen/chiwen_gurgle_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_head": {
+      "files": [
+        "premium_chiwen/chiwen_head_1.ogg",
+        "premium_chiwen/chiwen_head_2.ogg",
+        "premium_chiwen/chiwen_head_3.ogg",
+        "premium_chiwen/chiwen_head_4.ogg"
+      ],
+      "vol": 1.35,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false
+    },
+    "chiwen_hit": {
+      "files": [
+        "premium_chiwen/chiwen_hit_1.ogg",
+        "premium_chiwen/chiwen_hit_2.ogg",
+        "premium_chiwen/chiwen_hit_3.ogg",
+        "premium_chiwen/chiwen_hit_4.ogg",
+        "premium_chiwen/chiwen_hit_5.ogg",
+        "premium_chiwen/chiwen_hit_6.ogg"
+      ],
+      "vol": 1.4,
+      "pitch": [
+        0.92,
+        1.08
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        2,
+        40
+      ],
+      "loop": false
+    },
+    "chiwen_idle": {
+      "files": [
+        "premium_chiwen/chiwen_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "chiwen_inspect": {
+      "files": [
+        "premium_chiwen/chiwen_inspect.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_mark": {
+      "files": [
+        "premium_chiwen/chiwen_mark_1.ogg",
+        "premium_chiwen/chiwen_mark_2.ogg",
+        "premium_chiwen/chiwen_mark_3.ogg",
+        "premium_chiwen/chiwen_mark_4.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        50
+      ],
+      "loop": false
+    },
+    "chiwen_mark_burst": {
+      "files": [
+        "premium_chiwen/chiwen_mark_burst_1.ogg",
+        "premium_chiwen/chiwen_mark_burst_2.ogg",
+        "premium_chiwen/chiwen_mark_burst_3.ogg",
+        "premium_chiwen/chiwen_mark_burst_4.ogg",
+        "premium_chiwen/chiwen_mark_burst_5.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        55
+      ],
+      "loop": false
+    },
+    "chiwen_mech": {
+      "files": [
+        "premium_chiwen/chiwen_mech_1.ogg",
+        "premium_chiwen/chiwen_mech_2.ogg",
+        "premium_chiwen/chiwen_mech_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_orb_burst": {
+      "files": [
+        "premium_chiwen/chiwen_orb_burst_1.ogg",
+        "premium_chiwen/chiwen_orb_burst_2.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_orb_cast": {
+      "files": [
+        "premium_chiwen/chiwen_orb_cast_1.ogg",
+        "premium_chiwen/chiwen_orb_cast_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false
+    },
+    "chiwen_orb_pulse": {
+      "files": [
+        "premium_chiwen/chiwen_orb_pulse_1.ogg",
+        "premium_chiwen/chiwen_orb_pulse_2.ogg",
+        "premium_chiwen/chiwen_orb_pulse_3.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        55
+      ],
+      "loop": false
+    },
+    "chiwen_ray_end": {
+      "files": [
+        "premium_chiwen/chiwen_ray_end_1.ogg",
+        "premium_chiwen/chiwen_ray_end_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        55
+      ],
+      "loop": false
+    },
+    "chiwen_ray_loop": {
+      "files": [
+        "premium_chiwen/chiwen_ray_loop.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": true
+    },
+    "chiwen_ray_start": {
+      "files": [
+        "premium_chiwen/chiwen_ray_start_1.ogg",
+        "premium_chiwen/chiwen_ray_start_2.ogg"
+      ],
+      "vol": 1.15,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_roar_low": {
+      "files": [
+        "premium_chiwen/chiwen_roar_low_1.ogg",
+        "premium_chiwen/chiwen_roar_low_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_scales": {
+      "files": [
+        "premium_chiwen/chiwen_scales_1.ogg",
+        "premium_chiwen/chiwen_scales_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_splash": {
+      "files": [
+        "premium_chiwen/chiwen_splash_1.ogg",
+        "premium_chiwen/chiwen_splash_2.ogg",
+        "premium_chiwen/chiwen_splash_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_tail": {
+      "files": [
+        "premium_chiwen/chiwen_tail_1.ogg",
+        "premium_chiwen/chiwen_tail_2.ogg",
+        "premium_chiwen/chiwen_tail_3.ogg",
+        "premium_chiwen/chiwen_tail_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_tank": {
+      "files": [
+        "premium_chiwen/chiwen_tank_1.ogg",
+        "premium_chiwen/chiwen_tank_2.ogg",
+        "premium_chiwen/chiwen_tank_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chiwen_ult_bed": {
+      "files": [
+        "premium_chiwen/chiwen_ult_bed.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        140
+      ],
+      "loop": false
+    },
+    "chiwen_ult_bed_searing": {
+      "files": [
+        "premium_chiwen/chiwen_ult_bed_searing.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        140
+      ],
+      "loop": false
+    },
+    "chiwen_ult_bite": {
+      "files": [
+        "premium_chiwen/chiwen_ult_bite_1.ogg",
+        "premium_chiwen/chiwen_ult_bite_2.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        110
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "chiwen_ult_end": {
+      "files": [
+        "premium_chiwen/chiwen_ult_end.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_ult_end_searing": {
+      "files": [
+        "premium_chiwen/chiwen_ult_end_searing.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_ult_fall": {
+      "files": [
+        "premium_chiwen/chiwen_ult_fall_1.ogg",
+        "premium_chiwen/chiwen_ult_fall_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        110
+      ],
+      "loop": false
+    },
+    "chiwen_ult_gulp": {
+      "files": [
+        "premium_chiwen/chiwen_ult_gulp_1.ogg",
+        "premium_chiwen/chiwen_ult_gulp_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_ult_inhale": {
+      "files": [
+        "premium_chiwen/chiwen_ult_inhale.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_ult_inhale_searing": {
+      "files": [
+        "premium_chiwen/chiwen_ult_inhale_searing.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_ult_roar": {
+      "files": [
+        "premium_chiwen/chiwen_ult_roar_1.ogg",
+        "premium_chiwen/chiwen_ult_roar_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        140
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chiwen_ult_roar_searing": {
+      "files": [
+        "premium_chiwen/chiwen_ult_roar_searing.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        140
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chiwen_ult_spit": {
+      "files": [
+        "premium_chiwen/chiwen_ult_spit_1.ogg",
+        "premium_chiwen/chiwen_ult_spit_2.ogg",
+        "premium_chiwen/chiwen_ult_spit_3.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        110
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "chiwen_ult_tail": {
+      "files": [
+        "premium_chiwen/chiwen_ult_tail_1.ogg",
+        "premium_chiwen/chiwen_ult_tail_2.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "chiwen_ult_vortex": {
+      "files": [
+        "premium_chiwen/chiwen_ult_vortex_1.ogg",
+        "premium_chiwen/chiwen_ult_vortex_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        80
+      ],
+      "loop": false
+    },
+    "ready_chiwen": {
+      "files": [
+        "premium_chiwen/ready_chiwen.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "ready_chiwen_searing": {
+      "files": [
+        "premium_chiwen/ready_chiwen_searing.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    }
+  }
+}

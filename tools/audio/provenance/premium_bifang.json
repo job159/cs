@@ -1,0 +1,203 @@
+{
+  "category": "premium_bifang",
+  "producer": "premium_bifang",
+  "sounds": {
+    "bifang_beam": [
+      "fs:764329",
+      "fs:764330",
+      "fs:382313"
+    ],
+    "bifang_beam_ready": [],
+    "bifang_bell": [],
+    "bifang_cell_in": [
+      "fs:815879"
+    ],
+    "bifang_cell_out": [
+      "fs:815879"
+    ],
+    "bifang_click": [],
+    "bifang_close": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P",
+      "ffsl/Nova/O_17P"
+    ],
+    "bifang_cocoon": [
+      "fs:221528",
+      "fs:244238",
+      "fs:202093",
+      "fs:494797"
+    ],
+    "bifang_crane_cry": [],
+    "bifang_draw": [
+      "fs:163164",
+      "fs:393732",
+      "kenney_impact/Audio/impactGlass_light_000",
+      "kenney_impact/Audio/impactGlass_light_002",
+      "kenney_impact/Audio/impactPlate_light_001"
+    ],
+    "bifang_far": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P",
+      "ffsl/Nova/O_17P"
+    ],
+    "bifang_feather": [
+      "fs:494797"
+    ],
+    "bifang_feather_hit": [
+      "fs:476117",
+      "fs:513694",
+      "fs:382313"
+    ],
+    "bifang_feather_rain": [],
+    "bifang_fire": [
+      "fs:412558"
+    ],
+    "bifang_gate_close": [
+      "fs:675008"
+    ],
+    "bifang_gate_open": [
+      "fs:674742"
+    ],
+    "bifang_hit_heavy": [
+      "fs:423301",
+      "fs:504615",
+      "fs:382313"
+    ],
+    "bifang_idle": [],
+    "bifang_inspect": [],
+    "bifang_kill": [],
+    "bifang_mech": [
+      "fs:675008"
+    ],
+    "bifang_scream": [
+      "fs:433735",
+      "fs:400168"
+    ],
+    "bifang_sizzle": [
+      "fs:382313",
+      "fs:363092"
+    ],
+    "bifang_soul": [],
+    "bifang_swish": [
+      "fs:507466"
+    ],
+    "bifang_tail": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P",
+      "ffsl/Nova/O_17P"
+    ],
+    "bifang_ult_dive": [
+      "fs:260555",
+      "fs:181563"
+    ],
+    "bifang_ult_end": [],
+    "bifang_ult_flap": [
+      "fs:494797"
+    ],
+    "bifang_ult_pillar": [
+      "fs:486140",
+      "fs:375532",
+      "fs:374273",
+      "fs:374274",
+      "fs:764329",
+      "fs:764330",
+      "fs:260555"
+    ],
+    "bifang_ult_rise": [
+      "fs:375497",
+      "fs:375519"
+    ],
+    "bifang_wing_close": [
+      "fs:507466",
+      "fs:675008",
+      "fs:494797"
+    ],
+    "bifang_wing_loop": [
+      "fs:363092"
+    ],
+    "bifang_wing_open": [
+      "fs:260554",
+      "fs:494797"
+    ],
+    "guiche_close": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P",
+      "ffsl/Nova/O_17P"
+    ],
+    "guiche_far": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P",
+      "ffsl/Nova/O_17P"
+    ],
+    "guiche_mech": [
+      "fs:675008"
+    ],
+    "guiche_tail": [
+      "ffsl/Model 12/K_22P",
+      "ffsl/CD/H_21P",
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/CD/H_16P",
+      "ffsl/Nova/O_17P"
+    ],
+    "ready_bifang": [],
+    "ready_guiche": []
+  },
+  "loaded": [
+    "ffsl/CD/H_16P",
+    "ffsl/CD/H_21P",
+    "ffsl/Model 12/K_17P",
+    "ffsl/Model 12/K_22P",
+    "ffsl/Nova/O_17P",
+    "ffsl/Nova/O_21P",
+    "fs:163164",
+    "fs:181563",
+    "fs:202093",
+    "fs:221528",
+    "fs:244238",
+    "fs:260554",
+    "fs:260555",
+    "fs:363092",
+    "fs:374273",
+    "fs:374274",
+    "fs:375497",
+    "fs:375519",
+    "fs:375532",
+    "fs:382313",
+    "fs:393732",
+    "fs:400168",
+    "fs:412558",
+    "fs:423301",
+    "fs:433735",
+    "fs:476117",
+    "fs:486140",
+    "fs:494797",
+    "fs:504615",
+    "fs:507466",
+    "fs:513694",
+    "fs:674742",
+    "fs:675008",
+    "fs:764329",
+    "fs:764330",
+    "fs:815879",
+    "kenney_impact/Audio/impactGlass_light_000",
+    "kenney_impact/Audio/impactGlass_light_002",
+    "kenney_impact/Audio/impactPlate_light_001"
+  ],
+  "original": false
+}

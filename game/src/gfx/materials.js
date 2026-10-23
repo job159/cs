@@ -71,6 +71,8 @@ export const MATS = {
   gold_leaf:    { color: '#e8b54a', metal: 1, rough: 0.18, detail: 'brushed', dScale: 50, dStr: 0.08, wear: { color: '#7a5a2e', metal: 1, rough: 0.4, amount: 0.4 } },
   bronze_aged:  { color: '#7a5a2e', metal: 1, rough: 0.42, detail: 'cast', dScale: 40, dStr: 0.25, cavity: 1.0, cavCol: '#3f6a58', wear: { color: '#c8995a', metal: 1, rough: 0.25, amount: 0.6 } },
   obsidian:     { color: '#0f0d12', metal: 0.2, rough: 0.12, detail: 'flat', wear: { color: '#2a2630', metal: 0.2, rough: 0.2, amount: 0.2 } },
+  // polished water-buffalo horn (composite bow bellies, X03 彤弓): near-black with translucent amber streaks
+  horn:         { color: '#1a110b', metal: 0, rough: 0.22, detail: 'flat', env: 1.2, wood: { dark: '#0b0705', light: '#6b4220', scale: 3, marble: 1 }, wear: { color: '#7a5434', metal: 0, rough: 0.3, amount: 0.35 } },
   black_chrome: { color: '#1a1a1e', metal: 1, rough: 0.1, detail: 'flat', wear: { color: '#9a9ca0', metal: 1, rough: 0.15, amount: 0.4 } },
   glaze_cobalt: { color: '#244aa5', metal: 0, rough: 0.18, detail: 'flat', env: 1.3, wear: { color: '#d9d2c2', metal: 0, rough: 0.6, amount: 0.25 } },
   glaze_jade:   { color: '#2f8f4e', metal: 0, rough: 0.18, detail: 'flat', wear: { color: '#d9d2c2', metal: 0, rough: 0.6, amount: 0.25 } },
@@ -91,6 +93,8 @@ export const MATS = {
   paper_oil:    { color: '#d9b98a', metal: 0, rough: 0.5, detail: 'fabric', dScale: 220, dStr: 0.15, selfLit: 0.12, wear: { color: '#b8956a', metal: 0, rough: 0.6, amount: 0.3 } },
   silk_red:     { color: '#a5121e', metal: 0, rough: 0.7, detail: 'fabric', dScale: 300, dStr: 0.4, wear: { color: '#c23a3e', metal: 0, rough: 0.7, amount: 0.2 } },
   silk_violet:  { color: '#4a2260', metal: 0, rough: 0.7, detail: 'fabric', dScale: 300, dStr: 0.4, wear: { color: '#7a4a90', metal: 0, rough: 0.7, amount: 0.2 } },
+  // verdigris crust in the recesses of cast bronze relief (X03 彤弓 riser floors): matte, non-metal, darker in the cavities
+  patina_bronze: { color: '#4f5e4a', metal: 0.15, rough: 0.8, detail: 'cast', dScale: 80, dStr: 0.5, cavity: 1.0, cavCol: '#1e2e26', wear: { color: '#8a6a38', metal: 1, rough: 0.35, amount: 0.2 } },
   pearl:        { color: '#ece8e2', metal: 0.1, rough: 0.2, detail: 'flat', pearl: 0.2, wear: { color: '#d8d2c8', metal: 0.1, rough: 0.3, amount: 0.2 } },
   stone_slate:  { color: '#4a4f52', metal: 0, rough: 0.75, detail: 'cast', dScale: 14, dStr: 0.6, wear: { color: '#6a7074', metal: 0, rough: 0.8, amount: 0.5 } },
   paint_safety: { color: '#e2571a', metal: 0.1, rough: 0.45, detail: 'cast', dScale: 40, dStr: 0.15, wear: { color: '#8f9296', metal: 1, rough: 0.3, amount: 1.0 } },
@@ -332,7 +336,7 @@ export function setPremiumQuality(q) { premiumLite = q === 'low'; }
  * Unknown keys fall back to steel.
  */
 export function hardSurface(key, opts = {}) {
-  const def = MATS[key] || MATS.steel;
+  let def = MATS[key] || MATS.steel;
   // finishes (skins) only apply to paintable parts
   const paint = !!(opts.finish && (opts.melee ? PAINTABLE_MELEE : PAINTABLE).has(key));
   if (paint && !opts.finishU) opts = { ...opts, finishU: finishUniforms(opts.finish.id, opts.finish.seed, opts.finish.float ?? (opts.finish.wear !== undefined ? opts.finish.wear / 2 : null), opts.finish.sfx) };
@@ -343,6 +347,10 @@ export function hardSurface(key, opts = {}) {
   if (pv && !PRESET_DEFS(pv, lite)) pv = null;
   if (pv) opts = { ...opts, pv, lite, pvParams: premiumParams(pv, key, opts.state.cfg, opts.pvx) };
   else if (opts.pv) opts = { ...opts, pv: null };
+  // a premium weapon may retune its own copies of a base material (def.premium.mat[key]: color, rough, metal, env,
+  // detail, dScale, dStr): only premium materials, whose cache key carries the state, so nothing else is touched
+  const ovr = pv ? opts.state.cfg?.mat?.[key] : null;
+  if (ovr) def = { ...def, ...ovr };
   const fu = opts.finishU;
   const progKey = (opts.viewmodel ? 'hsvm' : 'hs') + (opts.vmEnv ? 'E' : '') + (fu ? `F${fu.type}.${fu.wearStyle}.${fu.sfxMask}` : '')
     + (pv ? ':' + pv + (lite ? '-' : '') : '') + (def.pearl ? 'P' : '') + (def.fres ? 'R' : '') + (opts.counter ? 'K' : '');

@@ -8,6 +8,8 @@ import { FX } from './fx/fx.js';
 import { Projectiles } from './weapons/ballistics.js';
 import { Arsenal } from './weapons/arsenal.js';
 import './weapons/premium/chiwen.js';   // M07 螭吻．吞潮 (registers its special, skills, clips, crosshair, kill mark)
+import './weapons/premium/starsword.js';   // X02 星河．斬嶽 (premium melee: special, skills, clips, crosshair, kill mark)
+import './weapons/premium/sunbow.js';      // X03 彤弓．落陽 (great bow: own trigger, arrows, skills, clips, crosshair, kill mark)
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';

@@ -19,6 +19,8 @@ import { FRAME } from './atlas.js';
 // ------------------------------------------------------------------ ghost shader
 const GHOST_VERT = /* glsl */`
 attribute vec4 aAnim;          // x: wing span weight (signed), y: body-wave weight, z: along body 0..1 (head = 0)
+attribute vec4 aTint;          // optional per-vertex glaze colour (rgb) and its weight (a): a beak, a crest, gold edges
+varying vec4 vTint;
 #ifdef USE_INSTANCING
 attribute vec4 aInst;          // x: phase, y: dissolve, z: flap rate multiplier, w: -
 #endif
@@ -34,6 +36,7 @@ void main() {
   vec3 p = position, n = normal;
   float ph = 0.0, rate = 1.0;
   vDis = 0.0;
+  vTint = aTint;
 #ifdef USE_INSTANCING
   ph = aInst.x; vDis = aInst.y; rate = aInst.z;
 #endif
@@ -69,6 +72,7 @@ varying vec3 vN;
 varying vec3 vV;
 varying vec3 vObj;
 varying float vDis;
+varying vec4 vTint;
 void main() {
   vec3 q = (vObj - uBoxMin) / uBoxSize;                       // 0..1 inside the body's box
   float nz = texture2D(tNoise, q.xz * 1.7 + q.y * 0.35).r * 0.6 + texture2D(tNoise, q.zy * 3.1).g * 0.4;
@@ -97,8 +101,10 @@ void main() {
   float cloud = texture2D(tNoise, vec2(q.x * 0.3 - q.z * 0.2, q.y * 0.45 - uTime * uDis.w * 0.2)).r;
   vec3 body = mix(uBase, uCore * 0.6, smoothstep(0.45, 0.8, cloud) * 0.5) * sky;
   body = mix(body, vec3(0.01, 0.008, 0.012), uLook.w);
-  float a = clamp(uLook.x + fres * 0.45 + spec * 0.6, 0.0, 1.0);
-  vec3 emit = uRim * fres * 2.2 + vec3(1.0, 0.97, 0.92) * spec * 2.0 + uCore * flow * 0.9 * (1.0 - uLook.w);
+  body = mix(body, vTint.rgb * sky, vTint.a);                    // tinted parts: their own glaze colour
+  float a = clamp(uLook.x + fres * 0.45 + spec * 0.6 + vTint.a * 0.25, 0.0, 1.0);
+  vec3 emit = uRim * fres * 2.2 + vec3(1.0, 0.97, 0.92) * spec * 2.0 + uCore * flow * 0.9 * (1.0 - uLook.w) * (1.0 - vTint.a);
+  emit += vTint.rgb * vTint.a * 0.45;
   emit += uEdge * edge * 6.0 + vec3(1.0) * uDis.z * (0.4 + fres);
   gl_FragColor = vec4(body * a + emit, a);
 #endif
@@ -362,6 +368,8 @@ export class Summons {
     const depth = new THREE.ShaderMaterial({ vertexShader: GHOST_VERT, fragmentShader: GHOST_FRAG, uniforms: u, defines: { PREPASS: '' }, colorWrite: false, side: THREE.DoubleSide });
     const color = new THREE.ShaderMaterial({ vertexShader: GHOST_VERT, fragmentShader: GHOST_FRAG, uniforms: u, transparent: true, depthWrite: false, depthFunc: THREE.LessEqualDepth, side: THREE.DoubleSide,
       blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor });
+    // geometry without aTint: a constant zero tint (never a stale attribute array)
+    for (const m of [depth, color]) m.defaultAttributeValues = { ...m.defaultAttributeValues, aTint: [0, 0, 0, 0] };
     return { depth, color, u };
   }
 

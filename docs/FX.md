@@ -195,7 +195,7 @@ staggered kick up dust at their feet automatically (`knockDust()` for manual use
 |---|---|
 | `fx.muzzle(kind, pos, dir, { vm, ramp: RAMP.blue })` | recoloured muzzle flash (energy, plasma, holy gold, charged red) |
 | `fx.glowTracer(from, to, { color, glow, width, length, speed })` | coloured glowing tracers (energy rifles) |
-| `fx.beam(from, to, { core, glow, wCore, wGlow, life, shrink, scroll })` → `{ set(from, to), stop() }` | lasers, rail shots, charge beams (Thunderbolt / Frost Viper style) |
+| `fx.beam(from, to, { core, glow, wCore, wGlow, life, shrink, scroll, pattern, wStart, ramp })` → `{ set(from, to), stop() }` | lasers, rail shots, charge beams (Thunderbolt / Frost Viper style); `pattern: 'feather'` = a hot rachis + herringbone barbs scrolling down the shaft (M03 焚天光), `wStart` / `ramp` (m) = width fraction where it leaves the gun and the distance to full width (a fat shaft that stays thin at the muzzle, never a disc over the crosshair) |
 | `fx.bolt(from, to, { col, glow, width, core, levels, jitter, branches, regen, life })` → `{ set, stop }` | lightning chains, arcs (JANUS / Gungnir style) |
 | `fx.trail({ width, life, color, color1, taper, profile, vm })` → `t.push(a)` / `t.push(root, tip)` / `t.stop()` | projectile streaks; blade slash trails (push the blade root and tip every frame) |
 | `fx.shockwave(pos, { normal, r0, r1, life, color, thin })` | ground rings, muzzle rings, impact shocks |
@@ -256,8 +256,9 @@ coloured BORDER, CLOUDSEA → gold tint, RIFT → short white tint, CURTAIN → 
 
 `SIGIL` designs (original, procedural Canvas 2D; pseudo seal glyphs come from a stroke grammar, not real
 characters): `clouds` 雲紋, `seal` 篆印, `bagua` 八方陣, `censer` 香爐雲紋, `isobar` 等壓線, `mountainSea` 山海紋,
-`nian` 剪紙「年」, `vortex` 漩渦水紋, `thunder` 雷紋, `flame` 火焰雲紋, `wind` 風紋, `square` 方陣 (no spin).
-Each is a white mask in one channel of a 1024² RGBA texture (4 per texture, 3 textures, built lazily per group in
+`nian` 剪紙「年」, `vortex` 漩渦水紋, `thunder` 雷紋, `flame` 火焰雲紋, `wind` 風紋, `square` 方陣 (no spin),
+`starmap` 星圖 (28 mansion ticks with little constellation glyphs, a dipper inside; group 3, X02 天劍).
+Each is a white mask in one channel of a 1024² RGBA texture (4 per texture, 4 textures, built lazily per group in
 ~0.1 s; 512² on low). Designs use three concentric bands that the shader spins independently (inner +35°/s,
 outer −20°/s by default); a mip-biased second fetch gives the glow halo. `fx.sigils.preload(['censer'])` at
 weapon equip avoids a first-use hitch; `fx.sigils.debugURL('seal')` returns a PNG of a design.
@@ -274,7 +275,7 @@ Budget: ≤ 6 sigils alive (L2: 2 per player); the oldest fades early.
 
 | Call | Effect |
 |---|---|
-| `ghost({ shape \| mesh \| geometry, shapeOpts, pos, yaw \| quat, size, base, core, rim, edge, opacity, glaze, dark, rimPower, flowSpeed, appear = 0.35, life = 3, out = 0.5, motion, bob, flap, wave, exit, big, seed })` → `{ obj, t, alive, dissolveOut(dur), flash(k), lunge(target, dur), remove() }` | glazed porcelain spirit: depth pre-pass (only the front surface shows), fresnel rim (`rim`), glaze highlight following the scene sun, light veins drifting up the body (`core`), ground-up dissolve in (`appear`), extremities-first dissolve out (`out`) with a hot `edge`, then `exit: { kind, count, palette, color, speed }` motes thrown off the body surface (`kind: 'spray'` = water). `dark: true` = black silhouette + rim (金烏影). `motion: 'rise'` comes up out of the ground, `'hover'` bobs. Built-in `shape`s: `bird` (flapping; `shapeOpts.tail` 2.4 = magpie), `fish` (whale flukes, `wave.axis [0,1,0]`), `serpent` (water dragon, travelling `wave`), `bell`, `stele`, `orb`, `blade`; weapon spirits (lion, nian…) pass a GLB `mesh`. `big` (default when size > 3): one big spirit at a time, the previous dissolves (§1.7.3) |
+| `ghost({ shape \| mesh \| geometry, shapeOpts, pos, yaw \| quat, size, base, core, rim, edge, opacity, glaze, dark, rimPower, flowSpeed, appear = 0.35, life = 3, out = 0.5, motion, bob, flap, wave, exit, big, seed })` → `{ obj, t, alive, dissolveOut(dur), flash(k), lunge(target, dur), remove() }` | glazed porcelain spirit: depth pre-pass (only the front surface shows), fresnel rim (`rim`), glaze highlight following the scene sun, light veins drifting up the body (`core`), ground-up dissolve in (`appear`), extremities-first dissolve out (`out`) with a hot `edge`, then `exit: { kind, count, palette, color, speed }` motes thrown off the body surface (`kind: 'spray'` = water). `dark: true` = black silhouette + rim (金烏影). `motion: 'rise'` comes up out of the ground, `'hover'` bobs. Built-in `shape`s: `bird` (flapping; `shapeOpts.tail` 2.4 = magpie), `fish` (whale flukes, `wave.axis [0,1,0]`), `serpent` (water dragon, travelling `wave`), `bell`, `stele`, `orb`, `blade`; weapon spirits (lion, nian…) pass a GLB `mesh`. `big` (default when size > 3): one big spirit at a time, the previous dissolves (§1.7.3). A `geometry` may carry `aTint` (vec4 per vertex: glaze rgb + weight) for parts in their own colour on the one draw (M03 crane: vermilion beak, red crown, enamel feather plates, gold edges); without it the tint is zero |
 | `shadow(pos, { height = 1.8, face, rise = 0.1, life = 1.6, slashes, every = 0.3, delay, glow, trailColor, seed })` → `{ obj, slash(), stop(), tip(out), alive }` | SHADOW: original shadow-puppet swordsman (five riveted leather plates — head, robe, sleeve, sword arm, rod; vermilion + ink with lace cut-outs, backlit, gold edges) propped up from the ground in 0.1 s, faces the camera, looks towards `face`, slashes with a blade trail, falls back and scatters paper scraps |
 | `swarm({ shape = 'bird', shapeOpts, count = 12, center, radius, height, size, speed, …ghost colours, life, appear, trails, trailColor, flap, exit: { kind, color }, seed })` → `{ obj, center, dive(i, target, dur), diveAll(targets, every), exit(point?), stop(), alive }` | instanced flock (one draw + pre-pass): orbits `center` (Vector3 or function), banks into turns, `dive` swoops to a target and back dragging a TRAIL, `exit(point)` flies home one by one and dissolves (no point: dissolve in place with feather motes) |
 
@@ -288,7 +289,8 @@ Budget: ≤ 6 sigils alive (L2: 2 per player); the oldest fades early.
 
 Cards: innermost 0.22×0.05 m, +12 % length per card, outermost ≈ 0.42×0.07 m, idle sway, light flowing out at
 0.4 uv/s. Styles: `'glow'` additive (white root → `tip` colour) and `'cloisonne'` 掐絲琺瑯 (gold wire cells with
-glowing `enamel` [c0, c1, c2], M03 畢方). Quality: 3 / 5 / 7 cards per side (low / medium / high), same fan
+glowing `enamel` [c0, c1, c2], M03 畢方; `tipMix` 0..1 shades the cells to `tip` towards the feather tips: 鬼車's
+violet-to-cold-teal wings, a charged state's white-hot edges). Quality: 3 / 5 / 7 cards per side (low / medium / high), same fan
 angle. First person: a guard shrinks a side whose cards would enter the central 20 % or exceed 25 % of the screen.
 
 ### `fx.motes` — falling sprites + TRAIL_DROP (`motes.js`)

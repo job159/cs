@@ -721,6 +721,10 @@ function makeV2(p) {
     onFire(ws, ctx) { ov().onFire?.(ws, ctx); },
     onHit(ws, info, res, target) { v2Hit(ws, info, res); ov().onHit?.(ws, info, res, target); },
     onSpecial(ws) { starDown(ws); },
+    // premium melee: the weapon runs its own swings (Arsenal._melee asks first; false = the stock knife logic)
+    melee(ws, s, g) { return ov().melee?.(ws, s, g) || false; },
+    // premium ranged weapon with its own trigger (a bow's hold-to-draw / release): Arsenal asks before its gun logic
+    trigger(ws, s, g) { return ov().trigger?.(ws, s, g) || false; },
     onReloadInput(ws, g) { return ov().onReloadInput?.(ws, g) || false; },
     update(ws, dt, g) { v2Update(ws, dt, g); ov().update?.(ws, dt, g); },
     tick(ws, dt, g) { v2Tick(ws, dt, g); ov().tick?.(ws, dt, g); },

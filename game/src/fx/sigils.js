@@ -30,6 +30,7 @@ export const SIGIL = {
   flame:       { g: 2, ch: 1, spin: [35, -12, -24] },
   wind:        { g: 2, ch: 2, spin: [80, 30, -18] },
   square:      { g: 2, ch: 3, spin: [0, 0, 0] },
+  starmap:     { g: 3, ch: 0, spin: [14, -9, 5] },                // 星圖: 28 mansion ring + constellation glyphs + 北斗 (X02 天劍)
 };
 
 // ------------------------------------------------------------------ procedural drawing (Canvas 2D, white on black)
@@ -324,6 +325,31 @@ const DESIGNS = {
     p.circle(0.39, 0.006, [0.03, 0.02]); p.circle(0.61, 0.006, [0.03, 0.02]);
     for (let i = 0; i < 6; i++) { const a0 = (i / 6) * TAU; p.polar(Array.from({ length: 30 }, (_, k) => [a0 + k * 0.03, 0.42 + 0.17 * (k / 29)]), 0.012); }
     for (let k = 0; k < 3; k++) { const pts = []; for (let i = 0; i <= 80; i++) { const t = i / 80; pts.push([k * TAU / 3 + t * 4.2, 0.03 + t * 0.3]); } p.polar(pts, 0.011); }
+  },
+  starmap(ctx, p, r) {
+    // outer band: double rim, the 28 mansion ticks, a small constellation glyph (2-4 joined stars) in every sector
+    p.circle(0.985, 0.012); p.circle(0.955, 0.004); p.circle(0.665, 0.008);
+    for (let i = 0; i < 28; i++) {
+      const a = (i / 28) * TAU;
+      p.polar([[a, 0.905], [a, 0.95]], i % 7 === 0 ? 0.012 : 0.006);
+      const n = 2 + Math.floor(r() * 3), pts = [];
+      for (let k = 0; k < n; k++) pts.push([a + (0.035 + r() * 0.15), 0.71 + r() * 0.17]);
+      p.polar(pts, 0.004);
+      for (const [b, rr] of pts) { const [x, y] = p.P(rr, b); ctx.beginPath(); ctx.arc(x, y, (0.008 + r() * 0.008) * p.R, 0, TAU); ctx.fill(); }
+    }
+    // middle band: twin rings, four dotted quadrant arcs, eight four-point stars
+    p.circle(0.61, 0.008); p.circle(0.39, 0.008); p.circle(0.5, 0.003, [0.01, 0.025]);
+    for (let i = 0; i < 8; i++) p.at(0.5, (i / 8) * TAU + TAU / 16, () => {
+      ctx.beginPath(); ctx.moveTo(0, -0.05); ctx.lineTo(0.012, -0.012); ctx.lineTo(0.05, 0); ctx.lineTo(0.012, 0.012); ctx.lineTo(0, 0.05); ctx.lineTo(-0.012, 0.012); ctx.lineTo(-0.05, 0); ctx.lineTo(-0.012, -0.012); ctx.closePath(); ctx.fill();
+    });
+    for (let q = 0; q < 4; q++) for (let k = 0; k < 9; k++) { const [x, y] = p.P(0.44 + (k % 2) * 0.12, (q / 4) * TAU + 0.12 + k * 0.06); ctx.beginPath(); ctx.arc(x, y, 0.006 * p.R, 0, TAU); ctx.fill(); }
+    // inner: the dipper, its first star (天樞) the brightest, inside a thin ring
+    p.circle(0.345, 0.012);
+    const D = [[-0.2, 0.06], [-0.13, -0.05], [-0.02, -0.03], [0.0, 0.08], [0.1, 0.12], [0.18, 0.19], [0.27, 0.21]];
+    ctx.lineWidth = 0.008 * p.R; ctx.beginPath();
+    for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]]) { ctx.moveTo(p.C + D[a][0] * p.R, p.C + D[a][1] * p.R); ctx.lineTo(p.C + D[b][0] * p.R, p.C + D[b][1] * p.R); }
+    ctx.stroke();
+    D.forEach(([x, y], i) => { ctx.beginPath(); ctx.arc(p.C + x * p.R, p.C + y * p.R, (i === 0 ? 0.03 : 0.018) * p.R, 0, TAU); ctx.fill(); });
   },
   square(ctx, p, r) {
     // square court: nested squares, corner seals, centre glyph (bands do not spin)

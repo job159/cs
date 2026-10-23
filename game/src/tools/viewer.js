@@ -38,6 +38,8 @@ export async function runViewer(renderer, params) {
 
   const path = kind === 'weapon' ? `weapons/${id}.glb` : `${kind}/${id}.glb`;
   const model = await instanceGLB(path);
+  // parts the weapon logic shows only in action (GLB extras.restHidden: a sword's full projected blade) stay hidden
+  model.traverse((o) => { if (o.userData?.restHidden) o.visible = false; });
   const fin = params.get('finish');
   const list = (k) => (params.get(k) || '').split(',').filter(Boolean).map((e) => e.split(':'));
   // material remap (premium preview on an existing gun) + preset assignment
@@ -72,6 +74,8 @@ export async function runViewer(renderer, params) {
   model.position.sub(center);
   scene.add(model);
   const radius = size.length() * 0.5;
+  let meta = {};
+  model.traverse((o) => { if (o.userData?.weapon) meta = o.userData; });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.ShadowMaterial({ opacity: 0.25 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -size.y / 2 - 0.002; floor.receiveShadow = true;
   scene.add(floor);
@@ -103,7 +107,13 @@ export async function runViewer(renderer, params) {
   model.traverse((o) => { if (o.isMesh) info.tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; });
   const draw = (spin = 0) => {
     views.forEach(([yaw, pitch], i) => {
-      if (yaw === 'fp') {
+      if (yaw === 'fp' && meta.grip === 'bow') {
+        // bows (long axis = y): from behind the nock along the arrow, a little right and above, onto the riser
+        const b = meta.brace ?? -0.19;
+        cam.position.set(0.05, 0.05, 0.3 - b).add(model.position);
+        cam.lookAt(new THREE.Vector3(0, 0.07, 0).add(model.position));
+        cam.fov = 45; cam.updateProjectionMatrix();
+      } else if (yaw === 'fp') {
         // close rear-right-high 3/4: the receiver/sight area the player stares at in first person
         cam.position.set(size.z * 0.28, size.z * 0.2, size.z * 0.22);
         cam.lookAt(0, size.y * 0.15, -size.z * 0.12);

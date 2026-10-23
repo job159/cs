@@ -86,10 +86,13 @@ function curvature(geo) {
 
 /**
  * Bakes all meshes in place (geometry replaced by a tessellated, indexed copy with `_bake`).
- * opts: tessellate (max edge, metres), aoDist (metres), rays, curvScale (curvature 1/m that maps to 1)
+ * opts: tessellate (max edge, metres), aoDist (metres), rays, curvScale (curvature 1/m that maps to 1),
+ * minHeight (metres, or (mesh) => metres; default 0): occluders lower than this above a vertex's tangent plane are
+ * ignored (low relief: inlays, wires, cloisonné plates on a big shell; at a 12 mm vertex grid their contact shadow
+ * only smears into dark wedges)
  */
 export function bakeMeshes(meshes, opts = {}) {
-  const { tessellate: maxEdge = 0.012, aoDist = 0.035, rays = 32, curvScale = 1 / 150, seed = 1, log = false } = opts;
+  const { tessellate: maxEdge = 0.012, aoDist = 0.035, rays = 32, curvScale = 1 / 150, seed = 1, log = false, minHeight = 0 } = opts;
   const t0 = Date.now();
   const worldGeos = [];
   for (const m of meshes) {
@@ -116,6 +119,7 @@ export function bakeMeshes(meshes, opts = {}) {
     const curv = curvature(geo);
     nm.getNormalMatrix(m.matrixWorld);
     const partRand = Math.floor(random() * 255);
+    const minH = typeof minHeight === 'function' ? minHeight(m) || 0 : minHeight;
     for (let i = 0; i < n; i++) {
       _p.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
       _n.fromBufferAttribute(nor, i).applyMatrix3(nm).normalize();
@@ -128,7 +132,15 @@ export function bakeMeshes(meshes, opts = {}) {
         const dx = dx0 * cr - dy0 * sr, dy = dx0 * sr + dy0 * cr;
         _d.set(0, 0, 0).addScaledVector(_t, dx).addScaledVector(_b, dy).addScaledVector(_n, dz);
         _ray.direction.copy(_d);
-        const hit = bvh.raycastFirst(_ray, THREE.DoubleSide, 0, aoDist);
+        let hit = bvh.raycastFirst(_ray, THREE.DoubleSide, 0, aoDist);
+        if (minH > 0 && hit && hit.distance * dz < minH && dz > 1e-3) {
+          // low relief: march on past it (up to where the ray clears minH) and take the next hit beyond
+          const skip = Math.min(aoDist, minH / dz);
+          _ray.origin.addScaledVector(_d, skip);
+          hit = bvh.raycastFirst(_ray, THREE.DoubleSide, 0, aoDist - skip);
+          if (hit) hit = { distance: hit.distance + skip };
+          _ray.origin.copy(_p).addScaledVector(_n, 0.0003);
+        }
         open += hit ? Math.sqrt(Math.min(1, hit.distance / aoDist)) * 0.7 : 1;
       }
       const ao = open / dirs.length;

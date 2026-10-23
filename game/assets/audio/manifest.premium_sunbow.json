@@ -1,0 +1,761 @@
+{
+  "sounds": {
+    "ready_sunbow": {
+      "files": [
+        "premium_sunbow/ready_sunbow_1.ogg",
+        "premium_sunbow/ready_sunbow_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "ready_sunbow_eclipse": {
+      "files": [
+        "premium_sunbow/ready_sunbow_eclipse_1.ogg",
+        "premium_sunbow/ready_sunbow_eclipse_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_close": {
+      "files": [
+        "premium_sunbow/sunbow_close_1.ogg",
+        "premium_sunbow/sunbow_close_2.ogg",
+        "premium_sunbow/sunbow_close_3.ogg",
+        "premium_sunbow/sunbow_close_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        70
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "sunbow_creak": {
+      "files": [
+        "premium_sunbow/sunbow_creak.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "sunbow_crisis": {
+      "files": [
+        "premium_sunbow/sunbow_crisis_1.ogg",
+        "premium_sunbow/sunbow_crisis_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_draw": {
+      "files": [
+        "premium_sunbow/sunbow_draw_1.ogg",
+        "premium_sunbow/sunbow_draw_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_dry": {
+      "files": [
+        "premium_sunbow/sunbow_dry_1.ogg",
+        "premium_sunbow/sunbow_dry_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_empower": {
+      "files": [
+        "premium_sunbow/sunbow_empower_1.ogg",
+        "premium_sunbow/sunbow_empower_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        100
+      ],
+      "loop": false
+    },
+    "sunbow_far": {
+      "files": [
+        "premium_sunbow/sunbow_far_1.ogg",
+        "premium_sunbow/sunbow_far_2.ogg",
+        "premium_sunbow/sunbow_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        320
+      ],
+      "loop": false
+    },
+    "sunbow_first": {
+      "files": [
+        "premium_sunbow/sunbow_first.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_full": {
+      "files": [
+        "premium_sunbow/sunbow_full.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "sunbow_hang": {
+      "files": [
+        "premium_sunbow/sunbow_hang_1.ogg",
+        "premium_sunbow/sunbow_hang_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        120
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_hang_burst": {
+      "files": [
+        "premium_sunbow/sunbow_hang_burst_1.ogg",
+        "premium_sunbow/sunbow_hang_burst_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_hang_loop": {
+      "files": [
+        "premium_sunbow/sunbow_hang_loop.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        45
+      ],
+      "loop": true
+    },
+    "sunbow_hit": {
+      "files": [
+        "premium_sunbow/sunbow_hit_1.ogg",
+        "premium_sunbow/sunbow_hit_2.ogg",
+        "premium_sunbow/sunbow_hit_3.ogg",
+        "premium_sunbow/sunbow_hit_4.ogg",
+        "premium_sunbow/sunbow_hit_5.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        90
+      ],
+      "loop": false
+    },
+    "sunbow_hit_world": {
+      "files": [
+        "premium_sunbow/sunbow_hit_world_1.ogg",
+        "premium_sunbow/sunbow_hit_world_2.ogg",
+        "premium_sunbow/sunbow_hit_world_3.ogg",
+        "premium_sunbow/sunbow_hit_world_4.ogg",
+        "premium_sunbow/sunbow_hit_world_5.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        80
+      ],
+      "loop": false
+    },
+    "sunbow_idle": {
+      "files": [
+        "premium_sunbow/sunbow_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "sunbow_ignite": {
+      "files": [
+        "premium_sunbow/sunbow_ignite_1.ogg",
+        "premium_sunbow/sunbow_ignite_2.ogg",
+        "premium_sunbow/sunbow_ignite_3.ogg",
+        "premium_sunbow/sunbow_ignite_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.93,
+        1.07
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_inspect": {
+      "files": [
+        "premium_sunbow/sunbow_inspect_1.ogg",
+        "premium_sunbow/sunbow_inspect_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_kill": {
+      "files": [
+        "premium_sunbow/sunbow_kill_1.ogg",
+        "premium_sunbow/sunbow_kill_2.ogg",
+        "premium_sunbow/sunbow_kill_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_nock": {
+      "files": [
+        "premium_sunbow/sunbow_nock_1.ogg",
+        "premium_sunbow/sunbow_nock_2.ogg",
+        "premium_sunbow/sunbow_nock_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_pin": {
+      "files": [
+        "premium_sunbow/sunbow_pin_1.ogg",
+        "premium_sunbow/sunbow_pin_2.ogg",
+        "premium_sunbow/sunbow_pin_3.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        14,
+        110
+      ],
+      "loop": false
+    },
+    "sunbow_pluck": {
+      "files": [
+        "premium_sunbow/sunbow_pluck_1.ogg",
+        "premium_sunbow/sunbow_pluck_2.ogg",
+        "premium_sunbow/sunbow_pluck_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_regen": {
+      "files": [
+        "premium_sunbow/sunbow_regen_1.ogg",
+        "premium_sunbow/sunbow_regen_2.ogg",
+        "premium_sunbow/sunbow_regen_3.ogg",
+        "premium_sunbow/sunbow_regen_4.ogg",
+        "premium_sunbow/sunbow_regen_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 5,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_rekindle": {
+      "files": [
+        "premium_sunbow/sunbow_rekindle_1.ogg",
+        "premium_sunbow/sunbow_rekindle_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_release": {
+      "files": [
+        "premium_sunbow/sunbow_release_1.ogg",
+        "premium_sunbow/sunbow_release_2.ogg",
+        "premium_sunbow/sunbow_release_3.ogg",
+        "premium_sunbow/sunbow_release_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        70
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_release_heavy": {
+      "files": [
+        "premium_sunbow/sunbow_release_heavy_1.ogg",
+        "premium_sunbow/sunbow_release_heavy_2.ogg",
+        "premium_sunbow/sunbow_release_heavy_3.ogg",
+        "premium_sunbow/sunbow_release_heavy_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "sunbow_split": {
+      "files": [
+        "premium_sunbow/sunbow_split_1.ogg",
+        "premium_sunbow/sunbow_split_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_stage1": {
+      "files": [
+        "premium_sunbow/sunbow_stage1_1.ogg",
+        "premium_sunbow/sunbow_stage1_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_stage2": {
+      "files": [
+        "premium_sunbow/sunbow_stage2_1.ogg",
+        "premium_sunbow/sunbow_stage2_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_stage3": {
+      "files": [
+        "premium_sunbow/sunbow_stage3_1.ogg",
+        "premium_sunbow/sunbow_stage3_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_tail": {
+      "files": [
+        "premium_sunbow/sunbow_tail_1.ogg",
+        "premium_sunbow/sunbow_tail_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "sunbow_ult_fall": {
+      "files": [
+        "premium_sunbow/sunbow_ult_fall_1.ogg",
+        "premium_sunbow/sunbow_ult_fall_2.ogg",
+        "premium_sunbow/sunbow_ult_fall_3.ogg"
+      ],
+      "vol": 0.8,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        200
+      ],
+      "loop": false
+    },
+    "sunbow_ult_final": {
+      "files": [
+        "premium_sunbow/sunbow_ult_final_1.ogg",
+        "premium_sunbow/sunbow_ult_final_2.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        20,
+        320
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "sunbow_ult_impact": {
+      "files": [
+        "premium_sunbow/sunbow_ult_impact_1.ogg",
+        "premium_sunbow/sunbow_ult_impact_2.ogg",
+        "premium_sunbow/sunbow_ult_impact_3.ogg",
+        "premium_sunbow/sunbow_ult_impact_4.ogg"
+      ],
+      "vol": 0.7,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        240
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "sunbow_ult_raise": {
+      "files": [
+        "premium_sunbow/sunbow_ult_raise_1.ogg",
+        "premium_sunbow/sunbow_ult_raise_2.ogg"
+      ],
+      "vol": 0.85,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        220
+      ],
+      "loop": false,
+      "priority": 4
+    },
+    "sunbow_ult_shot": {
+      "files": [
+        "premium_sunbow/sunbow_ult_shot_1.ogg",
+        "premium_sunbow/sunbow_ult_shot_2.ogg",
+        "premium_sunbow/sunbow_ult_shot_3.ogg"
+      ],
+      "vol": 0.8,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        200
+      ],
+      "loop": false
+    },
+    "sunbow_whiz": {
+      "files": [
+        "premium_sunbow/sunbow_whiz_1.ogg",
+        "premium_sunbow/sunbow_whiz_2.ogg",
+        "premium_sunbow/sunbow_whiz_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    }
+  }
+}

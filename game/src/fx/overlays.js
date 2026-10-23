@@ -352,25 +352,27 @@ void main() {
   float depthFade = smoothstep(29.0, 10.0, z) * smoothstep(0.0, 1.5, z);
   vec3 col; float al;
   if (uLook < 0.5) {
-    // wave pipe: a 220 degree curl over the top and right side; white foam, cyan-blue water wall
+    // wave pipe (螭吻 浪管): a 220 degree curl of WATER over the top and right side -- a cyan (#6fe3ff) to deep blue
+    // (#2f8bff) water wall (α 0.27-0.33), foam bands thresholded out of noise rolling round the axis 0.8 turns/s and
+    // streaming back, a light refraction wobble through it; thin white streaks are only a secondary layer
     float a0 = radians(-62.0), a1 = radians(158.0);
     float span = smoothstep(a0, a0 + 0.35, ang) * (1.0 - smoothstep(a1 - 0.25, a1, ang));
-    float lipK = smoothstep(a1 - 0.9, a1 - 0.1, ang);         // leading lip curling over on the left
-    // helical flow: rotates 0.8 turns/s around the axis, streams backwards along it
     float hel = ang / 6.2831853 + z * 0.045 - T * 0.8;
     float zz = z * 0.03 + T * 0.4;
     float up = smoothstep(radians(-62.0), radians(150.0), ang);   // 0 at the base of the wall .. 1 at the lip
-    float s1 = n1(vec2(hel * 7.0, zz * 0.35));
+    vec2 wob = vec2(n1(vec2(hel * 4.0 + T * 0.3, zz * 0.5)), n1(vec2(zz * 0.7 + 3.1, hel * 3.0 - T * 0.2))) - 0.5;
+    float bodyN = fbm2(vec2(hel * 3.0, zz * 0.6) + wob * 0.35);
+    col = mix(vec3(0.16, 0.77, 1.0), vec3(0.02, 0.2, 0.9), clamp(up * 0.85 + (bodyN - 0.5) * 0.5, 0.0, 1.0)) * uCol;
+    col += vec3(0.45, 0.95, 1.1) * pow(n1(vec2(hel * 2.5, zz * 0.6) + wob), 3.0) * 0.55;   // light through thin water
+    float fb = fbm2(vec2(hel * 5.0, z * 0.25 + T * 1.6) + wob * 0.6);   // foam patches (not long streaks)
+    float foam = smoothstep(0.61, 0.67, fb) * (0.4 + 0.5 * up);
     float s2 = n1(vec2(hel * 15.0 + 0.3, zz * 0.8));
-    float lines = smoothstep(0.66, 0.74, s1) * (1.0 - smoothstep(0.74, 0.84, s1)) + smoothstep(0.7, 0.77, s2) * (1.0 - smoothstep(0.77, 0.86, s2)) * 0.7;
+    float lines = smoothstep(0.72, 0.78, s2) * (1.0 - smoothstep(0.78, 0.86, s2)) * 0.3;
     float lipN = fbm2(vec2(hel * 3.0, zz * 1.5));
     float lipFoam = smoothstep(0.2, 0.0, (radians(150.0) - ang) / 1.2 - (lipN - 0.5) * 0.35);
-    vec3 deep = vec3(0.0, 0.1, 0.16), shal = vec3(0.12, 0.6, 0.72);
-    col = mix(deep, shal, up * up) * uCol;
-    col += vec3(0.25, 0.75, 0.85) * pow(n1(vec2(hel * 2.5, zz * 0.6)), 3.0) * up * 0.6;   // light through thin water
-    float foam = clamp(lines * (0.35 + 0.65 * up) + lipFoam, 0.0, 1.0);
-    col = mix(col, vec3(1.4, 1.6, 1.65), foam);
-    al = span * (0.42 - 0.12 * up + 0.45 * foam);
+    float f = clamp(foam + lines + lipFoam, 0.0, 1.0);
+    col = mix(col, vec3(1.3, 1.5, 1.6), f);
+    al = span * (0.26 + 0.06 * up + 0.34 * f);
   } else if (uLook < 1.5) {
     // lava pipe (螭吻 twin): black crust, orange molten seams flowing back
     float hel = ang / 6.2831853 + z * 0.05 - T * 0.35;

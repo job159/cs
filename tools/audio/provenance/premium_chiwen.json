@@ -1,0 +1,270 @@
+{
+  "category": "premium_chiwen",
+  "producer": "premium_chiwen",
+  "sounds": {
+    "chiwen_barrier": [
+      "fs:442773",
+      "fs:212143"
+    ],
+    "chiwen_bead": [
+      "fs:539823",
+      "fs:530233"
+    ],
+    "chiwen_bubble": [
+      "fs:539823"
+    ],
+    "chiwen_close": [
+      "ffsl/Mosin Nagant/M_21P",
+      "ffsl/AK-47/C_28P",
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "ffsl/Mosin Nagant/M_26P",
+      "ffsl/Tikka/W_24P"
+    ],
+    "chiwen_crisis": [
+      "fs:565642",
+      "fs:203381",
+      "fs:212143",
+      "fs:263115"
+    ],
+    "chiwen_draw_first": [
+      "fs:494797",
+      "fs:377145",
+      "fs:389432",
+      "fs:530233"
+    ],
+    "chiwen_eyes": [
+      "fs:530233"
+    ],
+    "chiwen_far": [
+      "ffsl/Mosin Nagant/M_21P",
+      "ffsl/AK-47/C_28P",
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "ffsl/Mosin Nagant/M_26P",
+      "ffsl/Tikka/W_24P"
+    ],
+    "chiwen_final": [
+      "fs:754321",
+      "fs:212143",
+      "fs:530233"
+    ],
+    "chiwen_fire": [
+      "fs:530233",
+      "fs:539823",
+      "fs:672574"
+    ],
+    "chiwen_fire_searing": [],
+    "chiwen_frost_kill": [
+      "fs:329744",
+      "fs:342546",
+      "fs:119917",
+      "fs:203381",
+      "kenney_impact/Audio/impactGlass_light_001",
+      "fs:530233",
+      "fs:683102"
+    ],
+    "chiwen_gurgle": [
+      "fs:213566",
+      "fs:539823"
+    ],
+    "chiwen_head": [
+      "fs:342546",
+      "kenney_impact/Audio/impactGlass_light_000",
+      "fs:530233",
+      "fs:212143"
+    ],
+    "chiwen_hit": [
+      "fs:672574",
+      "fs:178732",
+      "fs:737232",
+      "fs:321490",
+      "fs:212143",
+      "fs:442773",
+      "fs:342546"
+    ],
+    "chiwen_idle": [
+      "fs:213566"
+    ],
+    "chiwen_inspect": [
+      "fs:376799",
+      "fs:530233"
+    ],
+    "chiwen_mark": [
+      "fs:530233"
+    ],
+    "chiwen_mark_burst": [
+      "fs:329744",
+      "fs:342546",
+      "fs:203381",
+      "kenney_impact/Audio/impactGlass_light_002"
+    ],
+    "chiwen_mech": [
+      "fs:675008"
+    ],
+    "chiwen_orb_burst": [
+      "fs:442773",
+      "fs:583348",
+      "fs:539823"
+    ],
+    "chiwen_orb_cast": [
+      "fs:539823",
+      "fs:583348"
+    ],
+    "chiwen_orb_pulse": [
+      "fs:442773",
+      "fs:539823"
+    ],
+    "chiwen_ray_end": [
+      "fs:212143"
+    ],
+    "chiwen_ray_loop": [
+      "fs:754321",
+      "fs:482855",
+      "fs:376799"
+    ],
+    "chiwen_ray_start": [
+      "fs:342546",
+      "fs:754321",
+      "fs:376799"
+    ],
+    "chiwen_roar_low": [
+      "fs:849186",
+      "fs:204912",
+      "fs:539823"
+    ],
+    "chiwen_scales": [
+      "fs:530233",
+      "fs:389432",
+      "fs:321490"
+    ],
+    "chiwen_splash": [
+      "fs:321490"
+    ],
+    "chiwen_tail": [
+      "ffsl/Mosin Nagant/M_21P",
+      "ffsl/AK-47/C_28P",
+      "ffsl/Tikka/W_29P",
+      "ffsl/1917/B_24P",
+      "ffsl/Mosin Nagant/M_26P",
+      "ffsl/Tikka/W_24P"
+    ],
+    "chiwen_tank": [
+      "fs:539823",
+      "fs:119915",
+      "fs:675008"
+    ],
+    "chiwen_ult_bed": [
+      "fs:127265",
+      "fs:452400",
+      "fs:486141",
+      "fs:764329",
+      "fs:764339"
+    ],
+    "chiwen_ult_bed_searing": [],
+    "chiwen_ult_bite": [
+      "fs:565642",
+      "fs:389432",
+      "fs:355052",
+      "fs:442773"
+    ],
+    "chiwen_ult_end": [
+      "fs:539823",
+      "fs:530233"
+    ],
+    "chiwen_ult_end_searing": [],
+    "chiwen_ult_fall": [
+      "fs:376799",
+      "fs:442773",
+      "fs:342546"
+    ],
+    "chiwen_ult_gulp": [
+      "fs:212143",
+      "fs:119915",
+      "fs:539823"
+    ],
+    "chiwen_ult_inhale": [
+      "fs:442773",
+      "fs:119915"
+    ],
+    "chiwen_ult_inhale_searing": [],
+    "chiwen_ult_roar": [
+      "fs:263115",
+      "fs:849186",
+      "fs:204912",
+      "fs:442773",
+      "fs:376799"
+    ],
+    "chiwen_ult_roar_searing": [],
+    "chiwen_ult_spit": [
+      "fs:754321",
+      "fs:442773",
+      "fs:212143",
+      "fs:583348"
+    ],
+    "chiwen_ult_tail": [
+      "fs:212143",
+      "fs:442773"
+    ],
+    "chiwen_ult_vortex": [
+      "fs:213566",
+      "fs:754321",
+      "fs:482855"
+    ],
+    "ready_chiwen": [
+      "fs:263115",
+      "fs:451126",
+      "fs:539823",
+      "fs:530233"
+    ],
+    "ready_chiwen_searing": []
+  },
+  "loaded": [
+    "ffsl/1917/B_24P",
+    "ffsl/AK-47/C_28P",
+    "ffsl/Mosin Nagant/M_21P",
+    "ffsl/Mosin Nagant/M_26P",
+    "ffsl/Tikka/W_24P",
+    "ffsl/Tikka/W_29P",
+    "fs:119915",
+    "fs:119917",
+    "fs:127265",
+    "fs:178732",
+    "fs:203381",
+    "fs:204912",
+    "fs:212143",
+    "fs:213566",
+    "fs:263115",
+    "fs:321490",
+    "fs:329744",
+    "fs:342546",
+    "fs:355052",
+    "fs:376799",
+    "fs:377145",
+    "fs:389432",
+    "fs:442773",
+    "fs:451126",
+    "fs:452400",
+    "fs:482855",
+    "fs:486141",
+    "fs:494797",
+    "fs:530233",
+    "fs:539823",
+    "fs:565642",
+    "fs:583348",
+    "fs:672574",
+    "fs:675008",
+    "fs:683102",
+    "fs:737232",
+    "fs:754321",
+    "fs:764329",
+    "fs:764339",
+    "fs:849186",
+    "kenney_impact/Audio/impactGlass_light_000",
+    "kenney_impact/Audio/impactGlass_light_001",
+    "kenney_impact/Audio/impactGlass_light_002",
+    "kenney_impact/Audio/impactGlass_light_003",
+    "kenney_impact/Audio/impactGlass_light_004"
+  ],
+  "original": false
+}

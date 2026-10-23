@@ -10,8 +10,10 @@
 //     collar inlaid round the pearl, a louvred heat vent (right) and the charging handle (left);
 //   - tail = in-line stock: porcelain tail with gold borders, rump-feather scallops in low relief, an underglaze scroll
 //     band, a stitched leather cheek pad, three stepped cloisonné tail feathers a side, ribbed butt;
-//   - neck = vented barrel shroud: throat-feather scales, gold bands round a red lacquer ring (赤文); head with a ring
-//     of feather scales round each gem eye; crest of four lens-section plumes (cloisonné rows, gold-edged) = front sight;
+//   - neck = vented barrel shroud: throat-feather scales with cloisonné hearts, gold bands round a red lacquer ring
+//     (赤文); head with shingled feather scales round each glazed eye (round pupil; 鬼車: slit); crest of four
+//     lens-section plumes (cloisonné rows, gold-edged) fanned out and rolled about their spines, a gold crest pin
+//     between them carrying the front-sight bead;
 //   - beak = muzzle shroud: two lofted mandibles (keeled culmen, concave cheeks, rolled tomium lip holding a gold wire,
 //     rounded gonys, sheath groove, cut nostril); the lower one hinged (fx_beak), the bore fires from the gape;
 //     鬼車: the upper tip hooked down 20°;
@@ -60,8 +62,8 @@ const dist3 = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1], (b[2] || 0) - (a[2]
 /** tapered round segment a -> b (radii r0 -> r1, rounded ends) */
 const limb = (a, b, r0, r1, seg = 10) => { const L = dist3(a, b); return aim(lathe([[0, 0], [0, r0 * 0.7], [r0 * 0.3, r0], [L - r1 * 0.3, r1], [L, r1 * 0.7], [L, 0]], { seg }), a, b); };
 const capScrew = (at, r, axis = 'w', d = 1.4, seg = 8) =>
-  lax([[0, 0], [0, r], [d * 0.62, r], [d, r - 0.35], [d, r * 0.5], [d - 0.7, r * 0.5], [d - 0.7, 0]], at, axis, Math.min(seg, 8));
-const domeRivet = (at, r, axis = 'w', d = 1.2, seg = 10) => lax([[0, 0], [0, r], [d * 0.5, r * 0.8], [d, 0]], at, axis, seg);
+  lax([[0, 0], [0, r], [d * 0.62, r], [d, r - 0.35], [d, r * 0.5], [d - 0.7, r * 0.5], [d - 0.7, 0]], at, axis, Math.min(seg, 6));
+const domeRivet = (at, r, axis = 'w', d = 1.2, seg = 8) => lax([[0, 0], [0, r], [d * 0.5, r * 0.8], [d, 0]], at, axis, seg);
 const pinEnd = (at, r, axis = 'w', d = 0.6) => lax([[0, 0], [0, r], [d, r - 0.2], [d, 0]], at, axis, 10);
 const arcPts = (cs, ct, r, a0, a1, n) => {
   const out = [];
@@ -149,7 +151,7 @@ const onFace = (w0, sd, z0, z1) => ({ w: z1 - z0, cw: w0 + sd * (z0 + z1) / 2 })
  * Flat plate on a side face without its hidden bottom: top cap + side walls of poly [[s, t]...] (and holes) from z0 to
  * z1 above the face w0 (sd = outward side). Cloisons, enamel cells, inlays: 3 n triangles instead of a full prism's 4 n.
  */
-function slab(poly, w0, sd, z0, z1, holes = []) {
+function slab(poly, w0, sd, z0, z1, holes = [], walls = true, bottom = false, crease = 40) {
   const loops = [dedupe(poly), ...holes.map((h) => dedupe(h))].filter((l) => l.length >= 3);
   if (!loops.length) return null;
   const v2 = (l) => l.map(([x, y]) => new THREE.Vector2(x, y));
@@ -159,8 +161,9 @@ function slab(poly, w0, sd, z0, z1, holes = []) {
   for (const [x, y] of flat) P.push(x, y, w0 + sd * z1);
   for (const [x, y] of flat) P.push(x, y, w0 + sd * z0);
   for (const [a, b, c] of tris) { I.push(a, b, c); E.push([0, 0, sd]); }
+  if (bottom) for (const [a, b, c] of tris) { I.push(n + a, n + c, n + b); E.push([0, 0, -sd]); }   // closed plate (two-faced parts)
   let o = 0;
-  loops.forEach((l, li) => {
+  if (walls) loops.forEach((l, li) => {
     const m = l.length;
     let A = 0;
     for (let i = 0; i < m; i++) { const p = l[i], q = l[(i + 1) % m]; A += p[0] * q[1] - q[0] * p[1]; }
@@ -177,12 +180,15 @@ function slab(poly, w0, sd, z0, z1, holes = []) {
     const nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], e = E[k];
     if (nn[0] * e[0] + nn[1] * e[1] + nn[2] * e[2] < 0) { const t = I[3 * k + 1]; I[3 * k + 1] = I[3 * k + 2]; I[3 * k + 2] = t; }
   }
-  return mesh(P, I, { closed: false, crease: 40 });
+  return mesh(P, I, { closed: false, crease });
 }
+// cloison wires / thin inlays: sub-millimetre walls shade as one rounded bead (real cloisonné wire is rounded on top),
+// and the smoothed walls share the top's vertices (a hard-edged wire costs 2.5x the vertices)
+const WIRE = 100;
 /** straight flat strip (a cloison wire, a glow channel) as a slab from a to b, width wd */
-const slabStrip = (a, b, wd, w0, sd, z0, z1) => {
+const slabStrip = (a, b, wd, w0, sd, z0, z1, crease = 40) => {
   const d = [b[0] - a[0], b[1] - a[1]], l = Math.hypot(...d) || 1, n = [-d[1] / l * wd / 2, d[0] / l * wd / 2];
-  return slab([[a[0] + n[0], a[1] + n[1]], [b[0] + n[0], b[1] + n[1]], [b[0] - n[0], b[1] - n[1]], [a[0] - n[0], a[1] - n[1]]], w0, sd, z0, z1);
+  return slab([[a[0] + n[0], a[1] + n[1]], [b[0] + n[0], b[1] + n[1]], [b[0] - n[0], b[1] - n[1]], [a[0] - n[0], a[1] - n[1]]], w0, sd, z0, z1, [], true, false, crease);
 };
 /** flush gold inlay line along a closed polygon on a flat face (0.1 proud, sunk 0.35) */
 function inlayRing(poly, w0, sd, wd = 0.7, z0 = -0.35, z1 = 0.1) {
@@ -206,9 +212,9 @@ function inlayRing(poly, w0, sd, wd = 0.7, z0 = -0.35, z1 = 0.1) {
     const nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], e = E[k];
     if (nn[0] * e[0] + nn[1] * e[1] + nn[2] * e[2] < 0) { const t = I[3 * k + 1]; I[3 * k + 1] = I[3 * k + 2]; I[3 * k + 2] = t; }
   }
-  return mesh(P, I, { closed: false, crease: 40 });
+  return mesh(P, I, { closed: false, crease: WIRE });
 }
-const inlayLine = (pts, w0, sd, wd = 0.7, z1 = 0.1) => slab(ribbonPoly(pts, wd), w0, sd, -0.35, z1);
+const inlayLine = (pts, w0, sd, wd = 0.7, z1 = 0.1) => slab(ribbonPoly(pts, wd), w0, sd, -0.35, z1, [], false);   // flush: no walls
 
 /** filigree scroll: a spiral of gold wire in the side plane at w (turns, radius r0 shrinking inward). */
 function scrollPts(c, r0, a0, turns, dir, w, n = 18, shrink = 0.72) {
@@ -329,10 +335,32 @@ function stepSection(spec, s0, s1, { bevel = 0.6, bevelSeg = 2, curveSeg = 3, st
   const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: b > 0, bevelThickness: b, bevelSize: b, bevelOffset: -b, bevelSegments: bevelSeg, curveSegments: curveSeg, steps: Math.max(1, Math.ceil(depth / step)) });
   geo.translate(0, 0, b + Math.min(s0, s1));
   geo.scale(1, 1, -1);
+  // the mirror (scale z -1) turned the winding inside out: swap two corners of every triangle (ExtrudeGeometry is
+  // non-indexed, so swap the vertices themselves)
   const idx = geo.index;
   if (idx) { const a = idx.array; for (let i = 0; i < a.length; i += 3) { const t = a[i + 1]; a[i + 1] = a[i + 2]; a[i + 2] = t; } }
+  else { const a = geo.attributes.position.array; for (let i = 0; i < a.length; i += 9) for (let c = 0; c < 3; c++) { const t = a[i + 3 + c]; a[i + 3 + c] = a[i + 6 + c]; a[i + 6 + c] = t; } }
   for (const k of Object.keys(geo.attributes)) if (k !== 'position') geo.deleteAttribute(k);
   return toCreasedNormals(geo.index ? geo.toNonIndexed() : geo, 38 * D2R);
+}
+/**
+ * Width taper along s: w *= f(s) (gunkit x = w, z = -s); normals through the inverse-transpose of the map so the
+ * shading follows the tapered surface.
+ */
+function taperW(geo, f) {
+  const p = geo.attributes.position, n = geo.attributes.normal, e = 0.5;
+  for (let i = 0; i < p.count; i++) {
+    const sv = -p.getZ(i), x = p.getX(i), k = f(sv), dk = (f(sv + e) - f(sv - e)) / (2 * e);   // df/ds
+    p.setX(i, x * k);
+    if (n) {
+      // map (x, y, z) -> (x k(s), y, z) with s = -z: J = [[k, 0, -x dk], [0, 1, 0], [0, 0, 1]]; n' = J^-T n
+      const nx = n.getX(i) / k, ny = n.getY(i), nz = n.getZ(i) + x * dk * n.getX(i) / k, l = Math.hypot(nx, ny, nz) || 1;
+      n.setXYZ(i, nx / l, ny / l, nz / l);
+    }
+  }
+  p.needsUpdate = true; if (n) n.needsUpdate = true;
+  geo.computeBoundingBox?.();
+  return geo;
 }
 /** recompute creased normals after moving vertices */
 const renormal = (geo, crease = 40) => { geo.deleteAttribute('normal'); return toCreasedNormals(geo, crease * D2R); };
@@ -364,7 +392,7 @@ function bandAlong(pts, nrm, wd, th, sink = 0.2, o = {}) {
  */
 function cloisonne(o) {
   const { a, b, hu, hd, w0, sd, en, trim, glow = null, lines = 12, main = 0, rows = [0.36, 0.7], tipX = 0.84,
-    plate = 1.0, enT = 0.5, rim = 1.1, ang = 45, rachis = 1.0, ww = 0.42, wh = 0.28, nx = 16, lift = 0, plateBevel = 0.3 } = o;
+    plate = 1.0, enT = 0.5, rim = 1.1, ang = 45, rachis = 1.0, ww = 0.42, wh = 0.28, nx = 16, lift = 0, plateBevel = 0.3, noPlate = false, dome = 0.32 } = o;
   const F = axisFrame(a, b), k = 1 / (F.L * Math.tan(ang * D2R));
   const HW = (side) => (side > 0 ? hu : hd);
   const off = (u, f, side) => Math.max(0, Math.min(HW(side)(u), rachis + f * (HW(side)(u) - rachis)));
@@ -372,27 +400,30 @@ function cloisonne(o) {
   const z1 = plate + enT, zw0 = z1 - 0.12, zw1 = z1 + wh;
   const out = [];
   // gold backing plate (rim margin round the vane), standing off the face by `lift` when stacked over other feathers
+  // (noPlate: the second face of a two-faced feather, whose plate the first face already built)
   const back = vaneOutline(F.P(-0.012, 0), F.P(1.012, 0), (u) => hu(u) + rim, (u) => hd(u) + rim, Math.max(10, nx)).map(([x, y]) => [x, y]);
-  out.push([plateBevel ? PF(back, { ...onFace(w0, sd, -lift, plate), bevel: plateBevel, bevelSeg: 1, curveSeg: 2 }) : slab(back, w0, sd, -lift - 0.2, plate), trim]);
-  // enamel bands (rows), recessed between the cloisons
+  if (!noPlate) out.push([plateBevel === 'closed' ? slab(back, w0, sd, -lift, plate, [], true, true) : plateBevel ? PF(back, { ...onFace(w0, sd, -lift, plate), bevel: plateBevel, bevelSeg: 1, curveSeg: 2 }) : slab(back, w0, sd, -lift - 0.2, plate), trim]);
+  // enamel bands (rows), recessed between the cloisons; each cell's normals domed (the glaze pools proud in the
+  // middle of a cell and rolls down to its wires: the sweep runs over every cell instead of one flat sheet)
   const bandPoly = (xa, xb, fa, fb, side) => {
     const pts = [];
     for (let i = 0; i <= nx; i++) pts.push(at(xa + (xb - xa) * i / nx, fa, side));
     for (let i = nx; i >= 0; i--) pts.push(at(xa + (xb - xa) * i / nx, fb, side));
     return pts;
   };
+  const cell = (poly) => domed(slab(poly, w0, sd, plate - 0.2, z1, [], false), poly, sd, dome);
   const fr = [0, ...rows, 1], nT = Math.max(3, Math.round(nx * 0.4));
   for (const side of [1, -1]) {
     const rowKeys = fr.length === 2 ? [en[0]] : fr.length === 3 ? [en[0], en[2]] : [en[0], en[1], en[2]];
-    for (let r = 0; r < fr.length - 1; r++) out.push([slab(bandPoly(0, tipX, fr[r], fr[r + 1], side), w0, sd, plate - 0.2, z1), rowKeys[Math.min(r, rowKeys.length - 1)]]);
+    for (let r = 0; r < fr.length - 1; r++) out.push([cell(bandPoly(0, tipX, fr[r], fr[r + 1], side)), rowKeys[Math.min(r, rowKeys.length - 1)]]);   // walls hide under the wires
     const tp = [];
     for (let i = 0; i <= nT; i++) tp.push(at(tipX + (0.995 - tipX) * i / nT, 0, side));
     for (let i = nT; i >= 0; i--) tp.push(at(tipX + (0.995 - tipX) * i / nT, 1, side));
-    out.push([slab(tp, w0, sd, plate - 0.2, z1), en[en.length - 1]]);
+    out.push([cell(tp), en[en.length - 1]]);
   }
   // cloisons: row wires and the outline (ribbons), barbs (straight), the rachis
   const wires = [], glows = [];
-  const ribbon = (pts) => slab(ribbonPoly(dedupe(pts), ww), w0, sd, zw0, zw1);
+  const ribbon = (pts) => slab(ribbonPoly(dedupe(pts), ww), w0, sd, zw0, zw1, [], true, false, WIRE);
   for (const side of [1, -1]) {
     for (const f of [...rows, 1]) { const pts = []; for (let i = 0; i <= nx; i++) pts.push(at(0.995 * i / nx, f, side)); wires.push(ribbon(pts)); }
     for (let j = 0; j <= lines; j++) {
@@ -401,24 +432,51 @@ function cloisonne(o) {
       if (l < 0.8) continue;
       if (glow && main && j % main === 0 && j > 0 && j < lines) {
         const nn = [-d[1] / l, d[0] / l], g0 = 0.3 + ww / 2;
-        for (const q of [1, -1]) wires.push(slabStrip([A[0] + nn[0] * g0 * q, A[1] + nn[1] * g0 * q], [B[0] + nn[0] * g0 * q, B[1] + nn[1] * g0 * q], ww, w0, sd, zw0, zw1));
-        glows.push(slabStrip(A, B, 0.62, w0, sd, z1 - 0.3, z1 - 0.06));
-      } else wires.push(slabStrip(A, B, ww, w0, sd, zw0, zw1));
+        for (const q of [1, -1]) wires.push(slabStrip([A[0] + nn[0] * g0 * q, A[1] + nn[1] * g0 * q], [B[0] + nn[0] * g0 * q, B[1] + nn[1] * g0 * q], ww, w0, sd, zw0, zw1, WIRE));
+        glows.push(slabStrip(A, B, 0.62, w0, sd, z1 - 0.3, z1 + 0.03));          // just over the enamel, between its two wires
+      } else wires.push(slabStrip(A, B, ww, w0, sd, zw0, zw1, WIRE));
     }
   }
   // rachis: stops where the vane gets narrower than the channel
   let uEnd = 0.97;
   while (uEnd > 0.5 && Math.min(hu(uEnd), hd(uEnd)) < rachis + 0.6) uEnd -= 0.01;
   if (glow) {
-    for (const q of [1, -1]) wires.push(slabStrip(F.P(-0.01, q * (rachis - ww / 2)), F.P(uEnd, q * (rachis - ww / 2)), ww, w0, sd, zw0, zw1));
+    for (const q of [1, -1]) wires.push(slabStrip(F.P(-0.01, q * (rachis - ww / 2)), F.P(uEnd, q * (rachis - ww / 2)), ww, w0, sd, zw0, zw1, WIRE));
     glows.push(slabStrip(F.P(-0.01, 0), F.P(uEnd, 0), 2 * rachis - 2 * ww + 0.1, w0, sd, z1 - 0.35, z1 - 0.08));
-  } else wires.push(slabStrip(F.P(-0.01, 0), F.P(uEnd, 0), 2 * rachis, w0, sd, zw0, zw1 + 0.12));
+  } else wires.push(slabStrip(F.P(-0.01, 0), F.P(uEnd, 0), 2 * rachis, w0, sd, zw0, zw1 + 0.12, WIRE));
   out.push([merge(wires.filter(Boolean)), trim]);
   if (glows.length) out.push([merge(glows), glow]);
   return out.filter(([geo]) => geo);
 }
+/**
+ * Domes a flat cell's face normals (the top face: normal along ±w): each vertex's normal leans away from the cell's
+ * middle line by `k` (strips: across their width, so a band reads as a rounded glaze bead between two wires).
+ */
+function domed(geo, poly, sd, k = 0.32) {
+  if (!geo || !k) return geo;
+  // the cell's spine: least-squares line through its outline (s, t)
+  let cs = 0, ct = 0;
+  for (const [x, y] of poly) { cs += x; ct += y; }
+  cs /= poly.length; ct /= poly.length;
+  let sxx = 0, sxy = 0, syy = 0;
+  for (const [x, y] of poly) { const dx = x - cs, dy = y - ct; sxx += dx * dx; sxy += dx * dy; syy += dy * dy; }
+  const ang = 0.5 * Math.atan2(2 * sxy, sxx - syy), ux = Math.cos(ang), uy = Math.sin(ang);
+  let wmax = 1e-3;
+  for (const [x, y] of poly) wmax = Math.max(wmax, Math.abs(-(x - cs) * uy + (y - ct) * ux));
+  const p = geo.attributes.position, n = geo.attributes.normal;
+  for (let i = 0; i < p.count; i++) {
+    if (Math.abs(n.getX(i)) < 0.9) continue;                         // walls keep their normals
+    const s = -p.getZ(i), t = p.getY(i), o = (-(s - cs) * uy + (t - ct) * ux) / wmax;
+    // three axes: x = w, y = t, z = -s; across direction (in s, t) = (-uy, ux)
+    const ax = -uy * o * k, ay = ux * o * k;
+    const nx = Math.sign(n.getX(i)), ny = ay, nz = -ax, l = Math.hypot(nx, ny, nz);
+    n.setXYZ(i, nx / l, ny / l, nz / l);
+  }
+  n.needsUpdate = true;
+  return geo;
+}
 /** bends feather geometry about its frame F: w += sd * (bend * u² + twist * u * o / 10) (u 0..1 along, o mm across) */
-function bendFeather(list, F, sd, bend, twist = 0) {
+function bendFeather(list, F, sd, bend, twist = 0, creaseOf = () => 40) {
   return list.map(([geo, m]) => {
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
@@ -426,7 +484,7 @@ function bendFeather(list, F, sd, bend, twist = 0) {
       const u = Math.max(0, (ds * F.ux + dt * F.uy) / F.L), o = -ds * F.uy + dt * F.ux;
       p.setX(i, p.getX(i) + sd * (bend * u * u + twist * u * o / 10));
     }
-    return [renormal(geo), m];
+    return [renormal(geo, creaseOf(m)), m];
   });
 }
 /**
@@ -434,11 +492,14 @@ function bendFeather(list, F, sd, bend, twist = 0) {
  * th(u); a raised rachis; top and bottom faces split into enamel rows by |x| (mats[0..rows], tip zone mats[last]).
  * Returns { list: [[geo, mat]], surf(u, x, face) -> [s,t,w] }.
  */
-function featherLoft(spine, hu, hd, th, { nU = 16, nX = 10, rows = [0.5], mats, tipU = 0.85, rachisH = 0.45 } = {}) {
+function featherLoft(spine, hu, hd, th, { nU = 16, nX = 10, rows = [0.5], mats, tipU = 0.85, rachisH = 0.45, roll = () => 0 } = {}) {
   const Nw = new THREE.Vector3(1, 0, 0);
   const frame = (u) => {
     const c = V(...spine(u)), T = V(...spine(Math.min(1, u + 0.01))).sub(V(...spine(Math.max(0, u - 0.01)))).normalize();
     const Wd = new THREE.Vector3().crossVectors(Nw, T).normalize(), N = new THREE.Vector3().crossVectors(T, Wd).normalize();
+    // roll about the spine (radians, may vary along u): turns the vane's faces out of the side plane (a fan, not a row)
+    const r = roll(u);
+    if (r) { const cr = Math.cos(r), sr = Math.sin(r), w2 = Wd.clone().multiplyScalar(cr).addScaledVector(N, sr); N.multiplyScalar(cr).addScaledVector(Wd, -sr); Wd.copy(w2); }
     return { c, Wd, N };
   };
   const surfV = (u, x, face) => {
@@ -508,27 +569,6 @@ const FONT = {
   4: [[[3, 0], [3, 6], [0, 2], [4, 2]]], 6: [[[3.5, 6], [1.5, 6], [0, 4], [0, 1], [1, 0], [3, 0], [4, 1], [4, 2.5], [3, 3.5], [0, 3]]],
   7: [[[0, 6], [4, 6], [1.5, 0]]], '-': [[[0.8, 3], [3.2, 3]]],
 };
-/** V-groove cutters (90°, depth d) engraving `str` into a face at w0 (sd outward), centred on [sc, tc], cap height h */
-function engraveText(str, sc, tc, h, w0, sd, d = 0.25) {
-  const k = h / 6, adv = 5.4 * k, out = [];
-  const width = str.length * adv - 1.4 * k;
-  let x = -width / 2;
-  for (const ch of str) {
-    for (const line of FONT[ch] || []) for (let i = 0; i + 1 < line.length; i++) {
-      const P = (p) => [sc + sd * (x + p[0] * k), tc - h / 2 + p[1] * k];
-      const a = P(line[i]), b = P(line[i + 1]), L = Math.hypot(b[0] - a[0], b[1] - a[1]) + d;
-      const e = d * Math.SQRT2;                                   // box edge: its half diagonal = the groove depth
-      const g = box([0, 0, 0], [L, e, e], { r: 0 });
-      g.rotateZ(45 * D2R);                                       // diamond section in the (t, w) plane
-      g.rotateX(Math.atan2(b[1] - a[1], b[0] - a[0]));           // three X rotation: about the w axis -> tilt in (s, t)
-      const c = V((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, w0);
-      g.translate(c.x, c.y, c.z);
-      out.push(g);
-    }
-    x += adv;
-  }
-  return out;
-}
 
 // ------------------------------------------------------------------------------------------ looks / layout
 
@@ -539,7 +579,7 @@ const LOOKS = {
     en: ['glaze_teal', 'glaze_turquoise', 'glaze_vermilion', 'porcelain'],          // cloisonné rows: rachis, middle, edge, tip
     crestEn: ['glaze_teal', 'glaze_vermilion', 'glaze_vermilion', 'glaze_vermilion'], eyeRing: 'glaze_vermilion', scroll: 'glaze_cobalt',
     vein: 'glow_sun', crest: 'lacquer_red', medal: 'lacquer_red', claw: 'bronze_aged', toe: 'gold', wrap: 'leather_pebble', cord: 'silk_red',
-    eye: 'crystal', pupil: 'glaze_black', seal: ['畢', '方'], serial: 'M03-0417', name: 'PYREWING', hooked: false, focus: 'pearl', throat: 'glow_vermilion',
+    eye: 'glaze_teal', pupil: 'glaze_black', seal: ['畢', '方'], serial: 'M03-0417', name: 'PYREWING', hooked: false, focus: 'pearl', throat: 'glow_vermilion',
     mag: { coreMode: 1, coreTint: '#ff8a2a', coreScale: 1.6 },
   },
   guiche: {
@@ -547,7 +587,7 @@ const LOOKS = {
     en: ['glaze_inkteal', 'glaze_aubergine', 'glaze_aubergine', 'glaze_coldteal'],
     crestEn: ['glaze_aubergine', 'glaze_aubergine', 'glaze_coldteal', 'glaze_coldteal'], eyeRing: 'glaze_aubergine', scroll: 'glaze_inkteal',
     vein: 'glow_purple', crest: 'glaze_aubergine', medal: 'glaze_aubergine', claw: 'black_chrome', toe: 'silver_aged', wrap: 'leather_black', cord: 'silk_violet',
-    eye: 'obsidian', pupil: 'glaze_black', seal: ['鬼', '車'], serial: 'M03-0666', name: 'GLOOMWING', hooked: true, focus: 'eyes', throat: 'glow_purple',
+    eye: 'crystal', pupil: 'glaze_black', seal: ['鬼', '車'], serial: 'M03-0666', name: 'GLOOMWING', hooked: true, focus: 'eyes', throat: 'glow_purple',
     mag: { coreMode: 1, coreTint: '#b54bff', coreScale: 1.6 },
   },
 };
@@ -693,7 +733,7 @@ function beakKit(key) {
   return { B, tc, tm, W, ltm, lg, lW, upperRing, lowerRing, cheekW, up };
 }
 /** stations s0 .. s1 denser towards the tip, plus a dense band round the sheath groove */
-function beakStations(s0, s1, n = 30) {
+function beakStations(s0, s1, n = 19) {
   const out = new Set();
   for (let i = 0; i < n; i++) { const v = i / (n - 1); out.add(+(s0 + (s1 - s0) * (1 - Math.pow(1 - v, 1.45))).toFixed(2)); }
   for (let s = 826; s <= 838; s += 1) if (s > s0 && s < s1) out.add(s);
@@ -703,14 +743,14 @@ function beakStations(s0, s1, n = 30) {
 // crane emblem (local mm, facing +x): body + tail, S-neck, head with crest plume and long beak, one leg with three
 // toes; the raised wing (second relief level) with five primaries
 const CRANE = {
-  body: [[5.2, 0.4], [3.5, 2.4], [0, 3.0], [-4, 2.2], [-8, 0.2], [-12.8, -5.2], [-9.6, -4.3], [-11.6, -6.8], [-7, -4.9], [-3, -5.1], [1.5, -4.0], [4.6, -2.0]],
+  body: [[5.2, 0.4], [3.5, 2.4], [0, 3.0], [-4, 2.2], [-8, 0.2], [-12.8, -5.2, 'c'], [-9.6, -4.3, 'c'], [-11.6, -6.8, 'c'], [-7, -4.9], [-3, -5.1], [1.5, -4.0], [4.6, -2.0]],
   neck: [[4.0, 0.6], [6.3, 3.4], [6.5, 6.5], [5.2, 9.3], [5.5, 11.9], [7.2, 13.5]],
   head: [7.8, 13.9, 1.95],
   crest: [[6.4, 15.0], [4.8, 16.3], [2.8, 16.8]],
   beak: [[9.2, 14.7], [16.6, 12.4], [9.5, 13.0]],
   leg: [[0.4, -4.2], [0.9, -8.6], [0.2, -13.2]],
   toes: [[[0.2, -13.4], [4.4, -14.6]], [[0.2, -13.4], [3.0, -15.8]], [[0.2, -13.4], [-2.8, -14.5]]],
-  wing: [[3.4, 2.5], [2.2, 6.6], [-0.6, 10.3], [-3.4, 12.4], [-6.6, 9.9], [-6.9, 6.4], [-5.0, 3.0], [-1.5, 1.4]],
+  wing: [[3.4, 2.5], [2.2, 6.6], [-0.6, 10.3], [-3.4, 12.4, 'c'], [-6.6, 9.9], [-6.9, 6.4], [-5.0, 3.0], [-1.5, 1.4]],
 };
 /** tapered thick polyline -> polygon (w0 at the start, w1 at the end), rounded-ish ends */
 function thickLine(pts, w0, w1) {
@@ -729,6 +769,22 @@ function smoothPts(pts, n = 16) {
   const c = new THREE.SplineCurve(pts.map(([x, y]) => new THREE.Vector2(x, y)));
   return c.getPoints(n).map((v) => [v.x, v.y]);
 }
+/** a smooth closed outline through control points (centripetal Catmull-Rom); [x, y, 'c'] marks a sharp corner */
+function smoothClosed(pts, perSeg = 4) {
+  const out = [], n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    // a corner point keeps its neighbours' tangents from bending round it
+    const a = p1[2] === 'c' ? p1 : p0, d = p2[2] === 'c' ? p2 : p3;
+    const cv = new THREE.CatmullRomCurve3([a, p1, p2, d].map(([x, y]) => new THREE.Vector3(x, y, 0)), false, 'centripetal');
+    for (let k = 0; k < perSeg; k++) {
+      // the segment p1 -> p2 is the middle third of the 4-point curve (by parameter, close enough at these sizes)
+      const v = cv.getPoint((1 + k / perSeg) / 3);
+      out.push([v.x, v.y]);
+    }
+  }
+  return dedupe(out, 0.05);
+}
 
 // ------------------------------------------------------------------------------------------ model
 
@@ -744,7 +800,7 @@ export function buildPyrewing(variant = 'bifang') {
   // ======================================================================== receiver: chassis rail + three porcelain shells
   {
     // dark steel chassis rail between the shells and the lower receiver: machined slots, hex screws
-    let rail = stepSection([[-30.6, -24.5, 1], [30.6, -24.5, 1], [30.6, -15, 1], [-30.6, -15, 1]], 246, 644, { bevel: 0.8, bevelSeg: 1, step: 12 });
+    let rail = stepSection([[-30.6, -24.5, 1], [30.6, -24.5, 1], [30.6, -15.4, 1], [-30.6, -15.4, 1]], 246, 644, { bevel: 0.8, bevelSeg: 1, step: 12 });   // top 0.4 under the shells (no coplanar faces)
     const slots = [];
     for (const sd of [1, -1]) for (let k = 0; k < 7; k++) { const s = 268 + k * 52; slots.push(cutters.box([s + 15, -19.8, 30.8 * sd], [30, 3.4, 1.6])); }
     rail = cut(rail, slots);
@@ -752,7 +808,7 @@ export function buildPyrewing(variant = 'bifang') {
     for (const sd of [1, -1]) for (let k = 0; k < 8; k++) g.add(capScrew([262 + k * 52, -19.8, 30.4 * sd], 1.5, sideAx(sd), 0.7, 6), DARK);
 
     // three shells lofted from cross-sections, split at s 340 / 622 with 0.9 mm seams and bevelled ends
-    const shells = [shellLoft(236, 339.55, 2.6, 0.7, 5), shellLoft(340.45, 621.55, 0.7, 0.7, 7), shellLoft(622.45, SHELL_SMAX - 0.25, 0.7, 0, 2.5)];
+    const shells = [shellLoft(236, 339.55, 2.6, 0.7, 8), shellLoft(340.45, 621.55, 0.7, 0.7, 14), shellLoft(622.45, SHELL_SMAX - 0.25, 0.7, 0, 4)];
     // right: louvred heat-vent pocket (front, low); left: the charging-handle slot under the shoulder
     const vent = cutters.pocketW([[576, -12.5, 2], [634, -12.5, 2], [634, -1.5, 2], [576, -1.5, 2]], 27.6, 8);
     const slot = cutters.pocketW([[482, 38.2, 2.4], [574, 38.2, 2.4], [574, 43.4, 2.4], [482, 43.4, 2.4]], -28.8, 8);
@@ -802,7 +858,7 @@ export function buildPyrewing(variant = 'bifang') {
     for (const sd of [1, -1]) {
       const wb = FLANK * sd;
       addAll(g, cloisonne({ a: VA, b: VB, hu: VHU, hd: VHD, w0: wb, sd, en: L.en, trim: TRIM, glow: L.vein, lines: 20, main: 2, rows: [0.34, 0.68],
-        tipX: 0.86, nx: 22, rachis: 1.3, plate: 1.1, rim: 1.3, plateBevel: 0.4 }));
+        tipX: 0.86, nx: 18, rachis: 1.3, plate: 1.1, rim: 1.3, plateBevel: 0.4 }));
       // quill cap and tip bead
       g.add(lax([[0, 0], [0, 2.6], [1.2, 2.6], [1.9, 1.8], [1.9, 0]], [...F.P(-0.035, 0), wb], sideAx(sd), 14), TRIM);
       g.add(domeRivet([...F.P(0.99, 0), wb + 1.5 * sd], 1.3, sideAx(sd), 0.8), TRIM);
@@ -814,8 +870,8 @@ export function buildPyrewing(variant = 'bifang') {
     const MC = [293, 16];
     for (const sd of [1, -1]) {
       const wb = FLANK * sd, ax = sideAx(sd);
-      g.add(lax([[0, 18.6], [0, 23.4], [1.1, 23.4], [2.1, 22.6], [2.4, 21], [2.1, 19.4], [1.4, 18.6], [0, 18.6]], [MC[0], MC[1], wb], ax, 40), TRIM);
-      g.add(lax([[0, 0], [0, 18.8], [1.3, 18.8], [1.3, 0]], [MC[0], MC[1], wb], ax, 40), L.medal);
+      g.add(lax([[0, 18.6], [0, 23.4], [1.1, 23.4], [2.1, 22.6], [2.4, 21], [2.1, 19.4], [1.4, 18.6], [0, 18.6]], [MC[0], MC[1], wb], ax, 32), TRIM);
+      g.add(lax([[0, 0], [0, 18.8], [1.3, 18.8], [1.3, 0]], [MC[0], MC[1], wb], ax, 32), L.medal);
       const z0 = 1.15;                                  // the medal face
       const P = ([x, y]) => [MC[0] + sd * x * 0.95, MC[1] + y * 0.95 - 0.4];
       const lvl = (pts, z1, holes = []) => PF(pts.map(P), { ...onFace(wb, sd, z0 - 0.2, z0 + z1), bevel: 0.22, bevelSeg: 1, curveSeg: 2, holes: holes.map((h) => h.map(P)) });
@@ -824,12 +880,12 @@ export function buildPyrewing(variant = 'bifang') {
         // stand at stepped heights so every joint hides the lower piece's bevel (no CSG union needed)
         const C = CRANE;
         const eye = arcPts(C.head[0] + 0.35, C.head[1] + 0.25, 0.42, 0, 320, 7);
-        const pieces = [lvl(C.body, 0.9), lvl(thickLine(smoothPts([...C.neck.slice(0, -1), [6.7, 13.0]], 9), 2.5, 1.6), 0.84), lvl(arcPts(C.head[0], C.head[1], C.head[2], 0, 340, 14), 0.96, [eye]),
+        const pieces = [lvl(smoothClosed(C.body, 3), 0.9), lvl(thickLine(smoothPts([...C.neck.slice(0, -1), [6.7, 13.0]], 9), 2.5, 1.6), 0.84), lvl(arcPts(C.head[0], C.head[1], C.head[2], 0, 340, 14), 0.96, [eye]),
           lvl(thickLine(smoothPts(C.crest, 6), 1.1, 0.25), 0.8), lvl(C.beak, 0.9), lvl(thickLine(C.leg, 1.1, 0.85), 0.84),
           ...C.toes.map((t) => lvl(thickLine(t, 0.8, 0.45), 0.78))];
         g.add(merge(pieces), TRIM);
         // level 2 (1.4 mm): the raised wing, coverts engraved with three feather lines, five separate primaries
-        let wing = lvl(C.wing, 1.4);
+        let wing = lvl(smoothClosed(C.wing, 4), 1.4);
         const grooves = [[[-0.2, 4.4], [-4.8, 6.6]], [[0.6, 7.2], [-4.2, 9.6]], [[-1.4, 2.6], [-5.2, 4.0]]].map(([a, b]) => strip(P(a), P(b), wb + sd * (z0 + 1.4), 0.36, 0.9));
         wing = cut(wing, grooves);
         g.add(wing, TRIM);
@@ -840,24 +896,36 @@ export function buildPyrewing(variant = 'bifang') {
         }
         g.add(merge(prim), TRIM);
       } else {
-        // 鬼車: a body with nine necks fanned over it, each head pierced for its eye and hooked-beaked
-        // the body: a plump night bird with a forked tail; a folded wing (second level) engraved with three feather lines
-        const pieces = [lvl([[7.5, -2.5], [5.5, 0.5], [1, 1.6], [-4, 1.2], [-8.5, -0.6], [-14.5, -4.6], [-11.2, -5.4], [-14.2, -8.4], [-8.6, -7.2], [-3.5, -8.0], [2.5, -7.0], [6.2, -5.0]], 0.9)];
-        let fw = lvl([[4.2, -2.2], [1.5, 0.4], [-3.5, 0.2], [-9.5, -2.6], [-12.4, -5.6], [-7.0, -5.4], [-1.0, -5.6], [3.4, -4.4]], 1.3);
-        fw = cut(fw, [[[1.6, -1.2], [-3.4, -4.6]], [[-1.8, -0.6], [-6.4, -4.8]], [[-5.2, -1.6], [-9.6, -4.8]]].map(([a, b]) => strip(P(a), P(b), wb + sd * (z0 + 1.3), 0.34, 0.9)));
-        g.add(fw, TRIM);
-        for (let i = 0; i < 9; i++) {
-          const a = (-64 + i * 16) * D2R, hx = 3 + Math.sin(a) * 12.6, hy = 1 + Math.cos(a) * 12.6, big = i === 4;
-          const mid = [2 + Math.sin(a) * 6 - Math.cos(a) * 1.2, 1 + Math.cos(a) * 6 + Math.sin(a) * 1.2];
-          const hr = big ? 2.2 : 1.6;
-          pieces.push(lvl(thickLine(smoothPts([[2, 0.5], mid, [hx - Math.sin(a) * hr * 0.55, hy - Math.cos(a) * hr * 0.55]], 5), 1.6, 1.0), 0.8));
-          const ex = hx + Math.sin(a) * 0.3, ey = hy + Math.cos(a) * 0.3;
-          pieces.push(lvl(arcPts(hx, hy, hr, 0, 330, 10), 1.05, [arcPts(ex, ey, big ? 0.55 : 0.42, 0, 300, 5)]));
-          // hooked beak: out along the neck, the point curling clockwise
-          const d = [Math.sin(a), Math.cos(a)], nn = [d[1], -d[0]], b0 = [hx + d[0] * hr * 0.6, hy + d[1] * hr * 0.6];
-          const tip = [b0[0] + d[0] * 2.6 + nn[0] * 1.3, b0[1] + d[1] * 2.6 + nn[1] * 1.3];
-          pieces.push(lvl([[b0[0] - nn[0] * 0.8, b0[1] - nn[1] * 0.8], [b0[0] + d[0] * 2.4 - nn[0] * 0.2, b0[1] + d[1] * 2.4 - nn[1] * 0.2], tip, [b0[0] + d[0] * 1.2 + nn[0] * 0.7, b0[1] + d[1] * 1.2 + nn[1] * 0.7], [b0[0] + nn[0] * 0.8, b0[1] + nn[1] * 0.8]], 0.95));
+        // 鬼車: a plump night bird (forked tail, two short legs) facing forward; nine S-necks rise from its shoulder in
+        // a bundle and open into a staggered arc of heads, every head pierced for its eye, its hooked beak turned
+        // forward; the folded wing is the second relief level, engraved with three feather lines
+        const pieces = [lvl(smoothClosed([[6.5, -4.5], [5.2, -1.9], [2.0, -0.3], [-2.5, -0.7], [-7.5, -2.5], [-14.4, -3.8, 'c'], [-11.9, -6.0, 'c'],
+          [-14.2, -8.8, 'c'], [-8.5, -8.4], [-3.0, -9.9], [2.5, -9.4], [5.8, -7.4]], 4), 0.9)];
+        // the thin strokes (legs, toes, necks) are rounded beads (a slab with soft walls), the masses keep their bevels
+        const bead = (pts, z1) => slab(pts.map(P), wb, sd, z0 - 0.2, z0 + z1, [], true, false, WIRE);
+        for (const [leg, toes] of [[[[1.2, -9.2], [1.8, -11.8], [1.2, -13.8]], [[2.9, -14.6], [0.4, -15.3]]], [[[-2.0, -9.6], [-2.4, -12.2], [-3.2, -14.0]], [[-1.6, -14.9], [-4.6, -14.8]]]]) {
+          pieces.push(bead(thickLine(leg, 1.1, 0.8), 0.84));
+          for (const t of toes) pieces.push(bead(thickLine([leg[2], t], 0.7, 0.4), 0.8));
         }
+        let fw = lvl(smoothClosed([[4.0, -4.0], [1.5, -1.7], [-3.5, -1.8], [-9.0, -3.7], [-12.6, -6.4, 'c'], [-7.0, -7.0], [-1.0, -7.6], [3.2, -6.4]], 4), 1.3);
+        fw = cut(fw, [[[2.0, -2.8], [-2.8, -6.6]], [[-1.4, -2.4], [-6.0, -6.4]], [[-4.8, -3.0], [-9.2, -6.0]]].map(([a, b]) => strip(P(a), P(b), wb + sd * (z0 + 1.3), 0.34, 0.9)));
+        g.add(fw, TRIM);
+        const HEADS = [[-11.0, 5.2], [-8.4, 9.8], [-4.4, 13.0], [0.1, 14.3], [4.6, 13.2], [8.6, 10.8], [11.2, 7.2], [12.5, 3.0], [11.8, -1.0]];
+        HEADS.forEach(([hx, hy], i) => {
+          const big = i === 4, hr = big ? 2.2 : 1.6, b = [-2.0 + 7.4 * i / 8, -0.5 - 1.8 * i / 8];
+          // S-neck: out of the shoulder, bowing one way then the other into the back of the head
+          const dx = hx - b[0], dy = hy - b[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l, bow = (i % 2 ? 1 : -1) * 1.1;
+          const end = [hx - dx / l * hr * 0.7, hy - dy / l * hr * 0.7];
+          pieces.push(bead(thickLine(smoothPts([b, [b[0] + dx * 0.3 + nx * bow, b[1] + dy * 0.3 + ny * bow], [b[0] + dx * 0.7 - nx * bow, b[1] + dy * 0.7 - ny * bow], end], 4), 1.5, 0.95), 0.8));
+          // head + eye; the beak points out and forward, hooking down at its tip
+          const o = [hx - 1, hy - 1.5], ol = Math.hypot(...o), d0 = [o[0] / ol + 1.1, o[1] / ol + 0.2], dl = Math.hypot(...d0), d = [d0[0] / dl, d0[1] / dl];
+          const ex = hx + d[0] * hr * 0.25, ey = hy + d[1] * hr * 0.25 + hr * 0.18;
+          pieces.push(lvl(arcPts(hx, hy, hr, 0, 340, big ? 12 : 9), 1.05, [arcPts(ex, ey, big ? 0.55 : 0.42, 0, 300, 5)]));
+          const nn = [d[1], -d[0]], b0 = [hx + d[0] * hr * 0.6, hy + d[1] * hr * 0.6], k = big ? 1.25 : 1;
+          const tip = [b0[0] + (d[0] * 2.6 + nn[0] * 1.3) * k, b0[1] + (d[1] * 2.6 + nn[1] * 1.3) * k];
+          pieces.push(bead([[b0[0] - nn[0] * 0.8 * k, b0[1] - nn[1] * 0.8 * k], [b0[0] + (d[0] * 2.4 - nn[0] * 0.2) * k, b0[1] + (d[1] * 2.4 - nn[1] * 0.2) * k], tip,
+            [b0[0] + (d[0] * 1.2 + nn[0] * 0.7) * k, b0[1] + (d[1] * 1.2 + nn[1] * 0.7) * k], [b0[0] + nn[0] * 0.8 * k, b0[1] + nn[1] * 0.8 * k]], 0.95));
+        });
         g.add(merge(pieces), TRIM);
       }
       // bead ring and four screws in the bezel
@@ -890,7 +958,7 @@ export function buildPyrewing(variant = 'bifang') {
       g.add(tl(PL(scale(0.62).map(([a, b, r]) => [a + 1.2, b, r]), { h: 0.9, ct: t0 + 1.3, bevel: 0, curveSeg: 2 })), L.en[0]);
       const wires = [strip([s0 - 3, t0 + 1.85], [s0 + 13, t0 + 1.85], w0, 0.4, 0.5)];
       for (const q of [1, -1]) for (const f of [0.35, 0.7]) wires.push(xform(box([s0 + 1 + 9 * f, t0 + 1.85, w0 + q * 2.4 * (1 - f * 0.4)], [0.4, 0.5, 4.6 * (1 - f * 0.5)], { r: 0, rot: [0, q * sd * 38, 0] }), {}));
-      g.add(tl(merge(wires)), TRIM);
+      g.add(renormal(tl(merge(wires)), WIRE), TRIM);
     }
     // cloud-scroll filigree along the right shoulder (above the vane) and the left one (behind the charging slot)
     g.add(cloudBand(356, 600, 48.4, projector(shellGeo, 1, 0.25, FLANK)), TRIM);
@@ -928,7 +996,7 @@ export function buildPyrewing(variant = 'bifang') {
       z -= 0.7 * ful(u) * Math.exp(-(((x + 0.22) / 0.13) ** 2));
       return z;
     };
-    const XS = [-1, -0.8, -0.55, -0.36, -0.22, -0.08, 0.14, 0.36, 0.55, 0.72, 0.85, 0.94, 1];
+    const XS = [-1, -0.78, -0.5, -0.3, -0.12, 0.14, 0.4, 0.62, 0.8, 0.93, 1];
     const sec = (u, x, f) => { const o = x >= 0 ? x * hwT(u) : x * hwB(u); return [...P(u, o), W0 + f * hz(u, x)]; };
     const rings = [];
     const us = [];
@@ -984,8 +1052,11 @@ export function buildPyrewing(variant = 'bifang') {
       const w0 = W0 + sd * (hz(u0, -0.35) + lift);
       const fhu = vaneW(6.4, 0.25, 0.55, 0.3), fhd = vaneW(7.6, 0.25, 0.6, 0.3);
       const F = axisFrame(a, b);
-      const list = cloisonne({ a, b, hu: fhu, hd: fhd, w0, sd, en: L.en, trim: TRIM, lines: 4, rows: [], tipX: 0.78, nx: 7, rachis: 0.75, plate: 0.8, enT: 0.4, rim: 1.0, ww: 0.38, wh: 0.24, plateBevel: 0.15 });
-      addAll(bone, bendFeather(list, F, sd, 2.2 + k * 0.2, 1.4));
+      // two-faced: a closed gold plate with cloisonné on both faces (first person the right bone is seen from below /
+      // inboard: a one-faced feather showed there as an empty gold wire frame)
+      const C = { a, b, hu: fhu, hd: fhd, en: L.en, trim: TRIM, lines: 4, rows: [], tipX: 0.78, nx: 5, rachis: 0.75, enT: 0.4, rim: 1.0, ww: 0.38, wh: 0.24 };
+      const list = [...cloisonne({ ...C, w0, sd, plate: 0.5, lift: 0.5, plateBevel: 'closed' }), ...cloisonne({ ...C, w0: w0 - sd * 0.5, sd: -sd, plate: 0, noPlate: true, lines: 2, nx: 4 })];
+      addAll(bone, bendFeather(list, F, sd, 2.2 + k * 0.2, 1.4, (m) => (m === TRIM ? WIRE : 40)));
       // socket cup round the quill (opening towards the tip) and its pin back to the bone
       const cA = [...F.P(-0.06, 0), w0 + sd * 0.7], cB = [...F.P(0.2, 0), w0 + sd * 0.7];
       bone.add(aim(lathe([[0, 0], [0, 1.7], [0.7, 2.5], [4.2, 2.4], [4.9, 1.7], [4.4, 0]], { seg: 8 }), cA, cB), TRIM);
@@ -994,7 +1065,7 @@ export function buildPyrewing(variant = 'bifang') {
     // 5 Ø4 rivets on the arm's outer face (the wing cards grow from them)
     for (let k = 0; k < 5; k++) { const u = 34 + k * 28; bone.add(domeRivet([...P(u, hw(u) * 0.3), W0 + sd * (hz(u, 0.3 * hw(u) / hwT(u)) - 0.1)], 2, ax, 1.2), TRIM); }
     // ball joint at the hinge: gold ball, porcelain collar with a gold lip
-    bone.add(sphere([HINGE[0], HINGE[1], W0], 9.5, { seg: 24 }), TRIM);
+    bone.add(sphere([HINGE[0], HINGE[1], W0], 9.5, { seg: 18 }), TRIM);
     bone.add(lax([[0, 6], [0, 10.5], [1, 11.2], [4.5, 11.2], [5.5, 10], [5.5, 6], [0, 6]], [HINGE[0] - 9, HINGE[1] + 1.6, W0], '-s', 20), BODY);
     bone.add(lax([[0, 10.4], [0, 11.6], [0.9, 11.6], [0.9, 10.4]], [HINGE[0] - 9.4, HINGE[1] + 1.6, W0], '-s', 20), TRIM);
     // where the cards root once the wing is open (the middle rivet); extras.rest = the folded position
@@ -1063,16 +1134,22 @@ export function buildPyrewing(variant = 'bifang') {
     for (let k = 0; k < 8; k++) {
       const a = (110 + k * 20) * D2R, p = [C[0] + Math.cos(a) * 16.5, 67.2, Math.sin(a) * 16.5];
       addAll(small, slitEye(p, 2.5, [-0.5, 0.86], TRIM, L.pupil, 'crystal'));
-      g.add(lax([[0, 2.3], [0, 3.3], [0.5, 3.7], [1.3, 3.7], [1.3, 2.3], [0, 2.3]], [p[0], 64.9, p[2]], 't', 14), TRIM);
+      g.add(lax([[0, 2.3], [0, 3.3], [0.5, 3.7], [1.3, 3.7], [1.3, 2.3], [0, 2.3]], [p[0], 64.9, p[2]], 't', 10), TRIM);
     }
     g.socket('pearl', [C[0], 79, 0]);
   }
 
   // ======================================================================== stock = tail (s 0-238)
+  // a tail, not a box: the whole stock (and everything laid on it) tapers in width from the receiver (46 mm) to the
+  // butt (~36 mm), its lower edge splits into three overlapping tail-feather tips (two V notches), a softer bevel
+  const gAdd = g.add.bind(g), kf = (sv) => 0.78 + 0.22 * Math.pow(Math.max(0, Math.min(1, sv / 238)), 0.85);
+  g.add = (geo, m) => gAdd(taperW(geo, kf), m);
   {
     const SO = [[18, -88, 6], [70, -78, 30], [196, -42, 40], [238, -26, 4], [238, 44, 4], [150, 41, 80], [42, 35, 10], [18, 33, 4]];
-    let stock = PF(SO, { w: 46, bevel: 5, bevelSeg: 3, curveSeg: 6 });
-    stock = cut(stock, [cutters.slotW(40, 62, -60, 8, 80, 0)]);      // sling slot through the tail
+    let stock = PF(SO, { w: 46, bevel: 6, bevelSeg: 4, curveSeg: 6 });
+    const lowT = (sv) => -78 + (sv - 70) / 126 * 36;
+    const notch = (sv) => PF([[sv - 7, lowT(sv) - 12, 0], [sv + 5, lowT(sv) - 12, 0], [sv + 1.5, lowT(sv) + 6.5, 0.8]], { w: 80, bevel: 0, curveSeg: 2 });
+    stock = cut(stock, [cutters.slotW(40, 62, -60, 8, 80, 0), notch(104), notch(152)]);      // sling slot through the tail
     g.add(stock, BODY);
     // ribbed rubber butt pad, gold butt-plate frame with screws
     let pad = PF([[18, 35, 2], [8, 36, 8], [0, 30, 6], [0, -84, 6], [8, -92, 8], [18, -90, 2]], { w: 50, bevel: 4, bevelSeg: 1, curveSeg: 3 });
@@ -1090,11 +1167,11 @@ export function buildPyrewing(variant = 'bifang') {
       for (let k = 0; k < 24; k++) {
         const s = 64 + k * 5.8;
         for (const sd of [1, -1]) {
-          const w = (17 - 2.4 - 1.5) * sd, t0 = ptop(s - 1.2, w), t1 = ptop(s + 1.2, w);
+          const w = (17 - 2.4 - 1.5) * sd, t0 = ptop(s - 1.2, w * kf(s - 1.2)), t1 = ptop(s + 1.2, w * kf(s + 1.2));   // (the pad is tapered already)
           stitch.push(box([s, (t0 + t1) / 2 - 0.1, w], [2.6, 0.5, 0.75], { r: 0, rot: [Math.atan2(t1 - t0, 2.4) / D2R, sd * 14, 0] }));
         }
       }
-      g.add(merge(stitch), TRIM2);
+      g.add(renormal(merge(stitch), WIRE), TRIM2);           // (thread: soft-shaded, shared vertices)
     }
     // sling swivel under the tail
     g.add(lax([[0, 0], [0, 4], [3, 4], [3.6, 3.2], [3.6, 0]], [64, -79.6, 0], '-t', 12), DARK);
@@ -1133,10 +1210,10 @@ export function buildPyrewing(variant = 'bifang') {
         if (!insideStock(cs, ct, 6.4) || !clearOfTails(cs, ct, 6.4)) continue;
         const z1 = 0.45 + 0.22 * c, pts = [[cs + 5.6, ct - 5.8], [cs + 5.6, ct + 5.8]];
         for (let i = 0; i <= 7; i++) { const a = (90 + 180 * i / 7) * D2R; pts.push([cs - 1 + Math.cos(a) * 6.6, ct + Math.sin(a) * 5.8]); }
-        sc.push(PF(pts, { ...onFace(wb, sd, -0.3, z1), bevel: 0.22, bevelSeg: 1 }));
+        sc.push(PF(pts, { ...onFace(wb, sd, -0.3, z1), bevel: 0.12, bevelSeg: 1, curveSeg: 2 }));
         const e = [];
         for (let i = 0; i <= 7; i++) { const a = (90 + 180 * i / 7) * D2R; e.push([cs - 1 + Math.cos(a) * 6.3, ct + Math.sin(a) * 5.5, wb + sd * (z1 + 0.02)]); }
-        edges.push(sweep(e, 0.26, { seg: 8, radial: 3 }));
+        edges.push(sweep(e, 0.26, { seg: 6, radial: 3 }));
       }
       if (sc.length) { g.add(merge(sc), BODY); g.add(merge(edges), TRIM); }
       // underglaze scroll band along the top of the flank
@@ -1148,13 +1225,14 @@ export function buildPyrewing(variant = 'bifang') {
       TAILS.forEach(([s0, t0, len, wid], j) => {
         const { F } = tailF[j];
         const hu = vaneW(wid, 0.12, 0.62, 0.3), hd = vaneW(wid * 0.8, 0.12, 0.6, 0.3);
-        addAll(g, cloisonne({ a: F.a, b: F.P(1, 0), hu, hd, w0: (23 + j * 1.75) * sd, sd, lift: j * 1.75, en: L.en, trim: TRIM, lines: 8, rows: [0.45],
-          tipX: 0.82, nx: 10, rachis: 0.9, plate: 0.9, enT: 0.45, plateBevel: 0 }));
+        addAll(g, cloisonne({ a: F.a, b: F.P(1, 0), hu, hd, w0: (23 + j * 1.75) * sd, sd, lift: j * 1.75, en: L.en, trim: TRIM, lines: 7, rows: [0.45],
+          tipX: 0.82, nx: 8, rachis: 0.9, plate: 0.9, enT: 0.45, plateBevel: 0 }));
       });
     }
     // stock-to-receiver collar
     g.add(SC([[-24.6, -28, 2], [24.6, -28, 2], [24.6, 45.4, 3], [-24.6, 45.4, 3]], 232, 240, { bevel: 0.8 }), TRIM);
   }
+  g.add = gAdd;
 
   // ======================================================================== lower receiver, magwell, trigger group, grip
   {
@@ -1167,6 +1245,8 @@ export function buildPyrewing(variant = 'bifang') {
       lc.push(cutters.pocketW([[286, -43, 2], [324, -43, 2], [324, -28.5, 2], [286, -28.5, 2]], 24.4 * sd, 4));
       lc.push(cutters.pocketW([[344, -43, 2], [376, -43, 2], [376, -28.5, 2], [344, -28.5, 2]], 24.4 * sd, 4));
     }
+    // machined: a parting seam along each flank, under the relief pockets
+    for (const sd of [1, -1]) lc.push(cutters.box([388, -45.2, 25 * sd], [262, 0.7, 1.4]));
     lower = cut(lower, lc);
     g.add(lower, 'steel');                      // satin steel: black chrome read as a hole under the white shells
     g.add(PF([[398, -63.5, 2], [488, -63.5, 2], [490, -67.5, 1], [396, -67.5, 1]], { w: 43.6, bevel: 0.6 }), TRIM);
@@ -1175,6 +1255,7 @@ export function buildPyrewing(variant = 'bifang') {
     for (const sd of [1, -1]) {
       for (const [s, t] of [[276, -34], [334, -31], [508, -33]]) g.add(pinEnd([s, t, 25 * sd], 1.7, sideAx(sd), 0.5), 'steel');
       g.add(capScrew([392, -40, 25.1 * sd], 2.1, sideAx(sd), 0.9), 'steel_dark');
+      for (const sv of [305, 360]) g.add(capScrew([sv, -25.6, 25.05 * sd], 1.0, sideAx(sd), 0.45, 6), 'steel_dark');   // pocket-frame screws
       g.add(capScrew([279, -35, 22.6 * sd], 1.4, sideAx(sd), 0.6), TRIM2);
       g.add(capScrew([383, -35, 22.6 * sd], 1.4, sideAx(sd), 0.6), TRIM2);
     }
@@ -1182,7 +1263,7 @@ export function buildPyrewing(variant = 'bifang') {
     {
       const cs = 431, ct = -31.4, wb = 25, sd = 1;
       let plate = PF([[cs - 19, ct - 6.4, 1.6], [cs + 19, ct - 6.4, 1.6], [cs + 19, ct + 6.4, 1.6], [cs - 19, ct + 6.4, 1.6]], { ...onFace(wb, sd, -0.3, 0.9), bevel: 0.35, bevelSeg: 1 });
-      plate = cut(plate, engraveText(L.serial, cs + 9.6, ct - 2.6, 2.4, wb + 0.9, sd));          // the serial is cut (V-groove); the name line is a blackened inlay
+      // (both lines are blackened inlays: a CSG-cut serial on top cost 2.6-4k triangles the inlay already reads as)
       g.add(plate, TRIM);
       g.add(PF([[cs - 17.6, ct - 5.2, 0.6], [cs - 0.6, ct - 5.2, 0.6], [cs - 0.6, ct + 5.2, 0.6], [cs - 17.6, ct + 5.2, 0.6]], { ...onFace(wb, sd, 0.7, 1.05), bevel: 0.1, bevelSeg: 1 }), L.medal);
       const frame = [[cs - 17.0, ct - 4.6], [cs - 1.2, ct - 4.6], [cs - 1.2, ct + 4.6], [cs - 17.0, ct + 4.6]];
@@ -1260,7 +1341,7 @@ export function buildPyrewing(variant = 'bifang') {
           st2.push(geo);
         }
       }
-      g.add(merge(st2), TRIM2);
+      g.add(renormal(merge(st2), WIRE), TRIM2);
     }
     // tassel: a knot at the back of the lower ferrule, a gold cap and twelve silk strands
     {
@@ -1301,17 +1382,21 @@ export function buildPyrewing(variant = 'bifang') {
     // vent frames: gold wire round each slot
     for (const sd of [1, -1]) {
       const proj = projector(neck, sd, 0.2, 26 * sd);
-      for (const [a, b] of [[664, 688], [698, 720], [730, 748]]) g.add(sweep(rectLoop([a - 1.3, NT - 7.7], [b + 1.3, NT + 3.7], 3).map(proj), 0.45, { seg: 24, radial: 4, closed: true }), TRIM);
+      for (const [a, b] of [[664, 688], [698, 720], [730, 748]]) g.add(sweep(rectLoop([a - 1.3, NT - 7.7], [b + 1.3, NT + 3.7], 3).map(proj), 0.45, { seg: 24, radial: 3, closed: true }), TRIM);
     }
-    // throat-feather scales at the collar: 12 porcelain scales round the neck, each with its gold edge wire following
-    // the scale's own tilt
-    for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * 360 + 15;
-      const piv = { rot: [-11.3, 0, 0], pivot: [648, NT + 31.2, 0] }, ring = { rot: [0, 0, a], pivot: [0, NT, 0] };
-      const sc = PL([[648, -5.2, 3], [662, -6, 4], [676, 0, 1], [662, 6, 4], [648, 5.2, 3]], { h: 1.6, ct: NT + 31.2, bevel: 0.5, bevelSeg: 1, curveSeg: 2 });
-      g.add(xform(xform(sc, piv), ring), BODY);
-      const ed = sweep([[650, NT + 32.05, -4.6], [661, NT + 32.05, -5.3], [670.5, NT + 32.05, -2.6], [673.6, NT + 32.05, 0], [670.5, NT + 32.05, 2.6], [661, NT + 32.05, 5.3], [650, NT + 32.05, 4.6]], 0.38, { seg: 8, radial: 4 });
-      g.add(xform(xform(ed, piv), ring), TRIM);
+    // throat-feather scales at the collar: 12 porcelain scales round the neck, each carrying a cloisonné heart (青
+    // enamel in a closed gold wire, like the mantle scales), all following the scale's own tilt
+    {
+      const heart = [[651, -3.3, 2], [661, -3.9, 3], [670.6, 0, 0.8], [661, 3.9, 3], [651, 3.3, 2]];
+      const loop = offsetPoly(dedupe(makeShape(heart).getPoints(3).map((v) => [v.x, v.y])), 0.3);
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * 360 + 15;
+        const piv = { rot: [-11.3, 0, 0], pivot: [648, NT + 31.2, 0] }, ring = { rot: [0, 0, a], pivot: [0, NT, 0] };
+        const both = (geo) => xform(xform(geo, piv), ring);
+        g.add(both(PL([[648, -5.2, 3], [662, -6, 4], [676, 0, 1], [662, 6, 4], [648, 5.2, 3]], { h: 1.6, ct: NT + 31.2, bevel: 0.5, bevelSeg: 1, curveSeg: 2 })), BODY);
+        g.add(both(PL(heart, { h: 0.7, ct: NT + 31.95, bevel: 0.12, bevelSeg: 1, curveSeg: 2 })), L.en[0]);
+        g.add(both(sweep(loop.map(([x, y]) => [x, NT + 32.22, y]), 0.3, { seg: loop.length, radial: 3, closed: true })), TRIM);
+      }
     }
     // eyes in gold bezels, ringed by two rings of small feather scales (the inner one 赤 enamel), a sculpted brow and
     // a lash wire, on the curved head (placed by angle round the neck axis)
@@ -1320,7 +1405,10 @@ export function buildPyrewing(variant = 'bifang') {
     for (const sd of [1, -1]) {
       const E = onHead(ES, EA), ew = E[2] * sd;
       g.add(lax([[0, 0], [0, 4.4], [0.8, 4.8], [1.8, 4.6], [1.8, 0]], [ES, E[1], ew - 0.9 * sd], sideAx(sd), 22), TRIM);
-      g.add(sphere([ES, E[1], ew + 0.4 * sd], 3.0, { seg: 16 }), L.eye);
+      // the eye: a smooth glazed iris ball with a pupil skin looking out and a little forward (round: 畢方, slit: 鬼車)
+      const ec = [ES, E[1], ew + 0.4 * sd], look = V(0.22, Math.sin(EA * D2R), Math.cos(EA * D2R) * sd).normalize();
+      g.add(sphere(ec, 3.0, { seg: 22 }), L.eye);
+      g.add(pupilSkin(ec, 3.0, look, V(0, 1, 0), L.hooked ? 0.62 : 0.4, L.hooked ? 0.13 : 0.4), L.pupil);
       // feather scales: three rings round the eye, every scale pointing back along the head (the ones nearer the beak
       // overlap the ones behind), 赤 next to the eye; built on top of the neck (facing +t), then turned round the axis
       const scales = [[], []];
@@ -1328,8 +1416,10 @@ export function buildPyrewing(variant = 'bifang') {
         const phi = (i + (ring && R < 10 ? 0.5 : 0)) / n * Math.PI * 2, ds = Math.cos(phi) * R, darc = Math.sin(phi) * R * 0.92;
         const s = ES + ds, ang = EA + (darc / nr(s)) / D2R;
         if (s > 805) continue;
-        const lobe = [[-1.1, -1.5], [0.9, -1.5], [1.9, -0.8], [2.2, 0], [1.9, 0.8], [0.9, 1.5], [-1.1, 1.5]].map(([x, y]) => [s - x * sz, y * sz, 0]);
-        const geo = PL(lobe, { h: 0.75 + 0.022 * (ds + 13), ct: NT + nr(s) - 0.12, bevel: 0.26, bevelSeg: 1, curveSeg: 1 });
+        const lobe = [[-1.3, 0], [-0.3, -1.35], [1.0, -1.5], [2.0, -0.9], [2.25, 0], [2.0, 0.9], [1.0, 1.5], [-0.3, 1.35]].map(([x, y]) => [s - x * sz, y * sz, 0]);   // teardrop: narrow root, round tip
+        // shingled: the root tucks into the head, the rounded tip lifts ~0.5 mm (each row overlaps the one behind)
+        const ct = NT + nr(s) - 0.2, h = 0.62 + 0.012 * (ds + 13);
+        const geo = xform(PL(lobe, { h, ct, bevel: ring ? 0 : 0.2, bevelSeg: 1, curveSeg: 1 }), { rot: [R < 7 ? -9 : -13, 0, 0], pivot: [s + 1.1 * sz, ct - h / 2, 0] });
         scales[ring].push(xform(geo, { rot: [0, 0, sd > 0 ? ang - 90 : 90 - ang], pivot: [0, NT, 0] }));
       }
       g.add(merge(scales[0]), L.eyeRing);
@@ -1342,11 +1432,13 @@ export function buildPyrewing(variant = 'bifang') {
     }
     // crest = front sight tower: four lens-section plumes (raised rachis, cloisonné rows, gold-edged, curling out)
     // fanned on a gold collar; sight post + ears between them
+    // the plumes fan out in w (tips ±8..12 mm) and roll about their spines (outer ones more), so the crest shows
+    // faces, not edges, from the front, from above and from the shooter's seat
     const PLUMES = [
-      { pts: [[764, 27, -4.0], [765, 50, -4.6], [771, 76, -6.2], [776, 99, -9.0]], wid: 6.6 },
-      { pts: [[776, 27, -1.6], [779, 50, -2.0], [785, 70, -3.4], [791, 86, -6.0]], wid: 6.4 },
-      { pts: [[788, 27, 1.6], [793, 48, 2.0], [800, 66, 3.4], [808, 79, 6.0]], wid: 6.2 },
-      { pts: [[800, 27, 4.0], [806, 42, 4.6], [813, 54, 6.0], [820, 63, 8.4]], wid: 5.6 },
+      { pts: [[764, 27, -4.2], [765, 50, -5.8], [769.5, 76, -9.0], [773, 99, -12.5]], wid: 6.6, roll: -38 },
+      { pts: [[776, 27, -2.3], [779, 50, -3.2], [784, 70, -5.6], [788.5, 86, -8.6]], wid: 6.4, roll: -18 },
+      { pts: [[788, 27, 2.3], [793, 48, 3.2], [800, 66, 5.6], [806.5, 79, 8.6]], wid: 6.2, roll: 18 },
+      { pts: [[800, 27, 4.2], [806, 42, 5.8], [813, 54, 8.4], [819.5, 63, 11.5]], wid: 5.6, roll: 38 },
     ];
     for (const p of PLUMES) {
       const cv = new THREE.CatmullRomCurve3(p.pts.map((q) => V(...q)));
@@ -1354,7 +1446,8 @@ export function buildPyrewing(variant = 'bifang') {
       const hu = (u) => p.wid * (0.32 + 0.68 * smooth(0, 0.22, u)) * (u < 0.5 ? 1 : Math.sqrt(Math.max(0, 1 - ((u - 0.5) / 0.5) ** 2)));
       const hd = (u) => hu(u) * 0.86;
       const th = (u) => 3.4 * Math.pow(1 - u, 1.2) + 0.35;
-      const { list, surf } = featherLoft(spine, hu, hd, th, { nU: 14, nX: 8, rows: [0.4, 0.75], mats: L.crestEn, tipU: 0.84 });
+      const roll = (u) => p.roll * D2R * (0.35 + 0.65 * smooth(0, 0.7, u));
+      const { list, surf } = featherLoft(spine, hu, hd, th, { nU: 14, nX: 8, rows: [0.4, 0.75], mats: L.crestEn, tipU: 0.84, roll });
       addAll(g, list);
       const wires = [];
       for (const face of [1, -1]) {
@@ -1368,20 +1461,25 @@ export function buildPyrewing(variant = 'bifang') {
       const edge = [];
       for (let i = 0; i <= 16; i++) edge.push(surf(i / 16 * 0.995, -1, 1));
       for (let i = 16; i >= 0; i--) edge.push(surf(i / 16 * 0.995, 1, 1));
-      wires.push(sweep(edge, 0.34, { seg: 36, radial: 4 }));
+      wires.push(sweep(edge, 0.34, { seg: 26, radial: 3 }));
       g.add(merge(wires), TRIM);
     }
     g.add(PF([[752, 22, 1], [821, 22, 1], [821, 31.6, 2], [814, 34, 2], [756, 32.6, 2], [752, 29.4, 1]], { w: 13, bevel: 1.2, bevelSeg: 2 }), TRIM);
-    g.add(box([796, 89, 0], [1.6, 6.4, 1.6], { r: 0.4 }), TRIM);
-    for (const sd of [1, -1]) g.add(PF([[792, 84, 1], [800, 84, 1], [799, 93, 1.5], [795, 91.5, 1]], { w: 1.4, cw: 3.4 * sd, bevel: 0.4 }), TRIM);
+    // front sight: a gold crest pin rising between the middle plumes, a flame bead on top level with the rear aperture
+    {
+      const a = [782, 33.6, 0], b = [795, 88.4, 0];
+      g.add(limb(a, b, 0.95, 0.6, 8), TRIM);
+      g.add(aim(lathe([[0, 1.0], [0, 1.9], [0.7, 2.2], [1.4, 1.9], [1.4, 1.0], [0, 1.0]], { seg: 12 }), [781.6, 32.4, 0], [782.4, 35.6, 0]), TRIM);
+      g.add(aim(lathe([[0, 0], [0, 0.8], [0.7, 1.4], [1.9, 1.5], [3.0, 1.0], [3.7, 0.3], [3.9, 0]], { seg: 12 }), [794.9, 87.9, 0], [795.9, 92.0, 0]), TRIM);
+    }
   }
 
   // ======================================================================== barrel (bore Ø18.6, OD Ø24), ember throat
   {
     const bp = [[650, 9.3], [650, 12]];
-    for (let x = 660; x < 858; x += 10) bp.push([x, 12]);
+    for (let x = 670; x < 858; x += 20) bp.push([x, 12]);
     bp.push([858, 12], [858.6, 11.4], [860, 10.6], [860, 9.3], [650, 9.3]);
-    g.add(lathe(bp, { seg: 28 }), 'steel_dark');                    // hidden inside the receiver behind s 650
+    g.add(lathe(bp, { seg: 20 }), 'steel_dark');                    // hidden inside the receiver behind s 650
   }
   g.add(band(859.6, 860.8, 6.8, 9.2, 0, 0.3, 24), L.throat);     // the furnace throat behind the beak
   // compensator inside the gape: three port rings
@@ -1587,14 +1685,18 @@ export function buildPyrewing(variant = 'bifang') {
     if (o.bake !== false) {
       const meshes = [];
       root.traverse((m) => { if (m.isMesh) meshes.push(m); });
-      const tess = (o.tessellate ?? 12) * 0.001;
+      const tess = (o.tessellate ?? TESS) * 0.001;
       for (const m of meshes) {
         let geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
         for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
-        // glossy dielectrics show AO smudges most: 12 mm grid; metal, enamel and glass read fine on a coarser one
-        m.geometry = tessellateFat(geo, /^(porcelain|lacquer_|leather|rubber)/.test(m.userData.mat) ? tess : tess * 1.75, 0.0016);
+        // glossy dielectrics show AO smudges most: the fine grid; metal, enamel and glass read fine on a coarser one
+        m.geometry = tessellateFat(geo, /^(porcelain|lacquer_|leather|rubber)/.test(m.userData.mat) ? tess : tess * TESS_K, 0.0016);
       }
-      bakeMeshes(meshes, { tessellate: 0, aoDist: 0.018, rays: 32, log: true });          // already tessellated above
+      if (o.tessOnly) return root;                       // (dev: triangle budget without the bake)
+      // the big glazed / leather / steel surfaces ignore low relief (inlays, wires, cloisonné plates, scallops up to
+      // 3 mm): on their 12 mm vertex grid a contact shadow only smears into dark wedges round every plate
+      const relief = (m) => (/^(porcelain|lacquer_|leather|rubber)/.test(m.userData.mat) ? 0.003 : /^steel/.test(m.userData.mat) ? 0.002 : 0);
+      bakeMeshes(meshes, { tessellate: 0, aoDist: 0.018, rays: 32, log: true, minHeight: relief });          // already tessellated above
       postBake(root, {}, WEAR);
     }
     return root;
@@ -1602,6 +1704,9 @@ export function buildPyrewing(variant = 'bifang') {
   return g;
 }
 
+// bake grid (mm): glossy dielectrics / everything else x TESS_K. 12 / 1.75 put the twin over the 160k / 5 MB
+// budget (194k / 6.3 MB); the lofted shells are already dense along s, the grid only splits their long flats
+const TESS = 26, TESS_K = 2.4;
 /** per-material wear [curvature (1/m) mapped to full wear, cap]: glossy glaze barely chips, gold rubs on its edges */
 const WEAR = {
   '*:porcelain': [1 / 700, 0.45], '*:lacquer_black': [1 / 700, 0.45], '*:lacquer_red': [1 / 700, 0.4], '*:gold': [1 / 450, 0.7], '*:silver_aged': [1 / 450, 0.7],
@@ -1630,12 +1735,12 @@ function briolette(c, rows, n = 12) {
  * at (`look` = [s, t] direction), almond lids (two arcs of wire) round the opening when `lid` is given.
  */
 function slitEye(c, R, look, lid, pupil, iris) {
-  const out = [[sphere(c, R, { seg: 28 }), iris]];
+  const out = [[sphere(c, R, { seg: R > 4 ? 28 : 10 }), iris]];          // the small eyes: 10 segments (pv_crystal facets them anyway)
   const d = V(look[0], look[1], 0).normalize(), side = new THREE.Vector3(1, 0, 0), up = new THREE.Vector3().crossVectors(d, side).normalize();
   const C = V(...c);
   const onBall = (al, be, r) => C.clone().addScaledVector(d.clone().multiplyScalar(Math.cos(al)).addScaledVector(up, Math.sin(al)).multiplyScalar(Math.cos(be)).addScaledVector(side, Math.sin(be)), r);
   // pupil skin: alpha along the slit (in the look / up plane), beta across it (towards w); lens-shaped width
-  const P = [], I = [], NA = 12, NB = 4;
+  const P = [], I = [], NA = R > 4 ? 12 : 8, NB = R > 4 ? 4 : 2;
   for (let i = 0; i <= NA; i++) for (let j = 0; j <= NB; j++) {
     const al = (-0.66 + 1.32 * i / NA), wdt = 0.26 * Math.cos((i / NA - 0.5) * Math.PI) + 0.03, be = (-1 + 2 * j / NB) * wdt;
     const v = onBall(al, be, R * 1.012);
@@ -1652,11 +1757,29 @@ function slitEye(c, R, look, lid, pupil, iris) {
     for (const q of [1, -1]) {
       const pts = [];
       for (let i = 0; i <= 14; i++) { const al = -1.0 + 2.0 * i / 14, be = q * 0.62 * Math.cos((i / 14 - 0.5) * Math.PI) ** 0.8; const v = onBall(al, be, R * 1.06); pts.push([-v.z, v.y, v.x]); }
-      arcs.push(sweep(pts, R * 0.11, { seg: 22, radial: 6 }));
+      arcs.push(sweep(pts, R * 0.11, { seg: R > 4 ? 22 : 9, radial: R > 4 ? 6 : 3 }));
     }
     out.push([merge(arcs), lid]);
   }
   return out;
+}
+/**
+ * pupil skin on an eyeball (centre c [s,t,w], radius R): a lens / disc patch 1.2 % proud of the ball round the three
+ * direction `dir`, aLen radians long along `up` (orthogonalised), aWid radians half-wide at its middle
+ */
+function pupilSkin(c, R, dir, up, aLen, aWid, NA = 10, NB = 4) {
+  const d = dir.clone().normalize(), u = up.clone().addScaledVector(d, -up.dot(d)).normalize(), side = new THREE.Vector3().crossVectors(d, u);
+  const C = V(...c), P = [], I = [];
+  for (let i = 0; i <= NA; i++) for (let j = 0; j <= NB; j++) {
+    const al = -aLen + 2 * aLen * i / NA, wdt = aWid * Math.sqrt(Math.max(0, 1 - (al / aLen) ** 2)) + 0.015, be = (-1 + 2 * j / NB) * wdt;
+    const v = C.clone().addScaledVector(d.clone().multiplyScalar(Math.cos(al)).addScaledVector(u, Math.sin(al)).multiplyScalar(Math.cos(be)).addScaledVector(side, Math.sin(be)), R * 1.012);
+    P.push(-v.z, v.y, v.x);
+  }
+  for (let i = 0; i < NA; i++) for (let j = 0; j < NB; j++) { const a = i * (NB + 1) + j, b = a + 1, e = a + NB + 1, f = e + 1; I.push(a, e, b, b, e, f); }
+  const tri = [0, 1, 2].map((k) => V(P[I[k] * 3], P[I[k] * 3 + 1], P[I[k] * 3 + 2]));
+  const n = tri[1].clone().sub(tri[0]).cross(tri[2].clone().sub(tri[0]));
+  if (n.dot(tri[0].clone().sub(C)) < 0) for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t; }
+  return mesh(P, I, { closed: false, crease: 60 });
 }
 /** underglaze scroll band: a flat running wave (flush inlay) with a curl at every crest, baseline t0 (number or fn of s) */
 function scrollBand(s0, s1, t0, w0, sd, { step = 16, amp = 1.3, wd = 0.75, r: rc = 2.3 } = {}) {

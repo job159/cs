@@ -566,6 +566,55 @@ class Zombie {
     return 0;
   }
 
+  /**
+   * The mixer writes a bone only when its sampled value CHANGES (three's PropertyMixer.apply), so once a clip holds
+   * still (a clamped death, a paused action) the rotations layered on top after it (pose offsets, flinch) were
+   * multiplied onto the previous frame's result every update: a corpse's offsets accumulated until the spine folded
+   * through the floor. savePost() keeps the pure clip rotations of those bones; restorePost() puts them back before
+   * the next mixer update.
+   */
+  restorePost() {
+    const P = this._post;
+    if (P) for (let i = 0; i < P.bones.length; i++) P.bones[i].quaternion.copy(P.q[i]);
+  }
+
+  savePost() {
+    let P = this._post;
+    if (!P) {
+      const set = new Set([...(this.clipPose?.bones || []), ...(this.poseQ || []).map(([b]) => b), this.bones.spine_02 || this.bones.spine_01, this.bones.spine_03, this.bones.head].filter(Boolean));
+      P = this._post = { bones: [...set], q: [...set].map(() => new THREE.Quaternion()) };
+    }
+    for (let i = 0; i < P.bones.length; i++) P.q[i].copy(P.bones[i].quaternion);
+  }
+
+  /** Per-clip pose offsets (extras.poseOffsetsByClip): an offset table per action that has its own set. */
+  initClipPose(entry) {
+    const names = [...new Set([...(entry.poseQ || []), ...Object.values(entry.poseQByClip).flat()].map(([b]) => b))].filter((n) => this.bones[n]);
+    const I = new THREE.Quaternion();
+    const table = (list) => { const m = new Map(list || []); return names.map((n) => m.get(n) || I); };
+    const byAction = [];
+    for (const [clip, list] of Object.entries(entry.poseQByClip)) if (this.actions[clip]) byAction.push([this.actions[clip], table(list)]);
+    this.clipPose = { bones: names.map((n) => this.bones[n]), def: table(entry.poseQ), byAction, acc: names.map(() => new THREE.Quaternion()) };
+  }
+
+  /** Pose offsets after the mixer: each clip's set weighted by its action's effective weight, the default set
+   *  for the remaining weight (so the sets cross-fade exactly like the clips). */
+  applyClipPose() {
+    const P = this.clipPose, acc = P.acc, n = acc.length;
+    for (let i = 0; i < n; i++) acc[i].set(0, 0, 0, 0);
+    let total = 0;
+    for (let k = 0; k <= P.byAction.length; k++) {
+      let set, w;
+      if (k < P.byAction.length) {
+        const a = P.byAction[k][0];
+        if (!a.isScheduled() || !((w = a.getEffectiveWeight()) > 1e-3)) continue;
+        set = P.byAction[k][1]; total += w;
+      } else { w = 1 - total; set = P.def; if (w <= 1e-3) continue; }
+      for (let i = 0; i < n; i++) { const q = set[i], a = acc[i]; a.x += q.x * w; a.y += q.y * w; a.z += q.z * w; a.w += q.w * w; }
+    }
+    for (let i = 0; i < n; i++) P.bones[i].quaternion.multiply(acc[i].normalize());
+  }
+
   /** Procedural flinch layered on top of the animation (call after mixer update). */
   applyFlinch(dt) {
     const f = this.flinch, fv = this.flinchV;
@@ -643,9 +692,19 @@ export class ZombieManager {
       const g = await loadGLB(`zombies/${id}.glb`);
       const ex = g.scene.userData || {};
       entry = { scene: g.scene, hitboxes: ex.hitboxes, height: ex.height, scale: 1, clips: g.animations, poseOffsets: ex.poseOffsets || null };
-      if (entry.poseOffsets) {
-        // per-frame additive local rotations (hunched spines etc.), degrees XYZ
-        entry.poseQ = Object.entries(entry.poseOffsets).map(([bone, e]) => [bone, new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0] * Math.PI / 180, e[1] * Math.PI / 180, e[2] * Math.PI / 180))]);
+      // per-frame additive local rotations (hunched spines etc.), degrees XYZ (w >= 0 so sets can be blended)
+      const toQ = (set) => Object.entries(set).map(([bone, e]) => {
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0] * Math.PI / 180, (e[1] || 0) * Math.PI / 180, (e[2] || 0) * Math.PI / 180));
+        if (q.w < 0) q.set(-q.x, -q.y, -q.z, -q.w);
+        return [bone, q];
+      });
+      if (entry.poseOffsets) entry.poseQ = toQ(entry.poseOffsets);
+      // extras.poseOffsetsByClip { clip: { bone: euler } }: OVERRIDES of poseOffsets entries while that clip plays
+      // (a counter-lean made for the upright clips must not arch a corpse through the floor); Zombie.applyPose
+      // blends the sets by the mixer's action weights, so they cross-fade with the clips
+      if (ex.poseOffsetsByClip) {
+        entry.poseQByClip = {};
+        for (const [clip, set] of Object.entries(ex.poseOffsetsByClip)) entry.poseQByClip[clip] = toQ({ ...(entry.poseOffsets || {}), ...set });
       }
       try { entry.lod1 = (await loadGLB(`zombies/${id}_lod1.glb`)).scene; } catch { entry.lod1 = null; }
     } catch {
@@ -796,6 +855,7 @@ export class ZombieManager {
     z.shell = patchShell(scene);   // per-zombie status-shell uniforms (fx/zfx.js: berserk, healed, burning, elite...)
     if (def.boss) z.fadeMats = bossFadeable(scene);   // (its own patched material clones: _bossFade)
     z.poseQ = entry.poseQ ? entry.poseQ.map(([b, q]) => [z.bones[b], q]).filter(([b]) => b) : null;
+    if (entry.poseQByClip) z.initClipPose(entry);
     if (def.boss) { z.height = def.height; z.radius = def.radius; }
     if (opts.puppet) { z.puppet = true; if (opts.running !== undefined) { z.running = opts.running; z.setLoco(z.running); } }
     z.modelId = mid;
@@ -1040,9 +1100,12 @@ export class ZombieManager {
       z.animAcc += dt;
       if ((this.frame + z.id) % every === 0 || !z.alive && z.deathT < 1.5) {
         const step = z.animAcc; // real elapsed time since the last pose (not dt*every)
+        z.restorePost();        // undo last pose's offsets / flinch first (see restorePost)
         z.mixer.update(step);
+        z.savePost();
         z.animAcc = 0;
-        if (z.poseQ) for (const [b, q] of z.poseQ) b.quaternion.multiply(q);
+        if (z.clipPose) z.applyClipPose();
+        else if (z.poseQ) for (const [b, q] of z.poseQ) b.quaternion.multiply(q);
         z.applyFlinch(step);
       }
       // mesh LOD + shadow casting by distance (bosses always full detail)

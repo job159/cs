@@ -129,7 +129,8 @@ export async function runZombieViewer(renderer, params) {
         b.quaternion.multiply(q.setFromEuler(e));
       }
     };
-    if (!params.get('noOffsets')) add(model.userData.poseOffsets);
+    // (+ extras.poseOffsetsByClip[anim]: per-clip overrides, as the game blends them while that clip plays)
+    if (!params.get('noOffsets')) add({ ...model.userData.poseOffsets, ...(animName && model.userData.poseOffsetsByClip?.[animName]) });
     add(parsePose(params.get('pose')));
     // world-axis rotations: new local = P^-1 * R * P * local (P = parent world rotation), parents first
     const wp = params.get('wpose') === 'test' || params.get('pose') === 'test' ? TEST_WPOSE : parsePose(params.get('wpose'));

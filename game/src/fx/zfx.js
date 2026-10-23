@@ -48,8 +48,13 @@ export const SHELL = {
   rageFlash: { col: [2.0, 0.42, 0.1], amt: 0.85, fres: 1, exp: 2.2, prio: 7, decay: true },
   berserk: { col: [2.2, 0.15, 0.12], amt: 0.9, hz: 4, depth: 0.3, fres: 0, prio: 6 },
   burning: { col: [2.6, 0.9, 0.15], amt: 0.5, hz: 9, depth: 0.45, flicker: true, fres: 0.6, prio: 5 },
-  // ghost fire (鬼火, M03 鬼車's 灼羽): the burning look in violet / cold teal (hit info.burnFx = 'ghostfire')
-  ghostfire: { col: [1.5, 0.45, 2.7], amt: 0.5, hz: 7, depth: 0.45, flicker: true, fres: 0.7, prio: 5 },
+  // M03 灼羽 (畢方 featherburn, 鬼車 ghostfire, hit info.burnFx): a thin flickering rim only, under the elite rim
+  // (prio 1): the burn reads through the body flames and rising feather licks, never a translucent orange body.
+  // The amount scales with the stack count (status(z, kind, dur, mul))
+  featherburn: { col: [2.4, 0.95, 0.2], amt: 0.3, hz: 8, depth: 0.35, flicker: true, fres: 0.97, exp: 2.6, prio: 1 },
+  ghostfire: { col: [1.5, 0.45, 2.7], amt: 0.3, hz: 7, depth: 0.35, flicker: true, fres: 0.97, exp: 2.6, prio: 1 },
+  // M03 kill: a warm rim flash instead of the white body flash (the corpse catches fire, it does not turn to glass)
+  emberkill: { col: [2.8, 1.1, 0.25], amt: 0.6, fres: 0.95, exp: 1.8, prio: 9, decay: true },
   frozen: { col: [0.8, 1.8, 2.6], amt: 0.5, fres: 1, prio: 5 },
   poisoned: { col: [0.6, 1.6, 0.2], amt: 0.4, hz: 2, depth: 0.3, fres: 0.7, prio: 4 },
   // enraged boss: a thin ember-red rim; the readable cue is the model's own vein glow + embers (_rageStep)
@@ -178,12 +183,13 @@ export class ZFX {
 
   // ------------------------------------------------------------------ status shells
   /** Whole-body status tint for a while: kind = SHELL key (kill, healed, hardened, berserk, burning, frozen, poisoned, rage, elite). Infinity = until cleared. */
-  status(z, kind, dur = 1) {
+  status(z, kind, dur = 1, mul) {
     if (!z || !SHELL[kind]) return;
     const s = this._state(z);
     const e = s.st[kind];
+    if (e && mul !== undefined) e.mul = mul;            // mul: amount scale (stack counts)
     if (e && e.t >= dur && isFinite(e.dur)) return;
-    s.st[kind] = { t: dur, dur };
+    s.st[kind] = { t: dur, dur, mul: mul ?? e?.mul ?? 1 };
   }
   clearStatus(z, kind) { const s = this._zs.get(z); if (s) delete s.st[kind]; }
 
@@ -201,23 +207,23 @@ export class ZFX {
   }
 
   _shell(z, s, dt) {
-    let best = null, u = 1;
+    let best = null, u = 1, mul = 1;
     for (const k in s.st) {
       const e = s.st[k];
       e.t -= dt;
       if (e.t <= 0) { delete s.st[k]; continue; }
       const S = SHELL[k];
-      if (!best || S.prio > best.prio) { best = S; u = isFinite(e.dur) ? e.t / e.dur : 1; }
+      if (!best || S.prio > best.prio) { best = S; u = isFinite(e.dur) ? e.t / e.dur : 1; mul = e.mul ?? 1; }
     }
     const der = z.alive ? this._derived(z, s) : null;
-    if (der && (!best || SHELL[der].prio > best.prio)) { best = SHELL[der]; u = 1; }
+    if (der && (!best || SHELL[der].prio > best.prio)) { best = SHELL[der]; u = 1; mul = 1; }
     const U = z.shell;
     if (!U) return;
     let target = 0;
     if (best) {
       let p = 1;
       if (best.hz) p += best.depth * (best.flicker ? R() * 2 - 1 : Math.sin(this.time * best.hz * TAU));
-      target = best.amt * (best.decay ? u : 1) * p;
+      target = best.amt * mul * (best.decay ? u : 1) * p;
       if (best !== s.cur) {
         s.cur = best;
         U.col.value.setRGB(best.col[0], best.col[1], best.col[2]);
@@ -306,7 +312,7 @@ export class ZFX {
       }
       // element statuses: flames licking the body, frost glints, plague bubbles
       if (s.fxT <= 0) {
-        if (s.st.burning || s.st.ghostfire) { s.fxT = 0.07 / Math.max(0.5, this.k); this._bodyFlame(z, !s.st.burning); }
+        if (s.st.burning || s.st.ghostfire || s.st.featherburn) { s.fxT = 0.07 / Math.max(0.5, this.k); this._bodyFlame(z, !s.st.burning && !s.st.featherburn); }
         else if (s.st.frozen) { s.fxT = 0.25; this._bodyPoint(z, _v); this.marks.add('glint', { x: _v.x, y: _v.y, z: _v.z, life: 0.35, size: 0.08, size1: 0.02, color: [1.6, 2.6, 3.4, 1], rot: R() * 6 }); }
         else if (z.purgeT > 0 || s.st.poisoned) { s.fxT = 0.35; this._bodyPoint(z, _v); this.marks.add('bubble', { x: _v.x, y: _v.y, z: _v.z, vy: 0.5, life: 0.8, size: 0.07, size1: 0.13, color: [0.6, 1.4, 0.2, 0.9] }); }
         else s.fxT = 0.2;

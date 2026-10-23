@@ -7,30 +7,38 @@
 //     antlers with a burr of knobs, relief scales over the crown, grooved cobalt flame locks over the nape, cloud-scroll
 //     cheek plates on the jaw hinge, cobalt gill fins; the lower jaw fx_jaw hinges open (3° a shot, 25° beam /
 //     ultimate) and carries a grooved lacquer tongue (rugae on the palate above)
-//   - receiver top = a roof ridge: 12 jade 筒瓦 tiles strapped with gilt clips on a porcelain ridge body whose
-//     flanks carry a raised gilt 回紋 meander, a 瓦當 end cap facing the shooter; the rear keeps a Picatinny section
-//     for the low-power holographic sight (gilt-framed hood, cloud-scroll side plates, cobalt top, knurled knobs)
+//   - receiver top = a roof ridge: a centre row of jade 筒瓦 over two rows of concave 板瓦, every tile lapping the one
+//     behind it (a stepped, shingled line) with gilt nail caps, a 瓦當 cap and 滴水 lips towards the shooter, on a
+//     porcelain ridge body whose flanks carry a raised gilt 回紋 meander; the rear keeps a Picatinny section for the
+//     望脊 ridge sight: no box -- a crouching porcelain ridge beast on a low mount and, ahead of it, a gilt lens ring
+//     (tinted glass, ice reticle) on cloud-scroll uprights under a cobalt eave
+//   - the whole head is sculpted at 1:1 and enlarged x1.22 (s, w) / x1.1 (t) about the collar: at the far end of the
+//     gun it read as a small white blob in first person; the barrel and compensator run on into the bigger mouth
 //   - handguard flanks = 開片 crackle-glazed fish scales, cobalt back fading to a white belly, each with a gilt rim:
 //     6 groups fx_scale1..6 (2 columns x 4 rows a side, both sides in one part) that flick 4° rear -> front;
 //     ice-cyan light shows through the seams (glow_ice bed in a gilt frame); ahead of them 海水江崖 plates (cobalt
 //     enamel wave bands in gilt walls, jade rock peaks, 立水 stripes)
-//   - hero focus: a Ø16 glass water tube along the lower right of the handguard (fx_tube: pv_core water, fx_flow:
-//     a bubble helix whose spin reads as the water circulating), knurled brass union nuts with screwed flats
+//   - hero focus: a Ø16 glass water tube along the lower LEFT of the handguard -- the flank the shooter sees from the
+//     hip (fx_tube: pv_core water, fx_flow: a bubble helix whose spin reads as the water circulating), knurled brass
+//     union nuts with screwed flats
 //   - the stock is the fish body (a swelled loft): a gilt-rimmed cobalt gill cover, four rows of relief scales
 //     tapering to the tail (cobalt -> white), a gilt lateral line with its pores, pectoral and pelvic fins, a 海水
 //     belly band, a cobalt dorsal comb with gilt rays, a cobalt spacer with a gilt wave; it ends in the upturned forked
 //     tail fx_tail (tapered, ribbed cobalt lobes with scalloped trailing edges, gilt edges and rays) that sways
 //   - receiver: gilt cloud-scroll filigree in beaded frames, gold-inlaid roll-marks, rear serrations, an open dust
-//     cover, a grooved carrier with its cam pin in the port; lower: gilt-edged panels, a cobalt enamel medallion
-//     (right) and a wave cartouche (left) on the magwell, the 九子 resonance lamp fx_resonance (§1.3)
-//   - transparent 40-round water-tank magazine: the round stack and the follower show above the water line
+//     cover, a grooved carrier with its cam pin in the port; lower: gilt-edged panels, panel seams, a roll-marked gilt
+//     name plate on four screws, a border of small cobalt relief scales, a cobalt enamel medallion (right) and a wave
+//     cartouche (left) on the magwell, the 九子 resonance lamp fx_resonance (§1.3)
+//   - transparent 40-round water-tank magazine: clear glass round the tube's own water (pv_core), a bright meniscus,
+//     bubbles, bevelled corner posts; the round stack and the follower show above the water line
+// Budget: ~208k triangles after the AO tessellation (was 236k), normals stored as bytes: ~5.7 MB (was 8.1 MB).
 // Materials 60 / 30 / 10: ice-white / cobalt / jade glaze (crackle via premium.pvKey) / dark steel, black chrome,
 // gold, chrome / glow (glow_ice seams, water, eyes).
 // Side view, mm: s forward from the rear face of the receiver, t up from the bore axis, w right.
 import * as THREE from 'three';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TessellateModifier } from 'three/addons/modifiers/TessellateModifier.js';
-import { Gun, V, makeShape, profile, plan, section, lathe, cyl, tube, box, sphere, sweep, cut, union, cutters, merge, xform } from '../lib/gunkit.mjs';
+import { Gun, V, makeShape, profile, plan, section, lathe, cyl, tube, box, sphere, cut, union, cutters, merge, xform } from '../lib/gunkit.mjs';
 import { bakeMeshes } from '../lib/bake.mjs';
 import { postBake } from './m4.mjs';
 
@@ -88,10 +96,22 @@ const gearPts = (cx, cy, ro, ri, n) => {
 };
 /** ring band round the bore axis (or a parallel axis at t, w): s0..s1, radii r0..r1, chamfer b */
 const washer = (s0, s1, r0, r1, b = 0.5, seg = 24, t = 0, w = 0) => lathe([[s0, r0 + b], [s0, r1 - b], [s0 + b, r1], [s1 - b, r1], [s1, r1 - b], [s1, r0 + b], [s1 - b, r0], [s0 + b, r0], [s0, r0 + b]], { seg, t, w });
-/** straight strip (inlay / wire / bead) from a to b ([s, t]) in the side plane at w: height h across, thickness d in w */
+/** straight strip (inlay / wire / bead) from a to b ([s, t]) in the side plane at w: height h across, thickness d in w
+ * (centred on w, the outer side = the sign of w; open underneath) */
 function strip(a, b, w, h, d) {
-  const ds = b[0] - a[0], dt = b[1] - a[1], L = Math.hypot(ds, dt);
-  return box([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, w], [L + h * 0.5, h, d], { r: 0, rot: [Math.atan2(dt, ds) / D2R, 0, 0] });
+  const ds = b[0] - a[0], dt = b[1] - a[1], L = Math.hypot(ds, dt) || 1, e = h / 4 / L, sd = Math.sign(w) || 1;
+  return band([[a[0] - ds * e, a[1] - dt * e], [b[0] + ds * e, b[1] + dt * e]], w - sd * d / 2, sd, h / 2, d);
+}
+/**
+ * Wire / bead tube along [s, t, w] points. Unlike the kit's sweep (creased at 70°: a 3-5 sided wire renders as a
+ * faceted prism and every face needs its own vertices) it keeps the tube's smooth radial normals: thin gilt wires
+ * read round and bright, at half the vertices.
+ */
+function sweep(points, r, { seg = 48, radial = 10, closed = false, tension = 0.5 } = {}) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => V(...p)), closed, 'catmullrom', tension);
+  const geo = new THREE.TubeGeometry(curve, seg, r, radial, closed);
+  geo.deleteAttribute('uv');
+  return geo.toNonIndexed();
 }
 /** side-plane points [s, t] -> sweep points at w */
 const atW = (pts, w) => pts.map(([s, t]) => [s, t, w]);
@@ -121,15 +141,14 @@ function cloudPts(cs, ct, k, f = 1) {
 }
 /** raised gilt 回紋 meander band along s (s0..s1) between t0 and t0 + h, side plane at w (sd = side) */
 function meander(s0, s1, t0, h, w, sd, unit = 9, wire = 0.6, proud = 0.55) {
-  const out = [], u = unit, ww = w + sd * proud / 2;
+  const out = [], u = unit, hw = wire / 2;
   const P = ([x, y]) => [x, t0 + y];
   const top = h - wire / 2, low = h * 0.2;
-  out.push(strip(P([s0, wire / 2]), P([s1, wire / 2]), ww, wire, proud));   // base line
-  out.push(strip(P([s0, top]), P([s1, top]), ww, wire, proud));             // top line
+  out.push(band([P([s0, wire / 2]), P([s1, wire / 2])], w, sd, hw, proud));   // base line
+  out.push(band([P([s0, top]), P([s1, top])], w, sd, hw, proud));             // top line
   for (let x = s0 + 1.5; x + u * 0.8 <= s1; x += u) {
-    // a square key spiral hanging from the top line
-    const k = [[x, top], [x, low], [x + u * 0.75, low], [x + u * 0.75, top - h * 0.28], [x + u * 0.28, top - h * 0.28], [x + u * 0.28, low + h * 0.42]];
-    for (let i = 1; i < k.length; i++) out.push(strip(P(k[i - 1]), P(k[i]), ww, wire, proud));
+    // a square key spiral hanging from the top line (one mitred band)
+    out.push(band([[x, top - hw], [x, low], [x + u * 0.75, low], [x + u * 0.75, top - h * 0.28], [x + u * 0.28, top - h * 0.28], [x + u * 0.28, low + h * 0.42]].map(P), w, sd, hw, proud));
   }
   return merge(out);
 }
@@ -144,16 +163,44 @@ function aimGeo(geo, a, b) {
 }
 
 /**
+ * Relief slab from a side-plane outline ([s, t], convex enough to fan from its centroid): a top face at cw + th/2
+ * (towards sd), a bevel band and a wall down to cw - th/2, no back cap (it always sits on a surface). 5 n triangles:
+ * the hundreds of scales cost two thirds of an extruded profile.
+ */
+function slab(pts, cw, sd, th, bevel) {
+  const n = pts.length, C = [pts.reduce((a, p) => a + p[0], 0) / n, pts.reduce((a, p) => a + p[1], 0) / n];
+  const Q = pts.map(([s, t]) => { const d = Math.hypot(C[0] - s, C[1] - t) || 1, k = Math.min(bevel, d * 0.45) / d; return [s + (C[0] - s) * k, t + (C[1] - t) * k]; });
+  const wt = cw + sd * th / 2, wm = wt - sd * Math.min(bevel * 0.8, th * 0.45), wb = cw - sd * th / 2, pos = [];
+  const tri = (a, b, c, out) => {
+    const n0 = vcross(vsub(b, a), vsub(c, a));
+    if (vdot(n0, out) < 0) [b, c] = [c, b];
+    for (const p of [a, b, c]) pos.push(p[2], p[1], -p[0]);
+  };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, o = [(pts[i][0] + pts[j][0]) / 2 - C[0], (pts[i][1] + pts[j][1]) / 2 - C[1], 0];
+    tri([C[0], C[1], wt], [...Q[i], wt], [...Q[j], wt], [0, 0, sd]);
+    tri([...Q[i], wt], [...Q[j], wt], [...pts[j], wm], vadd(o, [0, 0, sd]));
+    tri([...Q[i], wt], [...pts[j], wm], [...pts[i], wm], vadd(o, [0, 0, sd]));
+    tri([...pts[i], wm], [...pts[j], wm], [...pts[j], wb], o);
+    tri([...pts[i], wm], [...pts[j], wb], [...pts[i], wb], o);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return fin(geo, 50);
+}
+
+/**
  * Fish scale: free edge (a half circle, radius r) to the rear, straight front edge at s0 + len (round = a rounded
  * front instead, for the first scale of a row); thick th across w, centred on cw; the free edge stands proud by
  * `tilt` degrees about the front edge. rim: a gilt bead along the free edge.
  */
-function fishScale(s0, t0, r, len, cw, sd, { th = 2.2, tilt = 6, bevel = 0.8, rim = true, round = false } = {}) {
+function fishScale(s0, t0, r, len, cw, sd, { th = 2.2, tilt = 6, bevel = 0.8, rim = true, round = false, rimR = 0.4, beadSeg = 0 } = {}) {
   const front = round ? arcPts(0, 0, 1, -90, 90, 6).map(([a, b]) => [s0 + len * (0.55 + 0.45 * a), t0 + r * b]) : [[s0 + len, t0 - r], [s0 + len, t0 + r]];
-  const pts = [...front.map(([a, b]) => [a, b, 0]), ...arcPts(s0, t0, r, 90, 270, 5).map(([a, b]) => [a, b, 0])];
+  const na = r >= 4.5 ? 6 : 5;   // big scales get a rounder free edge
+  const pts = [...front, ...arcPts(s0, t0, r, 90, 270, na)];
   const pivot = [s0 + len, t0, cw];
-  const body = xform(PF(pts, { w: th, cw, bevel, bevelSeg: 1 }), { rot: [0, tilt * sd, 0], pivot });
-  const bead = rim ? xform(sweep(atW(arcPts(s0, t0, r - 0.75, 98, 262, 6), cw + sd * (th / 2 - 0.05)), 0.4, { seg: 4, radial: 3 }), { rot: [0, tilt * sd, 0], pivot }) : null;
+  const body = xform(slab(pts, cw, sd, th, bevel), { rot: [0, tilt * sd, 0], pivot });
+  const bead = rim ? xform(sweep(atW(arcPts(s0, t0, r - 0.35 - rimR, 98, 262, 6), cw + sd * (th / 2 - 0.05)), rimR, { seg: beadSeg || na, radial: 3 }), { rot: [0, tilt * sd, 0], pivot }) : null;
   return { body, bead };
 }
 
@@ -303,14 +350,14 @@ function sList(s0, s1, step, ends = [0, 0.35, 1, 2, 3]) {
 }
 
 /** Closed loft through rings of three-space points; fan caps; winding made outward (sides vs. ring centres, caps vs. ends). */
-function skin(rows, { capA = true, capB = true, crease = 50 } = {}) {
+function skin(rows, { capA = true, capB = true, crease = 50, open = false } = {}) {
   const n = rows[0].length, R = rows.length, pos = [];
   for (const r of rows) for (const p of r) pos.push(p.x, p.y, p.z);
   const cen = rows.map((r) => r.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / n));
   const P = (k) => new THREE.Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]);
   const nrm = (a, b, c) => { const A = P(a); return P(b).sub(A).cross(P(c).sub(A)); };
   const tris = [];
-  for (let i = 0; i + 1 < R; i++) for (let j = 0; j < n; j++) {
+  for (let i = 0; i + 1 < R; i++) for (let j = 0; j < (open ? n - 1 : n); j++) {
     const a = i * n + j, b = i * n + ((j + 1) % n), c = (i + 1) * n + j, d = (i + 1) * n + ((j + 1) % n);
     tris.push([a, c, b], [b, c, d]);
   }
@@ -341,6 +388,7 @@ function skin(rows, { capA = true, capB = true, crease = 50 } = {}) {
 // unit sections for ribbon(): x across, y up
 const SEC = {
   rect: [[-1, -1], [1, -1], [1, 1], [-1, 1]],                                   // flat cloisonné strip
+  u3: [[1, -1], [1, 1], [-1, 1], [-1, -1]],                                     // the same, open underneath (open: true)
   round6: Array.from({ length: 6 }, (_, i) => [Math.cos((i / 6) * Math.PI * 2), Math.sin((i / 6) * Math.PI * 2)]),
   lens: Array.from({ length: 10 }, (_, i) => [Math.cos((i / 10) * Math.PI * 2), Math.sin((i / 10) * Math.PI * 2)]),
   groove1: [[-1, 0], [-0.75, -0.7], [0, -0.9], [0.75, -0.7], [1, 0], [0.78, 0.66], [0.32, 0.95], [0, 0.45], [-0.32, 0.95], [-0.78, 0.66]],
@@ -350,7 +398,7 @@ const SEC = {
  * Sweep of a section along [s, t, w] points: wf(u) / hf(u) = half width / half height (mm); up = [s, t, w] or
  * (u) => [s, t, w]: the section's y axis leans towards it (a strip lying on a face: up = the face normal).
  */
-function ribbon(points, sec, { wf = () => 1, hf = () => 1, up = [0, 1, 0], seg = 24, tension = 0.5, crease = 40, capA = true, capB = true } = {}) {
+function ribbon(points, sec, { wf = () => 1, hf = () => 1, up = [0, 1, 0], seg = 24, tension = 0.5, crease = 40, capA = true, capB = true, open = false } = {}) {
   const curve = new THREE.CatmullRomCurve3(points.map((p) => V(...p)), false, 'catmullrom', tension);
   const rows = [], P = new THREE.Vector3(), T = new THREE.Vector3(), L = new THREE.Vector3(), U = new THREE.Vector3();
   for (let i = 0; i <= seg; i++) {
@@ -361,11 +409,42 @@ function ribbon(points, sec, { wf = () => 1, hf = () => 1, up = [0, 1, 0], seg =
     const w = Math.max(0.03, wf(u)), h = Math.max(0.03, hf(u));
     rows.push(sec.map(([x, y]) => P.clone().addScaledVector(L, x * w).addScaledVector(U, y * h)));
   }
-  return skin(rows, { crease, capA, capB });
+  return skin(rows, { crease, capA, capB, open });
 }
 /** flat gilt strip lying on the side plane at w (sd = side): pts [s, t], half width hw, half thickness hh */
 const flat = (pts, w, sd, hw = 0.32, hh = 0.22, seg) =>
-  ribbon(atW(pts, w + sd * hh), SEC.rect, { wf: () => hw, hf: () => hh, up: [0, 0, sd], seg: seg ?? Math.max(4, Math.round(plen(pts) / 1.3)) });
+  ribbon(atW(pts, w + sd * hh), SEC.u3, { wf: () => hw, hf: () => hh, up: [0, 0, sd], open: true, seg: seg ?? Math.max(4, Math.round(plen(pts) / 2.8)) });
+/**
+ * Mitred band along a side-plane polyline [s, t] (sharp corners: meander keys), lying on the plane w (sd = side):
+ * half width hw, height h; top and both walls, end caps, nothing underneath.
+ */
+function band(pts, w, sd, hw, h) {
+  const n = pts.length, L = [], R = [], pos = [];
+  const nrm = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [-(b[1] - a[1]) / d, (b[0] - a[0]) / d]; };
+  for (let i = 0; i < n; i++) {
+    const a = nrm(pts[Math.max(0, i - 1)], pts[Math.max(1, i)]), b = nrm(pts[Math.min(n - 2, i)], pts[Math.min(n - 1, i + 1)]);
+    const m = [a[0] + b[0], a[1] + b[1]], ml = Math.hypot(m[0], m[1]) || 1, k = hw / Math.max(0.35, (m[0] * a[0] + m[1] * a[1]) / ml);
+    L.push([pts[i][0] + (m[0] / ml) * k, pts[i][1] + (m[1] / ml) * k]); R.push([pts[i][0] - (m[0] / ml) * k, pts[i][1] - (m[1] / ml) * k]);
+  }
+  const wt = w + sd * h, q = (A, B, C, D, out) => {
+    for (const [a, b, c] of [[A, B, C], [A, C, D]]) {
+      const nn = vcross(vsub(b, a), vsub(c, a));
+      const [p1, p2] = vdot(nn, out) < 0 ? [c, b] : [b, c];
+      for (const p of [a, p1, p2]) pos.push(p[2], p[1], -p[0]);
+    }
+  };
+  for (let i = 0; i + 1 < n; i++) {
+    const d = [pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]], nl = nrm(pts[i], pts[i + 1]);
+    q([...L[i], wt], [...L[i + 1], wt], [...R[i + 1], wt], [...R[i], wt], [0, 0, sd]);
+    q([...L[i], w], [...L[i + 1], w], [...L[i + 1], wt], [...L[i], wt], [nl[0], nl[1], 0]);
+    q([...R[i], w], [...R[i + 1], w], [...R[i + 1], wt], [...R[i], wt], [-nl[0], -nl[1], 0]);
+    if (i === 0) q([...L[0], w], [...R[0], w], [...R[0], wt], [...L[0], wt], [-d[0], -d[1], 0]);
+    if (i === n - 2) q([...L[n - 1], w], [...R[n - 1], w], [...R[n - 1], wt], [...L[n - 1], wt], [d[0], d[1], 0]);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return fin(geo, 40);
+}
 
 /** geometry authored round the origin in side-plane terms (w = out of the surface) placed at P with normal N, +s along T */
 function placeOn(geo, P, N, T) {
@@ -393,6 +472,12 @@ function insidePoly(poly, s, t, m = 0) {
   }
   return inside && d >= m;
 }
+/** point in polygon ([s, t]) or within m of its edges */
+function nearPoly(poly, s, t, m) {
+  if (insidePoly(poly, s, t)) return true;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) if (segDist(s, t, 0, [poly[i][0], poly[i][1], 0], [poly[j][0], poly[j][1], 0]) < m) return true;
+  return false;
+}
 /** checkering: 4-sided pyramids {c, n, a, b, h} (base diamond c ± a, c ± b, apex c + n h), all gun-space arrays */
 function pyramids(list) {
   const pos = [];
@@ -414,7 +499,7 @@ function pyramids(list) {
  * Pre-bake (metres, non-indexed): coplanar, vertex-connected triangle groups at least `width` wide (true flat faces
  * of the extrusions) get their exact face normal. The kit creases at 38°, so a flat face bordering a 3-step bevel
  * inherits the bevel's tilted normals and smears them across its long earcut triangles (the streaks and wedges on
- * the porcelain flanks). Lofted surfaces never form groups that wide. mergeVertices in the bake keeps the copies.
+ * the porcelain flanks). Curved (lofted) groups are left smooth. mergeVertices in the bake keeps the copies.
  */
 function flattenFaces(geo, { width = 0.004, cos = 0.9995 } = {}) {
   const Pa = geo.attributes.position, Na = geo.attributes.normal;
@@ -462,11 +547,26 @@ function flattenFaces(geo, { width = 0.004, cos = 0.9995 } = {}) {
     m.A += a; m.x += a * gx; m.y += a * gy;
     m.xx += a * (gx * gx + cxx / 12); m.yy += a * (gy * gy + cyy / 12); m.xy += a * (gx * gy + cxy / 12);
   }
+  // a chain of nearly coplanar neighbours can wander round a gentle loft curve (the cheeks under the eye): only a group
+  // whose every triangle agrees with its mean normal is a true flat face, else it would be flat-shaded into facets
+  const mean = new Map(), spread = new Map();
+  for (let t = 0; t < nt; t++) {
+    if (!ar[t]) continue;
+    const r = find(t), m = mean.get(r) || [0, 0, 0];
+    m[0] += fn[t * 3] * ar[t]; m[1] += fn[t * 3 + 1] * ar[t]; m[2] += fn[t * 3 + 2] * ar[t];
+    mean.set(r, m);
+  }
+  for (const [r, m] of mean) mean.set(r, vnorm(m));
+  for (let t = 0; t < nt; t++) {
+    if (!ar[t]) continue;
+    const r = find(t), m = mean.get(r), d = fn[t * 3] * m[0] + fn[t * 3 + 1] * m[1] + fn[t * 3 + 2] * m[2];
+    spread.set(r, Math.min(spread.get(r) ?? 1, d));
+  }
   const isFace = new Map();
   for (const [r, m] of M) {
     const X = m.x / m.A, Y = m.y / m.A, sxx = m.xx / m.A - X * X, syy = m.yy / m.A - Y * Y, sxy = m.xy / m.A - X * Y;
     const lmin = (sxx + syy) / 2 - Math.sqrt(((sxx - syy) / 2) ** 2 + sxy * sxy);
-    isFace.set(r, Math.sqrt(Math.max(0, 12 * lmin)) >= width);
+    isFace.set(r, Math.sqrt(Math.max(0, 12 * lmin)) >= width && spread.get(r) > 0.9998);
   }
   for (let t = 0; t < nt; t++) if (ar[t] > 0 && isFace.get(find(t))) for (let k = 0; k < 3; k++) Na.setXYZ(t * 3 + k, fn[t * 3], fn[t * 3 + 1], fn[t * 3 + 2]);
   Na.needsUpdate = true;
@@ -510,9 +610,10 @@ function sliceS(geo, step) {
 /** glass, water, glow and the eyes need no AO detail: left untessellated */
 const NO_TESS = /:(glass|glass_clear|glow_ice|lens|crystal)$/;
 /** wear per mesh 'part:mat' / '*:mat' for m4's postBake: [curvature (1/m) for full wear, cap]. Glaze chips only on
- * true edges (bevels under ~1 mm) and never past 0.45, so the biscuit shows as a rim, not as grey smudges. */
+ * true edges (bevels under ~0.7 mm) and never past 0.42, so the biscuit shows as a rim, not as grey smudges on the
+ * sculpted ridges of the head (radius 3+ mm: < 0.25). */
 const WEAR = {
-  '*:porcelain': [1 / 900, 0.45], '*:glaze_cobalt': [1 / 900, 0.45], '*:glaze_jade': [1 / 900, 0.45], '*:lacquer_red': [1 / 900, 0.4],
+  '*:porcelain': [1 / 1400, 0.42], '*:glaze_cobalt': [1 / 1400, 0.42], '*:glaze_jade': [1 / 1400, 0.42], '*:lacquer_red': [1 / 1400, 0.4],
   '*:gold': [1 / 700, 0.55], '*:brass': [1 / 600, 0.6], '*:copper': [1 / 600, 0.6], '*:steel_dark': [1 / 1000, 0.6], '*:steel': [1 / 800, 0.7],
   '*:steel_bright': [1 / 500, 0.8], '*:black_chrome': [1 / 1000, 0.5], '*:chrome': [0, 0], '*:polymer_grip': [1 / 450, 0.6], '*:rubber': [1 / 450, 0.5],
   '*:crystal': [0, 0], '*:glow_ice': [0, 0], '*:glass': [0, 0], '*:glass_clear': [0, 0], '*:lens': [0, 0],
@@ -523,10 +624,14 @@ const WEAR = {
 export default function build() {
   const g = new Gun('chiwen');
   const RAIL_T = 24;
-  const AIM = 62;                  // holo window centre
-  const MUZZLE = 696;              // the mouth
+  const AIM = 65;                  // ridge sight lens centre (clears the enlarged head's antlers, t <= 61)
+  // the 螭吻 head is sculpted at 1:1 below and then enlarged about the collar (HK: s / w, t): it is the far end of the
+  // gun in first person and read as a small white blob at 1:1
+  const HK = [545, 1.22, 1.1], hs = (s) => HK[0] + (s - HK[0]) * HK[1];
+  const MUZZLE = hs(708) - 6;      // the mouth
   const HG0 = 240, HG1 = 542;      // handguard
-  const TT = -24.5, TW = 18.6;     // water tube axis (lower right of the handguard)
+  // water tube axis: lower LEFT of the handguard, the flank the shooter sees from the hip (TSD = side)
+  const TSD = -1, TT = -24.5, TW = 18.6 * TSD;
   const TS0 = 250, TS1 = 534;      // water tube ends (fittings outside)
   const ROOF = 9.6, FLOOR = -9.6;  // the mouth: roof of the upper jaw, floor of the lower
 
@@ -558,7 +663,7 @@ export default function build() {
     const n = 3, span = (s1 - s0) / n;
     for (let i = 0; i < n; i++) {
       const f = i % 2 ? -1 : 1, cs = s0 + 5 + i * span + (f < 0 ? 15 : 0);
-      wires.push(flat(cloudPts(cs, -3.6 + (i % 2) * 2.2, 4.6, f), w, sd, 0.3, 0.2, 34));
+      wires.push(flat(cloudPts(cs, -3.6 + (i % 2) * 2.2, 4.6, f), w, sd, 0.3, 0.2, 27));
     }
     // a running tendril linking the clouds along the top of the panel
     const ten = [];
@@ -614,9 +719,8 @@ export default function build() {
   bolt.add(lax([[0, 6.2], [0, 6.6], [0.6, 6.6], [0.6, 6.2]], [214.8, 6, -29.6], '-w', 16), 'gold');
   {
     // carrier: sand-cut grooves, the cam pin and a keyed gas block seen through the port
-    let car = lathe([[96, 0], [96, 11.2], [97, 12], [202, 12], [203, 11.2], [203, 0]], { seg: 24 });
-    car = cut(car, [merge([0, 1, 2, 3].map((k) => washer(124 + k * 3.4, 125.4 + k * 3.4, 11.1, 13, 0.2, 24)))]);
-    bolt.add(car, 'steel_bright');
+    const gr = [0, 1, 2, 3].flatMap((k) => { const a = 124 + k * 3.4; return [[a, 12], [a + 0.2, 11.1], [a + 1.2, 11.1], [a + 1.4, 12]]; });
+    bolt.add(lathe([[96, 0], [96, 11.2], [97, 12], ...gr, [202, 12], [203, 11.2], [203, 0]], { seg: 24 }), 'steel_bright');
     bolt.add(cut(box([158, 6, 10], [44, 5, 6], { r: 1 }), [cutters.box([158, 6, 10], [40, 1.2, 8])]), 'steel_bright');
     bolt.add(lax([[0, 0], [0, 2.6], [2.2, 2.6], [2.9, 1.9], [2.9, 0]], [168, -1.5, 10.6], 'w', 14), 'steel');
     for (const s0 of [142, 174]) bolt.add(capScrew([s0, 8.6, 10], 1.2, 't', 0.5, 6), 'steel_dark');
@@ -638,7 +742,7 @@ export default function build() {
     const ring = [];
     for (let i = 0; i <= 40; i++) { const sh = makeShape(pn).getPoint(i / 40); ring.push([sh.x, sh.y]); }
     const gl = [flat(ring, w, sd, 0.36, 0.22, 40)];
-    gl.push(flat(cloudPts(58, -23.6, 2.5, 1), w, sd, 0.26, 0.18, 24), flat(cloudPts(95, -23.6, 2.5, -1), w, sd, 0.26, 0.18, 24));
+    gl.push(flat(cloudPts(58, -23.6, 2.5, 1), w, sd, 0.26, 0.18, 19), flat(cloudPts(95, -23.6, 2.5, -1), w, sd, 0.26, 0.18, 19));
     const vine = [];
     for (let s = 66; s <= 86; s += 2) vine.push([s, -21.3 + Math.sin((s - 66) * 0.32) * 1.4]);
     gl.push(flat(vine, w, sd, 0.24, 0.18));
@@ -673,6 +777,23 @@ export default function build() {
     }
     rel.push(dome([166, -39.4, W0 - 1.35], 1.4, '-w', 0.9, 10));
     g.add(merge(rel), 'gold');
+  }
+  // relief on the plain rear of the lower flanks: panel seams, a gilt name plate on four screws (roll-marked), a raised
+  // border of small cobalt scales along the bottom edge, more pins
+  for (const sd of [1, -1]) {
+    const w = 14 * sd;
+    g.add(merge([box([44.6, -28.2, w + sd * 0.05], [0.5, 31.4, 0.3], { r: 0, seg: 1 }), box([16, -28.2, w + sd * 0.05], [56, 0.5, 0.3], { r: 0, seg: 1 })]), 'black_chrome');
+    g.add(PF([[-6, -29.4, 1.2], [26, -29.4, 1.2], [26, -38.6, 1.2], [-6, -38.6, 1.2]], { w: 0.9, cw: w + sd * 0.45, bevel: 0.3, bevelSeg: 1 }), 'gold');
+    g.add(merge([[-4.2, -31.2], [24.2, -31.2], [-4.2, -36.8], [24.2, -36.8]].map(([a0, b0]) => dome([a0, b0, w + sd * 0.9], 0.6, sideAx(sd), 0.45, 6))), 'steel_bright');
+    g.add(stamp(sd > 0 ? 'M07 TIDE' : 'TIDEWARDEN', [sd > 0 ? -1.8 : 21.8, -32.8, w + sd * 0.9], { px: 0.5, side: sd > 0 ? 1 : -1, proud: 0.12, sink: 0.25 }), 'black_chrome');
+    const body = [], bead = [];
+    for (const [a0, b0] of [[-6, 46], [78, 112]]) for (let s0 = a0; s0 + 3.6 <= b0; s0 += 4.6) {
+      const sc = fishScale(s0, -41.6, 2.1, 3.4, w + sd * 0.5, sd, { th: 1.0, tilt: 4, bevel: 0.3, rimR: 0.3 });
+      body.push(sc.body); bead.push(sc.bead);
+    }
+    g.add(merge(body), 'glaze_cobalt');
+    g.add(merge(bead), 'gold');
+    for (const [s0, t0] of [[34, -38], [-4, -24], [112, -36]]) g.add(rollPin([s0, t0, w], 1.2, sideAx(sd), 0.4), 'steel');
   }
   // trigger guard
   g.add(PF([[116, -44.4, 0.5], [116, -50, 3], [108, -64, 9], [66, -65, 9], [58, -60, 4], [55, -54, 1.5], [56, -46, 1.5],
@@ -717,15 +838,16 @@ export default function build() {
     const pyr = [];
     const field = (a, b, cols) => {
       const seg = out.slice(Math.min(a, b), Math.max(a, b) + 1), L = plen(seg);
-      for (let x = 2.4, row = 0; x < L - 2.4; x += 2.2, row++) {
+      // a closed diamond lattice (rows half a diagonal apart, alternate rows offset): the faces meet, no flat between
+      for (let x = 2.4, row = 0; x < L - 2.4; x += 1.4, row++) {
         let acc = 0, i = 1;
         while (i < seg.length - 1 && acc + Math.hypot(seg[i][0] - seg[i - 1][0], seg[i][1] - seg[i - 1][1]) < x) { acc += Math.hypot(seg[i][0] - seg[i - 1][0], seg[i][1] - seg[i - 1][1]); i++; }
         const A = seg[i - 1], B = seg[i], l = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, f = Math.min(1, (x - acc) / l);
         const p = [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f], tg = [(B[0] - A[0]) / l, (B[1] - A[1]) / l];
         let n = [tg[1], -tg[0]];
         if (!insidePoly(out, p[0] - n[0] * 1.5, p[1] - n[1] * 1.5)) n = [-n[0], -n[1]];   // outward
-        for (let wv = -cols + (row % 2) * 1.1; wv <= cols + 0.01; wv += 2.2) {
-          pyr.push({ c: [p[0] - n[0] * 0.12, p[1] - n[1] * 0.12, wv], n: [n[0], n[1], 0], a: [tg[0] * 1.05, tg[1] * 1.05, 0], b: [0, 0, 1.05], h: 0.7 });
+        for (let wv = -cols + (row % 2) * 1.4; wv <= cols + 0.01; wv += 2.8) {
+          pyr.push({ c: [p[0] - n[0] * 0.12, p[1] - n[1] * 0.12, wv], n: [n[0], n[1], 0], a: [tg[0] * 1.4, tg[1] * 1.4, 0], b: [0, 0, 1.4], h: 0.8 });
         }
       }
     };
@@ -743,18 +865,20 @@ export default function build() {
       const cs = 4 + GS, ct = -84 + GT, dx = cs - s, dy = ct - t, l = Math.hypot(dx, dy) || 1;
       return [s + dx / l * 1.3, t + dy / l * 1.3];
     }), 16.85 * sd), 0.45, { seg: 60, radial: 4, closed: false, tension: 0.2 }), 'gold');
+    // overlapping field (pitch 7 < span 8.7 along a row, rows 5.4 apart < 2r), odd rows half a pitch on; the front scale
+    // of each row is rounded so no straight cut shows
     const poly = sc.map(([s, t]) => [s, t]), body = { glaze_cobalt: [], porcelain: [] }, bead = [];
-    for (let r = 0; r < 6; r++) {
+    for (let r = 0; r < 12; r++) {
       const row = [];
-      for (let c = -1; c < 7; c++) {
+      for (let c = -4; c < 9; c++) {
         // columns lean with the grip's rake (the panel edges run ~0.33 mm forward per mm up)
-        const t0 = -61 + GT - r * 8.4, s0 = -19 + GS + c * 8.6 + (r % 2) * 4.3 + 0.33 * (t0 + 61 - GT);
-        if (insidePoly(poly, s0 - 4.2, t0, 1.5) && insidePoly(poly, s0 + 6.2, t0, 1.5) && insidePoly(poly, s0, t0 + 4.2, 1.3) && insidePoly(poly, s0, t0 - 4.2, 1.3)) row.push([s0, t0]);
+        const t0 = -58.6 + GT - r * 5.4, s0 = -22 + GS + c * 7 + (r % 2) * 3.5 + 0.33 * (t0 + 58.6 - GT);
+        if (insidePoly(poly, s0 - 3.5, t0, 1.7) && insidePoly(poly, s0 + 5.2, t0, 1.7) && insidePoly(poly, s0 + 1, t0 + 3.4, 1.5) && insidePoly(poly, s0 + 1, t0 - 3.4, 1.5)) row.push([s0, t0]);
       }
       row.forEach(([s0, t0], i) => {
         const front = i === row.length - 1;
-        const { body: b, bead: bd } = fishScale(s0, t0, 4.2, 6.2, 16.8 * sd + sd * 0.6, sd, { th: 1.2, tilt: 3, bevel: 0.4, round: front });
-        body[r < 2 || (r === 2 && i % 2 === 0) ? 'glaze_cobalt' : 'porcelain'].push(b); bead.push(bd);
+        const { body: b, bead: bd } = fishScale(s0, t0, 3.5, 5.2, 16.8 * sd + sd * 0.6, sd, { th: 1.2, tilt: 3, bevel: 0.4, round: front });
+        body[r < 3 || (r === 3 && i % 2 === 0) ? 'glaze_cobalt' : 'porcelain'].push(b); bead.push(bd);
       });
     }
     for (const [m, l] of Object.entries(body)) if (l.length) g.add(merge(l), m);
@@ -775,7 +899,7 @@ export default function build() {
     for (let s = SB0; s <= SB1 + 0.01; s += 12) { const tp = stTop(s), bt = stBot(s); st.push([s, stA(s), tp, bt + (tp - bt) * 0.58, bt, 2.8, 2.4]); }
     return new Body(st, { scale: (s) => { const d = Math.min(s - SB0, SB1 - s); return d >= 3 ? 1 : 0.9 + 0.1 * Math.sqrt(Math.max(0, d) / 3); } });
   })();
-  g.add(skin(STK.rings(sList(SB0, SB1, 4.5), 56), { crease: 60 }), 'porcelain');
+  g.add(skin(STK.rings(sList(SB0, SB1, 7.5), 40), { crease: 60 }), 'porcelain');
   // side-plane features are authored at w = ±16 and bent onto the swelled flank
   const onS = (s, t, off, sd) => [s, t, sd * (STK.hw(s, t) + off)];
   const toStock = (geo, tess = 0) => warp(geo, (s, t, w) => [s, t, Math.sign(w) * (STK.hw(s, t) + Math.abs(w) - 16)], { tess });
@@ -790,6 +914,13 @@ export default function build() {
       rays.push(sweep([[s + 5, t - 1.9, -7.4], [s + 1, t - 0.5, -4.4], [s - 1, t, 0], [s + 1, t - 0.5, 4.4], [s + 5, t - 1.9, 7.4]], 0.38, { seg: 10, radial: 4 }));
     }
     g.add(merge(rays), 'gold');
+    // pectoral fin behind the grip and a pelvic fin further back: [outline [s, t, r], ray root, leading edge]
+    const FINS = [
+      [[[-17, -23.8, 2], [-36, -26, 8], [-56, -30, 6], [-74, -36.5, 1], [-67, -37.4, 2], [-61, -36, 3], [-55, -38.6, 1], [-49, -36.8, 3], [-43, -37.6, 1], [-36, -35, 3], [-28, -34.6, 1], [-18, -31, 3]],
+        [-19, -27.6], [[-17, -23.8], [-36, -26], [-56, -30], [-73, -36.3]]],
+      [[[-146, -25, 2], [-160, -26.4, 6], [-176, -30, 5], [-192, -35.8, 1], [-185, -36.6, 2], [-180, -35.6, 3], [-175, -38.2, 1], [-169, -36.4, 3], [-163, -38.4, 1], [-156, -35.6, 3], [-147, -32, 3]],
+        [-148, -28.4], [[-146, -25], [-160, -26.4], [-176, -30], [-191, -35.6]]],
+    ];
     const rad = (s) => 4.6 + 1.6 * Math.min(1, Math.max(0, (s + 250) / 200));
     const rimS = (t) => -14 - 29 * Math.sqrt(Math.max(0, 1 - ((t + 7.5) / 20.5) ** 2));   // gill cover rim at height t
     const rowT = (r, s) => stTop(s) - 1.25 * rad(s) - r * 1.45 * rad(s);
@@ -808,7 +939,7 @@ export default function build() {
         let s0 = rimS(rowT(r, -36)) - 1.55 * rad(-36) + 1.6, c = 0;
         while (s0 - rad(s0) > -294) {
           const R = rad(s0), t0 = rowT(r, s0);
-          const sc = fishScale(s0, t0, R, 1.55 * R, sd * (16 + 0.75 + r * 0.12), sd, { th: 2.0, tilt: 5, bevel: 0.6 });
+          const sc = fishScale(s0, t0, R, 1.55 * R, sd * (16 + 0.75 + r * 0.12), sd, { th: 2.0, tilt: 5, bevel: 0.6, beadSeg: 4 });
           body[r < 2 || (r === 2 && c % 2 === 0) ? 'glaze_cobalt' : 'porcelain'].push(sc.body); bead.push(sc.bead);
           s0 -= 2.1 * R * (c === 0 && r % 2 ? 0.5 : 1);
           c++;
@@ -820,7 +951,7 @@ export default function build() {
       // light runs along them (pv_energy vein), with a full meter they burn -- the ready state reads in the corner
       const lat = [];
       for (let s = -36; s >= -292; s -= 8) lat.push(onS(s, latT(s), 0.2, sd));
-      g.add(sweep(lat, 0.5, { seg: 64, radial: 5 }), 'gold');
+      g.add(sweep(lat, 0.5, { seg: 56, radial: 4 }), 'gold');
       const pores = [], collars = [];
       for (let s = -44, i = 0; s >= -286; s -= 12, i++) {
         const f = STK.frameAt(s, latT(s) - 2.9 - (i % 2) * 0.6, sd), P = vadd(f.P, f.N, -0.15), Q = vadd(P, f.N);
@@ -829,17 +960,31 @@ export default function build() {
       }
       g.add(merge(collars), 'gold');
       g.add(merge(pores), 'glow_ice');
+      // belly: smaller white scales with cobalt painted rims (青花) under the pores down to the 海水 band, clear of the
+      // fins and the sling socket (the butt half of the body, where the band drops away)
+      for (let rb = 0; rb < 5; rb++) {
+        const body = [], rim = [];
+        let s0 = -150 - rb * 9, run = 0;   // the rows start further back as they go down (a diagonal front)
+        while (s0 > -292) {
+          const R = 0.78 * rad(s0), L = 1.55 * R, t0 = latT(s0) - 5.4 - R - rb * 1.45 * R;
+          const ok = t0 - R > stBot(s0 - R) + 21.5 && t0 - R > stBot(s0 + L) + 21.5 && Math.hypot(s0 - -284, t0 - -31) > 9 + R
+            && !FINS.some(([f]) => [[s0 - R, t0], [s0 + L, t0 + R], [s0 + L, t0 - R], [s0, t0 + R], [s0, t0 - R]].some(([a, b]) => nearPoly(f, a, b, 1.8)));
+          // the first scale of a run (behind the fin, or where the band drops away) gets a rounded front
+          if (ok) {
+            const sc = fishScale(s0, t0, R, L, sd * (16 + 0.5), sd, { th: 1.3, tilt: 3, bevel: 0.45, rimR: 0.55, round: run === 0, beadSeg: 3 });
+            body.push(sc.body); rim.push(sc.bead);
+          }
+          run = ok ? run + 1 : 0;
+          s0 -= 2.1 * R;
+        }
+        if (body.length) { g.add(toStock(merge(body)), 'porcelain'); g.add(toStock(merge(rim)), 'glaze_cobalt'); }
+      }
       // pectoral fin behind the grip and a pelvic fin further back: cobalt, scalloped trailing edge, gilt rays + edge
-      for (const [fin0, root, lead] of [
-        [[[-17, -23.8, 2], [-36, -26, 8], [-56, -30, 6], [-74, -36.5, 1], [-67, -37.4, 2], [-61, -36, 3], [-55, -38.6, 1], [-49, -36.8, 3], [-43, -37.6, 1], [-36, -35, 3], [-28, -34.6, 1], [-18, -31, 3]],
-          [-19, -27.6], [[-17, -23.8], [-36, -26], [-56, -30], [-73, -36.3]]],
-        [[[-146, -25, 2], [-160, -26.4, 6], [-176, -30, 5], [-192, -35.8, 1], [-185, -36.6, 2], [-180, -35.6, 3], [-175, -38.2, 1], [-169, -36.4, 3], [-163, -38.4, 1], [-156, -35.6, 3], [-147, -32, 3]],
-          [-148, -28.4], [[-146, -25], [-160, -26.4], [-176, -30], [-191, -35.6]]],
-      ]) {
+      for (const [fin0, root, lead] of FINS) {
         g.add(toStock(PF(fin0, { w: 1.4, cw: sd * 16.5, bevel: 0.45, bevelSeg: 1, curveSeg: 2 }), 8), 'glaze_cobalt');
         const tips = fin0.filter((p, i) => i >= 3 && p[2] === 1);
-        const fr = tips.map(([s, t]) => { const d = Math.hypot(s - root[0], t - root[1]); return sweep([onS(root[0], root[1], 1.3, sd), onS(root[0] + (s - root[0]) * 0.5, root[1] + (t - root[1]) * 0.5 + 0.4, 1.35, sd), onS(root[0] + (s - root[0]) * (1 - 2 / d), root[1] + (t - root[1]) * (1 - 2 / d), 1.3, sd)], 0.36, { seg: 8, radial: 4 }); });
-        fr.push(sweep(lead.map(([s, t]) => onS(s, t - 0.4, 1.0, sd)), 0.5, { seg: 24, radial: 5 }));
+        const fr = tips.map(([s, t]) => { const d = Math.hypot(s - root[0], t - root[1]); return sweep([onS(root[0], root[1], 1.3, sd), onS(root[0] + (s - root[0]) * 0.5, root[1] + (t - root[1]) * 0.5 + 0.4, 1.35, sd), onS(root[0] + (s - root[0]) * (1 - 2 / d), root[1] + (t - root[1]) * (1 - 2 / d), 1.3, sd)], 0.36, { seg: 6, radial: 4 }); });
+        fr.push(sweep(lead.map(([s, t]) => onS(s, t - 0.4, 1.0, sd)), 0.5, { seg: 20, radial: 4 }));
         g.add(merge(fr), 'gold');
       }
       // 海水紋 belly band: cobalt sea-wave relief along the bottom of the body, scalloped crests with a gilt edge
@@ -850,10 +995,10 @@ export default function build() {
           top.push([s0, stBot(s0) + 16.5 + 3.6 * Math.abs(Math.sin((-s0 - 84) / 19 * Math.PI)) ** 0.6]);
         }
         g.add(toStock(PF([...bot.map(([a, b]) => [a, b, 0]), ...top.slice().reverse().map(([a, b]) => [a, b, 0])], { w: 1.3, cw: sd * 16.45, bevel: 0.45, bevelSeg: 1, curveSeg: 1 }), 12), 'glaze_cobalt');
-        g.add(sweep(top.map(([a, b]) => onS(a, b + 0.2, 1.1, sd)), 0.42, { seg: 90, radial: 4 }), 'gold');
+        g.add(sweep(top.map(([a, b]) => onS(a, b + 0.2, 1.1, sd)), 0.42, { seg: 64, radial: 4 }), 'gold');
         // foam curls on every other crest
         const curls = [];
-        for (let i = 0; i < 6; i++) { const cs = -84 - 19 * (2 * i + 1) + 4; if (cs < -285) break; curls.push(toStock(flat(spiral(cs, stBot(cs) + 13.6, 2.6, 0.7, 120, -200, 12), 16 * sd + sd * 1.25, sd, 0.3, 0.2, 16))); }
+        for (let i = 0; i < 6; i++) { const cs = -84 - 19 * (2 * i + 1) + 4; if (cs < -285) break; curls.push(toStock(flat(spiral(cs, stBot(cs) + 13.6, 2.6, 0.7, 120, -200, 12), 16 * sd + sd * 1.25, sd, 0.3, 0.2, 11))); }
         g.add(merge(curls), 'gold');
       }
       // sling socket
@@ -901,7 +1046,7 @@ export default function build() {
         const rib = 0.74 + 0.26 * Math.cos(Math.min(1, near / (gap / 2)) * Math.PI / 2) ** 2;
         return (2.5 + 3.5 * Math.max(0, 1 - d / 95)) * (d < 18 ? 1 : rib);
       };
-      const geo = warp(PF(outline, { w: 4, bevel: 1.3, bevelSeg: 2, curveSeg: 3 }), (s, t, w) => [s, t, w / 2 * thick(s, t) / 2], { tess: 7 });
+      const geo = warp(PF(outline, { w: 4, bevel: 1.3, bevelSeg: 2, curveSeg: 3 }), (s, t, w) => [s, t, w / 2 * thick(s, t) / 2], { tess: 11 });
       const rays = [];
       for (const sd of [1, -1]) {
         ends.forEach((e, i) => {
@@ -941,6 +1086,15 @@ export default function build() {
     for (const a of [430, 478]) hc.push(slotCut(a, a + 30, -6, 6.4, 8, -19));   // M-LOK, left front
     g.add(cut(hg, merge(hc)), 'steel_dark');
   }
+  // handguard shoulders (the black chamfers between the ridge and the scale panels, seen from the shooter): a gilt
+  // inlay line and a row of rivets under the ridge straps
+  for (const sd of [1, -1]) {
+    const n = [0, 0.814, 0.581 * sd], at = (s, o = 0) => [s, 17.5 + 0.814 * o, (16.5 + 0.581 * o) * sd];
+    g.add(ribbon([at(HG0 + 7, 0.1), at(HG1 - 7, 0.1)], SEC.u3, { wf: () => 0.38, hf: () => 0.13, up: n, open: true, seg: 2 }), 'gold');
+    const rv = [];
+    for (let i = 3; i < 12; i++) { const s = 150 + i * 32.6 - 0.6; if (s > HG0 + 8 && s < HG1 - 8) rv.push(aimGeo(lathe([[0, 0], [0, 1.35], [0.45, 1.2], [0.75, 0.6], [0.85, 0]], { seg: 8 }), at(s - 4, -0.1), at(s - 4, 1))); }
+    g.add(merge(rv), 'steel_bright');
+  }
   // gilt + chrome end rings
   g.add(washer(HG0 - 1, HG0 + 3, 16, 25, 0.5, 28), 'chrome');
   g.add(washer(HG1 - 2, HG1 + 2, 16, 25.4, 0.5, 28), 'chrome');
@@ -953,11 +1107,20 @@ export default function build() {
     g.add(box([333, 15.8, 19.5 * sd], [172, 1.6, 1.4], { r: 0.4, seg: 1 }), 'gold');
     g.add(box([333, -15.3, 19.5 * sd], [172, 1.6, 1.4], { r: 0.4, seg: 1 }), 'gold');
     g.add(box([250.6, 0.25, 19.6 * sd], [7.6, 32.6, 1.6], { r: 0.6, seg: 1 }), 'gold');
-    g.add(box([412.1, 0.25, 20.4 * sd], [14.2, 32.6, 2.4], { r: 0.7, seg: 1 }), 'gold');   // wide front post: caps the scale ends
+    // wide front post standing as proud as the scales: the last scales tuck under it, no cut end shows
+    g.add(PF([[401.4, -16.05, 1.2], [419.8, -16.05, 1.2], [419.8, 16.55, 1.2], [401.4, 16.55, 1.2]], { w: 4.6, cw: 21.5 * sd, bevel: 0.7, bevelSeg: 2 }), 'gold');
+    {
+      // its face: a cobalt enamel inset in a raised gilt frame, a gilt cloud scroll between each pair of screws
+      const fr = [[403.2, -14.3], [418, -14.3], [418, 14.8], [403.2, 14.8]], dec = [];
+      g.add(PF(fr.map(([a, b]) => [a, b, 0.8]), { w: 0.5, cw: 24.05 * sd, bevel: 0.15, bevelSeg: 1, curveSeg: 1 }), 'glaze_cobalt');
+      for (let i = 0; i < 4; i++) dec.push(strip(fr[i], fr[(i + 1) % 4], 24.1 * sd, 0.7, 0.6));
+      dec.push(flat(cloudPts(408.2, 4.4, 1.8, 1), 24.3 * sd, sd, 0.3, 0.2, 26), flat(cloudPts(414.6, -6.2, 1.8, -1), 24.3 * sd, sd, 0.3, 0.2, 26));
+      g.add(merge(dec), 'gold');
+    }
     const beads = [];
-    for (let s = 252; s <= 414; s += 10) { beads.push(dome([s, 15.8, 20.2 * sd], 0.55, sideAx(sd), 0.5, 5)); beads.push(dome([s + 3, -15.3, 20.2 * sd], 0.55, sideAx(sd), 0.5, 5)); }
+    for (let s = 252; s <= 414; s += 10) { beads.push(dome([s, 15.8, 20.2 * sd], 0.55, sideAx(sd), 0.5, 4)); beads.push(dome([s + 3, -15.3, 20.2 * sd], 0.55, sideAx(sd), 0.5, 4)); }
     g.add(merge(beads), 'gold');
-    for (const [s, w] of [[250.6, 20.3], [412.1, 21.5]]) for (const t of [11.5, -11, 0.25]) if (s > 300 || t !== 0.25) g.add(capScrew([s, t, w * sd], 1.1, sideAx(sd), 0.5, 6), 'steel_bright');
+    for (const [s, w] of [[250.6, 20.3], [411.6, 24.25]]) for (const t of [11.5, -11, 0.25]) if (s > 300 || t !== 0.25) g.add(capScrew([s, t, w * sd], 1.1, sideAx(sd), 0.5, 6), 'steel_bright');
   }
   for (let k = 0; k < 6; k++) {
     const front = SC0 + (2 * k + 1) * SP + 7;
@@ -966,7 +1129,7 @@ export default function build() {
     for (let c = 2 * k; c < 2 * k + 2; c++) {
       ROWS.forEach((t0, r) => {
         const s0 = SC0 + c * SP + (r % 2) * (SP / 2);
-        if (s0 + 9.4 > 417) return;   // the last scales end under the front post
+        if (s0 - 5.6 > 401) return;   // wholly under the front post (the rest end under it)
         // cobalt back, white belly (青花 fish): rows 0-1 cobalt, row 2 every other one, row 3 white
         const mat = r < 2 || (r === 2 && c % 2 === 0) ? 'glaze_cobalt' : 'porcelain';
         for (const sd of [1, -1]) {
@@ -995,10 +1158,10 @@ export default function build() {
     // wave crest lines (s ascending): arches rising to a crest that curls over, then drops into the next one
     const crest = (b, L, ph) => {
       const line = [[425, b]], curls = [];
-      for (let a = 425 - ph; a < 535; a += L) {
+      for (let a = 425 - ph, k = 0; a < 535; a += L, k++) {
         for (const p of [[a + 0.3 * L, b + 1.6], [a + 0.56 * L, b + 3.4], [a + 0.74 * L, b + 4.1], [a + 0.8 * L, b + 3.2], [a + 0.86 * L, b + 1.0], [a + L, b]]) if (p[0] > 425.6 && p[0] < 534.4) line.push(p);
         const cs = a + 0.66 * L;
-        if (cs > 428 && cs < 532) curls.push(spiral(cs, b + 2.3, 1.7, 0.45, 80, -240, 12));
+        if (cs > 428 && cs < 532 && k % 2 === 0) curls.push(spiral(cs, b + 2.3, 1.7, 0.45, 80, -240, 12));   // a curl on every other crest
       }
       line.push([535, b]);
       return { line, curls };
@@ -1007,8 +1170,8 @@ export default function build() {
     cob.push(PF([[425, -6.4], [535, -6.4], ...C0.line.slice().reverse()], { w: 0.6, cw: F + sd * 0.3, bevel: 0.12, bevelSeg: 1, curveSeg: 1 }));
     cob.push(PF([...C1.line, ...C2.line.slice().reverse()], { w: 0.6, cw: F + sd * 0.3, bevel: 0.12, bevelSeg: 1, curveSeg: 1 }));
     for (const C of [C0, C1, C2]) {
-      gold.push(flat(C.line, F + sd * 0.55, sd, 0.3, 0.22, Math.round(plen(C.line) / 2.5)));
-      for (const c of C.curls) gold.push(flat(c, F + sd * 0.55, sd, 0.26, 0.2, 7));
+      gold.push(flat(C.line, F + sd * 0.55, sd, 0.3, 0.22, Math.round(plen(C.line) / 3.4)));
+      for (const c of C.curls) gold.push(flat(c, F + sd * 0.55, sd, 0.26, 0.2, 6));
     }
     // 江崖: three rock peaks (jade), gilt outlines and facet lines
     for (const [rock, facets] of [
@@ -1016,12 +1179,22 @@ export default function build() {
       [[[438, -11.2], [440.8, -5.6], [443.4, -4], [446.6, 1.4], [449.8, -2.2], [451.6, -4.6], [454, -11.2]], [[[446.6, 1.4], [445.8, -4], [443.4, -9]]]],
       [[[506, -11.2], [508.8, -3.8], [512, 2], [515.2, -1.4], [518, -4.4], [521.6, -11.2]], [[[512, 2], [512.6, -3.4], [510.6, -9]]]],
     ]) {
-      jade.push(PF(rock.map(([s, t]) => [s, t, 0.6]), { w: 1.6, cw: F + sd * 0.8, bevel: 0.45, bevelSeg: 1, curveSeg: 1 }));
-      for (let i = 1; i < rock.length; i++) gold.push(strip(rock[i - 1], rock[i], F + sd * 1.7, 0.45, 0.4));
-      for (const f of facets) gold.push(flat(f, F + sd * 1.6, sd, 0.22, 0.15, 8));
+      // carved relief: the rock rises from 0.9 at its foot to 3.4 along its facet ridges (sharp crests)
+      const ridge = (s, t) => { let d = Infinity; for (const f of facets) for (let i = 1; i < f.length; i++) d = Math.min(d, segDist(s, t, 0, [...f[i - 1], 0], [...f[i], 0])); return Math.max(0, 1 - d / 5.5); };
+      const hgt = (s, t) => 0.9 + 2.5 * ridge(s, t) ** 0.85;
+      jade.push(warp(PF(rock.map(([s, t]) => [s, t, 0.6]), { w: 1, cw: F + sd * 0.5, bevel: 0.25, bevelSeg: 1, curveSeg: 1 }),
+        (s, t, w) => (Math.abs(w) > Math.abs(F) + 0.5 ? [s, t, w + sd * (hgt(s, t) - 1)] : [s, t, w]), { tess: 4.4, crease: 32 }));
+      for (let i = 1; i < rock.length; i++) gold.push(strip(rock[i - 1], rock[i], F + sd * 0.3, 0.5, 0.6));
+      for (const f of facets) {
+        const pts = [];
+        for (let i = 1; i < f.length; i++) for (let k = 0; k < 4; k++) { const u = k / 4, s = f[i - 1][0] + (f[i][0] - f[i - 1][0]) * u, t = f[i - 1][1] + (f[i][1] - f[i - 1][1]) * u; pts.push([s, t, F + sd * (hgt(s, t) + 0.08)]); }
+        const e = f[f.length - 1];
+        pts.push([e[0], e[1], F + sd * (hgt(e[0], e[1]) + 0.08)]);
+        gold.push(ribbon(pts, SEC.rect, { wf: () => 0.24, hf: () => 0.16, up: [0, 0, sd], seg: 4 * (f.length - 1) + 2 }));
+      }
     }
     // clouds in the sky over the waves
-    for (const [cs, f] of [[430, 1], [497, -1], [526, 1]]) gold.push(flat(cloudPts(cs, 9.4, 1.5, f), F, sd, 0.24, 0.18, 20));
+    for (const [cs, f] of [[430, 1], [497, -1], [526, 1]]) gold.push(flat(cloudPts(cs, 9.4, 1.5, f), F, sd, 0.24, 0.18, 15));
     g.add(merge(cob), 'glaze_cobalt');
     g.add(merge(jade), 'glaze_jade');
     g.add(merge(gold), 'gold');
@@ -1031,35 +1204,49 @@ export default function build() {
   g.add(SC([[-10.4, 21.6, 0.5], [10.4, 21.6, 0.5], [10.4, 27.8, 0.6], [8.6, 28.8, 0.6], [-8.6, 28.8, 0.6], [-10.4, 27.8, 0.6]], 142, 548, { bevel: 0.7 }), 'porcelain');
   // raised gilt 回紋 meander on both flanks of the ridge body
   for (const sd of [1, -1]) g.add(meander(150, 540, 22.2, 5.2, 10.4 * sd, sd, 12, 0.62, 0.55), 'gold');
-  // 12 筒瓦 (half-round tiles), each with a bead at its rear end; gilt straps over the joints with a rivet a side
-  for (let i = 0; i < 12; i++) {
-    const s0 = 150 + i * 32.6;
-    g.add(lathe([[s0, 0], [s0, 8.4], [s0 + 0.8, 9.3], [s0 + 3.6, 9.3], [s0 + 4.4, 8.6], [s0 + 30.8, 8.6], [s0 + 31.4, 8.0], [s0 + 31.4, 0]],
-      { t: 28.6, seg: 12, phase: -Math.PI / 2, arc: Math.PI }), 'glaze_jade');
-  }
+  // tiling as on a glazed roof: a centre row of 筒瓦 (half-round tiles) over two rows of concave 板瓦 (pan tiles);
+  // every tile laps over the one behind it (rear edge raised ~1.4 mm: a stepped, shingled silhouette, not a row of
+  // tubes); round 瓦當 caps end the 筒瓦 row towards the shooter, 滴水 drip lips end the pan rows; gilt 釘帽 nail caps
+  const TL = 32.6, TN = 12, TR = 6.2, RT = 28.6;
   {
-    const straps = [];
-    for (let i = 1; i < 12; i++) {
-      const s = 150 + i * 32.6 - 0.6;
-      straps.push(lathe([[s - 1.6, 9.0], [s - 1.6, 9.9], [s - 1.0, 10.4], [s + 1.0, 10.4], [s + 1.6, 9.9], [s + 1.6, 9.0], [s - 1.6, 9.0]], { t: 28.6, seg: 12, phase: -Math.PI / 2, arc: Math.PI }));
+    const jade = [], caps = [];
+    for (let i = 0; i < TN; i++) {
+      const s0 = 150 + i * TL, s1 = s0 + TL + 1.6, lap = { rot: [-2.4, 0, 0], pivot: [s1, RT, 0] };
+      // 筒瓦: a rolled bead at the rear (where it laps over), tapering to the front that tucks under the next one
+      jade.push(xform(lathe([[s0, 0], [s0, TR - 0.6], [s0 + 0.7, TR + 0.3], [s0 + 3.2, TR + 0.3], [s0 + 4.0, TR - 0.2], [s1 - 1.2, TR - 0.55], [s1, TR - 1.3], [s1, 0]],
+        { t: RT, seg: 10, phase: -Math.PI / 2, arc: Math.PI }), lap));
+      // 板瓦 either side: a concave pan, thicker at its outer edge, lapping the same way
+      for (const sd of [1, -1]) {
+        const sec = [[5.0, RT + 0.7, 0], [7.9, RT + 0.15, 1.5], [10.9, RT + 0.55, 0], [11.0, RT - 0.9, 0], [7.9, RT - 1.25, 1.5], [5.0, RT - 0.75, 0]].map(([w, t, r]) => [w * sd, t, r]);
+        jade.push(xform(SC(sd > 0 ? sec : sec.slice().reverse(), s0 + 0.6, s1 - 0.6, { bevel: 0.35, bevelSeg: 1, curveSeg: 2 }), lap));
+      }
+      caps.push(xform(lax([[0, 0], [0, 2.1], [0.35, 2.05], [0.5, 1.5], [0.85, 1.25], [1.1, 0.5], [1.15, 0]], [s0 + 21, RT + TR - 0.75, 0], 't', 9), lap));
     }
-    g.add(merge(straps), 'gold');
+    g.add(merge(jade), 'glaze_jade');
+    g.add(merge(caps), 'gold');
+    // the shooter end: a round 瓦當 on the 筒瓦 row (gilt rim, jade field, a gilt wave-eye boss) and 滴水 lips on the pans
+    const lap0 = { rot: [-2.4, 0, 0], pivot: [150 + TL + 1.6, RT, 0] };
+    g.add(xform(merge([lathe([[146.4, 0], [146.4, TR + 1.4], [147.1, TR + 2.1], [150.4, TR + 2.1], [150.4, 0]], { t: RT, seg: 20, phase: -Math.PI / 2, arc: Math.PI }),
+      lax([[0, 0], [0, 4.4], [0.6, 4.4], [0.6, 3.5], [0.25, 3.5], [0.25, 1.6], [1.0, 1.45], [1.3, 0]], [146.4, RT + 0.15, 0], '-s', 14)]), lap0), 'gold');
+    for (const sd of [1, -1]) {
+      g.add(xform(PF([[146.6, RT + 0.6, 0.3], [150.6, RT + 0.6, 0.3], [150.6, RT - 1.0, 0.3], [148.4, RT - 3.4, 1.2], [146.6, RT - 1.0, 0.3]], { w: 5.6, cw: 7.95 * sd, bevel: 0.35, bevelSeg: 1 }), lap0), 'glaze_jade');
+      g.add(xform(box([146.4, RT - 0.4, 7.95 * sd], [0.6, 2.6, 5.2], { r: 0.2, seg: 1 }), lap0), 'gold');
+    }
   }
-  // 瓦當 end cap facing the shooter: gilt disc, ring and boss
-  g.add(lathe([[141, 0], [141, 8.8], [141.8, 9.6], [146, 9.6], [146, 0]], { t: 28.6, seg: 24, phase: -Math.PI / 2, arc: Math.PI }), 'gold');
-  g.add(lax([[0, 0], [0, 6.6], [0.8, 6.6], [0.8, 5.2], [0.3, 5.2], [0.3, 2.2], [1.4, 2], [1.8, 0]], [141, 28.8, 0], '-s', 16), 'gold');
 
   // ======================================================================== barrel + muzzle device (inside the mouth)
-  g.add(lathe([[196, 3.9], [196, 9.8], [196.6, 10.4], [262, 10.4], [264, 9.4], [330, 9.0], [610, 8.4], [650, 8.4], [650, 3.9], [196, 3.9]], { seg: 20 }), 'black_chrome');
+  // (the barrel runs on into the enlarged mouth: the compensator sits as deep in the jaws as it did at 1:1)
+  const CO = Math.round(hs(650) - 650);
+  g.add(lathe([[196, 3.9], [196, 9.8], [196.6, 10.4], [262, 10.4], [264, 9.4], [330, 9.0], [610, 8.4], [650 + CO, 8.4], [650 + CO, 3.9], [196, 3.9]], { seg: 20 }), 'black_chrome');
   {
     // a short 'pearl' compensator held in the jaws: gilt band, ports, bright crown
-    let comp = lathe([[650, 3.9], [650, 8.2], [650.6, 8.8], [682, 8.8], [682.6, 8.2], [682.6, 3.9], [650, 3.9]], { seg: 28 });
+    let comp = lathe([[650, 3.9], [650, 8.2], [650.6, 8.8], [682, 8.8], [682.6, 8.2], [682.6, 3.9], [650, 3.9]].map(([s, r]) => [s + CO, r]), { seg: 28 });
     const pc = [];
-    for (const [a, b] of [[656, 662], [666, 672]]) pc.push(slotCut(a, b, 0, 4.2, 40, 0));
+    for (const [a, b] of [[656, 662], [666, 672]]) pc.push(slotCut(a + CO, b + CO, 0, 4.2, 40, 0));
     comp = cut(comp, pc);
     g.add(comp, 'black_chrome');
-    g.add(washer(682.2, 686, 4, 8.6, 0.5, 28), 'chrome');
-    g.add(washer(651, 654, 8.4, 9.1, 0.4, 28), 'gold');
+    g.add(washer(682.2 + CO, 686 + CO, 4, 8.6, 0.5, 28), 'chrome');
+    g.add(washer(651 + CO, 654 + CO, 8.4, 9.1, 0.4, 28), 'gold');
   }
 
   // ======================================================================== neck collar (head mount on the handguard end)
@@ -1080,13 +1267,15 @@ export default function build() {
     for (let k = 0; k < 44; k++) {
       const a = (k / 44) * Math.PI * 2, ct = Math.cos(a), cw = Math.sin(a);
       if (25 * ct > 14) continue;
-      beads.push(aimGeo(lathe([[0, 0], [0, 0.75], [0.4, 0.55], [0.6, 0]], { seg: 6 }), [552.8, 24.85 * ct, 24.85 * cw], [552.8, 26 * ct, 26 * cw]));
+      beads.push(aimGeo(lathe([[0, 0], [0, 0.75], [0.4, 0.55], [0.6, 0]], { seg: 5 }), [552.8, 24.85 * ct, 24.85 * cw], [552.8, 26 * ct, 26 * cw]));
     }
     g.add(merge(cb), 'glaze_cobalt');
     g.add(merge([...cbd, ...beads]), 'gold');
   }
 
   // ======================================================================== 螭吻 head (a sculpted loft, see Body)
+  // its own static part (no motion): its meshes stay under 64k vertices (16-bit indices) and draw apart from the body
+  const hd = g.part('beast');
   // stations: s, A (half width), top, c (widest line), bot (lower extent; the floor clamps it flat: the mouth roof
   // from s 609, the jowls behind), nT (crown squareness: a squared brow plane), nB
   const HEAD = new Body([
@@ -1117,17 +1306,17 @@ export default function build() {
     // sculpt brushes (placed on the bare loft; w >= 0, mirrored)
     const hb = (s, t) => [s, t, HEAD.hw(s, t)], hc = (s, w = 0) => [s, HEAD.topAt(s, w), w];
     HEAD.brushes = [
-      [[hb(598, 44), hb(610, 47.6), hb(622, 49), hb(634, 47), hb(645, 43)], 6.8, 5.6, 0.35],   // brow ridge over the eye
+      [[hb(598, 44), hb(610, 47.6), hb(622, 49), hb(634, 47), hb(645, 43)], 6.8, 6.8, 0.5],    // brow ridge over the eye (a crisp, flat-topped visor plane)
       [[hb(622, 41)], 10, -4.6],                                                         // eye socket
       [[hc(609)], 11, 2.4],                                                                 // forehead boss
       [[hc(596), hc(628)], 3.2, -1.6],                                                      // furrow between the brows
       [[hb(600, 40)], 7, -2],                                                             // temple hollow
-      [[hb(586, 25), hb(604, 23), hb(626, 26), hb(648, 22.6)], 5, 3.6],                   // cheekbone ridge
+      [[hb(586, 25), hb(604, 23), hb(626, 26), hb(648, 22.6)], 5, 4.6, 0.4],              // cheekbone ridge (a plate edge, not a swell)
       [[hb(584, 14), hb(600, 15)], 7, 2.6],                                                 // jowl
       [[hb(566, 31), hb(586, 34)], 6, 1.4],                                                 // swell behind the eye
       [[hb(610, ROOF + 3.4), hb(650, ROOF + 3.6), hb(690, ROOF + 3.6), hb(702, ROOF + 3)], 3.4, 2.2],   // upper lip roll
       [[hb(612, ROOF + 7.6), hb(650, ROOF + 8), hb(688, ROOF + 7.8)], 2, -1.0],            // groove over the lip
-      [[hc(638), hc(672)], 4.4, 1.6],                                                         // nasal bridge
+      [[hc(638), hc(672)], 4.4, 2.2, 0.45],                                                   // nasal bridge (flat-topped: the snout reads bevelled)
       [[hc(642, 6.4), hc(672, 7)], 2.1, -1.0],                                            // furrows beside it
       [[hc(548), hc(596)], 4.6, 1.3],                                                       // nape ridge
       [[hb(691, 37)], 7, 4.2],                                                              // flared nostril wings
@@ -1139,20 +1328,20 @@ export default function build() {
       },
     ];
   }
-  g.add(skin(HEAD.rings(sList(541.5, 708.2, 2.4, [0, 0.4, 1.1, 2]), 84), { crease: 55 }), 'porcelain');
+  hd.add(skin(HEAD.rings(sList(541.5, 708.2, 2.9, [0, 0.4, 1.1, 2]), 72), { crease: 55 }), 'porcelain');
   const EYE = HEAD.frameAt(622, 41);
   {
     // red-lacquer palate under the roof (follows the mouth outline) with transverse rugae
     const pal = [];
     for (let s = 607; s <= 701; s += 6) pal.push([s, Math.max(1, HEAD.hw(s, ROOF + 0.05) - 1.4)]);
-    g.add(PL([...pal.map(([s, w]) => [s, w, 0]), ...pal.slice().reverse().map(([s, w]) => [s, -w, 0])], { h: 1.2, ct: ROOF - 0.7, bevel: 0.3 }), 'lacquer_red');
+    hd.add(PL([...pal.map(([s, w]) => [s, w, 0]), ...pal.slice().reverse().map(([s, w]) => [s, -w, 0])], { h: 1.2, ct: ROOF - 0.7, bevel: 0.3 }), 'lacquer_red');
     const rug = [];
     for (const s of [616, 625, 634, 643, 652, 661]) {
       const hw = HEAD.hw(s, ROOF + 0.05) - 3;
       rug.push(ribbon([[s - 0.6, ROOF - 1.2, -hw], [s + 1.8, ROOF - 1.25, -hw * 0.45], [s + 2.6, ROOF - 1.25, 0], [s + 1.8, ROOF - 1.25, hw * 0.45], [s - 0.6, ROOF - 1.2, hw]], SEC.round6,
         { wf: () => 0.75, hf: () => 0.45, up: [0, -1, 0], seg: 10 }));
     }
-    g.add(merge(rug), 'lacquer_red');
+    hd.add(merge(rug), 'lacquer_red');
     // the 如意 nose: a gilt rim on the shoulder of the raised plate, nostrils in gilt rings in the side lobes with a
     // gilt curl round each, a gilt bead down the front lobe
     const O = [688, 0], rim = [];
@@ -1166,71 +1355,76 @@ export default function build() {
       const s = O[0] + u[0] * (best - 1.1), w = O[1] + u[1] * (best - 1.1);
       rim.push([s, HEAD.topAt(s, w) + 0.12, w]);
     }
-    g.add(ribbon([...rim, rim[0]], SEC.rect, { wf: () => 0.45, hf: () => 0.2, up: [0, 1, 0], seg: 120, tension: 0.2 }), 'gold');
-    g.add(ribbon([694, 697, 700, 703].map((s) => [s, HEAD.topAt(s, 0) + 0.15, 0]), SEC.rect, { wf: () => 0.4, hf: () => 0.2, up: [0, 1, 0], seg: 10 }), 'gold');
+    hd.add(ribbon([...rim, rim[0]], SEC.rect, { wf: () => 0.45, hf: () => 0.2, up: [0, 1, 0], seg: 120, tension: 0.2 }), 'gold');
+    hd.add(ribbon([694, 697, 700, 703].map((s) => [s, HEAD.topAt(s, 0) + 0.15, 0]), SEC.rect, { wf: () => 0.4, hf: () => 0.2, up: [0, 1, 0], seg: 10 }), 'gold');
     for (const sd of [1, -1]) {
       const f = HEAD.frameTop(686.5, 8 * sd), N = vnorm(vadd(f.N, [0.55, 0, 0.15 * sd])), P = vadd(f.P, f.N, 0.05);
-      g.add(placeOn(sphere([0, 0, 0], 1, { scale: [1.8, 1.25, 0.45], seg: 10 }), P, N, [1, 0, 0]), 'black_chrome');
-      g.add(aimGeo(lathe([[0, 1.9], [0, 3.0], [0.7, 2.85], [1.0, 2.2], [1.0, 1.9]], { seg: 16 }), vadd(P, N, -0.35), vadd(P, N, 1)), 'gold');
+      hd.add(placeOn(sphere([0, 0, 0], 1, { scale: [1.8, 1.25, 0.45], seg: 10 }), P, N, [1, 0, 0]), 'black_chrome');
+      hd.add(aimGeo(lathe([[0, 1.9], [0, 3.0], [0.7, 2.85], [1.0, 2.2], [1.0, 1.9]], { seg: 16 }), vadd(P, N, -0.35), vadd(P, N, 1)), 'gold');
       const cl = spiral(686.5, 8 * sd, 3.4, 4.4, sd > 0 ? 200 : -20, sd > 0 ? 470 : -290, 16).map(([s, w]) => [s, HEAD.topAt(s, w) + 0.12, w]);
-      g.add(ribbon(cl, SEC.rect, { wf: () => 0.32, hf: () => 0.18, up: [0, 1, 0], seg: 20 }), 'gold');
+      hd.add(ribbon(cl, SEC.rect, { wf: () => 0.32, hf: () => 0.18, up: [0, 1, 0], seg: 20 }), 'gold');
     }
     // the upper lip rolls up into a gilt scroll on each side of the snout (如意 curl)
     for (const sd of [1, -1]) {
       const lw = HEAD.hw(696, 15) + 0.4;
-      g.add(sweep(atW(spiral(695.5, 16.2, 5.0, 1.1, -95, 250, 20), lw * sd), 0.72, { seg: 24, radial: 5 }), 'gold');
+      hd.add(sweep(atW(spiral(695.5, 16.2, 5.0, 1.1, -95, 250, 20), lw * sd), 0.72, { seg: 24, radial: 5 }), 'gold');
     }
     for (const sd of [1, -1]) {
       // eye: a bulging crystal with a slit pupil, porcelain lids and a slim gilt ring
       const E = sd > 0 ? EYE : { P: mirW(EYE.P), N: mirW(EYE.N), T: mirW(EYE.T) };
       const eye = sphere([0, 0, 0], 8.2, { seg: 22 });
-      g.add(placeOn(eye, vadd(E.P, E.N, -1.0), E.N, E.T), 'crystal');
-      g.add(placeOn(sphere([0, 0, 0], 1, { scale: [1.5, 5.8, 0.7], seg: 10 }), vadd(E.P, E.N, 6.9), E.N, E.T), 'black_chrome');
+      hd.add(placeOn(eye, vadd(E.P, E.N, -1.0), E.N, E.T), 'crystal');
+      hd.add(placeOn(sphere([0, 0, 0], 1, { scale: [1.5, 5.8, 0.7], seg: 10 }), vadd(E.P, E.N, 6.9), E.N, E.T), 'black_chrome');
       const lid = (a0, a1, r, th) => placeOn(taper(arcPts(0, 0, r, a0, a1, 10).map(([s, t]) => [s, t, 1.5 + 0.3 * Math.sin(((s + r) / (2 * r)) * Math.PI)]), 0, 0, { seg: 18, radial: 7, rf: (u) => 0.5 + th * Math.sin(Math.PI * u) }), E.P, E.N, E.T);
-      g.add(merge([lid(-12, 192, 8.8, 1.9), lid(204, 336, 8.6, 1.1)]), 'porcelain');
-      g.add(placeOn(lax([[0, 10.8], [0, 11.8], [0.5, 11.9], [0.9, 11.4], [0.9, 10.8], [0, 10.8]], [0, 0, 0], 'w', 32), vadd(E.P, E.N, -0.6), E.N, E.T), 'gold');
+      hd.add(merge([lid(-12, 192, 8.8, 1.9), lid(204, 336, 8.6, 1.1)]), 'porcelain');
+      {
+        // the gilt ring lies on the skull round the socket rim (a flat ring in the eye plane cut in and out of the cheek)
+        const rp = [], rn = [];
+        for (let k = 0; k <= 40; k++) { const a = (k / 40) * Math.PI * 2, f = HEAD.frameAt(622 + 11.6 * Math.cos(a), 41 + 10.2 * Math.sin(a), sd); rp.push(vadd(f.P, f.N, 0.18)); rn.push(f.N); }
+        hd.add(ribbon(rp, SEC.round6, { wf: () => 0.62, hf: () => 0.4, up: (u) => rn[Math.round(u * 40)], seg: 44, tension: 0.3, capA: false, capB: false }), 'gold');
+      }
       // heavy brow visor overhanging the eye: a porcelain lens-section sweep from the inner corner up and back,
       // flicking up behind the temple
       {
         const vp = [[640, 45.2, 1.2], [632, 49.4, 2.8], [622, 51.6, 3.6], [611, 51, 3.2], [601, 48.6, 2], [594, 51.2, 1.4]].map(([s, t, o]) => { const f = HEAD.frameAt(s, Math.min(t, HEAD.top(s) - 3), sd); return vadd(f.P, f.N, o); });
-        g.add(ribbon(vp, SEC.lens, { wf: (u) => 4.6 * Math.sin(Math.PI * Math.min(1, 0.12 + u * 0.95)) + 0.6, hf: (u) => 2.2 * (1 - u) + 0.7, up: [0, 0.75, 0.66 * sd], seg: 24 }), 'porcelain');
+        hd.add(ribbon(vp, SEC.lens, { wf: (u) => 4.6 * Math.sin(Math.PI * Math.min(1, 0.12 + u * 0.95)) + 0.6, hf: (u) => 2.2 * (1 - u) + 0.7, up: [0, 0.75, 0.66 * sd], seg: 24 }), 'porcelain');
       }
       // flame brows: four grooved gilt tongues off the brow ridge, sweeping back and up (kept under the sight line)
       const tongues = [];
       for (const [s, t, L] of [[644, 44.4, 15], [634, 48.4, 17], [622, 50.4, 18], [610, 49, 16]]) {
         const f = HEAD.frameAt(s, t, sd), P0 = vadd(f.P, f.N, 0.3);
         const path = [[0, 0, 0], [-0.3 * L, 0.16 * L, 0.06 * L], [-0.62 * L, 0.3 * L, 0.1 * L], [-0.88 * L, 0.34 * L, 0.06 * L], [-L, 0.25 * L, 0]].map(([a, b, c]) => [P0[0] + a, Math.min(54, P0[1] + b), P0[2] + sd * c]);
-        tongues.push(ribbon(path, SEC.groove2, { wf: (u) => 2.7 * (1 - u) ** 0.8 + 0.25, hf: (u) => 0.95 * (1 - u) + 0.25, up: f.N, seg: 12 }));
+        tongues.push(ribbon(path, SEC.groove1, { wf: (u) => 2.7 * (1 - u) ** 0.8 + 0.25, hf: (u) => 0.95 * (1 - u) + 0.25, up: f.N, seg: 10 }));
       }
-      g.add(merge(tongues), 'gold');
+      hd.add(merge(tongues), 'gold');
       // lip-corner curls (卷雲嘴角) and short whisker curls (the 焚海 twin grows the long sensing whiskers)
       const cw0 = HEAD.hw(608, ROOF + 1) + 0.6;
-      g.add(sweep(atW(spiral(607, 9.4, 5.6, 1.2, 100, -230, 18), cw0 * sd), 0.85, { seg: 22, radial: 5 }), 'gold');
+      hd.add(sweep(atW(spiral(607, 9.4, 5.6, 1.2, 100, -230, 18), cw0 * sd), 0.85, { seg: 22, radial: 5 }), 'gold');
       const ww = HEAD.hw(676, 14);
-      g.add(taper([[678, 14, (ww - 0.6) * sd], [669, 10.6, (ww + 3.8) * sd], [658, 12.4, (ww + 6.8) * sd], [651, 17.6, (ww + 7.2) * sd], [653, 21.4, (ww + 5.8) * sd], [657.5, 20.2, (ww + 4.8) * sd]], 1.3, 0.45, { seg: 22, radial: 6 }), 'gold');
+      hd.add(taper([[678, 14, (ww - 0.6) * sd], [669, 10.6, (ww + 3.8) * sd], [658, 12.4, (ww + 6.8) * sd], [651, 17.6, (ww + 7.2) * sd], [653, 21.4, (ww + 5.8) * sd], [657.5, 20.2, (ww + 4.8) * sd]], 1.3, 0.45, { seg: 22, radial: 6 }), 'gold');
       // ringed antlers swept back and out (they frame the reticle when aiming; nothing above t 55.5, the sight line is
       // t 62): main beam off the brow with a burr of knobs at its root, two tines, curling tips
       const T0 = HEAD.topAt(606, 10.5) - 1;
-      const ringed = (pts, r0, r1, pitch, seg) => taper(pts, 0, 0, { seg, radial: 9, rf: (u) => (r0 + (r1 - r0) * u) * (1 + 0.14 * (0.5 + 0.5 * Math.cos(2 * Math.PI * u * plen(pts) / pitch)) ** 4) });
+      const ringed = (pts, r0, r1, pitch, seg) => taper(pts, 0, 0, { seg, radial: 7, rf: (u) => (r0 + (r1 - r0) * u) * (1 + 0.14 * (0.5 + 0.5 * Math.cos(2 * Math.PI * u * plen(pts) / pitch)) ** 4) });
       const beam = [[606, T0, 10.5 * sd], [594, T0 + 3.4, 14.4 * sd], [578, 54.2, 19 * sd], [562, 55, 23.6 * sd], [548, 53.6, 27.6 * sd], [537, 49.6, 30.4 * sd], [532, 44.6, 30 * sd], [534.6, 41.2, 28.2 * sd]];
-      g.add(ringed(beam, 4.4, 0.8, 4.6, 96), 'gold');
-      g.add(ringed([[583, 52.4, 16.8 * sd], [578, 55.2, 21 * sd], [570, 55.6, 25.4 * sd], [564, 54.4, 28 * sd], [562.4, 52.4, 27.6 * sd]], 2.4, 0.55, 4, 34), 'gold');
-      g.add(ringed([[557, 53, 24.6 * sd], [550, 55, 29.4 * sd], [544.6, 54, 32.2 * sd], [543, 51.8, 31.6 * sd]], 1.8, 0.5, 3.6, 26), 'gold');
+      hd.add(ringed(beam, 4.4, 0.8, 4.6, 56), 'gold');
+      hd.add(ringed([[583, 52.4, 16.8 * sd], [578, 55.2, 21 * sd], [570, 55.6, 25.4 * sd], [564, 54.4, 28 * sd], [562.4, 52.4, 27.6 * sd]], 2.4, 0.55, 4, 34), 'gold');
+      hd.add(ringed([[557, 53, 24.6 * sd], [550, 55, 29.4 * sd], [544.6, 54, 32.2 * sd], [543, 51.8, 31.6 * sd]], 1.8, 0.5, 3.6, 26), 'gold');
       {
         const a = V(...beam[0]), d = V(...beam[1]).sub(a).normalize(), e1 = new THREE.Vector3(0, 1, 0).cross(d).normalize(), e2 = d.clone().cross(e1);
         const knobs = [];
         for (let k = 0; k < 7; k++) {
           const ang = (k / 7) * Math.PI * 2, p = a.clone().addScaledVector(d, 1.6).addScaledVector(e1, Math.cos(ang) * 4.7).addScaledVector(e2, Math.sin(ang) * 4.7);
-          knobs.push(sphere([-p.z, p.y, p.x], 1.35 + (k % 2) * 0.25, { seg: 8 }));
+          knobs.push(sphere([-p.z, p.y, p.x], 1.35 + (k % 2) * 0.25, { seg: 6 }));
         }
-        g.add(merge(knobs), 'gold');
+        hd.add(merge(knobs), 'gold');
       }
       // gill fins flaring behind the cheeks (the fish half of the 螭吻), cobalt with gilt rays and edge
       const gw = HEAD.hw(592, 20) - 0.8;
       const finP = [[600, 28, 2], [588, 37, 8], [564, 41, 10], [540, 35, 4], [528, 26, 0], [544, 21, 4], [532, 12, 0], [550, 6.5, 4], [574, 4.5, 8], [598, 12, 3]];
-      g.add(PF(finP, { w: 2.6, cw: gw * sd, bevel: 0.9, curveSeg: 2 }), 'glaze_cobalt');
-      for (const [a, b] of [[[596, 27], [542, 34]], [[596, 22], [532, 26]], [[596, 16], [534, 12]], [[594, 10.5], [552, 7]]]) g.add(sweep([[a[0], a[1], (gw + 1.45) * sd], [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 0.8, (gw + 1.55) * sd], [b[0], b[1], (gw + 1.45) * sd]], 0.55, { seg: 6, radial: 4 }), 'gold');
-      g.add(sweep(atW([[588, 37.6], [564, 41.6], [540, 35.6], [528.6, 26]], (gw + 0.2) * sd), 0.75, { seg: 18, radial: 5 }), 'gold');
+      hd.add(PF(finP, { w: 2.6, cw: gw * sd, bevel: 0.9, curveSeg: 2 }), 'glaze_cobalt');
+      for (const [a, b] of [[[596, 27], [542, 34]], [[596, 22], [532, 26]], [[596, 16], [534, 12]], [[594, 10.5], [552, 7]]]) hd.add(sweep([[a[0], a[1], (gw + 1.45) * sd], [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 0.8, (gw + 1.55) * sd], [b[0], b[1], (gw + 1.45) * sd]], 0.55, { seg: 6, radial: 4 }), 'gold');
+      hd.add(sweep(atW([[588, 37.6], [564, 41.6], [540, 35.6], [528.6, 26]], (gw + 0.2) * sd), 0.75, { seg: 18, radial: 5 }), 'gold');
       // cloud-scroll cheek plate over the jaw hinge (comma: a disc running out into a tail up and back), gilt spiral,
       // gilt rim, the hinge rivet at its eye
       {
@@ -1241,27 +1435,34 @@ export default function build() {
         const e0 = arc[arc.length - 1], s0 = arc[0];
         const outline = [...arc, ...q(e0, [C[0] - 13, C[1] - 1], tip, 6), ...q(tip, [C[0] - 2.5, C[1] + 7], s0, 6).slice(0, -1)];
         const cw = 21.4 * sd;
-        g.add(PF(outline.map(([s, t]) => [s, t, 0]), { w: 2.6, cw, bevel: 0.8, bevelSeg: 2, curveSeg: 1 }), 'glaze_cobalt');
+        hd.add(PF(outline.map(([s, t]) => [s, t, 0]), { w: 2.6, cw, bevel: 0.8, bevelSeg: 2, curveSeg: 1 }), 'glaze_cobalt');
         const face = cw + sd * 1.3;
-        g.add(merge([flat(spiral(C[0], C[1], 1.6, 6.6, 70, -400, 30).concat([[C[0] - 9.6, C[1] + 4.2], [tip[0] + 2.6, tip[1] - 2]]), face, sd, 0.36, 0.22, 40),
+        hd.add(merge([flat(spiral(C[0], C[1], 1.6, 6.6, 70, -400, 30).concat([[C[0] - 9.6, C[1] + 4.2], [tip[0] + 2.6, tip[1] - 2]]), face, sd, 0.36, 0.22, 40),
           flat([...outline, outline[0]].map(([s, t]) => { const d = Math.hypot(s - C[0], t - C[1]) || 1; return [s + (C[0] - s) / d * 0.9, t + (C[1] - t) / d * 0.9]; }), face, sd, 0.3, 0.2, 60),
           lax([[0, 0], [0, 2.1], [0.9, 1.7], [1.3, 0]], [C[0], C[1], face], sideAx(sd), 12)]), 'gold');
       }
     }
     // relief scales over the crown and nape (cobalt, gilt rims), free edges to the shooter
     {
-      const cbd = [], cbd2 = [];
-      for (let i = 0; i < 7; i++) {
-        const s = 562 + i * 5.3;
-        for (let j = -3; j <= 3; j++) {
-          const w = j * 5.6 + (i % 2) * 2.8;
-          if (Math.abs(w) > 17.5 || (s > 590 && Math.abs(w) > 12)) continue;
+      // the nape rows run down the back of the skull to the collar: it is the face the shooter sees over the sight
+      // (rows 5.3 apart along the surface: the nape is steep, equal steps in s would open gaps between them)
+      const cbd = [], cbd2 = [], nape = [];
+      for (let s = 561.8, acc = 0, p = [562, HEAD.topAt(562, 0)]; s > 544 && nape.length < 4; s -= 0.2) {
+        const q = [s, HEAD.topAt(s, 0)];
+        acc += Math.hypot(q[0] - p[0], q[1] - p[1]); p = q;
+        if (acc >= 5.3) { nape.push(s); acc = 0; }
+      }
+      for (let i = -nape.length; i < 7; i++) {
+        const s = i < 0 ? nape[-i - 1] : 562 + i * 5.3;
+        for (let j = -4; j <= 4; j++) {
+          const w = j * 5.6 + (i % 2 ? 2.8 : 0);
+          if (Math.abs(w) > 17.5 || (s > 590 && Math.abs(w) > 12) || (s < 562 && Math.abs(w) > 0.62 * HEAD.A(s))) continue;
           const f = HEAD.frameTop(s, w), { body, bead } = fishScale(-1.8, 0, 2.9, 3.9, 0.55, 1, { th: 1.1, tilt: 7, bevel: 0.35 });
           cbd.push(placeOn(body, vadd(f.P, f.N, -0.4), f.N, f.T)); cbd2.push(placeOn(bead, vadd(f.P, f.N, -0.4), f.N, f.T));
         }
       }
-      g.add(merge(cbd), 'glaze_cobalt');
-      g.add(merge(cbd2), 'gold');
+      hd.add(merge(cbd), 'glaze_cobalt');
+      hd.add(merge(cbd2), 'gold');
     }
     // the mane: grooved cobalt flame locks off the upper rear of the head, following the skull back over the neck and
     // flicking up at the tips (clear of the first ridge tile)
@@ -1276,21 +1477,22 @@ export default function build() {
           }
           const e = path[path.length - 1];
           path.push([e[0] - 3, e[1] + 3.2, e[2]]);
-          locks.push(ribbon(path, SEC.groove2, { wf: (u) => wd * (u < 0.2 ? 0.6 + 2 * u : 1 - 0.85 * ((u - 0.2) / 0.8) ** 1.2), hf: (u) => 2.1 * (1 - u) + 0.5, up: [0.1, 0.45, sd], seg: 20 }));
+          // full-bodied flame (thick root, rounded tip), not a paper cut-out
+          locks.push(ribbon(path, SEC.groove2, { wf: (u) => 0.85 * wd * (u < 0.2 ? 0.6 + 2 * u : 1 - 0.8 * ((u - 0.2) / 0.8) ** 1.2), hf: (u) => 2.9 * (1 - u) ** 0.8 + 0.85, up: [0.1, 0.45, sd], seg: 20 }));
         }
       }
-      g.add(merge(locks), 'glaze_cobalt');
+      hd.add(merge(locks), 'glaze_cobalt');
     }
     // gilt upper lip all round the mouth (one sweep, right corner -> snout -> left corner)
     const lipS = [606, 616, 626, 636, 646, 656, 666, 676, 684, 690, 695, 699, 702.5, 705];
     const lipR = lipS.map((s) => [s, ROOF + 0.2, HEAD.hw(s, ROOF + 0.2) + 0.15]);
-    g.add(sweep([...lipR, [707.2, ROOF + 0.3, 0], ...lipR.slice().reverse().map(([s, t, w]) => [s, t, -w])], 1.1, { seg: 60, radial: 6 }), 'gold');
+    hd.add(sweep([...lipR, [707.2, ROOF + 0.3, 0], ...lipR.slice().reverse().map(([s, t, w]) => [s, t, -w])], 1.1, { seg: 60, radial: 6 }), 'gold');
     // teeth hang from the lip where they clear the compensator (w > ~9.5); two fangs a side
     const teeth = [];
     for (const sd of [1, -1]) for (const [s, L] of [[624, 2.6], [632, 2.8], [640, 3], [648, 2.8], [656, 2.8], [664, 3], [672, 3.2], [681, 7.6], [692, 4.6]]) {
       teeth.push(xform(lathe([[0, 0], [0, L > 5 ? 1.7 : 1.15], [L, 0]], { seg: 6 }), { rot: [-90, 0, 0], move: [s, ROOF + 0.1, (HEAD.hw(s, ROOF + 0.05) - 1.6) * sd] }));
     }
-    g.add(merge(teeth), 'porcelain');
+    hd.add(merge(teeth), 'porcelain');
   }
   // lower jaw fx_jaw (hinge at the cheek plates): 3° a shot, 25° for the beam / ultimate (extras.open = -25)
   {
@@ -1314,7 +1516,7 @@ export default function build() {
       [[jb(612, -18.5), jb(640, -21.6), jb(668, -21.6), jb(692, -18.2)], 2.8, 1.3],                            // jaw line
       [[JAW.pt(626, -Math.PI / 2), JAW.pt(694, -Math.PI / 2)], 3.2, 1.0],                                      // chin keel
     ];
-    jaw.add(skin(JAW.rings(sList(598, 706.5, 2.5, [0, 0.4, 1.1, 2]), 56), { crease: 55 }), 'porcelain');
+    jaw.add(skin(JAW.rings(sList(598, 706.5, 2.9, [0, 0.4, 1.1, 2]), 52), { crease: 55 }), 'porcelain');
     // arms up to the hinge (inside the cheek plates)
     for (const sd of [1, -1]) jaw.add(PF([[597, 0, 2], [610, 0, 2], [628, -10, 3], [616, -15.5, 4], [598, -9, 3]], { w: 2.6, cw: 13.4 * sd, bevel: 0.8 }), 'porcelain');
     // grooved lacquer tongue, rounded tip
@@ -1335,6 +1537,11 @@ export default function build() {
     // authored 6° agape: the jaws hold the barrel, the fire kick / beam open it further
     for (const list of jaw.geos.values()) for (const geo of list) xform(geo, { rot: [-6, 0, 0], pivot: [604, -4, 0] });
   }
+  // enlarge the whole head (skull, mane, antlers, fins, jaw) about the collar; the jaw hinge moves with it
+  const HM = new THREE.Matrix4().makeTranslation(0, 0, -HK[0]).multiply(new THREE.Matrix4().makeScale(HK[1], HK[2], HK[1])).multiply(new THREE.Matrix4().makeTranslation(0, 0, HK[0]));
+  for (const name of ['beast', 'fx_jaw']) for (const list of g.part(name).geos.values()) for (const geo of list) geo.applyMatrix4(HM);
+  g.part('fx_jaw').pivot.applyMatrix4(HM);
+  const hsP = ([s, t, w]) => [hs(s), t * HK[2], w * HK[1]];
 
   // ======================================================================== water tube (hero focus) on the lower right of the handguard
   g.add(tube(TS0 + 6, TS1 - 6, 8, 7.3, { t: TT, w: TW, seg: 24 }), 'glass_clear');
@@ -1347,7 +1554,7 @@ export default function build() {
     for (let k = 0; k < 3; k++) for (let i = 0; i < 6; i++) {
       const u = (i + k / 3) / 6, s = TS0 + 14 + u * (TS1 - TS0 - 28), a = k * 2.094 + u * Math.PI * 4;
       const r = 1.15 + ((i * 7 + k * 3) % 4) * 0.12;
-      bub.push(sphere([s, TT + Math.cos(a) * 5.85, TW + Math.sin(a) * 5.85], r, { seg: 9 }));
+      bub.push(sphere([s, TT + Math.cos(a) * 5.85, TW + Math.sin(a) * 5.85], r, { seg: 7 }));
     }
     flow.add(merge(bub), 'crystal');
   }
@@ -1360,61 +1567,71 @@ export default function build() {
     g.add(SC(gearPts(TW, TT, 10.3, 9.7, 30), k0, k1, { bevel: 0.35, bevelSeg: 1, curveSeg: 1 }), 'brass');
     g.add(washer(dir > 0 ? h1 : k1, dir > 0 ? k0 : h0, 7, 10.2, 0.2, 18, TT, TW), 'gold');
     g.add(washer(dir > 0 ? b - 0.2 : a - 1.6, dir > 0 ? b + 1.6 : a + 0.2, 7.6, 9.2, 0.3, 16, TT, TW), 'brass');
-    g.add(sweep([[s0 + dir * 4, TT + 7, TW - 3], [s0 + dir * 4, TT + 11, TW - 6], [s0 + dir * 4, TT + 13, TW - 12]], 2.6, { seg: 8, radial: 8 }), 'brass');
-    for (const t of [TT + 2.5, TT - 2.5]) g.add(capScrew([(h0 + h1) / 2, t, TW + 9.05], 1.05, 'w', 0.55, 6), 'steel_bright');
+    g.add(sweep([[s0 + dir * 4, TT + 7, TW - TSD * 3], [s0 + dir * 4, TT + 11, TW - TSD * 6], [s0 + dir * 4, TT + 13, TW - TSD * 12]], 2.6, { seg: 8, radial: 8 }), 'brass');
+    for (const t of [TT + 2.5, TT - 2.5]) g.add(capScrew([(h0 + h1) / 2, t, TW + TSD * 9.05], 1.05, sideAx(TSD), 0.55, 6), 'steel_bright');
   }
   // two mid clamps (chrome bands round the glass) screwed to the handguard
   for (const s of [340, 444]) {
     g.add(washer(s - 3, s + 3, 8, 9.2, 0.4, 16, TT, TW), 'chrome');
-    g.add(box([s, -17, 18.4], [6, 4, 3], { r: 0.6, seg: 1 }), 'chrome');
-    g.add(capScrew([s, -17, 19.9], 1.2, 'w', 0.6, 6), 'steel_bright');
+    g.add(box([s, -17, 18.4 * TSD], [6, 4, 3], { r: 0.6, seg: 1 }), 'chrome');
+    g.add(capScrew([s, -17, 19.9 * TSD], 1.2, sideAx(TSD), 0.6, 6), 'steel_bright');
   }
 
-  // ======================================================================== holographic sight on the rear rail
+  // ======================================================================== 望脊 ridge sight on the rear rail
+  // no box: a crouching porcelain ridge beast (脊獸) on a low mount watches down the gun, and ahead of it a gilt lens
+  // ring under a cobalt eave (the roof motif) carries the reticle -- the barrel line stays open round it
   {
-    const B = 30;   // rail top
-    g.add(PF([[26, B, 1], [128, B, 1], [128, B + 7, 2], [26, B + 7, 2]], { w: 26, bevel: 1.2 }), 'steel_dark');   // base
-    g.add(PF([[28, B + 6, 2], [66, B + 6, 2], [66, B + 26, 3], [32, B + 26, 5], [28, B + 20, 3]], { w: 30, bevel: 2 }), 'steel_dark');   // battery / control body
-    // battery cap (right): knurled gilt knob; brightness buttons (rear) with a gilt frame
-    g.add(lax([[0, 0], [0, 7.4], [1.0, 7.6], [5.2, 7.6], [6, 6.8], [6, 0]], [47, B + 16, 15], 'w', 24), 'steel_dark');
-    g.add(PF(gearPts(47, B + 16, 8.1, 7.4, 22), { w: 3.6, cw: 18.6, bevel: 0.3 }), 'gold');
-    g.add(lax([[0, 0], [0, 3.2], [0.8, 3.0], [1.0, 0]], [47, B + 16, 21], 'w', 16), 'gold');
-    // hood: two side walls + bridge, window frames
+    const B = 30, T0 = B + 5;   // rail top, mount top
+    g.add(PF([[30, B, 1], [126, B, 1], [126, B + 5.4, 1.6], [30, B + 5.4, 1.6]], { w: 22, bevel: 1.1 }), 'steel_dark');   // mount
+    for (const sd of [1, -1]) g.add(strip([31, B + 4.6], [125, B + 4.6], 11.1 * sd, 0.45, 0.4), 'gold');
+    for (const s of [44, 100]) { g.add(hexHead([s, B + 2.4, 11.2], 2.1, 'w', 0.9), 'steel_bright'); g.add(capScrew([s, B + 2.4, -11.2], 1.4, '-w', 0.6, 6), 'steel_bright'); }
+    // QD lever (left) and the brightness knob (right, knurled gilt)
+    g.add(PF([[60, B + 0.6, 1.5], [86, B + 0.6, 1.5], [88, B + 4.6, 1.5], [62, B + 5.2, 1.5]], { w: 2.4, cw: -12.4, bevel: 0.7 }), 'steel_bright');
+    g.add(lax([[0, 0], [0, 5.2], [0.8, 5.4], [3.8, 5.4], [4.4, 4.8], [4.4, 0]], [96, B + 12, 13.4], 'w', 20), 'steel_dark');
+    g.add(PF(gearPts(96, B + 12, 5.8, 5.2, 18), { w: 2.6, cw: 15.6, bevel: 0.25 }), 'gold');
+    g.add(box([96, B + 7.4, 12.6], [6, 9, 2.4], { r: 0.8, seg: 1 }), 'steel_dark');
+    // the beast: seated on its haunches, chest up, head raised watching down the barrel, mouth open; a bevelled
+    // porcelain silhouette with jade haunch plates, a cobalt brow / neck band, gilt horns, cobalt mane, crystal eyes
+    const BEAST = [[36, T0, 0], [34.6, T0 + 5, 4], [38, T0 + 10, 5], [46, T0 + 12, 6], [57, T0 + 14, 4], [61.5, T0 + 19, 3], [65.5, T0 + 22.4, 3],
+      [71.5, T0 + 22, 2], [77.5, T0 + 20, 1.5], [80, T0 + 18.4, 1], [79.2, T0 + 16.8, 0.6], [74.2, T0 + 16.5, 0.4], [78.2, T0 + 15.2, 0.6], [75.5, T0 + 13.2, 1.5],
+      [70.5, T0 + 11, 3], [72.4, T0 + 6, 2], [72.8, T0, 0.5], [67.4, T0, 0.5], [66.2, T0 + 5, 2], [53, T0 + 3.4, 2], [53.8, T0, 0.5]];
+    g.add(PF(BEAST, { w: 12, bevel: 3.0, bevelSeg: 3, curveSeg: 3 }), 'porcelain');
+    g.add(PF([[60.5, T0 + 17.4, 2], [65.5, T0 + 22.6, 2], [72, T0 + 22.3, 2], [71, T0 + 20.6, 1], [64.6, T0 + 19.4, 1], [61.6, T0 + 15.4, 1]], { w: 14, bevel: 1.1, bevelSeg: 1 }), 'glaze_cobalt');   // brow + neck band
     for (const sd of [1, -1]) {
-      g.add(PF([[66, B + 6, 1.5], [128, B + 6, 1.5], [128, B + 50, 3], [104, B + 53, 5], [70, B + 51, 5], [66, B + 26, 1.5]], { w: 4, cw: 16.4 * sd, bevel: 1.2,
-        holes: [[[74, B + 19, 4], [120, B + 19, 4], [120, B + 43, 6], [74, B + 43, 6]]] }), 'steel_dark');
-      g.add(capScrew([118, B + 10, 18.6 * sd], 1.4, sideAx(sd), 0.6, 6), 'steel_bright');
-      g.add(capScrew([72, B + 10, 18.6 * sd], 1.4, sideAx(sd), 0.6, 6), 'steel_bright');
-      // gilt frame round the side window + a cloud scroll on the lower panel
-      const wf = [[73.4, B + 18.4], [120.6, B + 18.4], [120.6, B + 43.6], [73.4, B + 43.6]];
-      const wires = [];
-      for (let i = 0; i < 4; i++) wires.push(strip(wf[i], wf[(i + 1) % 4], 18.55 * sd, 0.9, 0.5));
-      wires.push(flat(cloudPts(80, B + 10.5, 2.6, 1), 18.4 * sd, sd, 0.28, 0.18, 30));
-      wires.push(flat(cloudPts(110, B + 10.5, 2.6, -1), 18.4 * sd, sd, 0.28, 0.18, 30));
-      g.add(merge(wires), 'gold');
+      const fw = 6 * sd;
+      g.add(PF([[39, T0 + 1.2, 4], [52, T0 + 1.2, 4], [52.6, T0 + 9.4, 4], [40, T0 + 9.4, 4]], { w: 1.4, cw: fw + sd * 0.4, bevel: 0.45, bevelSeg: 1 }), 'glaze_jade');   // haunch
+      g.add(flat(spiral(45.8, T0 + 5.3, 0.6, 3.2, 90, -330, 14), fw + sd * 1.15, sd, 0.28, 0.2, 18), 'gold');
+      g.add(PF([[66.6, T0 + 0.6, 2], [71.8, T0 + 0.6, 2], [71.4, T0 + 7.4, 2], [67.4, T0 + 6.4, 2]], { w: 1.2, cw: fw + sd * 0.3, bevel: 0.4, bevelSeg: 1 }), 'glaze_jade');   // foreleg plate
+      g.add(dome([74.6, T0 + 19.6, fw * 0.6], 1.2, sideAx(sd), 0.9, 8), 'crystal');                          // eye
+      g.add(sweep(atW(arcPts(74.6, T0 + 19.6, 2.0, 40, 200, 8), fw * 0.6 + sd * 0.6), 0.32, { seg: 10, radial: 4 }), 'gold');
+      g.add(taper([[66, T0 + 22, 2.6 * sd], [62, T0 + 25.4, 3.6 * sd], [57, T0 + 26.6, 4.2 * sd], [54, T0 + 25.2, 3.8 * sd]], 1.1, 0.35, { seg: 12, radial: 5 }), 'gold');   // horn
+      // mane locks down the neck and over the shoulders
+      for (const [s0, t0, L] of [[64, T0 + 20.4, 13], [60.5, T0 + 17, 12], [57, T0 + 14.2, 10]]) {
+        const path = [0, 0.33, 0.66, 1].map((u) => [s0 - L * u, t0 + 1.6 * Math.sin(Math.PI * u) - 1.2 * u, sd * (5.2 + 1.6 * u)]);
+        g.add(ribbon(path, SEC.groove2, { wf: (u) => 2.1 * (1 - u) + 0.4, hf: (u) => 1.1 * (1 - u) + 0.35, up: [0.1, 0.7, 0.7 * sd], seg: 8 }), 'glaze_cobalt');
+      }
+      g.add(dome([79.2, T0 + 18, 1.5 * sd], 0.65, sideAx(sd), 0.5, 6), 'black_chrome');                      // nostril
     }
-    // the bridge: cobalt glaze top in a gilt rim, a little upturned at the front corners (a roof eave)
-    g.add(PF([[68, B + 48.4, 3], [128, B + 48.4, 3], [128, B + 53, 3], [70, B + 53, 3]], { w: 36.8, bevel: 1.4 }), 'steel_dark');
-    g.add(PF([[69, B + 52.6, 2], [126.6, B + 52.6, 2], [128.4, B + 54.6, 1], [124, B + 54.2, 1], [72, B + 54.2, 1]], { w: 33.6, bevel: 0.6 }), 'glaze_cobalt');
-    g.add(PF([[68, B + 52.4, 2], [128, B + 52.4, 2], [128, B + 53.4, 1], [70, B + 53.4, 1]], { w: 37.4, bevel: 0.3 }), 'gold');
-    for (const sd of [1, -1]) g.add(taper([[121, B + 53.6, 18.4 * sd], [126, B + 54.4, 19.2 * sd], [129.5, B + 57, 19.6 * sd], [130.2, B + 59.2, 18.8 * sd]], 1.0, 0.4, { seg: 10, radial: 5 }), 'gold');
-    g.add(sweep([[74, B + 54.5, 0], [100, B + 54.9, 0], [124, B + 54.7, 0]], 0.5, { seg: 10, radial: 4 }), 'gold');
-    g.add(box([97, B + 10.5, 0], [62, 9, 28.8], { r: 1.2, seg: 1 }), 'steel_dark');   // lower housing under the window (laser diode, electronics)
-    // window frames (front + rear: the front one gilt) and glass
-    for (const s of [76, 124]) {
-      g.add(SC([[-14.4, B + 14], [14.4, B + 14], [14.4, B + 49], [-14.4, B + 49]], s - 2, s + 2, { bevel: 0.6, bevelSeg: 1,
-        holes: [[[-12.2, B + 18, 2.5], [12.2, B + 18, 2.5], [12.2, B + 46, 3], [-12.2, B + 46, 3]]] }), s > 100 ? 'gold' : 'steel_dark');
-      g.add(box([s, B + 32, 0], [0.8, 28, 24.4], { r: 0.2, seg: 1 }), 'lens');
+    g.add(PF([[74.6, T0 + 16.3, 0.3], [78.6, T0 + 16.6, 0.3], [78, T0 + 15.6, 0.3], [75.2, T0 + 15.6, 0.3]], { w: 7, bevel: 0.25, bevelSeg: 1 }), 'lacquer_red');   // open mouth
+    g.add(sweep(atW(spiral(34.5, T0 + 10.5, 4.6, 1.2, -80, 260, 18), 0), 1.0, { seg: 26, radial: 6 }), 'gold');  // the tail curl
+    g.add(sweep([[60.5, T0 + 14.6, -6.6], [62.6, T0 + 16.4, 0], [60.5, T0 + 14.6, 6.6]], 0.7, { seg: 10, radial: 5 }), 'gold');   // collar
+    // the lens: cloud-scroll uprights, a gilt bezel ring (black inner wall), tinted glass, the reticle, a cobalt eave
+    const LS = 115;
+    for (const sd of [1, -1]) {
+      const up = [[106, T0, 1], [124, T0, 1], [122.6, T0 + 8, 4], [120.4, AIM - 8, 3], [118, AIM - 3, 2], [112, AIM - 3, 2], [109.6, AIM - 9, 3], [107.4, T0 + 7, 4]];
+      g.add(PF(up, { w: 2.6, cw: 14.6 * sd, bevel: 0.8, bevelSeg: 1, curveSeg: 2 }), 'porcelain');
+      g.add(flat(cloudPts(115, T0 + 7.4, 2.6, sd), 14.6 * sd + sd * 1.3, sd, 0.3, 0.2, 26), 'gold');
     }
-    // reticle on the front window: cold-cyan ring + dot (the house colour)
-    g.add(xform(lathe([[0, 2.6], [0, 3.1], [0.3, 3.1], [0.3, 2.6], [0, 2.6]], { seg: 32 }), { move: [123.2, AIM, 0] }), 'glow_ice');
-    g.add(sphere([123.4, AIM, 0], 0.32, { seg: 8 }), 'glow_ice');
-    // control buttons (rear) and the QD lever (left)
-    for (const t of [B + 12, B + 19]) g.add(box([27, t, 0], [2.4, 4.6, 9], { r: 1, seg: 1 }), 'rubber');
-    g.add(lax([[0, 0], [0, 7], [8, 7], [8.6, 6.4], [8.6, 0]], [46, B + 15, -15], '-w', 24), 'steel_dark');
-    g.add(PF(gearPts(46, B + 15, 7.4, 6.8, 18), { w: 2, cw: -24.4, bevel: 0.3 }), 'steel_bright');
-    g.add(PF([[90, B + 1, 2], [112, B + 1, 2], [114, B + 5, 2], [92, B + 6, 2]], { w: 3, cw: -15, bevel: 0.8 }), 'steel_bright');
-    g.add(stamp('TW-1', [62, B + 17, -15], { px: 0.5, side: -1 }), 'gold');
+    g.add(lathe([[LS - 3.4, 10.4], [LS - 3.4, 12.6], [LS - 2.6, 13.6], [LS + 2.6, 13.6], [LS + 3.4, 12.6], [LS + 3.4, 10.4], [LS - 3.4, 10.4]], { t: AIM, seg: 40 }), 'gold');
+    g.add(lathe([[LS - 2.6, 9.6], [LS - 2.6, 10.6], [LS + 2.6, 10.6], [LS + 2.6, 9.6], [LS - 2.6, 9.6]], { t: AIM, seg: 32 }), 'black_chrome');
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; g.add(dome([LS - 3.5, AIM + Math.sin(a) * 12, Math.cos(a) * 12], 0.6, '-s', 0.5, 6), 'steel_bright'); }
+    g.add(cyl(LS - 0.5, LS + 0.5, 9.8, { t: AIM, seg: 32, b: 0 }), 'glass_clear');
+    g.add(xform(lathe([[0, 2.6], [0, 3.1], [0.3, 3.1], [0.3, 2.6], [0, 2.6]], { seg: 32 }), { move: [LS + 0.6, AIM, 0] }), 'glow_ice');
+    g.add(sphere([LS + 0.8, AIM, 0], 0.32, { seg: 8 }), 'glow_ice');
+    g.add(PF([[LS - 7, AIM + 12.2, 1], [LS + 7, AIM + 12.2, 1], [LS + 9.4, AIM + 15.6, 1], [LS - 9.4, AIM + 15.6, 1]], { w: 19, bevel: 0.8, bevelSeg: 1 }), 'glaze_cobalt');
+    g.add(PF([[LS - 9.6, AIM + 15.4, 0.6], [LS + 9.6, AIM + 15.4, 0.6], [LS + 9.6, AIM + 16.4, 0.6], [LS - 9.6, AIM + 16.4, 0.6]], { w: 20.4, bevel: 0.25 }), 'gold');
+    for (const sd of [1, -1]) for (const e of [1, -1]) g.add(taper([[LS + 8.6 * e, AIM + 15.9, 9.6 * sd], [LS + 11 * e, AIM + 16.6, 10.6 * sd], [LS + 12.4 * e, AIM + 18.8, 10.8 * sd]], 0.8, 0.3, { seg: 8, radial: 5 }), 'gold');
+    g.add(stamp('TW-1', [96, B + 3.4, -11.05], { px: 0.45, side: -1 }), 'gold');
   }
 
   // ======================================================================== transparent water-tank magazine (40 rds)
@@ -1442,33 +1659,46 @@ export default function build() {
       mag.add(lathe([[176.8, 0], [176.8, 3.95], [183, 3.95], [188, 3.1], [192, 1.5], [194, 0.3], [194.2, 0]], { t, w, seg: 10 }), 'copper');
     }
     mag.add(PF([[123.4, -84, 1.2], [197, -82, 1.2], [197, -86.4, 1], [123.4, -88.4, 1]], { w: 22, bevel: 0.6 }), 'polymer_grip');   // follower
-    // the tank's water: a deeper, dimmer blue than the hero tube, under the round stack (one focus, §1.1 #3)
-    const mw = g.part('fx_magwater', { parent: 'mag', pivot: [160, -125, 0], extras: { pv: { preset: 'pv_core', coreMode: 2, coreScale: 0.7, coreTint: '#1b5a84' }, note: 'water in the tank magazine' } });
-    mw.add(PF([[123.6, -89, 2], [196.4, -89, 2], [197.4, -165, 3], [122.6, -165, 3]], { w: 24.4, bevel: 1.6 }), 'glass');
+    // the tank's water: the hero tube's own water (pv_core mode 2, broad caustics), a touch deeper; a clear glass gap
+    // all round it, a bright meniscus at the water line and bubbles rising in it
+    const mw = g.part('fx_magwater', { parent: 'mag', pivot: [160, -125, 0], extras: { pv: { preset: 'pv_core', coreMode: 2, coreScale: 3.6, coreTint: '#56c2f6' }, note: 'water in the tank magazine (the tube water: fine caustics, a touch deeper)' } });
+    mw.add(PF([[124.6, -89, 2], [195.4, -89, 2], [196.4, -164, 3], [123.6, -164, 3]], { w: 22.2, bevel: 1.6 }), 'glass');
+    mag.add(PF([[124.2, -89.6, 0.3], [195.8, -89.6, 0.3], [195.8, -88.4, 0.3], [124.2, -88.4, 0.3]], { w: 23.4, bevel: 0.2, bevelSeg: 1 }), 'glow_ice');   // meniscus
+    {
+      const bub = [];
+      for (let i = 0; i < 9; i++) {
+        const s = 131 + ((i * 37) % 60), t = -100 - ((i * 23) % 58), w = ((i % 3) - 1) * 6.2 + (i % 2 ? 11.3 : -11.3) * (i % 3 === 1 ? 1 : 0);
+        bub.push(sphere([s, t, Math.max(-11.4, Math.min(11.4, w))], 0.8 + (i % 3) * 0.45, { seg: 8 }));
+      }
+      mag.add(merge(bub), 'crystal');
+    }
+    // bevelled corner posts on the glass, a collar under the feed lips
+    for (const sd of [1, -1]) for (const [s0, s1, f] of [[121.4, 124.4, -1.6], [195.6, 198.6, 1.6]]) mag.add(PF([[s0, -15, 0.6], [s1, -15, 0.6], [s1 + f, -166, 0.6], [s0 + f, -166, 0.6]], { w: 1.6, cw: 14.6 * sd, bevel: 0.45, bevelSeg: 1 }), 'steel_dark');
+    mag.add(PF([[119.6, -14.2, 1], [200.4, -14.2, 1], [200.6, -19.4, 1], [119.4, -19.4, 1]], { w: 30.4, bevel: 0.8, bevelSeg: 1 }), 'steel_dark');
   }
 
   // ======================================================================== sockets & meta
-  const eyeFront = (sd) => { const p = vadd(EYE.P, EYE.N, 5.4); return sd > 0 ? p : mirW(p); };
+  const eyeFront = (sd) => { const p = hsP(vadd(EYE.P, EYE.N, 5.4)); return sd > 0 ? p : mirW(p); };
   g.socket('muzzle', [MUZZLE, 0, 0]);
   g.socket('eject', [154, 2, 15.5], { dir: [0.2, 0.45, 1] });
   g.socket('grip_r', [1 + GS, -80 + GT, 0], { rot: [0, 0, -20] });
   g.socket('grip_l', [338, -24, 0]);
   g.socket('magwell', [164, -82, 0]);
   g.socket('charge', [214, 6, -26]);
-  g.socket('optic', [123, AIM, 0], { type: 'holo', zoom: 1.25 });
-  g.socket('whiskerL', [676, 14, -13]);       // S_whiskerL / R: twin 焚海 whisker roots (cheeks)
-  g.socket('whiskerR', [676, 14, 13]);
-  g.socket('mouth', [676, 0, 0]);             // bubbles, water mist, beam origin
+  g.socket('optic', [116, AIM, 0], { type: 'holo', zoom: 1.25 });
+  g.socket('whiskerL', hsP([676, 14, -13]));  // S_whiskerL / R: twin 焚海 whisker roots (cheeks)
+  g.socket('whiskerR', hsP([676, 14, 13]));
+  g.socket('mouth', hsP([690, 0, 0]));        // bubbles, water mist, beam origin
   g.socket('eye_r', eyeFront(1));
   g.socket('eye_l', eyeFront(-1));
-  g.socket('tube', [392, TT, TW + 8]);        // middle of the water tube (outside face)
+  g.socket('tube', [392, TT, TW + TSD * 8]);  // middle of the water tube (outside face)
   g.socket('tube_a', [TS0 + 10, TT, TW]);
   g.socket('tube_b', [TS1 - 10, TT, TW]);
   g.socket('ridge', [300, 38, 0]);
   g.socket('scales_r', [333, 0, 22]);
   g.socket('scales_l', [333, 0, -22]);
   g.socket('tail', [-340, 76, 0]);
-  g.socket('mane', [556, 50, 0]);
+  g.socket('mane', hsP([556, 50, 0]));
   g.meta({
     grip: 'rifle', support: 'handguard', reload: 'mag', chargeSide: 'left', series: 'jiuzi',
     notes: 'M07 螭吻. fx_jaw hinge w (open -25: v 0.12 = 3° per shot, 1 = beam / ult). fx_scale1..6: groups rear -> front, '
@@ -1476,21 +1706,38 @@ export default function build() {
       + 'fx_flow: bubble helix, spin s (spinMul = flow speed). mag: clear tank + fx_magwater (pv_core). fx_resonance: 九子 lamp. '
       + 'The ejection-port dust cover is modelled open.',
   });
-  // bake: flat faces keep their own normals; every mesh but glass / glow is sliced along s and tessellated to 14 mm
-  // (so the per-vertex AO does not streak across the long extrusion faces), then the kit's bake (no further splits)
-  // and m4's postBake (unbury AO, per-material wear, clean flat faces).
+  // bake: flat faces keep their own normals; every mesh but glass / glow is sliced along s and tessellated (16 mm on
+  // the glazes, where AO gradients show on big pale faces; 40 mm on the dark metals and gold) so the per-vertex AO does
+  // not streak across the long extrusion faces, then the kit's bake (no further splits) and m4's postBake (unbury
+  // AO, per-material wear, clean flat faces).
   g.build = (opts = {}) => {
     if (opts.bake === false) return Gun.prototype.build.call(g, opts);
     const root = Gun.prototype.build.call(g, { ...opts, bake: false });
-    const L = (opts.tessellate ?? 14) * 0.001, meshes = [];
+    const L0 = (opts.tessellate ?? 28) * 0.001, LK = opts.tessDark ?? 3, meshes = [];
     root.traverse((o) => {
       if (!o.isMesh) return;
       flattenFaces(o.geometry);
+      const L = /:(porcelain|glaze_\w+|lacquer_red)$/.test(o.name) ? L0 : L0 * LK;
       if (!NO_TESS.test(o.name)) o.geometry = new TessellateModifier(L, 10).modify(sliceS(o.geometry, L));
       meshes.push(o);
     });
-    bakeMeshes(meshes, { tessellate: 1, aoDist: 0.035, rays: 32, log: true });
-    postBake(root, {}, WEAR);
+    // low relief on the glazes (wires, cloisonné strips, enamel plates < 0.9 mm) casts no contact AO: at a 14 mm vertex
+    // grid it only smears into grey wedges round every inlay
+    if (opts.tessOnly) return root;   // (budget checks)
+    bakeMeshes(meshes, { tessellate: 1, aoDist: 0.035, rays: 32, log: true, minHeight: (m) => (/:(porcelain|glaze_\w+)$/.test(m.name) ? 0.0009 : 0) });
+    postBake(root, { cos: 0.99999 }, WEAR);   // strict: a gently curved loft is never cleaned as one 'flat face'
+    // normals as normalized bytes (KHR_mesh_quantization; the exporter pads them to 4 bytes): 12 -> 4 bytes a vertex,
+    // ~2 MB off the download; the shaders read them as floats and nothing on the CPU reads a weapon's normals
+    root.traverse((o) => {
+      const n = o.isMesh && o.geometry.attributes.normal;
+      if (!n || n.array instanceof Int8Array) return;
+      const q = new Int8Array(n.count * 3);
+      for (let i = 0; i < n.count; i++) {
+        const x = n.getX(i), y = n.getY(i), z = n.getZ(i), l = Math.hypot(x, y, z) || 1;
+        q[i * 3] = Math.round((x / l) * 127); q[i * 3 + 1] = Math.round((y / l) * 127); q[i * 3 + 2] = Math.round((z / l) * 127);
+      }
+      o.geometry.setAttribute('normal', new THREE.BufferAttribute(q, 3, true));
+    });
     return root;
   };
   return g;

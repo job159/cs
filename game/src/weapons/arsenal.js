@@ -306,7 +306,9 @@ export class Arsenal {
     const t = first ? first.duration ?? 1.5 : (ws.def.draw ?? DRAW_TIME[ws.def.cat] ?? 0.7);
     this.state = 'draw';
     this.timer = t;
-    this.vm.play(first || drawClip(ws.def.cat === 'mg' || ws.def.cat === 'heavy'), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
+    // premium.drawClip: the weapon's own normal draw (a greatsword does not come up like a rifle)
+    const own = !first && ws.def.premium?.drawClip ? clipFor(ws.def.premium.drawClip, this.vm, { def: ws.def }) : null;
+    this.vm.play(first || own || drawClip(ws.def.cat === 'mg' || ws.def.cat === 'heavy'), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
     if (ws.slideLocked) this.vm.partState.slide = { v: 1 };
     this.game.hud?.weaponChanged?.(ws);
   }
@@ -323,7 +325,8 @@ export class Arsenal {
     // recoil recovery once the spray pauses
     if (ws) {
       const r = ws.def.recoil || {};
-      const pause = this.sinceShot > Math.max(0.12, 60 / (ws.def.rpm || 600) * 1.6);
+      // recoil.pause: the gap (x shot interval) after which recovery starts; < 1 lets slow auto guns settle between shots
+      const pause = this.sinceShot > Math.max(0.12, 60 / (ws.def.rpm || 600) * (r.pause ?? 1.6));
       if (pause) {
         const rec = (r.recover ?? 12) * dt;
         this.recoilPitch = Math.max(0, this.recoilPitch - rec * (1 + this.recoilPitch * 0.08));
@@ -375,6 +378,8 @@ export class Arsenal {
 
     if (def.mode === 'melee') { this._melee(s, ws); return; }
     this._updateSpin(dt, s, ws);
+    // a premium ranged weapon that runs its own trigger (bow draw / release): special.trigger() -> true
+    if (sp?.trigger?.(ws, s, this.game)) return;
 
     // trigger logic
     if (s.pressed.special && def.alt === 'burst') { ws.burstMode = !ws.burstMode; this.game.audio?.play('ui_click'); this.game.hud?.toast?.(ws.burstMode ? '三連發' : '半自動'); }
@@ -992,6 +997,8 @@ export class Arsenal {
 
   _melee(s, ws) {
     const def = ws.def;
+    // a premium melee drives its own attacks (combos, charge, guard) from its special: special.melee() -> true
+    if (specialOf(ws)?.melee?.(ws, s, this.game)) return;
     if (this.state !== 'idle') return;
     if (s.pressed.fire || (s.held.fire && this.fireCd <= 0)) {
       if (this.fireCd > 0) return;

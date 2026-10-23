@@ -3,7 +3,7 @@
 //                      fill (0.45-0.8), full glow (0.8-1.0), the focal gem flashes with a "ding" (1.0-1.15) -- hold,
 //                      0.3 s fade. Headshot version: a cross-star flare from the gem + an element ring; final-kill
 //                      version (last zombie of the wave / boss): x1.25, +0.6 s and 12 rays behind it.
-//                      registerKillMark(id, { draw(ctx, S, t, o) })  procedural (flip-book: drawn at N frames by
+//                      registerKillMark(id, { draw(ctx, S, t, o), scale })  procedural (scale: element size x, 1 = 112 px) (flip-book: drawn at N frames by
 //                      quality -- 12 / 24 / 30 -- straight onto the canvas, no atlas memory), or
 //                      registerKillMark(id, { src: 'assets/ui/km_x.webp', frames, cols, size, headFrames })  a WebP
 //                      atlas (row-major cells; frames after `frames` are the headshot extra cells).
@@ -174,6 +174,7 @@ export class KillLayer {
     this.km.classList.toggle('final', !!o.final);
     this.km.classList.add('on');
     this.km.style.setProperty('--kc', o.tint || '#ffc74a');
+    this.km.style.setProperty('--ks', spec.scale || 1);          // spec.scale: a bigger emblem (mythic marks)
   }
 
   _drawMark(c) {
@@ -264,7 +265,7 @@ export class KillLayer {
 
 injectCSS('cf-kl', `
 .kl { position: fixed; inset: 0; pointer-events: none; }
-.kl .km { position: fixed; left: 50%; bottom: calc(118px + var(--safe-bottom, 0px)); width: 112px; height: 112px; margin-left: -56px; opacity: 0; transition: opacity .3s; }
+.kl .km { position: fixed; left: 50%; bottom: calc(118px + var(--safe-bottom, 0px)); width: calc(112px * var(--ks, 1)); height: calc(112px * var(--ks, 1)); margin-left: calc(-56px * var(--ks, 1)); opacity: 0; transition: opacity .3s; }
 .kl .km.on { opacity: 1; }
 .kl .km canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .kl .km.final { transform: scale(1.25); transform-origin: 50% 100%; }
@@ -272,6 +273,8 @@ injectCSS('cf-kl', `
   -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%); }
 .kl .km.final .km-rays { opacity: .55; animation: kmRays 6s linear infinite; }
 @keyframes kmRays { to { transform: rotate(60deg); } }
+/* a skill card (hud .skcard, 22 % height) is up: the streak steps down under it instead of printing through its title */
+body:has(.skcard.on) .kl .cmb { top: calc(22% + max(44px, 8.5vh)); }
 body.touch .kl .km { left: 37%; bottom: calc(54px + var(--safe-bottom, 0px)); width: min(96px, 17vh); height: min(96px, 17vh); margin-left: calc(min(96px, 17vh) / -2); }
 .kl .cmb { position: fixed; left: 31%; top: max(17%, 96px); display: flex; align-items: center; gap: 8px; opacity: 0; transform-origin: 0 50%; }
 /* phones: smaller and further up-left, clear of the crosshair (at 844x390 it sat ~50 px above it, over the heads) */

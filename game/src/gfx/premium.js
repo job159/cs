@@ -146,6 +146,8 @@ export function premiumUniforms(state, prm) {
     pSeed: u.pSeed, pRimColor: u.pRimColor, pTwinColor: u.pTwinColor, pDissolve: u.pDissolve, pOpacity: u.pOpacity,
     // coreTint per part: one weapon can hold a gold-orange focus gem and a furnace capsule of another colour (M03)
     pCoreTint: prm.coreTint ? f(C(prm.coreTint)) : u.pCoreTint, pHoloColor: u.pHoloColor, pEdgeColor: u.pEdgeColor, pRuneColor: u.pRuneColor,
+    // galaxy second nebula tone (coreTint2; w = 0: the old bgr swap of the tint, which turns a blue core red)
+    pCoreTint2: f(prm.coreTint2 ? new THREE.Vector4(...C(prm.coreTint2).toArray(), 1) : new THREE.Vector4(0, 0, 0, 0)),
     pPal: prm.shardPal ? f(prm.shardPal.map((h) => C(h))) : u.pPal, pIridCool: f(prm.iridCool),
     pGrout: prm.grout ? f(C(prm.grout)) : u.pGrout, pCoreMode: prm.coreMode >= 0 ? f(prm.coreMode) : u.pCoreMode,
     pBox: f(new THREE.Vector4(-0.5, 0.2, -0.15, 0.1)),
@@ -363,6 +365,7 @@ uniform vec3 pCoreTint;
 #endif
 #ifdef PREMIUM_CORE
 uniform float pCoreMode, pCoreSkin, pCoreScale;   // pCoreScale: pattern density (small capsules want finer water / lava)
+uniform vec4 pCoreTint2;
 vec3 pCoreLayer(vec2 uv, float i) {
   float t = time;
   vec3 c = vec3(0.0);
@@ -372,7 +375,7 @@ vec3 pCoreLayer(vec2 uv, float i) {
     vec2 sg = uv * (160.0 - 30.0 * i) + i * 7.3;
     vec2 sc = floor(sg); vec2 so = pH22(sc) * 0.7 + 0.15;
     float st = step(0.8, pH21(sc + 3.1)) * smoothstep(0.12, 0.0, length(fract(sg) - so)) * (0.6 + 0.4 * sin(t * 3.0 + so.x * 40.0));
-    c = mix(pCoreTint, pCoreTint.bgr, smoothstep(0.4, 0.7, neb2)) * pow(neb, 2.5) * 2.6 + vec3(1.0, 0.95, 0.85) * st * 3.0;
+    c = mix(pCoreTint, pCoreTint2.w > 0.5 ? pCoreTint2.rgb : pCoreTint.bgr, smoothstep(0.4, 0.7, neb2)) * pow(neb, 2.5) * 2.6 + vec3(1.0, 0.95, 0.85) * st * 3.0;
   } else if (pCoreMode < 1.5) {     // cloud
     float cl = texture2D(tGrunge, uv * 3.0 + vec2(t * 0.025 * (i + 1.0), t * 0.01)).r;
     c = pCoreTint * smoothstep(0.35, 0.75, cl) * 1.4;

@@ -81,7 +81,7 @@ void main() {
 }`;
 const FRAG = /* glsl */`
 uniform sampler2D tFeather;
-uniform float uTime, uAmt, uStyle, uGlow, uAlpha;
+uniform float uTime, uAmt, uStyle, uGlow, uAlpha, uTipMix;
 uniform vec3 uCore, uTip, uE0, uE1, uE2, uGold;
 ${GLSL_NOISE}
 varying vec2 vUv;
@@ -102,6 +102,7 @@ void main() {
     gl_FragColor = vec4(c * t.r * k * uGlow * edgeFade, 0.0);
   } else {
     vec3 en = t.b < 0.33 ? uE0 : (t.b < 0.66 ? uE1 : uE2);
+    en = mix(en, uTip, smoothstep(0.5, 0.95, u) * uTipMix);   // tipMix: cells shade to the tip colour outwards
     en *= t.g * (0.8 + 0.4 * flow) * uGlow;
     vec3 gold = uGold * (0.8 + 0.6 * flow);
     vec3 c = mix(en, gold, t.a);
@@ -153,7 +154,7 @@ class Wing {
     geo.setAttribute('aCard', this.cardAttr);
     this.u = {
       tFeather: wings.tex, tNoise: this.kit.noise, uTime: this.kit.time, uAmt: { value: 1 }, uStyle: { value: this.style }, uGlow: { value: 1 },
-      uAlpha: { value: o.alpha ?? 0.92 }, uVm: { value: this.vm ? 1 : 0 }, vmProj: materialUniforms.vmProj,
+      uAlpha: { value: o.alpha ?? 0.92 }, uTipMix: { value: o.tipMix ?? 0 }, uVm: { value: this.vm ? 1 : 0 }, vmProj: materialUniforms.vmProj,
       uCore: { value: hdr(o.core ?? [1.7, 1.45, 1.05]) }, uTip: { value: hdr(o.tip ?? [1.9, 0.6, 0.16]) }, uGold: { value: hdr(o.gold ?? [2.6, 1.7, 0.55]) },
       uE0: { value: hdr(o.enamel?.[0] ?? [0.1, 0.9, 1.0]) }, uE1: { value: hdr(o.enamel?.[1] ?? [1.4, 0.18, 0.12]) }, uE2: { value: hdr(o.enamel?.[2] ?? [0.15, 0.45, 1.3]) },
     };
@@ -180,6 +181,7 @@ class Wing {
     if (o.core) hdr(o.core, 1, this.u.uCore.value); if (o.tip) hdr(o.tip, 1, this.u.uTip.value); if (o.gold) hdr(o.gold, 1, this.u.uGold.value);
     if (o.enamel) o.enamel.forEach((e, i) => hdr(e, 1, this.u['uE' + i].value));
     if (o.glow !== undefined) this.glow = o.glow;
+    if (o.tipMix !== undefined) this.u.uTipMix.value = o.tipMix;
     return this;
   }
   /** Light dust shed from the feather tips (§2 M03: 羽緣灑光塵 MOTE ×16). */
@@ -291,7 +293,7 @@ export class Wings {
    * ('both' | 'L' | 'R'), preset ('vm' | 'back'), anchors { L: Vector3, R: Vector3 } (local positions on the
    * parent), count (cards per side, 5–7), spacing (deg), sweep (deg), scale (1 vm; 3.2 back), style ('glow' |
    * 'cloisonne'), shape (0–3 feather silhouette), core / tip (HDR, glow style), enamel [c0, c1, c2] + gold
-   * (cloisonné), open (false = start folded), alpha (cloisonné enamel opacity, default 0.92; lower = the world
+   * (cloisonné; tipMix 0..1 shades the cells to `tip` towards the feather tips), open (false = start folded), alpha (cloisonné enamel opacity, default 0.92; lower = the world
    * shows through the cells), fan { L: { a, o }, R: { a, o } } (first person: innermost-card and opening directions
    * in the parent's frame, e.g. to keep a fan above the crosshair), guardMin (centre guard floor, 0.35). Returns a Wing { openWing(dur), close(dur), set(o), sparkle(n),
    * detach(), glow }.

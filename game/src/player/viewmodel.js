@@ -16,7 +16,7 @@ import { tickPremium, presetsInUse } from '../gfx/premium.js';
 import { WEAPONS } from '../weapons/defs.js';
 import { ArmRig, basisQuat } from './ik.js';
 import { ClipPlayer } from './clip.js';
-import { rightGrip, mirrorGrip, LEFT_GRIPS, FREE_GRIPS, freeGrip } from './grips.js';
+import { rightGrip, mirrorGrip, LEFT_GRIPS, FREE_GRIPS, freeGrip, BOW_DRAW } from './grips.js';
 import { Spring3, damp, clamp, lerp, ease } from '../engine/util.js';
 
 const D = Math.PI / 180;
@@ -91,8 +91,20 @@ export class WeaponView {
         if (side && this.parts[side + '_gun']) s.part = side + '_gun';
       }
     }
+    // sockets riding a moving part (GLB extras.ride = part name: a bow's draw hand on the string, the arrow point):
+    // a marker parented to the part keeps them on it through any hinge / slide / clip offset (nested parts too)
+    scene.updateMatrixWorld(true);
+    for (const s of Object.values(this.sockets)) {
+      const p = s.data?.ride && this.parts[s.data.ride];
+      if (!p || s.part) continue;
+      s.node = new THREE.Object3D();
+      s.node.position.copy(p.node.worldToLocal(s.pos.clone().applyMatrix4(scene.matrixWorld)));
+      p.node.add(s.node);
+    }
     const gr = this.sockets.grip_r?.pos, gl = this.sockets.grip_l?.pos;
-    this.pivot = this.dual && gr && gl ? gr.clone().add(gl).multiplyScalar(0.5) : gr || null;
+    // a bow turns about the bow hand (grip_l); the draw hand rides the string
+    this.pivot = this.dual && gr && gl ? gr.clone().add(gl).multiplyScalar(0.5) : this.meta.grip === 'bow' && gl ? gl.clone() : gr || null;
+    this.onParts = null;     // (vm, dt) after the parts are posed, before the hands: procedural parts (a bow's string)
     // def.premium -> premium shader presets + PremiumState (gfx/premium.js); def.finish = { id, seed, float, counter }
     applyHardSurface(scene, { viewmodel: true, wear: def.wear ?? 1, premium: def.premium, finish: def.finish, counter: def.finish?.counter });
     this.premium = scene.userData.premiumState || null;   // drive with setMeter / setReady / fire / reloadStart...
@@ -231,7 +243,7 @@ export class Viewmodel {
     this.hip.rot.set((h[3] ?? 1) * D, (h[4] ?? -2.5) * D, (h[5] ?? -2) * D);
     this.adsRelief = vm.relief ?? (w.has('optic') ? 0.2 : grip === 'pistol' ? 0.27 : 0.17);
     this.supportGrip = LEFT_GRIPS[w.meta.support] || LEFT_GRIPS.handguard;
-    this.rightGrip = rightGrip(this.rake);
+    this.rightGrip = grip === 'bow' ? { ...BOW_DRAW } : rightGrip(this.rake);
     // dual: each hand holds its own pistol one-handed, the left one mirrored
     if (w.dual) { this.rightGrip.pose = 'gripOne'; this.supportGrip = mirrorGrip(this.rightGrip); }
     this._computeAds();
@@ -273,6 +285,7 @@ export class Viewmodel {
 
   /** Socket position in gun space, following the part it rides on (dual: L_gun / R_gun recoil). */
   _socketGun(s, out) {
+    if (s.node) { const r = this.weapon.root; r.updateMatrixWorld(); return r.worldToLocal(s.node.getWorldPosition(out)); }
     out.copy(s.pos);
     const p = s.part && this.weapon.parts[s.part];
     if (p) out.sub(p.pos).applyQuaternion(_q.copy(p.quat).invert().premultiply(p.node.quaternion)).add(p.node.position);
@@ -663,6 +676,7 @@ export class Viewmodel {
       }
       node.visible = typeof vis === 'number' ? vis > 0.5 : !ps.hidden;
     }
+    w.onParts?.(this, dt);
   }
 
   /** World(container)-space wrist transform for a hand anchor. */
@@ -707,7 +721,7 @@ export class Viewmodel {
       return ref.clone().sub(part.pos).applyQuaternion(part.node.quaternion).add(part.node.position);
     };
     if (gripDef) { /* dual grip resolved above */ }
-    else if (name === 'grip_r') { gripDef = this.rightGrip; socketPos = w.socket('grip_r')?.pos; }
+    else if (name === 'grip_r') { gripDef = this.rightGrip; const s = w.socket('grip_r'); socketPos = s?.node ? this._socketGun(s, new THREE.Vector3()) : s?.pos; }
     else if (name === 'grip_l') {
       gripDef = this.supportGrip; socketPos = w.socket('grip_l')?.pos?.clone();
       // the support hand rides on a pump forend

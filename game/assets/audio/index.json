@@ -5,6 +5,9 @@
     "manifest.creatures.json",
     "manifest.impacts.json",
     "manifest.music.json",
+    "manifest.premium_bifang.json",
+    "manifest.premium_chiwen.json",
+    "manifest.premium_sunbow.json",
     "manifest.ui_amb.json",
     "manifest.weapons.json"
   ]

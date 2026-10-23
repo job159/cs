@@ -4,7 +4,8 @@
 //           (sizes at 720p, scaled with the window height); each pops, rises, fades on its own curve
 //   ghosts  two afterimages where the number was 40 / 80 ms ago (alpha .28 / .12) -- the CSO "drag"
 //   stack   a new number on the same target within 0.15 s starts 22 px above where the last one is now (so a burst
-//           climbs instead of piling up); 4 per target, the 5th merges into the top one (sum + punch)
+//           climbs instead of piling up); 4 per target, the 5th merges into the top one (sum + punch); premium
+//           skins merge same-frame hits per target (one number a pellet volley / skill tick), ≤ 8 new a frame
 //   skins   standard white | anti series-colour edge | exotic element gradient | mythic vermilion with a gold edge;
 //           crit swaps to gold (x1.3); premium.dmgSkin may name any SKINS key
 //   new DamageNumbers(parent, game).add(point, amount, { head, crit, armored, elem, skin, hex, target })  .update(dt)
@@ -58,6 +59,14 @@ export class DamageNumbers {
     const tier = o.armored ? 'armor' : o.crit || o.head ? 'crit' : o.elem ? 'elem' : 'normal';
     const T = TIER[tier], key = o.target || null, now = this.game.time;
     const stack = key ? (this.byTarget.get(key) || []).filter((n) => !n.dead) : [];
+    // premium skins: every hit on one target in the same frame (a pellet volley, one skill tick) is one number,
+    // and at most 8 new numbers a frame (an area tick on a horde must not wall off the screen)
+    if (o.skin && o.skin !== 'standard') {
+      const top = stack[stack.length - 1];
+      if (top && now - top.born < 1e-4) { this._set(top, top.n + amount); top.punch = 1; return; }
+      if (this._frameT !== now) { this._frameT = now; this._frameN = 0; }
+      if (++this._frameN > 8) return;
+    }
     // 5th number on one target: merge into the newest
     if (stack.length >= 4) { const top = stack[stack.length - 1]; this._set(top, top.n + amount); top.t = Math.min(top.t, top.T.popT); top.punch = 1; return; }
     const last = stack[stack.length - 1];

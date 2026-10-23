@@ -1,0 +1,213 @@
+{
+  "category": "premium_sunbow",
+  "producer": "premium_sunbow",
+  "sounds": {
+    "ready_sunbow": [],
+    "ready_sunbow_eclipse": [],
+    "sunbow_close": [
+      "fs:390462",
+      "kenney_impact/Audio/impactWood_heavy_003",
+      "fs:507466",
+      "fs:789222",
+      "fs:412558",
+      "kenney_impact/Audio/impactWood_heavy_004",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "kenney_impact/Audio/impactWood_heavy_001",
+      "kenney_impact/Audio/impactWood_heavy_002"
+    ],
+    "sunbow_creak": [
+      "fs:31574",
+      "fs:382313"
+    ],
+    "sunbow_crisis": [
+      "fs:565642",
+      "fs:244238"
+    ],
+    "sunbow_draw": [
+      "fs:268227",
+      "fs:494797",
+      "fs:31574",
+      "kenney_impact/Audio/impactWood_medium_001",
+      "kenney_impact/Audio/impactWood_medium_002"
+    ],
+    "sunbow_dry": [],
+    "sunbow_empower": [],
+    "sunbow_far": [],
+    "sunbow_first": [
+      "fs:268227",
+      "fs:31574",
+      "fs:373921",
+      "fs:486140",
+      "fs:373231",
+      "fs:375553"
+    ],
+    "sunbow_full": [
+      "fs:382313"
+    ],
+    "sunbow_hang": [
+      "fs:260554",
+      "fs:504618"
+    ],
+    "sunbow_hang_burst": [
+      "fs:375532",
+      "fs:609587",
+      "fs:260555",
+      "fs:398283"
+    ],
+    "sunbow_hang_loop": [
+      "fs:363092"
+    ],
+    "sunbow_hit": [
+      "fs:779805",
+      "fs:411743",
+      "fs:412558"
+    ],
+    "sunbow_hit_world": [
+      "fs:504618",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "fs:319227",
+      "fs:319214",
+      "fs:412558",
+      "kenney_impact/Audio/impactWood_heavy_001",
+      "kenney_impact/Audio/impactWood_heavy_002",
+      "kenney_impact/Audio/impactWood_heavy_003",
+      "kenney_impact/Audio/impactWood_heavy_004"
+    ],
+    "sunbow_idle": [],
+    "sunbow_ignite": [
+      "fs:412558",
+      "fs:260555"
+    ],
+    "sunbow_inspect": [
+      "fs:31574",
+      "fs:334219"
+    ],
+    "sunbow_kill": [],
+    "sunbow_nock": [
+      "fs:382313"
+    ],
+    "sunbow_pin": [
+      "fs:201094"
+    ],
+    "sunbow_pluck": [],
+    "sunbow_regen": [],
+    "sunbow_rekindle": [
+      "fs:163383",
+      "fs:789038",
+      "fs:412558"
+    ],
+    "sunbow_release": [
+      "fs:390462",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "fs:507466",
+      "kenney_impact/Audio/impactWood_heavy_001",
+      "kenney_impact/Audio/impactWood_heavy_002",
+      "kenney_impact/Audio/impactWood_heavy_003"
+    ],
+    "sunbow_release_heavy": [
+      "fs:390462",
+      "kenney_impact/Audio/impactWood_heavy_004",
+      "fs:507466",
+      "fs:789222",
+      "fs:412558",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "kenney_impact/Audio/impactWood_heavy_001",
+      "kenney_impact/Audio/impactWood_heavy_002"
+    ],
+    "sunbow_split": [],
+    "sunbow_stage1": [],
+    "sunbow_stage2": [],
+    "sunbow_stage3": [],
+    "sunbow_tail": [],
+    "sunbow_ult_fall": [
+      "fs:260554"
+    ],
+    "sunbow_ult_final": [
+      "fs:366086",
+      "fs:258195",
+      "fs:764329"
+    ],
+    "sunbow_ult_impact": [
+      "fs:758580",
+      "fs:569510",
+      "fs:486141",
+      "fs:260555",
+      "fs:609587",
+      "fs:398283",
+      "fs:516914",
+      "fs:258195"
+    ],
+    "sunbow_ult_raise": [
+      "fs:375497",
+      "fs:375519",
+      "fs:163383",
+      "fs:373921",
+      "fs:486140",
+      "fs:375531",
+      "fs:452400",
+      "fs:373257",
+      "fs:373253",
+      "fs:373248",
+      "fs:764329",
+      "fs:764330"
+    ],
+    "sunbow_ult_shot": [],
+    "sunbow_whiz": [
+      "fs:789222"
+    ]
+  },
+  "loaded": [
+    "fs:163383",
+    "fs:201094",
+    "fs:244238",
+    "fs:258195",
+    "fs:260554",
+    "fs:260555",
+    "fs:268227",
+    "fs:31574",
+    "fs:319214",
+    "fs:319227",
+    "fs:334219",
+    "fs:363092",
+    "fs:366086",
+    "fs:373231",
+    "fs:373248",
+    "fs:373253",
+    "fs:373257",
+    "fs:373921",
+    "fs:375497",
+    "fs:375519",
+    "fs:375531",
+    "fs:375532",
+    "fs:375553",
+    "fs:382313",
+    "fs:390462",
+    "fs:398283",
+    "fs:411743",
+    "fs:412558",
+    "fs:452400",
+    "fs:486140",
+    "fs:486141",
+    "fs:494797",
+    "fs:504618",
+    "fs:507466",
+    "fs:516914",
+    "fs:565642",
+    "fs:569510",
+    "fs:609587",
+    "fs:758580",
+    "fs:764329",
+    "fs:764330",
+    "fs:779805",
+    "fs:789038",
+    "fs:789222",
+    "kenney_impact/Audio/impactWood_heavy_000",
+    "kenney_impact/Audio/impactWood_heavy_001",
+    "kenney_impact/Audio/impactWood_heavy_002",
+    "kenney_impact/Audio/impactWood_heavy_003",
+    "kenney_impact/Audio/impactWood_heavy_004",
+    "kenney_impact/Audio/impactWood_medium_001",
+    "kenney_impact/Audio/impactWood_medium_002"
+  ],
+  "original": false
+}

@@ -4,6 +4,7 @@
 // their own geometry, tiers their own icon shape.
 //
 //   registerCrosshair(id, { draw(gap, c, s, c2) -> SVG markup (centre 0,0, px; c2 = second colour), dynamic: redraw on gap changes,
+//                           state: () => string (redraw when it changes: a bow's draw stage, its arrows),
 //                           nodes: radius of the 4 ready nodes, hit: hit-reactive (default true) })
 //     parts with class "a" take the hit colour; the default 'xh_default' follows the settings (colour, size, dot)
 //     settings.dot puts the centre dot on every crosshair (the user wants it always there), in its own group so it can stay
@@ -124,7 +125,7 @@ export class CrosshairView {
     if (!visible && !showDot) return;
     const spec = CROSSHAIRS[id] || CROSSHAIRS.xh_default;
     const g = Math.round(gap);
-    const key = `${id}|${spec.dynamic ? g : 0}|${color}|${color2}|${settings.crosshairLen}|${settings.crosshairThick}`;
+    const key = `${id}|${spec.dynamic ? g : 0}|${color}|${color2}|${settings.crosshairLen}|${settings.crosshairThick}|${spec.state ? spec.state() : ''}`;
     if (visible && key !== this.key) { this.key = key; this.body.innerHTML = spec.draw(g, color, settings, color2); }
     const nk = nodes && spec.nodes ? `${spec.nodes}` : '';
     if (nk !== this.nodeKey) { this.nodeKey = nk; this.nodesG.innerHTML = nk ? nodeMarkup(spec.nodes) : ''; }

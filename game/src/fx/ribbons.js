@@ -44,6 +44,16 @@ void main() {
     float band = vPrm.z > 0.0 ? 0.8 + 0.2 * sin((vUv.x - uTime * vPrm.z) * 6.2832) : 1.0;
     col = mix(col * 0.6, vec3(dot(col, vec3(0.33))) * 1.4 + col * 0.5, core);
     a = (core + glow) * band;
+  } else if (vPrm.x > 2.5) {
+    // feather-vein shaft (M03 焚天光): a hot rachis, a soft wide vane and herringbone barbs (chevrons sloping back
+    // from the axis) scrolling down the shaft
+    float k = 1.0 / max(vPrm.y * vPrm.y, 1e-4);
+    float core = exp(-v * v * k * 2.5);
+    float vane = exp(-v * v * 2.6);
+    float barb = smoothstep(0.35, 0.9, 0.5 + 0.5 * sin((vUv.x * 1.7 - v * 1.25 - uTime * vPrm.z) * 6.2832));
+    barb *= smoothstep(0.08, 0.3, v) * (1.0 - smoothstep(0.7, 1.0, v));
+    col = mix(col * 0.55, vec3(dot(col, vec3(0.33))) * 1.4 + col * 0.5, core);
+    a = core + vane * (0.22 + 0.55 * barb);
   } else {
     // blade slash: v = 0 at the root edge, 1 at the tip edge; bright, sharp tip edge with streaks
     float t = vUv.y;
@@ -169,9 +179,13 @@ export class Ribbons {
     return t;
   }
 
-  /** Energy beam; returns { set(from, to), stop() }. opts: core [r,g,b], glow [r,g,b], wCore, wGlow, life, shrink, scroll, vm */
-  beam(from, to, { core = [3, 4, 8], glow = [0.6, 0.8, 2.4], wCore = 0.03, wGlow = 0.2, life = 0.3, shrink = 0.4, scroll = 0, vm = false } = {}) {
-    const b = { kind: 'beam', from: from.clone(), to: to.clone(), core, glow, wCore, wGlow, life, shrink, scroll, vm, age: 0, stopped: false };
+  /**
+   * Energy beam; returns { set(from, to), stop() }. opts: core [r,g,b], glow [r,g,b], wCore, wGlow, life, shrink, scroll,
+   * vm, pattern ('bands' | 'feather': herringbone barbs), wStart (width fraction at `from`) + ramp (m to full width:
+   * a fat shaft that stays thin where it leaves the gun)
+   */
+  beam(from, to, { core = [3, 4, 8], glow = [0.6, 0.8, 2.4], wCore = 0.03, wGlow = 0.2, life = 0.3, shrink = 0.4, scroll = 0, vm = false, pattern = 'bands', wStart = 1, ramp = 0 } = {}) {
+    const b = { kind: 'beam', from: from.clone(), to: to.clone(), core, glow, wCore, wGlow, life, shrink, scroll, vm, age: 0, stopped: false, prof: pattern === 'feather' ? 3 : 1, wStart, ramp };
     b.set = (f, t) => { b.from.copy(f); b.to.copy(t); return b; };
     b.stop = () => { b.age = Math.max(b.age, b.life); return b; };
     this.items.push(b);
@@ -254,10 +268,11 @@ export class Ribbons {
         const f = it.age / it.life;
         const wk = 1 - (1 - it.shrink) * f;
         const a = 1 - f * f;
-        const segs = Math.min(40, Math.max(2, Math.ceil(it.from.distanceTo(it.to) / 2)));
+        const L = it.from.distanceTo(it.to), segs = Math.min(40, Math.max(2, Math.ceil(L / 2)));
         for (let k = 0; k <= segs; k++) this._pts[k].lerpVectors(it.from, it.to, k / segs);
         const c = [it.core[0] * 0.5 + it.glow[0], it.core[1] * 0.5 + it.glow[1], it.core[2] * 0.5 + it.glow[2], a];
-        B.strip(this._pts, segs + 1, () => it.wGlow * wk, () => c, 1, Math.max(0.05, it.wCore / it.wGlow), it.scroll, 0.5);
+        const wf = it.ramp > 0 ? (k) => { const x = Math.min(1, (k / segs) * L / it.ramp); return it.wStart + (1 - it.wStart) * x * x * (3 - 2 * x); } : () => 1;
+        B.strip(this._pts, segs + 1, (k) => it.wGlow * wk * wf(k), () => c, it.prof, Math.max(0.05, it.wCore / it.wGlow), it.scroll, 0.5);
       } else if (it.kind === 'bolt') {
         if (it.age >= it.life) { this.items.splice(i, 1); continue; }
         it.rt += dt;

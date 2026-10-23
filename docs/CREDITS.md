@@ -103,6 +103,7 @@ Procedural zombie overlays (pallor, veins, wounds, blood, tears) are generated b
 | `rigs/standard` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/rigs/standard) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/arms` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/arms) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/asym` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/asym) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `targets/breast` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/breast) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/buttocks` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/buttocks) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/cheek` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/cheek) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `targets/chin` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/chin) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
@@ -125,13 +126,17 @@ Procedural zombie overlays (pallor, veins, wounds, blood, tears) are generated b
 | `targets/torso` | MPFB2 data | [link](https://github.com/makehumancommunity/mpfb2/tree/master/src/mpfb/data/targets/torso) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `skins/reizibarrientos_white_walker_skin` | skins03 pack | [link](http://www.makehumancommunity.org/node/1470) | reizibarrientos | CC0-1.0 |
 | `skins/sohh_female_zombie_skin` | skins03 pack | [link](http://www.makehumancommunity.org/node/2529) | sohh | CC0-1.0 |
+| `clothes/female_elegantsuit01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/female_sportsuit01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `clothes/male_casualsuit01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/male_casualsuit02` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/male_casualsuit03` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/male_casualsuit04` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `clothes/male_casualsuit05` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/male_casualsuit06` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/male_worksuit01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/shoes01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `clothes/shoes02` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/shoes03` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `clothes/shoes05` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `eyebrows/eyebrow001` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
@@ -139,11 +144,14 @@ Procedural zombie overlays (pallor, veins, wounds, blood, tears) are generated b
 | `eyes/low-poly` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `eyes/materials` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `hair/long01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `hair/ponytail01` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `hair/short02` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `hair/short04` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `proxymeshes/female1605` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `proxymeshes/male1591` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `skins/middleage_caucasian_female` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `skins/middleage_caucasian_male` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
+| `skins/old_caucasian_female` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `skins/old_caucasian_male` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `skins/young_caucasian_male` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
 | `teeth/teeth_base` | system pack | [link](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip) | MakeHuman team (Data Collection AB, Joel Palmius, Jonas Hauquier) | CC0-1.0 |
@@ -174,12 +182,12 @@ Keyframed clips (`attack_b`, `attack_lunge`, `bite`, `hit_front`, `hit_back`, `h
 Shipped sounds in `game/assets/audio/` are produced by `tools/audio/producers/*.mjs` from the CC0 recordings below
 (downloaded by `tools/audio/fetch.mjs` into the gitignored `tools/audio/src/`, licence re-checked on each source page) and from
 sounds synthesized from scratch. Every source here is CC0 1.0 (public domain); attribution is not required, listed for provenance.
-Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
+Inventory: 959 files from 15 packs, generated 2026-10-23T10:43:48.795Z.
 
 | Pack | Author | Source page | License (verified) | Files | Used by categories |
 |---|---|---|---|---|---|
-| The Free Firearm Sound Library (Prepared SFX Library) (`ffsl`) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | [opengameart.org/content/the-free-firearm-sound-library](https://opengameart.org/content/the-free-firearm-sound-library) | CC0-1.0 (2026-10-12) | 56 | ui_amb, weapons |
-| Kenney Impact Sounds (`kenney_impact`) | Kenney (kenney.nl) | [kenney.nl/assets/impact-sounds](https://kenney.nl/assets/impact-sounds) | CC0-1.0 (2026-10-12) | 130 | creatures, impacts, ui_amb, weapons |
+| The Free Firearm Sound Library (Prepared SFX Library) (`ffsl`) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | [opengameart.org/content/the-free-firearm-sound-library](https://opengameart.org/content/the-free-firearm-sound-library) | CC0-1.0 (2026-10-12) | 56 | premium_bifang, premium_chiwen, ui_amb, weapons |
+| Kenney Impact Sounds (`kenney_impact`) | Kenney (kenney.nl) | [kenney.nl/assets/impact-sounds](https://kenney.nl/assets/impact-sounds) | CC0-1.0 (2026-10-12) | 130 | creatures, impacts, premium_bifang, premium_chiwen, premium_sunbow, ui_amb, weapons |
 | Muffled Distant Explosion (`oga_distant_explosion`) | NenadSimic | [opengameart.org/content/muffled-distant-explosion](https://opengameart.org/content/muffled-distant-explosion) | CC0-1.0 (2026-10-12) | 1 | impacts, ui_amb |
 | Fire Crackling (`oga_fire`) | AntumDeluge | [opengameart.org/content/fire-crackling](https://opengameart.org/content/fire-crackling) | CC0-1.0 (2026-10-12) | 1 | - |
 | Gun Reload Sounds (`oga_gun_reload`) | SpringySpringo | [opengameart.org/content/gun-reload-sounds](https://opengameart.org/content/gun-reload-sounds) | CC0-1.0 (2026-10-12) | 3 | weapons |
@@ -205,7 +213,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 22440 | Single Heartbeat Clean HQ_BeatSmith.wav | Lunardrive | [link](https://freesound.org/people/Lunardrive/sounds/22440/) | CC0-1.0 | - |
 | 26221 | light rain in city.wav | Walter_Odington | [link](https://freesound.org/people/Walter_Odington/sounds/26221/) | CC0-1.0 | - |
 | 30932 | bullet ricochet.wav | aust_paul | [link](https://freesound.org/people/aust_paul/sounds/30932/) | CC0-1.0 | impacts/ricochet |
-| 31574 | ship_creak.mp3 | Walter_Odington | [link](https://freesound.org/people/Walter_Odington/sounds/31574/) | CC0-1.0 | - |
+| 31574 | ship_creak.mp3 | Walter_Odington | [link](https://freesound.org/people/Walter_Odington/sounds/31574/) | CC0-1.0 | premium_sunbow/sunbow_creak, premium_sunbow/sunbow_draw, premium_sunbow/sunbow_first, premium_sunbow/sunbow_inspect |
 | 32930 | Seagulls-M.wav | DaveGould | [link](https://freesound.org/people/DaveGould/sounds/32930/) | CC0-1.0 | ui_amb/amb_harbor_wind |
 | 35213 | slashkut.wav | Abyssmal | [link](https://freesound.org/people/Abyssmal/sounds/35213/) | CC0-1.0 | - |
 | 35716 | scream.wav | analogchill | [link](https://freesound.org/people/analogchill/sounds/35716/) | CC0-1.0 | creatures/screamer_scream |
@@ -228,10 +236,14 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 118513 | Punch_02.wav | thefsoundman | [link](https://freesound.org/people/thefsoundman/sounds/118513/) | CC0-1.0 | - |
 | 119468 | Metal Creak 4.wav | ingudios | [link](https://freesound.org/people/ingudios/sounds/119468/) | CC0-1.0 | - |
 | 119825 | BodyFall_Carpet.aif | kbnevel | [link](https://freesound.org/people/kbnevel/sounds/119825/) | CC0-1.0 | - |
+| 119915 | Gargling Underwater.aif | ftpalad | [link](https://freesound.org/people/ftpalad/sounds/119915/) | CC0-1.0 | premium_chiwen/chiwen_tank, premium_chiwen/chiwen_ult_gulp, premium_chiwen/chiwen_ult_inhale |
+| 119917 | Ice Cubes Dropped in a Glass.aif | ftpalad | [link](https://freesound.org/people/ftpalad/sounds/119917/) | CC0-1.0 | premium_chiwen/chiwen_frost_kill |
 | 119931 | Shoe Slide and Scuffle.aif | ftpalad | [link](https://freesound.org/people/ftpalad/sounds/119931/) | CC0-1.0 | creatures/zombie_footstep |
+| 119937 | Water Bubbling.aif | ftpalad | [link](https://freesound.org/people/ftpalad/sounds/119937/) | CC0-1.0 | - |
 | 122183 | Dog Growling Snarling Grumbling | qubodup | [link](https://freesound.org/people/qubodup/sounds/122183/) | CC0-1.0 | - |
 | 125401 | Electric Motor Whir.aif | jasonLON | [link](https://freesound.org/people/jasonLON/sounds/125401/) | CC0-1.0 | weapons/minigun_spin, weapons/minigun_spindown |
 | 125405 | Monster Groans, Grunts, Slobbers.aif | jasonLON | [link](https://freesound.org/people/jasonLON/sounds/125405/) | CC0-1.0 | - |
+| 127265 | Gong.wav | DiArchangeli | [link](https://freesound.org/people/DiArchangeli/sounds/127265/) | CC0-1.0 | premium_chiwen/chiwen_ult_bed |
 | 128103 | Wooden Floor Body Slams | Project_Trident | [link](https://freesound.org/people/Project_Trident/sounds/128103/) | CC0-1.0 | - |
 | 129281 | Grende With Falling Earth | SanitysPrime | [link](https://freesound.org/people/SanitysPrime/sounds/129281/) | CC0-1.0 | - |
 | 129679 | White noise city captured from window at 1st floor | jmbphilmes | [link](https://freesound.org/people/jmbphilmes/sounds/129679/) | CC0-1.0 | - |
@@ -257,8 +269,8 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 159509 | Halloween - Graveyard At Night Howling Wind.mp3 | mistersherlock | [link](https://freesound.org/people/mistersherlock/sounds/159509/) | CC0-1.0 | - |
 | 162116 | Water Dripping (Large Echo) | editor_adp | [link](https://freesound.org/people/editor_adp/sounds/162116/) | CC0-1.0 | - |
 | 162363 | Distant Explosion of Propelled Grenade | qubodup | [link](https://freesound.org/people/qubodup/sounds/162363/) | CC0-1.0 | - |
-| 163164 | heavy cloth rustle.wav | jacobzeier | [link](https://freesound.org/people/jacobzeier/sounds/163164/) | CC0-1.0 | creatures/footstep_concrete, creatures/footstep_dirt, creatures/footstep_grate, creatures/footstep_metal, creatures/footstep_water, creatures/footstep_wood, creatures/revive, weapons/cloth, weapons/drawHeavy |
-| 163383 | Heavy Breathing | Under7dude | [link](https://freesound.org/people/Under7dude/sounds/163383/) | CC0-1.0 | - |
+| 163164 | heavy cloth rustle.wav | jacobzeier | [link](https://freesound.org/people/jacobzeier/sounds/163164/) | CC0-1.0 | creatures/footstep_concrete, creatures/footstep_dirt, creatures/footstep_grate, creatures/footstep_metal, creatures/footstep_water, creatures/footstep_wood, creatures/revive, premium_bifang/bifang_draw, weapons/cloth, weapons/drawHeavy |
+| 163383 | Heavy Breathing | Under7dude | [link](https://freesound.org/people/Under7dude/sounds/163383/) | CC0-1.0 | premium_sunbow/sunbow_rekindle, premium_sunbow/sunbow_ult_raise |
 | 163458 | Grenade Launcher | LeMudCrab | [link](https://freesound.org/people/LeMudCrab/sounds/163458/) | CC0-1.0 | - |
 | 164472 | Crack of branch 3.wav | deleted_user_2104797 | [link](https://freesound.org/people/deleted_user_2104797/sounds/164472/) | CC0-1.0 | impacts/impact_wood |
 | 164930 | Pistol Gun Cock | ShawnyBoy | [link](https://freesound.org/people/ShawnyBoy/sounds/164930/) | CC0-1.0 | - |
@@ -270,18 +282,19 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 172960 | Jump Landing [remix MentalSanityOff's jumping 148796] | qubodup | [link](https://freesound.org/people/qubodup/sounds/172960/) | CC0-1.0 | creatures/land_heavy |
 | 173126 | Death sound (male) | Replix | [link](https://freesound.org/people/Replix/sounds/173126/) | CC0-1.0 | - |
 | 173128 | Zombie | Taodan | [link](https://freesound.org/people/Taodan/sounds/173128/) | CC0-1.0 | creatures/spitter_attack, creatures/spitter_death, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert |
+| 173930 | Water Pour | JohnsonBrandEditing | [link](https://freesound.org/people/JohnsonBrandEditing/sounds/173930/) | CC0-1.0 | - |
 | 173944 | human male scream multi | JohnsonBrandEditing | [link](https://freesound.org/people/JohnsonBrandEditing/sounds/173944/) | CC0-1.0 | creatures/runner_death |
 | 174629 | Coins | altfuture | [link](https://freesound.org/people/altfuture/sounds/174629/) | CC0-1.0 | ui_amb/money |
 | 174634 | Guts Dragging | altfuture | [link](https://freesound.org/people/altfuture/sounds/174634/) | CC0-1.0 | - |
 | 176240 | ZombiesMoaningNoFX.wav | voiceofgup | [link](https://freesound.org/people/voiceofgup/sounds/176240/) | CC0-1.0 | creatures/brute_idle, creatures/zombie_idle |
 | 177863 | Clean Revolver Reload | Dredile | [link](https://freesound.org/people/Dredile/sounds/177863/) | CC0-1.0 | weapons/craneClose, weapons/craneOpen, weapons/speedloader |
 | 177958 | Water Dripping in Cave.wav | Sclolex | [link](https://freesound.org/people/Sclolex/sounds/177958/) | CC0-1.0 | - |
-| 178732 | Rock In Water Splash-Plop 3.aif | jc144940 | [link](https://freesound.org/people/jc144940/sounds/178732/) | CC0-1.0 | impacts/impact_water |
+| 178732 | Rock In Water Splash-Plop 3.aif | jc144940 | [link](https://freesound.org/people/jc144940/sounds/178732/) | CC0-1.0 | impacts/impact_water, premium_chiwen/chiwen_hit |
 | 179222 | Knife Stab.wav | Mixedupmoviestuff | [link](https://freesound.org/people/Mixedupmoviestuff/sounds/179222/) | CC0-1.0 | impacts/knife_hit_flesh |
 | 179345 | Monster Zombie Scream.wav | lolamadeus | [link](https://freesound.org/people/lolamadeus/sounds/179345/) | CC0-1.0 | creatures/runner_scream |
 | 181068 | Zombie Vocals - Grunts.wav | lolamadeus | [link](https://freesound.org/people/lolamadeus/sounds/181068/) | CC0-1.0 | creatures/crawler_attack, creatures/crawler_pain, creatures/runner_pain, creatures/spitter_pain, creatures/zombie_eat, creatures/zombie_pain |
 | 181177 | Body falling to floor.wav | jmdh | [link](https://freesound.org/people/jmdh/sounds/181177/) | CC0-1.0 | - |
-| 181563 | Fire Crackling 01.wav | kingsrow | [link](https://freesound.org/people/kingsrow/sounds/181563/) | CC0-1.0 | - |
+| 181563 | Fire Crackling 01.wav | kingsrow | [link](https://freesound.org/people/kingsrow/sounds/181563/) | CC0-1.0 | premium_bifang/bifang_ult_dive |
 | 182266 | bullet case release.wav | martian | [link](https://freesound.org/people/martian/sounds/182266/) | CC0-1.0 | - |
 | 182794 | Rocket Launch.flac | qubodup | [link](https://freesound.org/people/qubodup/sounds/182794/) | CC0-1.0 | - |
 | 183451 | Wood Crack 4 | utsuru | [link](https://freesound.org/people/utsuru/sounds/183451/) | CC0-1.0 | impacts/impact_wood |
@@ -296,10 +309,11 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 195876 | 130723_Brela_HarborJump_R_4824.wav | blaukreuz | [link](https://freesound.org/people/blaukreuz/sounds/195876/) | CC0-1.0 | - |
 | 200273 | Rain light 2 (rural) | jmbphilmes | [link](https://freesound.org/people/jmbphilmes/sounds/200273/) | CC0-1.0 | ui_amb/amb_rain |
 | 200459 | Missile / Rocket firing | wubitog | [link](https://freesound.org/people/wubitog/sounds/200459/) | CC0-1.0 | weapons/rocket_close, weapons/rocket_far, weapons/rocket_tail |
-| 201094 | Deep metal clang | BlenderDiplom | [link](https://freesound.org/people/BlenderDiplom/sounds/201094/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, ui_amb/boss_warning, ui_amb/round_start |
-| 202093 | Bottle Shattering.wav | spookymodem | [link](https://freesound.org/people/spookymodem/sounds/202093/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass |
+| 201094 | Deep metal clang | BlenderDiplom | [link](https://freesound.org/people/BlenderDiplom/sounds/201094/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, premium_sunbow/sunbow_pin, ui_amb/boss_warning, ui_amb/round_start |
+| 202093 | Bottle Shattering.wav | spookymodem | [link](https://freesound.org/people/spookymodem/sounds/202093/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass, premium_bifang/bifang_cocoon |
 | 202094 | Acid Bubbling.wav | spookymodem | [link](https://freesound.org/people/spookymodem/sounds/202094/) | CC0-1.0 | creatures/acid_splash |
-| 203381 | glass_shard_bounce_4.ogg | C_Rogers | [link](https://freesound.org/people/C_Rogers/sounds/203381/) | CC0-1.0 | impacts/impact_glass |
+| 203381 | glass_shard_bounce_4.ogg | C_Rogers | [link](https://freesound.org/people/C_Rogers/sounds/203381/) | CC0-1.0 | impacts/impact_glass, premium_chiwen/chiwen_crisis, premium_chiwen/chiwen_frost_kill, premium_chiwen/chiwen_mark_burst |
+| 204912 | Didgeridoo Monster Roar | Noxdl | [link](https://freesound.org/people/Noxdl/sounds/204912/) | CC0-1.0 | premium_chiwen/chiwen_roar_low, premium_chiwen/chiwen_ult_roar |
 | 205126 | .30 Shell Bouncing | Danwardvs | [link](https://freesound.org/people/Danwardvs/sounds/205126/) | CC0-1.0 | weapons/shell_brass, weapons/shellsDrop |
 | 205588 | Gunfire | qubodup | [link](https://freesound.org/people/qubodup/sounds/205588/) | CC0-1.0 | - |
 | 208101 | Metal Steps | Phil25 | [link](https://freesound.org/people/Phil25/sounds/208101/) | CC0-1.0 | - |
@@ -310,14 +324,14 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 211605 | Chicken Meat Slime | qubodup | [link](https://freesound.org/people/qubodup/sounds/211605/) | CC0-1.0 | - |
 | 211606 | Chicken Bone Break | qubodup | [link](https://freesound.org/people/qubodup/sounds/211606/) | CC0-1.0 | - |
 | 211617 | Far Away Rocket Launch | qubodup | [link](https://freesound.org/people/qubodup/sounds/211617/) | CC0-1.0 | - |
-| 212143 | SPLASH (by blaukreuz) | qubodup | [link](https://freesound.org/people/qubodup/sounds/212143/) | CC0-1.0 | creatures/acid_splash, impacts/impact_water |
+| 212143 | SPLASH (by blaukreuz) | qubodup | [link](https://freesound.org/people/qubodup/sounds/212143/) | CC0-1.0 | creatures/acid_splash, impacts/impact_water, premium_chiwen/chiwen_barrier, premium_chiwen/chiwen_crisis, premium_chiwen/chiwen_final, premium_chiwen/chiwen_head, premium_chiwen/chiwen_hit, premium_chiwen/chiwen_ray_end, premium_chiwen/chiwen_ult_gulp, premium_chiwen/chiwen_ult_spit, premium_chiwen/chiwen_ult_tail |
 | 213509 | Zombie Attack | soykevin | [link](https://freesound.org/people/soykevin/sounds/213509/) | CC0-1.0 | - |
-| 213566 | Gurgling | Woodylein | [link](https://freesound.org/people/Woodylein/sounds/213566/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain |
+| 213566 | Gurgling | Woodylein | [link](https://freesound.org/people/Woodylein/sounds/213566/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain, premium_chiwen/chiwen_gurgle, premium_chiwen/chiwen_idle, premium_chiwen/chiwen_ult_vortex |
 | 215140 | Bones Cracking | Firestorm002 | [link](https://freesound.org/people/Firestorm002/sounds/215140/) | CC0-1.0 | impacts/bone_crunch, impacts/gib |
 | 218895 | human grunts 3 | Halgrimm | [link](https://freesound.org/people/Halgrimm/sounds/218895/) | CC0-1.0 | creatures/brute_pain, creatures/player_pain |
 | 219856 | Scream | claracarpintero | [link](https://freesound.org/people/claracarpintero/sounds/219856/) | CC0-1.0 | - |
 | 221089 | squishy oobleck goo | AlaskaRobotics | [link](https://freesound.org/people/AlaskaRobotics/sounds/221089/) | CC0-1.0 | - |
-| 221528 | Glass Break | unfa | [link](https://freesound.org/people/unfa/sounds/221528/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass |
+| 221528 | Glass Break | unfa | [link](https://freesound.org/people/unfa/sounds/221528/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass, premium_bifang/bifang_cocoon |
 | 221650 | Footstep Drag Indoors .wav | abbahoot | [link](https://freesound.org/people/abbahoot/sounds/221650/) | CC0-1.0 | creatures/zombie_footstep |
 | 222363 | SFX_gross-guts-slime-goo | Perel | [link](https://freesound.org/people/Perel/sounds/222363/) | CC0-1.0 | creatures/bloater_pop |
 | 232135 | splat 005.wav | yottasounds | [link](https://freesound.org/people/yottasounds/sounds/232135/) | CC0-1.0 | impacts/blood_splat, impacts/gib, impacts/impact_flesh, impacts/knife_hit_flesh |
@@ -343,7 +357,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 241190 | Helicopter Flyby / Pass | mil0001 | [link](https://freesound.org/people/mil0001/sounds/241190/) | CC0-1.0 | - |
 | 241950 | Punches and hits | DSPena | [link](https://freesound.org/people/DSPena/sounds/241950/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit |
 | 242193 | Zombie Restraint | ketamineface | [link](https://freesound.org/people/ketamineface/sounds/242193/) | CC0-1.0 | creatures/crawler_attack, creatures/crawler_death, creatures/crawler_screech |
-| 244238 | Glass Smash.wav | chewiesmissus | [link](https://freesound.org/people/chewiesmissus/sounds/244238/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass |
+| 244238 | Glass Smash.wav | chewiesmissus | [link](https://freesound.org/people/chewiesmissus/sounds/244238/) | CC0-1.0 | impacts/fire_burst, impacts/impact_glass, premium_bifang/bifang_cocoon, premium_sunbow/sunbow_crisis |
 | 244310 | Walking on pavement.wav | JohnsonBrandEditing | [link](https://freesound.org/people/JohnsonBrandEditing/sounds/244310/) | CC0-1.0 | - |
 | 244394 | Bang/Explosion Metallic | Werra | [link](https://freesound.org/people/Werra/sounds/244394/) | CC0-1.0 | - |
 | 244590 | Gravel/Sand Walking 1 | Cornwallis89 | [link](https://freesound.org/people/Cornwallis89/sounds/244590/) | CC0-1.0 | - |
@@ -357,12 +371,13 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 256603 | Male Grunts | Kodack | [link](https://freesound.org/people/Kodack/sounds/256603/) | CC0-1.0 | creatures/brute_pain |
 | 257709 | GRUNT 2.wav | vmgraw | [link](https://freesound.org/people/vmgraw/sounds/257709/) | CC0-1.0 | - |
 | 257710 | GRUNT 1.wav | vmgraw | [link](https://freesound.org/people/vmgraw/sounds/257710/) | CC0-1.0 | - |
-| 258195 | Deep Explosion | Kodack | [link](https://freesound.org/people/Kodack/sounds/258195/) | CC0-1.0 | impacts/explosion_small |
+| 258195 | Deep Explosion | Kodack | [link](https://freesound.org/people/Kodack/sounds/258195/) | CC0-1.0 | impacts/explosion_small, premium_sunbow/sunbow_ult_final, premium_sunbow/sunbow_ult_impact |
 | 259553 | small metal object fall  | nicktermer | [link](https://freesound.org/people/nicktermer/sounds/259553/) | CC0-1.0 | impacts/grenade_bounce |
 | 259758 | M4 Assault rifle firing.wav | mnslugger20 | [link](https://freesound.org/people/mnslugger20/sounds/259758/) | CC0-1.0 | - |
-| 260554 | Basic Fire whoosh | LookIMadeAThing | [link](https://freesound.org/people/LookIMadeAThing/sounds/260554/) | CC0-1.0 | impacts/fire_burst |
-| 260555 | Basic Fire Whoosh 2 | LookIMadeAThing | [link](https://freesound.org/people/LookIMadeAThing/sounds/260555/) | CC0-1.0 | impacts/fire_burst |
+| 260554 | Basic Fire whoosh | LookIMadeAThing | [link](https://freesound.org/people/LookIMadeAThing/sounds/260554/) | CC0-1.0 | impacts/fire_burst, premium_bifang/bifang_wing_open, premium_sunbow/sunbow_hang, premium_sunbow/sunbow_ult_fall |
+| 260555 | Basic Fire Whoosh 2 | LookIMadeAThing | [link](https://freesound.org/people/LookIMadeAThing/sounds/260555/) | CC0-1.0 | impacts/fire_burst, premium_bifang/bifang_ult_dive, premium_bifang/bifang_ult_pillar, premium_sunbow/sunbow_hang_burst, premium_sunbow/sunbow_ignite, premium_sunbow/sunbow_ult_impact |
 | 261464 | Werewolf breathing and sniffing  | kd_jack | [link](https://freesound.org/people/kd_jack/sounds/261464/) | CC0-1.0 | creatures/bloater_death, creatures/brute_charge, creatures/brute_death, creatures/crawler_death, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/screamer_death, creatures/spitter_death, creatures/zombie_death |
+| 263115 | Tiger Roar | lauramellis | [link](https://freesound.org/people/lauramellis/sounds/263115/) | CC0-1.0 | premium_chiwen/chiwen_crisis, premium_chiwen/chiwen_ult_roar, premium_chiwen/ready_chiwen |
 | 263513 | AR15 Various Sounds | wadaltmon | [link](https://freesound.org/people/wadaltmon/sounds/263513/) | CC0-1.0 | weapons/beltIn, weapons/coverClose, weapons/coverOpen, weapons/drawHeavy, weapons/mg762_mech, weapons/rifle556_mech, weapons/smg45_mech, weapons/smg9_mech |
 | 263595 | swoosh.wav | PorkMuncher | [link](https://freesound.org/people/PorkMuncher/sounds/263595/) | CC0-1.0 | weapons/swingHeavy |
 | 263786 | Seagull single call | steaq | [link](https://freesound.org/people/steaq/sounds/263786/) | CC0-1.0 | - |
@@ -371,7 +386,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 264469 | Footsteps Dirt 01 | aglinder | [link](https://freesound.org/people/aglinder/sounds/264469/) | CC0-1.0 | - |
 | 265627 | Rain-Atmo.WAV | director89 | [link](https://freesound.org/people/director89/sounds/265627/) | CC0-1.0 | ui_amb/amb_rain |
 | 268226 | Woosh 2.mp3 | XxChr0nosxX | [link](https://freesound.org/people/XxChr0nosxX/sounds/268226/) | CC0-1.0 | weapons/knife_close, weapons/knife_far, weapons/knife_tail, weapons/swingHeavy |
-| 268227 | Swing.mp3 | XxChr0nosxX | [link](https://freesound.org/people/XxChr0nosxX/sounds/268227/) | CC0-1.0 | weapons/knife_close, weapons/knife_far, weapons/knife_tail, weapons/swing, weapons/swingHeavy |
+| 268227 | Swing.mp3 | XxChr0nosxX | [link](https://freesound.org/people/XxChr0nosxX/sounds/268227/) | CC0-1.0 | premium_sunbow/sunbow_draw, premium_sunbow/sunbow_first, weapons/knife_close, weapons/knife_far, weapons/knife_tail, weapons/swing, weapons/swingHeavy |
 | 269483 | Chop Hard and Withdraw | editor_adp | [link](https://freesound.org/people/editor_adp/sounds/269483/) | CC0-1.0 | impacts/gib |
 | 272224 | egg shell crunch crack | spanrucker | [link](https://freesound.org/people/spanrucker/sounds/272224/) | CC0-1.0 | - |
 | 272375 | Feet Shuffling.wav | danhelbling | [link](https://freesound.org/people/danhelbling/sounds/272375/) | CC0-1.0 | creatures/zombie_footstep |
@@ -382,30 +397,32 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 318964 | Bouncing Shell Casings (Various Sizes) | GryffDavid | [link](https://freesound.org/people/GryffDavid/sounds/318964/) | CC0-1.0 | weapons/shell_brass, weapons/shell_link, weapons/shellsDrop |
 | 319204 | Foot Drag Dirt 4.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319204/) | CC0-1.0 | creatures/zombie_footstep |
 | 319210 | Foot Drags Dirt 2 .wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319210/) | CC0-1.0 | creatures/zombie_footstep |
-| 319214 | Sticks in dirt 2.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319214/) | CC0-1.0 | impacts/impact_dirt |
+| 319214 | Sticks in dirt 2.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319214/) | CC0-1.0 | impacts/impact_dirt, premium_sunbow/sunbow_hit_world |
 | 319222 | Single Rock hit Dirt.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319222/) | CC0-1.0 | impacts/impact_dirt |
 | 319226 | Single rock hitting wood.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319226/) | CC0-1.0 | impacts/impact_wood |
-| 319227 | Single Rock hitting wood 4.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319227/) | CC0-1.0 | impacts/impact_wood |
+| 319227 | Single Rock hitting wood 4.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319227/) | CC0-1.0 | impacts/impact_wood, premium_sunbow/sunbow_hit_world |
 | 319228 | Single Rock hitting wood 2.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319228/) | CC0-1.0 | impacts/impact_wood |
 | 319229 | Single Rock hit dirt 2.wav | worthahep88 | [link](https://freesound.org/people/worthahep88/sounds/319229/) | CC0-1.0 | - |
 | 320740 | Horror shrieks woman | AderuMoro | [link](https://freesound.org/people/AderuMoro/sounds/320740/) | CC0-1.0 | creatures/screamer_scream |
 | 321143 | Concrete and Glass breaking in dumpster | OverlookHotelRecords | [link](https://freesound.org/people/OverlookHotelRecords/sounds/321143/) | CC0-1.0 | - |
 | 321477 | Concrete Hit  | dslrguide | [link](https://freesound.org/people/dslrguide/sounds/321477/) | CC0-1.0 | impacts/impact_concrete, impacts/knife_hit_wall |
 | 321478 | Concrete Hit 2 | dslrguide | [link](https://freesound.org/people/dslrguide/sounds/321478/) | CC0-1.0 | impacts/impact_concrete |
-| 321490 | Tiny Splash | dslrguide | [link](https://freesound.org/people/dslrguide/sounds/321490/) | CC0-1.0 | impacts/impact_water |
+| 321490 | Tiny Splash | dslrguide | [link](https://freesound.org/people/dslrguide/sounds/321490/) | CC0-1.0 | impacts/impact_water, premium_chiwen/chiwen_hit, premium_chiwen/chiwen_scales, premium_chiwen/chiwen_splash |
 | 321906 | Walkie Talkie - Roger Beep | bruce965 | [link](https://freesound.org/people/bruce965/sounds/321906/) | CC0-1.0 | - |
 | 324276 | multiple siren | Kostrava | [link](https://freesound.org/people/Kostrava/sounds/324276/) | CC0-1.0 | ui_amb/boss_warning |
 | 324277 | distant explosion | Kostrava | [link](https://freesound.org/people/Kostrava/sounds/324277/) | CC0-1.0 | - |
+| 329744 | Ice break | humanoide9000 | [link](https://freesound.org/people/humanoide9000/sounds/329744/) | CC0-1.0 | premium_chiwen/chiwen_frost_kill, premium_chiwen/chiwen_mark_burst |
 | 330427 | Downtown LA, Little Tokyo, late night semi distant traffic.wav | janbezouska | [link](https://freesound.org/people/janbezouska/sounds/330427/) | CC0-1.0 | - |
 | 332176 | Dog_Bark_Agressive.wav | ivolipa | [link](https://freesound.org/people/ivolipa/sounds/332176/) | CC0-1.0 | creatures/hound_bark |
 | 333832 | Demonic Woman Scream.wav | nick121087 | [link](https://freesound.org/people/nick121087/sounds/333832/) | CC0-1.0 | creatures/screamer_death |
 | 333988 | distant falling glass/metal | Kostrava | [link](https://freesound.org/people/Kostrava/sounds/333988/) | CC0-1.0 | ui_amb/amb_city_dead, ui_amb/amb_warehouse |
-| 334219 | Clothes Rustling 1 | WasabiWielder | [link](https://freesound.org/people/WasabiWielder/sounds/334219/) | CC0-1.0 | creatures/footstep_concrete, creatures/footstep_dirt, creatures/footstep_grate, creatures/footstep_metal, creatures/footstep_water, creatures/footstep_wood, creatures/jump, weapons/cloth |
+| 334219 | Clothes Rustling 1 | WasabiWielder | [link](https://freesound.org/people/WasabiWielder/sounds/334219/) | CC0-1.0 | creatures/footstep_concrete, creatures/footstep_dirt, creatures/footstep_grate, creatures/footstep_metal, creatures/footstep_water, creatures/footstep_wood, creatures/jump, premium_sunbow/sunbow_inspect, weapons/cloth |
 | 338267 | FemaleZombie1.wav | mazlyn | [link](https://freesound.org/people/mazlyn/sounds/338267/) | CC0-1.0 | creatures/screamer_pain |
 | 338358 |  Suffering From Pain.wav | milnersouza | [link](https://freesound.org/people/milnersouza/sounds/338358/) | CC0-1.0 | - |
 | 341090 | Dog snarl.mp3 | strongbot | [link](https://freesound.org/people/strongbot/sounds/341090/) | CC0-1.0 | creatures/hound_attack |
 | 341908 | Gasp. | bacruz666 | [link](https://freesound.org/people/bacruz666/sounds/341908/) | CC0-1.0 | creatures/revive |
 | 342204 | Beast Snarling | Christopherderp | [link](https://freesound.org/people/Christopherderp/sounds/342204/) | CC0-1.0 | - |
+| 342546 | Ice cracking | timbreknight | [link](https://freesound.org/people/timbreknight/sounds/342546/) | CC0-1.0 | premium_chiwen/chiwen_frost_kill, premium_chiwen/chiwen_head, premium_chiwen/chiwen_hit, premium_chiwen/chiwen_mark_burst, premium_chiwen/chiwen_ray_start, premium_chiwen/chiwen_ult_fall |
 | 342878 | Distant harbour noise in a windy night, Hamburg Landungsbrücken | Pfannkuchn | [link](https://freesound.org/people/Pfannkuchn/sounds/342878/) | CC0-1.0 | ui_amb/amb_harbor_wind |
 | 343462 | Real Coin Drop | Rocotilos | [link](https://freesound.org/people/Rocotilos/sounds/343462/) | CC0-1.0 | - |
 | 345456 | Male_Death_04 | Artmasterrich | [link](https://freesound.org/people/Artmasterrich/sounds/345456/) | CC0-1.0 | creatures/player_death |
@@ -420,16 +437,16 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 352870 | Footsteps Dirt Gravel | PotatokingXII | [link](https://freesound.org/people/PotatokingXII/sounds/352870/) | CC0-1.0 | creatures/footstep_dirt |
 | 353416 | Seagull on beach | squashy555 | [link](https://freesound.org/people/squashy555/sounds/353416/) | CC0-1.0 | - |
 | 353799 | Footsteps_6_Dirt_shoe.wav | monte32 | [link](https://freesound.org/people/monte32/sounds/353799/) | CC0-1.0 | creatures/footstep_dirt |
-| 355052 | Bone Crunch.wav | GreatNate98 | [link](https://freesound.org/people/GreatNate98/sounds/355052/) | CC0-1.0 | creatures/bloater_pop, impacts/bone_crunch, impacts/headshot |
+| 355052 | Bone Crunch.wav | GreatNate98 | [link](https://freesound.org/people/GreatNate98/sounds/355052/) | CC0-1.0 | creatures/bloater_pop, impacts/bone_crunch, impacts/headshot, premium_chiwen/chiwen_ult_bite |
 | 360633 | Stronger wind at a marina, rattling at masts and rigging of the yachts. | Pfannkuchn | [link](https://freesound.org/people/Pfannkuchn/sounds/360633/) | CC0-1.0 | ui_amb/amb_harbor_wind |
 | 361798 | Bag of chainmail chunks | kermite607 | [link](https://freesound.org/people/kermite607/sounds/361798/) | CC0-1.0 | creatures/land_heavy, creatures/player_downed, creatures/riot_armor_clank |
-| 363092 | Fire Crackle and Flames 002 | TheWoodlandNomad | [link](https://freesound.org/people/TheWoodlandNomad/sounds/363092/) | CC0-1.0 | ui_amb/amb_fire |
+| 363092 | Fire Crackle and Flames 002 | TheWoodlandNomad | [link](https://freesound.org/people/TheWoodlandNomad/sounds/363092/) | CC0-1.0 | premium_bifang/bifang_sizzle, premium_bifang/bifang_wing_loop, premium_sunbow/sunbow_hang_loop, ui_amb/amb_fire |
 | 363093 | Fire Crackle and Flames 001 | TheWoodlandNomad | [link](https://freesound.org/people/TheWoodlandNomad/sounds/363093/) | CC0-1.0 | - |
 | 363168 | Machine gun reload | SamsterBirdies | [link](https://freesound.org/people/SamsterBirdies/sounds/363168/) | CC0-1.0 | weapons/beltIn, weapons/coverClose, weapons/coverOpen, weapons/drawHeavy, weapons/mg556_mech, weapons/mg762_mech, weapons/minigun_spindown, weapons/rocketIn, weapons/sniper50_mech |
 | 363470 | Running_wood.wav | taure | [link](https://freesound.org/people/taure/sounds/363470/) | CC0-1.0 | - |
 | 363922 | land.wav | kfatehi | [link](https://freesound.org/people/kfatehi/sounds/363922/) | CC0-1.0 | - |
 | 364690 | Human Impact on Ground | alegemaate | [link](https://freesound.org/people/alegemaate/sounds/364690/) | CC0-1.0 | creatures/land |
-| 366086 | Huge Explosion Part 3 - Long Crash | bevibeldesign | [link](https://freesound.org/people/bevibeldesign/sounds/366086/) | CC0-1.0 | impacts/explosion_large |
+| 366086 | Huge Explosion Part 3 - Long Crash | bevibeldesign | [link](https://freesound.org/people/bevibeldesign/sounds/366086/) | CC0-1.0 | impacts/explosion_large, premium_sunbow/sunbow_ult_final |
 | 369867 | Radio beep. | SamsterBirdies | [link](https://freesound.org/people/SamsterBirdies/sounds/369867/) | CC0-1.0 | - |
 | 370345 | Mosin Nagant Bolt Action Cycle | Zott820 | [link](https://freesound.org/people/Zott820/sounds/370345/) | CC0-1.0 | weapons/boltDown, weapons/boltUp |
 | 370710 | Vomiting on the ground - Remixed | Podsburgh | [link](https://freesound.org/people/Podsburgh/sounds/370710/) | CC0-1.0 | creatures/bloater_death, creatures/spitter_death, creatures/spitter_spit |
@@ -473,23 +490,23 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 373226 | F Horn - staccato - A3 (MOHorn_stac_A2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373226/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373228 | F Horn - staccato - C4 (MOHorn_stac_C3_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373228/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373230 | F Horn - staccato - D3 (MOHorn_stac_D2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373230/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
-| 373231 | F Horn - staccato - D5 (MOHorn_stac_D4_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373231/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373231 | F Horn - staccato - D5 (MOHorn_stac_D4_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373231/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start, premium_sunbow/sunbow_first |
 | 373232 | F Horn - staccato - E#3 (MOHorn_stac_F2_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373232/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373234 | F Horn - staccato - F#2 (MOHorn_stac_G1_v2_rr2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373234/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
-| 373248 | F Horn - sustain - D5 (MOHorn_sus_D4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373248/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373248 | F Horn - sustain - D5 (MOHorn_sus_D4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373248/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, premium_sunbow/sunbow_ult_raise |
 | 373250 | F Horn - sustain - E#5 (MOHorn_sus_F4_v1_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373250/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
 | 373252 | F Horn - sustain - A#2 (MOHorn_sus_A#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373252/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
-| 373253 | F Horn - sustain - A3 (MOHorn_sus_A2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373253/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373253 | F Horn - sustain - A3 (MOHorn_sus_A2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373253/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, premium_sunbow/sunbow_ult_raise |
 | 373255 | F Horn - sustain - C4 (MOHorn_sus_C3_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373255/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
 | 373256 | F Horn - sustain - D#2 (MOHorn_sus_D#1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373256/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
-| 373257 | F Horn - sustain - D3 (MOHorn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373257/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
+| 373257 | F Horn - sustain - D3 (MOHorn_sus_D2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373257/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, premium_sunbow/sunbow_ult_raise |
 | 373258 | F Horn - sustain - E#3 (MOHorn_sus_F2_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373258/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
 | 373259 | F Horn - sustain - F#2 (MOHorn_sus_G1_v2_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373259/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory |
 | 373910 | Timpani - A#2 (Timpani2_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373910/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373911 | Timpani - C#3 (Timpani3_Hit_v1_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373911/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373919 | Timpani - A#2 (Timpani2_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373919/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373920 | Timpani - C#3 (Timpani3_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373920/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
-| 373921 | Timpani - E3 (Timpani4_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373921/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 373921 | Timpani - E3 (Timpani4_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373921/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start, premium_sunbow/sunbow_first, premium_sunbow/sunbow_ult_raise |
 | 373922 | Timpani - F3 (Timpani5_Hit_v4_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373922/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373928 | Timpani - F2 (Timpani1_Hit_v3_rr2_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373928/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 373943 | Timpani - rolls - F2 (Timpani1_Roll_v5_rr1_Sum.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/373943/) | CC0-1.0 | music/menu_theme, music/victory |
@@ -512,8 +529,8 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 374261 | Tuba - sustain - D#2 (Tuba3_sus_D#1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374261/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
 | 374262 | Tuba - sustain - D3 (Tuba3_sus_D2_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374262/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
 | 374263 | Tuba - sustain - E#2 (Tuba3_sus_F1_v2_rr1_Mid.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374263/) | CC0-1.0 | music/boss, music/combat_high, music/defeat, music/menu_theme, music/victory |
-| 374273 | Tubular Bells - C4 (TB_hit_C4_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374273/) | CC0-1.0 | music/calm, music/menu_theme |
-| 374274 | Tubular Bells - C5 (TB_hit_C5_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374274/) | CC0-1.0 | music/calm, music/menu_theme |
+| 374273 | Tubular Bells - C4 (TB_hit_C4_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374273/) | CC0-1.0 | music/calm, music/menu_theme, premium_bifang/bifang_ult_pillar |
+| 374274 | Tubular Bells - C5 (TB_hit_C5_v4_rr1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374274/) | CC0-1.0 | music/calm, music/menu_theme, premium_bifang/bifang_ult_pillar |
 | 374325 | Upright Piano - A1 (Player_dyn3_rr1_006.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374325/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
 | 374326 | Upright Piano - C#2 (Player_dyn3_rr1_008.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374326/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
 | 374327 | Upright Piano - E#2 (Player_dyn3_rr1_010.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/374327/) | CC0-1.0 | music/calm, music/defeat, music/menu_theme |
@@ -565,42 +582,44 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 375378 | Snare (snare1_nosnare_fff_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375378/) | CC0-1.0 | - |
 | 375404 | Snare (snare2_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375404/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low |
 | 375433 | Snare (snare2_rimshot_ff_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375433/) | CC0-1.0 | - |
-| 375497 | Cymbals (crash_hit_fff_loose_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375497/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
+| 375497 | Cymbals (crash_hit_fff_loose_2.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375497/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start, premium_bifang/bifang_ult_rise, premium_sunbow/sunbow_ult_raise |
 | 375498 | Cymbals (crash_hit_mp_loose.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375498/) | CC0-1.0 | - |
 | 375506 | Cymbals (susp_hit_hardmall_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375506/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/victory, music/wave_start |
 | 375512 | Cymbals (susp_hit_metal_2_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375512/) | CC0-1.0 | music/boss, music/combat_high |
-| 375519 | Cymbals (susp_hit_softmall_roll2_cresc.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375519/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start |
+| 375519 | Cymbals (susp_hit_softmall_roll2_cresc.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375519/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/menu_theme, music/wave_start, premium_bifang/bifang_ult_rise, premium_sunbow/sunbow_ult_raise |
 | 375521 | Cymbals (susp_hit_softmall_roll4_fff_long.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375521/) | CC0-1.0 | - |
-| 375531 | Gong (gong_hit_ff_hard.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375531/) | CC0-1.0 | music/boss, music/defeat, music/menu_theme, music/victory |
-| 375532 | Gong (gong_hit_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375532/) | CC0-1.0 | music/boss, music/defeat, music/menu_theme, music/victory |
+| 375531 | Gong (gong_hit_ff_hard.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375531/) | CC0-1.0 | music/boss, music/defeat, music/menu_theme, music/victory, premium_sunbow/sunbow_ult_raise |
+| 375532 | Gong (gong_hit_fff.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375532/) | CC0-1.0 | music/boss, music/defeat, music/menu_theme, music/victory, premium_bifang/bifang_ult_pillar, premium_sunbow/sunbow_hang_burst |
 | 375550 | Gong (gong_scrape_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375550/) | CC0-1.0 | music/calm |
-| 375553 | Gong (gong_smack_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375553/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start |
+| 375553 | Gong (gong_smack_1.wav) | sgossner | [link](https://freesound.org/people/sgossner/sounds/375553/) | CC0-1.0 | music/boss, music/combat_high, music/combat_low, music/wave_start, premium_sunbow/sunbow_first |
+| 376799 | Crashing Waves into Rocks 1 | amholma | [link](https://freesound.org/people/amholma/sounds/376799/) | CC0-1.0 | premium_chiwen/chiwen_inspect, premium_chiwen/chiwen_ray_loop, premium_chiwen/chiwen_ray_start, premium_chiwen/chiwen_ult_fall, premium_chiwen/chiwen_ult_roar |
 | 376809 | MUDDY AND WET FOOTSTEPS.wav | Alex_hears_things | [link](https://freesound.org/people/Alex_hears_things/sounds/376809/) | CC0-1.0 | - |
-| 377145 | Pistol Draw Unholster | nioczkus | [link](https://freesound.org/people/nioczkus/sounds/377145/) | CC0-1.0 | weapons/draw |
+| 377145 | Pistol Draw Unholster | nioczkus | [link](https://freesound.org/people/nioczkus/sounds/377145/) | CC0-1.0 | premium_chiwen/chiwen_draw_first, weapons/draw |
 | 380769 | BS _Swarm of roaches.wav | szczur_banshee | [link](https://freesound.org/people/szczur_banshee/sounds/380769/) | CC0-1.0 | creatures/crawler_skitter |
-| 382313 | Sizzle / Acid Burn | bottles | [link](https://freesound.org/people/bottles/sounds/382313/) | CC0-1.0 | creatures/acid_splash |
+| 382313 | Sizzle / Acid Burn | bottles | [link](https://freesound.org/people/bottles/sounds/382313/) | CC0-1.0 | creatures/acid_splash, premium_bifang/bifang_beam, premium_bifang/bifang_feather_hit, premium_bifang/bifang_hit_heavy, premium_bifang/bifang_sizzle, premium_sunbow/sunbow_creak, premium_sunbow/sunbow_full, premium_sunbow/sunbow_nock |
 | 384360 | Waves Crashing Against Wall/Break Water 2 | Ali_6868 | [link](https://freesound.org/people/Ali_6868/sounds/384360/) | CC0-1.0 | - |
 | 385867 | Police Sirens.wav | chimerical | [link](https://freesound.org/people/chimerical/sounds/385867/) | CC0-1.0 | - |
 | 385965 | Long Wet Pepper Crunch with Rip.wav | minituffy | [link](https://freesound.org/people/minituffy/sounds/385965/) | CC0-1.0 | impacts/gib |
 | 386799 | dirt_collision.wav | RichieMcMullen | [link](https://freesound.org/people/RichieMcMullen/sounds/386799/) | CC0-1.0 | - |
 | 388819 | Holster Pistol | nioczkus | [link](https://freesound.org/people/nioczkus/sounds/388819/) | CC0-1.0 | weapons/draw |
+| 389432 | Tea Cup Clank.wav | RossBell | [link](https://freesound.org/people/RossBell/sounds/389432/) | CC0-1.0 | premium_chiwen/chiwen_draw_first, premium_chiwen/chiwen_scales, premium_chiwen/chiwen_ult_bite |
 | 389678 | Jump Landing.wav | Shamewap | [link](https://freesound.org/people/Shamewap/sounds/389678/) | CC0-1.0 | - |
 | 389690 | Small Knife Whoosh.wav | Shamewap | [link](https://freesound.org/people/Shamewap/sounds/389690/) | CC0-1.0 | weapons/knife_close, weapons/knife_far, weapons/knife_tail, weapons/swing |
-| 390462 | Punch in the face | Huminaatio | [link](https://freesound.org/people/Huminaatio/sounds/390462/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit |
+| 390462 | Punch in the face | Huminaatio | [link](https://freesound.org/people/Huminaatio/sounds/390462/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit, premium_sunbow/sunbow_close, premium_sunbow/sunbow_release, premium_sunbow/sunbow_release_heavy |
 | 391552 | Monster screams.wav | gpag1 | [link](https://freesound.org/people/gpag1/sounds/391552/) | CC0-1.0 | creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_roar |
 | 392883 | Hard Candy / Bone Crunch | clif_creates | [link](https://freesound.org/people/clif_creates/sounds/392883/) | CC0-1.0 | - |
 | 392975 | Ricochet 2.wav | morganpurkis | [link](https://freesound.org/people/morganpurkis/sounds/392975/) | CC0-1.0 | - |
 | 393398 | Industrial ambience | Lewente | [link](https://freesound.org/people/Lewente/sounds/393398/) | CC0-1.0 | - |
-| 393732 | AR15 M4 Gun Hardware Magazine Movement Sounds | jackthemurray | [link](https://freesound.org/people/jackthemurray/sounds/393732/) | CC0-1.0 | ui_amb/ui_equip, weapons/dryfire, weapons/magRelease |
+| 393732 | AR15 M4 Gun Hardware Magazine Movement Sounds | jackthemurray | [link](https://freesound.org/people/jackthemurray/sounds/393732/) | CC0-1.0 | premium_bifang/bifang_draw, ui_amb/ui_equip, weapons/dryfire, weapons/magRelease |
 | 393734 | Glock 19 Handgun Pistol Slide Cocking Sounds | jackthemurray | [link](https://freesound.org/people/jackthemurray/sounds/393734/) | CC0-1.0 | weapons/magRelease, weapons/pistol_mech, weapons/slideRelease |
 | 395331 | Body falling on the ground 1 | ihitokage | [link](https://freesound.org/people/ihitokage/sounds/395331/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, creatures/land_heavy, creatures/player_downed, impacts/body_fall |
 | 396324 | HeavyMachineGun.wav | SuperPhat | [link](https://freesound.org/people/SuperPhat/sounds/396324/) | CC0-1.0 | - |
 | 396331 | 1911 Reload | nioczkus | [link](https://freesound.org/people/nioczkus/sounds/396331/) | CC0-1.0 | weapons/pistol45_mech |
 | 396797 | Mutant Scream | scorpion67890 | [link](https://freesound.org/people/scorpion67890/sounds/396797/) | CC0-1.0 | creatures/crawler_attack, creatures/crawler_screech |
 | 398032 | Splash | swordofkings128 | [link](https://freesound.org/people/swordofkings128/sounds/398032/) | CC0-1.0 | impacts/impact_water |
-| 398283 | Explosion | FlashTrauma | [link](https://freesound.org/people/FlashTrauma/sounds/398283/) | CC0-1.0 | impacts/explosion_large |
+| 398283 | Explosion | FlashTrauma | [link](https://freesound.org/people/FlashTrauma/sounds/398283/) | CC0-1.0 | impacts/explosion_large, premium_sunbow/sunbow_hang_burst, premium_sunbow/sunbow_ult_impact |
 | 399183 | Major punch | janbezouska | [link](https://freesound.org/people/janbezouska/sounds/399183/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit |
-| 400168 | banshie scream.wav | DylanTheFish | [link](https://freesound.org/people/DylanTheFish/sounds/400168/) | CC0-1.0 | creatures/screamer_chant, creatures/screamer_scream |
+| 400168 | banshie scream.wav | DylanTheFish | [link](https://freesound.org/people/DylanTheFish/sounds/400168/) | CC0-1.0 | creatures/screamer_chant, creatures/screamer_scream, premium_bifang/bifang_scream |
 | 401820 | dog_growling_mono_4824.wav | Mystikuum | [link](https://freesound.org/people/Mystikuum/sounds/401820/) | CC0-1.0 | creatures/hound_growl |
 | 402790 | Cocking a revolver | acidsnowflake | [link](https://freesound.org/people/acidsnowflake/sounds/402790/) | CC0-1.0 | - |
 | 402861 | Gurgled Scream | jacksonacademyashmore | [link](https://freesound.org/people/jacksonacademyashmore/sounds/402861/) | CC0-1.0 | creatures/runner_death |
@@ -611,8 +630,8 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 410442 | EnfieldRifle.wav | SuperPhat | [link](https://freesound.org/people/SuperPhat/sounds/410442/) | CC0-1.0 | - |
 | 411671 | BloodSquish.wav | deoking | [link](https://freesound.org/people/deoking/sounds/411671/) | CC0-1.0 | creatures/bloater_pop, impacts/impact_flesh |
 | 411742 | Knife Stab Pull.wav | neilsher | [link](https://freesound.org/people/neilsher/sounds/411742/) | CC0-1.0 | impacts/knife_hit_flesh |
-| 411743 | Knife Stab.wav | neilsher | [link](https://freesound.org/people/neilsher/sounds/411743/) | CC0-1.0 | - |
-| 412558 | Combust.wav | GrimGrum | [link](https://freesound.org/people/GrimGrum/sounds/412558/) | CC0-1.0 | impacts/explosion_large, impacts/fire_burst |
+| 411743 | Knife Stab.wav | neilsher | [link](https://freesound.org/people/neilsher/sounds/411743/) | CC0-1.0 | premium_sunbow/sunbow_hit |
+| 412558 | Combust.wav | GrimGrum | [link](https://freesound.org/people/GrimGrum/sounds/412558/) | CC0-1.0 | impacts/explosion_large, impacts/fire_burst, premium_bifang/bifang_fire, premium_sunbow/sunbow_close, premium_sunbow/sunbow_hit, premium_sunbow/sunbow_hit_world, premium_sunbow/sunbow_ignite, premium_sunbow/sunbow_rekindle, premium_sunbow/sunbow_release_heavy |
 | 413186 | male_hurt9.ogg | micahlg | [link](https://freesound.org/people/micahlg/sounds/413186/) | CC0-1.0 | - |
 | 414296 | goreSplat.wav | ThefitzyG | [link](https://freesound.org/people/ThefitzyG/sounds/414296/) | CC0-1.0 | creatures/bloater_pop, impacts/blood_splat, impacts/gib, impacts/headshot |
 | 414767 | Crackling Fire | samarobryn | [link](https://freesound.org/people/samarobryn/sounds/414767/) | CC0-1.0 | ui_amb/amb_fire |
@@ -621,7 +640,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 418545 | Running on concrete.WAV | 14FPanskaBubik_Lukas | [link](https://freesound.org/people/14FPanskaBubik_Lukas/sounds/418545/) | CC0-1.0 | creatures/zombie_run_step |
 | 420674 | Deep Cut / Slash / Gash | SypherZent | [link](https://freesound.org/people/SypherZent/sounds/420674/) | CC0-1.0 | impacts/knife_hit_flesh |
 | 422622 | Bones and Flesh movement | Aurelon | [link](https://freesound.org/people/Aurelon/sounds/422622/) | CC0-1.0 | - |
-| 423301 | VisceralBulletImpacts.wav | u1769092 | [link](https://freesound.org/people/u1769092/sounds/423301/) | CC0-1.0 | impacts/impact_flesh |
+| 423301 | VisceralBulletImpacts.wav | u1769092 | [link](https://freesound.org/people/u1769092/sounds/423301/) | CC0-1.0 | impacts/impact_flesh, premium_bifang/bifang_hit_heavy |
 | 423644 | City at Night_Ambience.wav | YellowJacketStudios | [link](https://freesound.org/people/YellowJacketStudios/sounds/423644/) | CC0-1.0 | - |
 | 423959 | Bubbling | pillwave | [link](https://freesound.org/people/pillwave/sounds/423959/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain |
 | 426628 | Zombie Moan.wav | mrh4hn | [link](https://freesound.org/people/mrh4hn/sounds/426628/) | CC0-1.0 | creatures/zombie_idle |
@@ -635,13 +654,13 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 431830 | Loading bullets into Sauer 404 mag.wav | moosegravy | [link](https://freesound.org/people/moosegravy/sounds/431830/) | CC0-1.0 | - |
 | 432139 | PistolReloadSound.wav | MaximBomba | [link](https://freesound.org/people/MaximBomba/sounds/432139/) | CC0-1.0 | - |
 | 432141 | Rifle-or-shotgun-reload.wav | MaximBomba | [link](https://freesound.org/people/MaximBomba/sounds/432141/) | CC0-1.0 | - |
-| 433735 | Shrieker_Screeching_Screaming_Nazgul_Demon_Voice_byTiffanyMarz.wav | Voices_Of_Marz | [link](https://freesound.org/people/Voices_Of_Marz/sounds/433735/) | CC0-1.0 | - |
+| 433735 | Shrieker_Screeching_Screaming_Nazgul_Demon_Voice_byTiffanyMarz.wav | Voices_Of_Marz | [link](https://freesound.org/people/Voices_Of_Marz/sounds/433735/) | CC0-1.0 | premium_bifang/bifang_scream |
 | 433840 | Slime 27.wav | Archos | [link](https://freesound.org/people/Archos/sounds/433840/) | CC0-1.0 | creatures/bloater_pop |
 | 434507 | industrial_machine_tone | Kostrava | [link](https://freesound.org/people/Kostrava/sounds/434507/) | CC0-1.0 | ui_amb/amb_warehouse |
 | 435651 | Zombie Demon Scream | Wakerone | [link](https://freesound.org/people/Wakerone/sounds/435651/) | CC0-1.0 | creatures/runner_scream |
 | 439535 | Angry Dog | CmdRobot | [link](https://freesound.org/people/CmdRobot/sounds/439535/) | CC0-1.0 | creatures/hound_attack |
 | 440865 | Angry big dog barking - Far [d15].wav | v23 | [link](https://freesound.org/people/v23/sounds/440865/) | CC0-1.0 | ui_amb/amb_city_dead |
-| 442773 | Big Water Splash | qubodup | [link](https://freesound.org/people/qubodup/sounds/442773/) | CC0-1.0 | creatures/bloater_pop |
+| 442773 | Big Water Splash | qubodup | [link](https://freesound.org/people/qubodup/sounds/442773/) | CC0-1.0 | creatures/bloater_pop, premium_chiwen/chiwen_barrier, premium_chiwen/chiwen_hit, premium_chiwen/chiwen_orb_burst, premium_chiwen/chiwen_orb_pulse, premium_chiwen/chiwen_ult_bite, premium_chiwen/chiwen_ult_fall, premium_chiwen/chiwen_ult_inhale, premium_chiwen/chiwen_ult_roar, premium_chiwen/chiwen_ult_spit, premium_chiwen/chiwen_ult_tail |
 | 443019 | AMB_Waves_Distant_Harbor.wav | cribbler | [link](https://freesound.org/people/cribbler/sounds/443019/) | CC0-1.0 | ui_amb/amb_harbor_wind |
 | 444444 | Creepy Evil Demon Monster Growl Halloween | Voices_Of_Marz | [link](https://freesound.org/people/Voices_Of_Marz/sounds/444444/) | CC0-1.0 | creatures/screamer_idle |
 | 445109 | Mud Splat | Breviceps | [link](https://freesound.org/people/Breviceps/sounds/445109/) | CC0-1.0 | creatures/acid_splash, impacts/blood_splat, impacts/impact_dirt |
@@ -649,7 +668,9 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 447922 | Thud / Falling on wooden floor / Snapping, breaking neck | Breviceps | [link](https://freesound.org/people/Breviceps/sounds/447922/) | CC0-1.0 | - |
 | 448089 | Zombies eating | Breviceps | [link](https://freesound.org/people/Breviceps/sounds/448089/) | CC0-1.0 | - |
 | 448133 | Circular Saw | derjuli | [link](https://freesound.org/people/derjuli/sounds/448133/) | CC0-1.0 | - |
+| 451126 | Water drop (splash) | bolkmar | [link](https://freesound.org/people/bolkmar/sounds/451126/) | CC0-1.0 | premium_chiwen/ready_chiwen |
 | 451864 | footsteps shoes metal stairs up down resonate.flac | kyles | [link](https://freesound.org/people/kyles/sounds/451864/) | CC0-1.0 | - |
+| 452400 | cymbal splash hit nearby chinese opera in park.flac | kyles | [link](https://freesound.org/people/kyles/sounds/452400/) | CC0-1.0 | premium_chiwen/chiwen_ult_bed, premium_sunbow/sunbow_ult_raise |
 | 452421 | Metal Stairs Foot Steps | sagamusix | [link](https://freesound.org/people/sagamusix/sounds/452421/) | CC0-1.0 | - |
 | 454622 | gore_blood_flesh_gurgle.wav | EricsSoundschmiede | [link](https://freesound.org/people/EricsSoundschmiede/sounds/454622/) | CC0-1.0 | creatures/bloater_death, creatures/bloater_gurgle, creatures/brute_attack, creatures/brute_charge, creatures/brute_death, creatures/brute_idle, creatures/brute_pain, creatures/brute_roar, creatures/crawler_attack, creatures/crawler_death, creatures/crawler_idle, creatures/crawler_pain, creatures/crawler_screech, creatures/hound_attack, creatures/hound_bark, creatures/hound_growl, creatures/runner_attack, creatures/runner_breath, creatures/runner_death, creatures/runner_idle, creatures/runner_pain, creatures/runner_scream, creatures/screamer_attack, creatures/screamer_death, creatures/screamer_idle, creatures/screamer_pain, creatures/screamer_scream, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_gurgle, creatures/spitter_idle, creatures/spitter_pain, creatures/zombie_alert, creatures/zombie_attack, creatures/zombie_death, creatures/zombie_eat, creatures/zombie_idle, creatures/zombie_pain |
 | 454623 | boots_water_step_creaky_dirt_gravel.wav | EricsSoundschmiede | [link](https://freesound.org/people/EricsSoundschmiede/sounds/454623/) | CC0-1.0 | creatures/footstep_water |
@@ -669,17 +690,18 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 469141 | Ghost Scream | onderwish | [link](https://freesound.org/people/onderwish/sounds/469141/) | CC0-1.0 | - |
 | 469363 | Distant Ambulance Siren | brunoboselli | [link](https://freesound.org/people/brunoboselli/sounds/469363/) | CC0-1.0 | - |
 | 471097 | Knife/sword swing | spycrah | [link](https://freesound.org/people/spycrah/sounds/471097/) | CC0-1.0 | - |
-| 476117 | Impact: Stone | Sheyvan | [link](https://freesound.org/people/Sheyvan/sounds/476117/) | CC0-1.0 | impacts/debris_fall, impacts/impact_concrete |
+| 476117 | Impact: Stone | Sheyvan | [link](https://freesound.org/people/Sheyvan/sounds/476117/) | CC0-1.0 | impacts/debris_fall, impacts/impact_concrete, premium_bifang/bifang_feather_hit |
 | 479631 | R01-54-Aggressive Dog Bark.wav | craigsmith | [link](https://freesound.org/people/craigsmith/sounds/479631/) | CC0-1.0 | creatures/hound_bark |
 | 481642 | Monster Growl | JonCon_Library | [link](https://freesound.org/people/JonCon_Library/sounds/481642/) | CC0-1.0 | creatures/brute_idle |
 | 481787 | Metallic groan long.wav | Crinkem | [link](https://freesound.org/people/Crinkem/sounds/481787/) | CC0-1.0 | - |
+| 482855 | R23-19-Ocean Waves Crashing.wav | craigsmith | [link](https://freesound.org/people/craigsmith/sounds/482855/) | CC0-1.0 | premium_chiwen/chiwen_ray_loop, premium_chiwen/chiwen_ult_vortex |
 | 483176 | Aggressive Barking Dog - 1.wav | SpaceJoe | [link](https://freesound.org/people/SpaceJoe/sounds/483176/) | CC0-1.0 | creatures/hound_bark |
 | 483190 | Growling Dog 2.wav | SpaceJoe | [link](https://freesound.org/people/SpaceJoe/sounds/483190/) | CC0-1.0 | creatures/hound_growl |
 | 485421 | Footsteps on wood floor | IENBA | [link](https://freesound.org/people/IENBA/sounds/485421/) | CC0-1.0 | creatures/footstep_wood |
-| 486140 | taiko.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486140/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
-| 486141 | taiko2.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486141/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start |
+| 486140 | taiko.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486140/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start, premium_bifang/bifang_ult_pillar, premium_sunbow/sunbow_first, premium_sunbow/sunbow_ult_raise |
+| 486141 | taiko2.wav | Anuj_Shrestha1 | [link](https://freesound.org/people/Anuj_Shrestha1/sounds/486141/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low, music/defeat, music/menu_theme, music/victory, music/wave_start, premium_chiwen/chiwen_ult_bed, premium_sunbow/sunbow_ult_impact |
 | 488659 | Bone Fracture | Fission9 | [link](https://freesound.org/people/Fission9/sounds/488659/) | CC0-1.0 | impacts/headshot |
-| 494797 | Jacket/Cloth Rustle 9 | brandondelehoy | [link](https://freesound.org/people/brandondelehoy/sounds/494797/) | CC0-1.0 | ui_amb/ui_equip, weapons/cloth, weapons/drawHeavy, weapons/pouch |
+| 494797 | Jacket/Cloth Rustle 9 | brandondelehoy | [link](https://freesound.org/people/brandondelehoy/sounds/494797/) | CC0-1.0 | premium_bifang/bifang_cocoon, premium_bifang/bifang_feather, premium_bifang/bifang_ult_flap, premium_bifang/bifang_wing_close, premium_bifang/bifang_wing_open, premium_chiwen/chiwen_draw_first, premium_sunbow/sunbow_draw, ui_amb/ui_equip, weapons/cloth, weapons/drawHeavy, weapons/pouch |
 | 495117 | Wet Splat 2.mp3 | nebulasnails | [link](https://freesound.org/people/nebulasnails/sounds/495117/) | CC0-1.0 | creatures/acid_splash, impacts/blood_splat, impacts/impact_flesh |
 | 495118 | Wet Splat 1.mp3 | nebulasnails | [link](https://freesound.org/people/nebulasnails/sounds/495118/) | CC0-1.0 | creatures/spitter_spit, impacts/blood_splat, impacts/impact_flesh |
 | 495474 | Footsteps-cowboy boots in empty warehouse.wav | DrDufus | [link](https://freesound.org/people/DrDufus/sounds/495474/) | CC0-1.0 | - |
@@ -688,18 +710,18 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 500008 | liner gangplank groaning.WAV | phonoflora | [link](https://freesound.org/people/phonoflora/sounds/500008/) | CC0-1.0 | ui_amb/amb_harbor_wind, ui_amb/amb_warehouse |
 | 500555 | vocal_groaning_male.wav | agaudiodesigns | [link](https://freesound.org/people/agaudiodesigns/sounds/500555/) | CC0-1.0 | creatures/bloater_death, creatures/brute_death, creatures/brute_idle, creatures/zombie_death, creatures/zombie_idle |
 | 501562 | Double Action Revolver Empty Chamber.wav | shelbyshark | [link](https://freesound.org/people/shelbyshark/sounds/501562/) | CC0-1.0 | weapons/dryfire |
-| 504615 | Slicing through flesh | NeoSpica | [link](https://freesound.org/people/NeoSpica/sounds/504615/) | CC0-1.0 | impacts/gib, impacts/knife_hit_flesh |
+| 504615 | Slicing through flesh | NeoSpica | [link](https://freesound.org/people/NeoSpica/sounds/504615/) | CC0-1.0 | impacts/gib, impacts/knife_hit_flesh, premium_bifang/bifang_hit_heavy |
 | 504617 | Body falling | NeoSpica | [link](https://freesound.org/people/NeoSpica/sounds/504617/) | CC0-1.0 | creatures/player_downed, impacts/body_fall |
-| 504618 | Knife thrust into wall | NeoSpica | [link](https://freesound.org/people/NeoSpica/sounds/504618/) | CC0-1.0 | impacts/knife_hit_wall |
+| 504618 | Knife thrust into wall | NeoSpica | [link](https://freesound.org/people/NeoSpica/sounds/504618/) | CC0-1.0 | impacts/knife_hit_wall, premium_sunbow/sunbow_hang, premium_sunbow/sunbow_hit_world |
 | 504626 | BODY FALL - V HVY - DIRT | leonelmail | [link](https://freesound.org/people/leonelmail/sounds/504626/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/body_fall |
 | 505238 | Whizzby | Daleonfire | [link](https://freesound.org/people/Daleonfire/sounds/505238/) | CC0-1.0 | impacts/ricochet |
-| 507466 | Clean fast Swoosh.aiff | Danjocross | [link](https://freesound.org/people/Danjocross/sounds/507466/) | CC0-1.0 | weapons/knife_close, weapons/knife_far, weapons/knife_tail, weapons/swing |
+| 507466 | Clean fast Swoosh.aiff | Danjocross | [link](https://freesound.org/people/Danjocross/sounds/507466/) | CC0-1.0 | premium_bifang/bifang_swish, premium_bifang/bifang_wing_close, premium_sunbow/sunbow_close, premium_sunbow/sunbow_release, premium_sunbow/sunbow_release_heavy, weapons/knife_close, weapons/knife_far, weapons/knife_tail, weapons/swing |
 | 508110 | fire ambience, flames, crackles, pops, burning | ahriik | [link](https://freesound.org/people/ahriik/sounds/508110/) | CC0-1.0 | - |
 | 510917 | Seagulls_short.wav | Lydmakeren | [link](https://freesound.org/people/Lydmakeren/sounds/510917/) | CC0-1.0 | - |
 | 511194 | Headshot.wav | Pablobd | [link](https://freesound.org/people/Pablobd/sounds/511194/) | CC0-1.0 | impacts/headshot |
-| 513694 | impact-stone-heavy.wav | kasparsj | [link](https://freesound.org/people/kasparsj/sounds/513694/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/impact_concrete |
+| 513694 | impact-stone-heavy.wav | kasparsj | [link](https://freesound.org/people/kasparsj/sounds/513694/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/impact_concrete, premium_bifang/bifang_feather_hit |
 | 514228 | Sniper Rifle | SuperPhat | [link](https://freesound.org/people/SuperPhat/sounds/514228/) | CC0-1.0 | - |
-| 516914 | Explosion, Medium Blast | Kinoton | [link](https://freesound.org/people/Kinoton/sounds/516914/) | CC0-1.0 | impacts/explosion_large |
+| 516914 | Explosion, Medium Blast | Kinoton | [link](https://freesound.org/people/Kinoton/sounds/516914/) | CC0-1.0 | impacts/explosion_large, premium_sunbow/sunbow_ult_impact |
 | 517150 | gear-friction.wav | isbeorn | [link](https://freesound.org/people/isbeorn/sounds/517150/) | CC0-1.0 | creatures/jump, creatures/land, creatures/land_heavy, creatures/player_downed, creatures/revive, creatures/riot_armor_clank |
 | 521377 | Rocket Launch | Jarusca | [link](https://freesound.org/people/Jarusca/sounds/521377/) | CC0-1.0 | weapons/rocket_close, weapons/rocket_far, weapons/rocket_tail |
 | 521590 | Hiking Boot Footsteps on Stone | Fission9 | [link](https://freesound.org/people/Fission9/sounds/521590/) | CC0-1.0 | - |
@@ -708,6 +730,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 523089 | Explosion 1 | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/523089/) | CC0-1.0 | impacts/explosion_far, impacts/explosion_small |
 | 523365 | Bomb Explosion | LilMati | [link](https://freesound.org/people/LilMati/sounds/523365/) | CC0-1.0 | - |
 | 530209 | Debris Falling on Tank 1.wav | Richard27 | [link](https://freesound.org/people/Richard27/sounds/530209/) | CC0-1.0 | impacts/explosion_large |
+| 530233 | COFFEE MUG STRIKES 1 | tbsounddesigns | [link](https://freesound.org/people/tbsounddesigns/sounds/530233/) | CC0-1.0 | premium_chiwen/chiwen_bead, premium_chiwen/chiwen_draw_first, premium_chiwen/chiwen_eyes, premium_chiwen/chiwen_final, premium_chiwen/chiwen_fire, premium_chiwen/chiwen_frost_kill, premium_chiwen/chiwen_head, premium_chiwen/chiwen_inspect, premium_chiwen/chiwen_mark, premium_chiwen/chiwen_scales, premium_chiwen/chiwen_ult_end, premium_chiwen/ready_chiwen |
 | 530589 | Footsteps_Boots_Gritty_Ground_(Gravel).wav | Nox_Sound | [link](https://freesound.org/people/Nox_Sound/sounds/530589/) | CC0-1.0 | creatures/footstep_dirt |
 | 531566 | puddle footsteps.wav | patchytherat | [link](https://freesound.org/people/patchytherat/sounds/531566/) | CC0-1.0 | creatures/footstep_water |
 | 532191 | Fire in the stove | mcmikai | [link](https://freesound.org/people/mcmikai/sounds/532191/) | CC0-1.0 | ui_amb/amb_fire |
@@ -716,6 +739,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 535776 | Distant ambulance & fire truck sirens (Germany) | Breviceps | [link](https://freesound.org/people/Breviceps/sounds/535776/) | CC0-1.0 | - |
 | 537853 | Many seagulls.wav | Ambientsoundapp | [link](https://freesound.org/people/Ambientsoundapp/sounds/537853/) | CC0-1.0 | - |
 | 537854 | Seagulls distant.wav | Ambientsoundapp | [link](https://freesound.org/people/Ambientsoundapp/sounds/537854/) | CC0-1.0 | - |
+| 539823 | Bubbles 001.wav | ristooooo1 | [link](https://freesound.org/people/ristooooo1/sounds/539823/) | CC0-1.0 | premium_chiwen/chiwen_bead, premium_chiwen/chiwen_bubble, premium_chiwen/chiwen_fire, premium_chiwen/chiwen_gurgle, premium_chiwen/chiwen_orb_burst, premium_chiwen/chiwen_orb_cast, premium_chiwen/chiwen_orb_pulse, premium_chiwen/chiwen_roar_low, premium_chiwen/chiwen_tank, premium_chiwen/chiwen_ult_end, premium_chiwen/chiwen_ult_gulp, premium_chiwen/ready_chiwen |
 | 540272 | land a jump.wav | zepurple | [link](https://freesound.org/people/zepurple/sounds/540272/) | CC0-1.0 | creatures/land |
 | 540823 | Zombie_5 | ohheyvoid | [link](https://freesound.org/people/ohheyvoid/sounds/540823/) | CC0-1.0 | - |
 | 546806 | Vehicle_Helicopter_Flyby_Close_Stereo.wav | Nox_Sound | [link](https://freesound.org/people/Nox_Sound/sounds/546806/) | CC0-1.0 | ui_amb/supply_drop |
@@ -737,8 +761,9 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 563010 | Explosion.mp3 | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/563010/) | CC0-1.0 | impacts/explosion_large |
 | 563765 | Fire Auto - car on fire | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/563765/) | CC0-1.0 | impacts/fire_burst, ui_amb/amb_fire |
 | 563766 | fire crackles | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/563766/) | CC0-1.0 | - |
+| 565642 | Plate Break 1.wav | jc.sg | [link](https://freesound.org/people/jc.sg/sounds/565642/) | CC0-1.0 | premium_chiwen/chiwen_crisis, premium_chiwen/chiwen_ult_bite, premium_sunbow/sunbow_crisis |
 | 568814 | 200829 Sirens, distant, ambulence, police, urban echoes roof, stops 9am.flac | TRP | [link](https://freesound.org/people/TRP/sounds/568814/) | CC0-1.0 | ui_amb/amb_city_dead |
-| 569510 | Stone Impact Rubble Debris 14 | Sheyvan | [link](https://freesound.org/people/Sheyvan/sounds/569510/) | CC0-1.0 | impacts/impact_concrete, impacts/knife_hit_wall |
+| 569510 | Stone Impact Rubble Debris 14 | Sheyvan | [link](https://freesound.org/people/Sheyvan/sounds/569510/) | CC0-1.0 | impacts/impact_concrete, impacts/knife_hit_wall, premium_sunbow/sunbow_ult_impact |
 | 572365 | 180521 Police siren distant good reflections roof fireworks ms.flac | TRP | [link](https://freesound.org/people/TRP/sounds/572365/) | CC0-1.0 | ui_amb/amb_city_dead |
 | 572459 | jump_land.wav | nhill2003 | [link](https://freesound.org/people/nhill2003/sounds/572459/) | CC0-1.0 | creatures/land |
 | 574752 | Bone Breaks (celery snaps) | ericnorcross81 | [link](https://freesound.org/people/ericnorcross81/sounds/574752/) | CC0-1.0 | impacts/bone_crunch, impacts/gib, impacts/headshot |
@@ -746,11 +771,12 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 577312 | Sirens, fire, police, close pass, distant, urban, CALGARY, 2011.wav | TRP | [link](https://freesound.org/people/TRP/sounds/577312/) | CC0-1.0 | - |
 | 578874 | BoneSnaping.mp3 | samueleunimancer | [link](https://freesound.org/people/samueleunimancer/sounds/578874/) | CC0-1.0 | - |
 | 581478 | Dogs Barking in Distance_Rural.wav | rvandemark | [link](https://freesound.org/people/rvandemark/sounds/581478/) | CC0-1.0 | - |
+| 583348 | Rock Splash | Fission9 | [link](https://freesound.org/people/Fission9/sounds/583348/) | CC0-1.0 | premium_chiwen/chiwen_orb_burst, premium_chiwen/chiwen_orb_cast, premium_chiwen/chiwen_ult_spit |
 | 584168 | old cash register open and close with a bing | clubmydia+ | [link](https://freesound.org/people/clubmydia+/sounds/584168/) | CC0-1.0 | - |
 | 593198 | Scratching and Clawing.wav | dannydandanshababaloo | [link](https://freesound.org/people/dannydandanshababaloo/sounds/593198/) | CC0-1.0 | creatures/crawler_skitter |
 | 594042 | HDD spinup/spindown on inductor mic | SamsterBirdies | [link](https://freesound.org/people/SamsterBirdies/sounds/594042/) | CC0-1.0 | - |
 | 608677 | Small Crack | eben-frostey | [link](https://freesound.org/people/eben-frostey/sounds/608677/) | CC0-1.0 | impacts/impact_glass |
-| 609587 | Grenade Explosion SFX (medium-sized, meaty, realistic) | unfa | [link](https://freesound.org/people/unfa/sounds/609587/) | CC0-1.0 | impacts/explosion_far, impacts/explosion_small |
+| 609587 | Grenade Explosion SFX (medium-sized, meaty, realistic) | unfa | [link](https://freesound.org/people/unfa/sounds/609587/) | CC0-1.0 | impacts/explosion_far, impacts/explosion_small, premium_sunbow/sunbow_hang_burst, premium_sunbow/sunbow_ult_impact |
 | 615774 | Stomach Growl.wav | oldrascal | [link](https://freesound.org/people/oldrascal/sounds/615774/) | CC0-1.0 | - |
 | 618115 | Zombie Monster growl and scream | NachtmahrTV | [link](https://freesound.org/people/NachtmahrTV/sounds/618115/) | CC0-1.0 | creatures/bloater_attack, creatures/crawler_idle, creatures/spitter_attack, creatures/spitter_death, creatures/spitter_idle, creatures/spitter_pain |
 | 619320 | Facility Hum Ambience Loopable | aSuperiorPotato | [link](https://freesound.org/people/aSuperiorPotato/sounds/619320/) | CC0-1.0 | - |
@@ -763,16 +789,18 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 641040 | GROSS IMPACT | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/641040/) | CC0-1.0 | creatures/bloater_pop, impacts/gib, impacts/headshot, impacts/impact_flesh |
 | 641046 | Gore Impact - "LOT OF HEART" | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/641046/) | CC0-1.0 | creatures/bloater_pop, impacts/gib, impacts/headshot |
 | 668071 | 50 cal shot.wav | ajhartman42295 | [link](https://freesound.org/people/ajhartman42295/sounds/668071/) | CC0-1.0 | weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
-| 672574 | Water Bullet 2.wav | Teaganbear | [link](https://freesound.org/people/Teaganbear/sounds/672574/) | CC0-1.0 | impacts/impact_water |
+| 672574 | Water Bullet 2.wav | Teaganbear | [link](https://freesound.org/people/Teaganbear/sounds/672574/) | CC0-1.0 | impacts/impact_water, premium_chiwen/chiwen_fire, premium_chiwen/chiwen_hit |
 | 674296 | Hi-Hat Closed Hit - Clean | TheEndOfACycle | [link](https://freesound.org/people/TheEndOfACycle/sounds/674296/) | CC0-1.0 | music/boss, music/calm, music/combat_high, music/combat_low |
-| 674742 | AK-47 Assault Rifle being unloaded and reloaded | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674742/) | CC0-1.0 | weapons/coverClose, weapons/drawHeavy, weapons/magIn, weapons/magOut |
+| 674742 | AK-47 Assault Rifle being unloaded and reloaded | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674742/) | CC0-1.0 | premium_bifang/bifang_gate_open, weapons/coverClose, weapons/drawHeavy, weapons/magIn, weapons/magOut |
 | 674744 | Browning Hi-Power handgun being cocked 5x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/674744/) | CC0-1.0 | weapons/pistol45_mech, weapons/slideRelease |
-| 675008 | AK-47 assault rifle being cocked 3x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/675008/) | CC0-1.0 | weapons/boltBack, weapons/boltForward, weapons/breakClose, weapons/mg556_mech, weapons/rifle762_mech, weapons/shotgunAuto_mech, weapons/sniper50_mech |
+| 675008 | AK-47 assault rifle being cocked 3x | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/675008/) | CC0-1.0 | premium_bifang/bifang_gate_close, premium_bifang/bifang_mech, premium_bifang/bifang_wing_close, premium_bifang/guiche_mech, premium_chiwen/chiwen_mech, premium_chiwen/chiwen_tank, weapons/boltBack, weapons/boltForward, weapons/breakClose, weapons/mg556_mech, weapons/rifle762_mech, weapons/shotgunAuto_mech, weapons/sniper50_mech |
 | 675817 | S09-02 metal armor helmet open & close; hinges and clanks.wav | craigsmith | [link](https://freesound.org/people/craigsmith/sounds/675817/) | CC0-1.0 | creatures/riot_armor_clank |
 | 675951 | S31-15 Shooting gallery; hitting metal targets.wav | craigsmith | [link](https://freesound.org/people/craigsmith/sounds/675951/) | CC0-1.0 | - |
 | 675955 | S20-02 Rifle ricochets.wav | craigsmith | [link](https://freesound.org/people/craigsmith/sounds/675955/) | CC0-1.0 | - |
 | 677159 | 22lr revolver handling clicking foley | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/677159/) | CC0-1.0 | weapons/craneClose, weapons/craneOpen, weapons/speedloader |
 | 677160 | Uzi submachine gun being reloaded while empty. Full sequence | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/677160/) | CC0-1.0 | weapons/coverOpen, weapons/magOut, weapons/shotgunAuto_mech, weapons/smg45_mech, weapons/smg9_mech |
+| 680735 | Sea Lion 3.wav | nifvimp | [link](https://freesound.org/people/nifvimp/sounds/680735/) | CC0-1.0 | - |
+| 683102 | water drop | florianreichelt | [link](https://freesound.org/people/florianreichelt/sounds/683102/) | CC0-1.0 | premium_chiwen/chiwen_frost_kill |
 | 686762 | abandoned building ext [smoketown] | cyntrix | [link](https://freesound.org/people/cyntrix/sounds/686762/) | CC0-1.0 | - |
 | 688765 | Unholster Gun | qubodup | [link](https://freesound.org/people/qubodup/sounds/688765/) | CC0-1.0 | weapons/draw |
 | 693125 | 22lr Revolver ejecting bullets from cylinder | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/693125/) | CC0-1.0 | weapons/shellsDrop |
@@ -790,19 +818,20 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 716948 | Guy_RunAndBreath2 | vadersfear | [link](https://freesound.org/people/vadersfear/sounds/716948/) | CC0-1.0 | creatures/runner_breath |
 | 725397 | An M16 Rifle being reloaded while empty; full sequence | serøutōnin--deprivəd | [link](https://freesound.org/people/ser%C3%B8ut%C5%8Dnin--depriv%C9%99d/sounds/725397/) | CC0-1.0 | weapons/boltBack, weapons/boltForward, weapons/magIn, weapons/magOut, weapons/rifle556_mech |
 | 732209 | Walkie Talkie Beep | SoundBiterSFX | [link](https://freesound.org/people/SoundBiterSFX/sounds/732209/) | CC0-1.0 | - |
-| 737232 | Short Water Squish | qubodup | [link](https://freesound.org/people/qubodup/sounds/737232/) | CC0-1.0 | creatures/acid_splash, creatures/spitter_spit, impacts/impact_water |
+| 737232 | Short Water Squish | qubodup | [link](https://freesound.org/people/qubodup/sounds/737232/) | CC0-1.0 | creatures/acid_splash, creatures/spitter_spit, impacts/impact_water, premium_chiwen/chiwen_hit |
 | 740037 | chainmail on metal | itinerantmonk108 | [link](https://freesound.org/people/itinerantmonk108/sounds/740037/) | CC0-1.0 | - |
-| 758580 | Rubble Trouble | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/758580/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/debris_fall |
-| 764329 | CRWDSing_Ahh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764329/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
-| 764330 | CRWDSing_Ahh Vowel Sung Near F 02_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764330/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
-| 764339 | CRWDSing_O Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764339/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
+| 754321 | water_hose | KenneysGarage | [link](https://freesound.org/people/KenneysGarage/sounds/754321/) | CC0-1.0 | premium_chiwen/chiwen_final, premium_chiwen/chiwen_ray_loop, premium_chiwen/chiwen_ray_start, premium_chiwen/chiwen_ult_spit, premium_chiwen/chiwen_ult_vortex |
+| 758580 | Rubble Trouble | magnuswaker | [link](https://freesound.org/people/magnuswaker/sounds/758580/) | CC0-1.0 | creatures/brute_charge, creatures/brute_stomp, impacts/debris_fall, premium_sunbow/sunbow_ult_impact |
+| 764329 | CRWDSing_Ahh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764329/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory, premium_bifang/bifang_beam, premium_bifang/bifang_ult_pillar, premium_chiwen/chiwen_ult_bed, premium_sunbow/sunbow_ult_final, premium_sunbow/sunbow_ult_raise |
+| 764330 | CRWDSing_Ahh Vowel Sung Near F 02_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764330/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory, premium_bifang/bifang_beam, premium_bifang/bifang_ult_pillar, premium_sunbow/sunbow_ult_raise |
+| 764339 | CRWDSing_O Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764339/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory, premium_chiwen/chiwen_ult_bed |
 | 764341 | CRWDSing_U Ooh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764341/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
 | 764343 | CRWDSing_Uh Vowel Sung Near F 01_ShaneVincent_GSC24_SpacedOmni-MK012.wav | ShangusBurger | [link](https://freesound.org/people/ShangusBurger/sounds/764343/) | CC0-1.0 | music/boss, music/calm, music/defeat, music/menu_theme, music/victory |
 | 770124 | Big Character Grunts | IENBA | [link](https://freesound.org/people/IENBA/sounds/770124/) | CC0-1.0 | creatures/brute_pain, creatures/player_pain |
-| 779805 | Meaty Damage Impact | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/779805/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit |
+| 779805 | Meaty Damage Impact | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/779805/) | CC0-1.0 | impacts/impact_flesh, impacts/melee_heavy_hit, premium_sunbow/sunbow_hit |
 | 786977 | Metal Grate Running | Oilcan03 | [link](https://freesound.org/people/Oilcan03/sounds/786977/) | CC0-1.0 | creatures/footstep_grate |
-| 789038 | Fabric_Foley_1 | Mediasaur | [link](https://freesound.org/people/Mediasaur/sounds/789038/) | CC0-1.0 | creatures/footstep_concrete, creatures/footstep_dirt, creatures/footstep_grate, creatures/footstep_water, creatures/footstep_wood, creatures/jump, weapons/cloth, weapons/pouch |
-| 789222 | Fly-by whiz SFX (subsonic) | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/789222/) | CC0-1.0 | impacts/bullet_whiz |
+| 789038 | Fabric_Foley_1 | Mediasaur | [link](https://freesound.org/people/Mediasaur/sounds/789038/) | CC0-1.0 | creatures/footstep_concrete, creatures/footstep_dirt, creatures/footstep_grate, creatures/footstep_water, creatures/footstep_wood, creatures/jump, premium_sunbow/sunbow_rekindle, weapons/cloth, weapons/pouch |
+| 789222 | Fly-by whiz SFX (subsonic) | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/789222/) | CC0-1.0 | impacts/bullet_whiz, premium_sunbow/sunbow_close, premium_sunbow/sunbow_release_heavy, premium_sunbow/sunbow_whiz |
 | 789388 | Bullet impact ground (subsonic) SFX | modusmogulus | [link](https://freesound.org/people/modusmogulus/sounds/789388/) | CC0-1.0 | impacts/impact_dirt |
 | 802673 | Mauser 98k - bolt-action mechanism sound | Walking.With.Microphones | [link](https://freesound.org/people/Walking.With.Microphones/sounds/802673/) | CC0-1.0 | weapons/boltBack, weapons/boltDown, weapons/boltForward, weapons/boltUp, weapons/breakClose, weapons/sniper50_mech |
 | 804460 | zombie growl 1 | OozerName | [link](https://freesound.org/people/OozerName/sounds/804460/) | CC0-1.0 | creatures/crawler_idle |
@@ -811,10 +840,11 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | 808213 | jump_grunt_01 | arther1974 | [link](https://freesound.org/people/arther1974/sounds/808213/) | CC0-1.0 | creatures/land_heavy |
 | 808215 | jump_grunt_02 | arther1974 | [link](https://freesound.org/people/arther1974/sounds/808215/) | CC0-1.0 | - |
 | 808216 | jump_grunt_03 | arther1974 | [link](https://freesound.org/people/arther1974/sounds/808216/) | CC0-1.0 | creatures/land_heavy |
-| 815879 | Assault Rifle Reload | qubodup | [link](https://freesound.org/people/qubodup/sounds/815879/) | CC0-1.0 | weapons/boltBack, weapons/boltForward, weapons/magIn, weapons/magOut, weapons/rifle556_mech |
+| 815879 | Assault Rifle Reload | qubodup | [link](https://freesound.org/people/qubodup/sounds/815879/) | CC0-1.0 | premium_bifang/bifang_cell_in, premium_bifang/bifang_cell_out, weapons/boltBack, weapons/boltForward, weapons/magIn, weapons/magOut, weapons/rifle556_mech |
 | 816113 | FPS Sniper Shot Alt | qubodup | [link](https://freesound.org/people/qubodup/sounds/816113/) | CC0-1.0 | - |
 | 830466 | Clawing or Scratching at wood | Wigglesworth | [link](https://freesound.org/people/Wigglesworth/sounds/830466/) | CC0-1.0 | creatures/crawler_skitter |
 | 834029 | Footsteps On Metal | IENBA | [link](https://freesound.org/people/IENBA/sounds/834029/) | CC0-1.0 | creatures/footstep_grate |
+| 849186 | Lobo Marino Grunendo - Growling Sea Lion | Diim_1 | [link](https://freesound.org/people/Diim_1/sounds/849186/) | CC0-1.0 | premium_chiwen/chiwen_roar_low, premium_chiwen/chiwen_ult_roar |
 | 855248 | Real Bullet Flyby Sound | qubodup | [link](https://freesound.org/people/qubodup/sounds/855248/) | CC0-1.0 | impacts/bullet_whiz |
 | 855580 | Pushing 50 Cal BMG Round into Magazine | qubodup | [link](https://freesound.org/people/qubodup/sounds/855580/) | CC0-1.0 | weapons/beltIn |
 
@@ -825,8 +855,8 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | `ffsl/1911/A_34P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/magnum_close, weapons/magnum_far, weapons/magnum_tail, weapons/pistol45_close, weapons/pistol45_far, weapons/pistol45_tail |
 | `ffsl/1911/A_42P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/magnum_close, weapons/magnum_far, weapons/magnum_tail, weapons/pistol45_close, weapons/pistol45_far, weapons/pistol45_tail |
 | `ffsl/1917/B_16P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
-| `ffsl/1917/B_24P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
-| `ffsl/AK-47/C_28P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/minigun_close, weapons/minigun_far, weapons/minigun_tail, weapons/rifle762_close, weapons/rifle762_far, weapons/rifle762_tail |
+| `ffsl/1917/B_24P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_chiwen/chiwen_close, premium_chiwen/chiwen_far, premium_chiwen/chiwen_tail, weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
+| `ffsl/AK-47/C_28P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_chiwen/chiwen_close, premium_chiwen/chiwen_far, premium_chiwen/chiwen_tail, weapons/minigun_close, weapons/minigun_far, weapons/minigun_tail, weapons/rifle762_close, weapons/rifle762_far, weapons/rifle762_tail |
 | `ffsl/AK-47/C_29P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/rifle762_close, weapons/rifle762_far, weapons/rifle762_tail |
 | `ffsl/AK-47/C_31P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/rifle762_close, weapons/rifle762_far, weapons/rifle762_tail |
 | `ffsl/AK-47/C_34P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/rifle762_close, weapons/rifle762_far, weapons/rifle762_tail |
@@ -840,19 +870,19 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | `ffsl/Carl Gustav M45/G_31P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/minigun_close, weapons/minigun_far, weapons/minigun_tail, weapons/smg9_close, weapons/smg9_far, weapons/smg9_tail |
 | `ffsl/Carl Gustav M45/G_33P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/smg9_close, weapons/smg9_far, weapons/smg9_tail |
 | `ffsl/Carl Gustav M45/G_35P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/smg9_close, weapons/smg9_far, weapons/smg9_tail |
-| `ffsl/CD/H_16P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail |
-| `ffsl/CD/H_21P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgunAuto_close, weapons/shotgunAuto_far, weapons/shotgunAuto_tail, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail |
+| `ffsl/CD/H_16P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_bifang/bifang_close, premium_bifang/bifang_far, premium_bifang/bifang_tail, premium_bifang/guiche_close, premium_bifang/guiche_far, premium_bifang/guiche_tail, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail |
+| `ffsl/CD/H_21P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_bifang/bifang_close, premium_bifang/bifang_far, premium_bifang/bifang_tail, premium_bifang/guiche_close, premium_bifang/guiche_far, premium_bifang/guiche_tail, weapons/shotgunAuto_close, weapons/shotgunAuto_far, weapons/shotgunAuto_tail, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail |
 | `ffsl/Marlin 336/I_17P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/mg762_close, weapons/mg762_far, weapons/mg762_tail |
 | `ffsl/Marlin 336/I_22P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/mg762_close, weapons/mg762_far, weapons/mg762_tail |
-| `ffsl/Model 12/K_17P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
-| `ffsl/Model 12/K_22P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/pumpBack, weapons/pumpForward, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
+| `ffsl/Model 12/K_17P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_bifang/bifang_close, premium_bifang/bifang_far, premium_bifang/bifang_tail, premium_bifang/guiche_close, premium_bifang/guiche_far, premium_bifang/guiche_tail, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
+| `ffsl/Model 12/K_22P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_bifang/bifang_close, premium_bifang/bifang_far, premium_bifang/bifang_tail, premium_bifang/guiche_close, premium_bifang/guiche_far, premium_bifang/guiche_tail, weapons/pumpBack, weapons/pumpForward, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
 | `ffsl/Model 1894/L_23P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/mg762_close, weapons/mg762_far, weapons/mg762_tail |
-| `ffsl/Mosin Nagant/M_21P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/rifleBolt_close, weapons/rifleBolt_far, weapons/rifleBolt_tail |
-| `ffsl/Mosin Nagant/M_26P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | ui_amb/amb_city_dead, weapons/rifleBolt_close, weapons/rifleBolt_far, weapons/rifleBolt_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
+| `ffsl/Mosin Nagant/M_21P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_chiwen/chiwen_close, premium_chiwen/chiwen_far, premium_chiwen/chiwen_tail, weapons/rifleBolt_close, weapons/rifleBolt_far, weapons/rifleBolt_tail |
+| `ffsl/Mosin Nagant/M_26P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_chiwen/chiwen_close, premium_chiwen/chiwen_far, premium_chiwen/chiwen_tail, ui_amb/amb_city_dead, weapons/rifleBolt_close, weapons/rifleBolt_far, weapons/rifleBolt_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
 | `ffsl/Mossberg/N_26P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgunAuto_close, weapons/shotgunAuto_far, weapons/shotgunAuto_tail |
 | `ffsl/Mossberg/N_30P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgunAuto_close, weapons/shotgunAuto_far, weapons/shotgunAuto_tail |
-| `ffsl/Nova/O_17P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
-| `ffsl/Nova/O_21P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
+| `ffsl/Nova/O_17P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_bifang/bifang_close, premium_bifang/bifang_far, premium_bifang/bifang_tail, premium_bifang/guiche_close, premium_bifang/guiche_far, premium_bifang/guiche_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
+| `ffsl/Nova/O_21P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_bifang/bifang_close, premium_bifang/bifang_far, premium_bifang/bifang_tail, premium_bifang/guiche_close, premium_bifang/guiche_far, premium_bifang/guiche_tail, weapons/shotgunHeavy_close, weapons/shotgunHeavy_far, weapons/shotgunHeavy_tail, weapons/shotgun_close, weapons/shotgun_far, weapons/shotgun_tail |
 | `ffsl/PPSh/P_16P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/smg45_close, weapons/smg45_far, weapons/smg45_tail |
 | `ffsl/PPSh/P_22P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | ui_amb/amb_city_dead |
 | `ffsl/PPSh/P_30P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/smg45_close, weapons/smg45_far, weapons/smg45_tail |
@@ -861,8 +891,8 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | `ffsl/SKS/U_19P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | ui_amb/amb_city_dead, weapons/mg556_close, weapons/mg556_far, weapons/mg556_tail, weapons/minigun_close, weapons/minigun_far, weapons/minigun_tail |
 | `ffsl/Smith & Wesson 642/V_22P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/magnum_close, weapons/magnum_far, weapons/magnum_tail |
 | `ffsl/Smith & Wesson 642/V_27P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/magnum_close, weapons/magnum_far, weapons/magnum_tail |
-| `ffsl/Tikka/W_24P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
-| `ffsl/Tikka/W_29P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
+| `ffsl/Tikka/W_24P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_chiwen/chiwen_close, premium_chiwen/chiwen_far, premium_chiwen/chiwen_tail, weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
+| `ffsl/Tikka/W_29P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | premium_chiwen/chiwen_close, premium_chiwen/chiwen_far, premium_chiwen/chiwen_tail, weapons/sniper338_close, weapons/sniper338_far, weapons/sniper338_tail, weapons/sniper50_close, weapons/sniper50_far, weapons/sniper50_tail |
 | `ffsl/Walther PPQ/X_31P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/pistol_close, weapons/pistol_far, weapons/pistol_tail |
 | `ffsl/Walther PPQ/X_39P` | [The Free Firearm Sound Library (Prepared SFX Library)](https://opengameart.org/content/the-free-firearm-sound-library) | Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney | CC0-1.0 | weapons/pistol45_close, weapons/pistol45_far, weapons/pistol45_tail, weapons/pistol_close, weapons/pistol_far, weapons/pistol_tail |
 | `kenney_impact/Audio/footstep_concrete_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | creatures/footstep_concrete |
@@ -881,11 +911,11 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | `kenney_impact/Audio/impactGeneric_light_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | weapons/magDrop |
 | `kenney_impact/Audio/impactGlass_heavy_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
 | `kenney_impact/Audio/impactGlass_heavy_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
-| `kenney_impact/Audio/impactGlass_light_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
-| `kenney_impact/Audio/impactGlass_light_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
-| `kenney_impact/Audio/impactGlass_light_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
-| `kenney_impact/Audio/impactGlass_light_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
-| `kenney_impact/Audio/impactGlass_light_004` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass |
+| `kenney_impact/Audio/impactGlass_light_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass, premium_bifang/bifang_draw, premium_chiwen/chiwen_head |
+| `kenney_impact/Audio/impactGlass_light_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass, premium_chiwen/chiwen_frost_kill |
+| `kenney_impact/Audio/impactGlass_light_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass, premium_bifang/bifang_draw, premium_chiwen/chiwen_mark_burst |
+| `kenney_impact/Audio/impactGlass_light_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass, premium_chiwen |
+| `kenney_impact/Audio/impactGlass_light_004` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_glass, premium_chiwen |
 | `kenney_impact/Audio/impactMetal_heavy_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/grenade_bounce, weapons/breakOpen |
 | `kenney_impact/Audio/impactMetal_heavy_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | ui_amb/round_lose, weapons/breakOpen |
 | `kenney_impact/Audio/impactMetal_heavy_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/grenade_bounce, weapons/breakOpen |
@@ -902,7 +932,7 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | `kenney_impact/Audio/impactPlate_heavy_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | weapons/breakClose |
 | `kenney_impact/Audio/impactPlate_heavy_004` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | weapons/rocketIn |
 | `kenney_impact/Audio/impactPlate_light_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | weapons/magDrop |
-| `kenney_impact/Audio/impactPlate_light_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | creatures/riot_armor_clank, impacts/armor_hit |
+| `kenney_impact/Audio/impactPlate_light_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | creatures/riot_armor_clank, impacts/armor_hit, premium_bifang/bifang_draw |
 | `kenney_impact/Audio/impactPlate_light_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | creatures/riot_armor_clank, weapons/magDrop |
 | `kenney_impact/Audio/impactPlate_light_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | creatures/riot_armor_clank, impacts/armor_hit, weapons/magDrop |
 | `kenney_impact/Audio/impactPlate_light_004` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | weapons/magDrop |
@@ -925,11 +955,18 @@ Inventory: 937 files from 15 packs, generated 2026-10-13T11:00:52.658Z.
 | `kenney_impact/Audio/impactTin_medium_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/grenade_bounce, ui_amb/supply_drop |
 | `kenney_impact/Audio/impactTin_medium_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/grenade_bounce |
 | `kenney_impact/Audio/impactTin_medium_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/grenade_bounce |
+| `kenney_impact/Audio/impactWood_heavy_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_close, premium_sunbow/sunbow_hit_world, premium_sunbow/sunbow_release, premium_sunbow/sunbow_release_heavy |
+| `kenney_impact/Audio/impactWood_heavy_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_close, premium_sunbow/sunbow_hit_world, premium_sunbow/sunbow_release, premium_sunbow/sunbow_release_heavy |
+| `kenney_impact/Audio/impactWood_heavy_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_close, premium_sunbow/sunbow_hit_world, premium_sunbow/sunbow_release, premium_sunbow/sunbow_release_heavy |
+| `kenney_impact/Audio/impactWood_heavy_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_close, premium_sunbow/sunbow_hit_world, premium_sunbow/sunbow_release |
+| `kenney_impact/Audio/impactWood_heavy_004` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_close, premium_sunbow/sunbow_hit_world, premium_sunbow/sunbow_release_heavy |
 | `kenney_impact/Audio/impactWood_light_000` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_wood |
 | `kenney_impact/Audio/impactWood_light_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_wood |
 | `kenney_impact/Audio/impactWood_light_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_wood |
 | `kenney_impact/Audio/impactWood_light_003` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_wood |
 | `kenney_impact/Audio/impactWood_light_004` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | impacts/impact_wood |
+| `kenney_impact/Audio/impactWood_medium_001` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_draw |
+| `kenney_impact/Audio/impactWood_medium_002` | [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney (kenney.nl) | CC0-1.0 | premium_sunbow/sunbow_draw |
 | `oga_distant_explosion/NenadSimic - Muffled Distant Explosion` | [Muffled Distant Explosion](https://opengameart.org/content/muffled-distant-explosion) | NenadSimic | CC0-1.0 | impacts/explosion_far, ui_amb/amb_city_dead |
 | `oga_gun_reload/assaultriflereload1_0` | [Gun Reload Sounds](https://opengameart.org/content/gun-reload-sounds) | SpringySpringo | CC0-1.0 | weapons/magIn |
 | `oga_gun_reload/shotguncock_0` | [Gun Reload Sounds](https://opengameart.org/content/gun-reload-sounds) | SpringySpringo | CC0-1.0 | weapons/pumpBack, weapons/pumpForward |

@@ -17,6 +17,13 @@ export function rightGrip(rake = 18 * D) {
   return { F, N, pose: 'grip', palm: [0.024, 0.05] };
 }
 
+/**
+ * Draw hand of a bow (grip 'bow', right hand on the `grip_r` socket that rides the string): thumb draw (Asian
+ * archery) -- the thumb hooked round the string under the arrow, the index finger locked over it, the back of the
+ * hand up and out, knuckles towards the bow.
+ */
+export const BOW_DRAW = { F: n(-0.12, -0.42, -0.9), N: n(-0.85, -0.2, -0.1), pose: 'thumbDraw', palm: [0.022, 0.05] };
+
 /** Mirror image of a grip across the gun's X axis (dual wielding: the left hand holds its own pistol grip). */
 export function mirrorGrip(g) {
   return { F: new THREE.Vector3(-g.F.x, g.F.y, g.F.z), N: new THREE.Vector3(-g.N.x, g.N.y, g.N.z), pose: g.pose, palm: g.palm };
@@ -33,6 +40,8 @@ export const LEFT_GRIPS = {
   pistol_cup: { F: n(0.55, 0.45, -0.7), N: n(0.55, 0.75, 0.1), pose: 'wrap', palm: [0.03, 0.05] },
   // carry handle / top handle (minigun, MG42 carried)
   top_handle: { F: n(0.75, 0, -0.65), N: n(0, -1, 0), pose: 'wrap', palm: [0.02, 0.05] },
+  // bow hand (grip 'bow'): the left fist round the riser grip, arm out, the heel of the palm pushing the bow forward
+  bow: { F: n(0.62, -0.05, -0.78), N: n(0.72, 0, -0.69), pose: 'bowHold', palm: [0.02, 0.045] },
   none: { F: n(0.3, -0.2, -0.9), N: n(0.2, 1, 0), pose: 'relaxed', palm: [0.03, 0.05] },
   // reload anchors
   magwell: { F: n(0.85, 0.1, -0.5), N: n(0.85, 0, 0.3), pose: 'magGrab', palm: [0.02, 0.05] },
@@ -88,4 +97,8 @@ Object.assign(HAND_POSES, {
   gripOne: { index: [42, 58, 22], middle: [78, 92, 50], ring: [80, 94, 52], pinky: [80, 92, 50], spread: [-4, 0, 2, 5], thumb: [30, -10, 40, 20, 10] },
   // fingers wrapped around a ~6 cm ball, thumb over the spoon
   grenade: { index: [48, 42, 22], middle: [52, 46, 24], ring: [55, 50, 26], pinky: [58, 50, 26], spread: [5, 0, -3, -7], thumb: [35, 45, 45, 20, 12] },
+  // bow hand: a loose fist round a ~35 mm riser grip, the index a little open, thumb over the middle finger
+  bowHold: { index: [58, 66, 34], middle: [70, 80, 42], ring: [74, 84, 44], pinky: [76, 84, 44], spread: [-3, 0, 2, 4], thumb: [38, 50, 62, 30, 18] },
+  // thumb draw: the thumb bent round the string, the index curled tight over the thumbnail, the rest in a fist
+  thumbDraw: { index: [78, 92, 48], middle: [88, 98, 62], ring: [88, 98, 62], pinky: [86, 95, 60], spread: [2, 0, 0, 0], thumb: [42, 18, 58, 62, 40] },
 });

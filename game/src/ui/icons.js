@@ -12,7 +12,7 @@ export async function weaponIcon(renderer, id, { w = 256, h = 96 } = {}) {
   const p = (async () => {
     let model;
     try { model = await instanceGLB(`weapons/${id}.glb`); } catch { return null; }
-    model.traverse((o) => { if (o.isMesh) o.material = mat; });
+    model.traverse((o) => { if (o.isMesh) o.material = mat; if (o.userData?.restHidden) o.visible = false; });
     const scene = new THREE.Scene();
     scene.add(model);
     const box = new THREE.Box3().setFromObject(model);
