@@ -291,7 +291,8 @@ export const SPECIALS = {
 // Input (§1.8): ◎ / right mouse = skills.alt; ★ / Q tap = skills.tap; ★ held 0.35 s = skills.ult when its meter is full,
 // else skills.hold; desktop also Q then F within 0.3 s = ult. Nothing to long-press for -> the tap casts on press.
 //
-// Skill implementation: registerSkill(id, { level: 'L0'..'L4', dur, channel, aim, defaults, start(k), update(k, dt)
+// Skill implementation: registerSkill(id, { level: 'L0'..'L4', dur, channel, aim (true, or 'target': a zombie under the
+// crosshair pins the ground point to its feet), defaults, start(k), update(k, dt)
 // -> false ends, end(k) }). Every client runs it: the caster with k.local = true (gameplay: k.hurt / k.hitRay use the
 // normal hit path, so a guest's damage still reaches the host as hits), everyone else from the network event
 // { type: 'skill', id, seed, pos, dir, w, by, slot, ph } with k.local = false (visuals, plus effects on their own
@@ -485,6 +486,7 @@ export function castSkill(ws, slot, opts = {}) {
   if (!sk || !(SKILLS[sk.id] || sk.id === 'crisis')) return null;
   const cam = g.camera;
   cam.getWorldDirection(_d);
+  if (SKILLS[sk.id]?.aim === 'target') snapAim(g, cam.position, _d, sk.range ?? SKILLS[sk.id].defaults?.range ?? 40);
   const ev = { type: 'skill', id: sk.id, w: ws.def.id, slot, seed: (Math.random() * 2147483647) | 0,
     pos: [cam.position.x, cam.position.y, cam.position.z], dir: [_d.x, _d.y, _d.z], by: g.localId, ph: 0 };
   const k = startSkill(g, ev, { ws, local: true });
@@ -494,6 +496,29 @@ export function castSkill(ws, slot, opts = {}) {
   g.hud?.onSkillCast?.(ws, slot, sk, k);
   if (slot !== 'crisis') haptic(slot === 'ult' ? 40 : 15);   // thud for the ultimate (§1.13)
   return k;
+}
+
+/**
+ * Ground-landing aim skills (impl.aim === 'target'): a zombie within 6° of the crosshair (in range, in sight) pins
+ * the point to its feet. Only the event's dir is bent (towards the feet), so every client's static-world ray still
+ * finds the same point; without it a crosshair on a zombie's chest flies over it to the floor far behind.
+ */
+function snapAim(g, eye, dir, range) {
+  const list = g.targets?.list || g.zombies?.list;
+  if (!list) return;
+  let best = null, bc = Math.cos(6 * Math.PI / 180);
+  for (const z of list) {
+    if (!z.alive || !z.center) continue;
+    _e.subVectors(z.center(_c), eye);
+    const d = _e.length();
+    if (d < 2 || d > range) continue;
+    const cs = _e.dot(dir) / d;
+    if (cs < bc) continue;
+    const hit = g.world?.collision?.raycast(eye, _f.copy(_e).multiplyScalar(1 / d), d);
+    if (hit && hit.dist < d - 0.6) continue;                    // behind cover
+    bc = cs; best = z;
+  }
+  if (best) dir.copy(_f.set(best.pos.x, best.pos.y + 0.05, best.pos.z).sub(eye).normalize());
 }
 
 class SkillInst {

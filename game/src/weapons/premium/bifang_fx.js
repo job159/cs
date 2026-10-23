@@ -22,7 +22,7 @@ export const LOOKS = {
   bifang: {
     id: 'bifang', root: [5.2, 4.4, 2.6], flame: [6, 1.5, 0.3], teal: [0.4, 3.6, 3.0], ember: [6, 2.4, 0.6], mote: [4.2, 2.6, 0.9], mote2: [6, 5, 3],
     beamCore: [6, 5.4, 4], beamGlow: [2.6, 1.3, 0.3], ring: [4, 2.2, 0.6], ramp: RAMP.gold, flameRamp: RAMP.flame, sigil: 'flame',
-    ghost: { base: [0.93, 0.9, 0.85], core: [0.35, 2.6, 2.2], rim: [3.4, 1.0, 0.28], edge: [5, 2.4, 0.6], opacity: 0.5 },
+    ghost: { base: [0.95, 0.92, 0.86], core: [0.35, 2.6, 2.2], rim: [3.8, 1.1, 0.3], edge: [5, 2.4, 0.6], opacity: 0.62, rimPower: 2.2 },
     wing: { core: [2.2, 1.9, 1.3], tip: [2.6, 0.7, 0.15], enamel: [[0.15, 1.6, 1.5], [2.2, 0.32, 0.12], [2.6, 2.1, 1.3]], gold: [2.6, 1.7, 0.55] },
     xh: '#ffc74a', light: 0xffb050, pitch: 1, echo: false, moteKind: 'glowfeather', scorch: 0,
   },
@@ -30,7 +30,7 @@ export const LOOKS = {
     id: 'guiche', root: [3.6, 2.2, 6], flame: [2.6, 0.5, 5.2], teal: [0.4, 4.4, 4], ember: [3, 0.8, 5.4], mote: [2.4, 1.0, 4.4], mote2: [3, 4.6, 5],
     beamCore: [4.4, 3.4, 6.4], beamGlow: [0.5, 2.4, 2.4], ring: [2, 0.8, 4], ramp: RAMP.purple, flameRamp: RAMP.purple, sigil: 'mountainSea',
     ghost: { base: [0.08, 0.07, 0.1], core: [0.3, 2.4, 2.2], rim: [2.0, 0.6, 3.8], edge: [2.4, 1.0, 5], opacity: 0.55, dark: true },
-    wing: { core: [1.4, 0.9, 2.4], tip: [0.3, 2.2, 2.0], enamel: [[1.2, 0.3, 2.2], [0.15, 1.6, 1.6], [1.8, 1.2, 2.8]], gold: [1.6, 1.7, 1.9] },
+    wing: { core: [1.5, 0.45, 2.8], tip: [0.3, 2.2, 2.0], enamel: [[1.2, 0.3, 2.2], [0.15, 1.6, 1.6], [1.8, 1.2, 2.8]], gold: [1.6, 1.7, 1.9] },
     xh: '#c58bff', light: 0xb070ff, pitch: 0.794, echo: true, moteKind: 'glowfeather', scorch: 0,
   },
 };
@@ -56,37 +56,43 @@ function gunAxes(vm) {
 }
 
 /**
- * 冠羽扇 (crest fan): a 1-frame white core at the beak, 5 flame feathers (0.12 x 0.03 m) fanned ±40° up from the beak
- * around the barrel axis (centre left hollow), scale 0.6 -> 1.2 and alpha 1 -> 0 over 200 ms, 2 sparks off each tip;
- * 30 % of shots a cyan tongue runs back down the right feather vein.
+ * 冠羽扇 (crest fan): a 1-frame white core at the beak, 5 flame feathers fanned ±44° up from the beak around the
+ * barrel axis (centre left hollow), scale 0.6 -> 1.2 and alpha 1 -> 0 over 200 ms, 2 sparks off each tip; a thin
+ * gold ring snaps open round the gape (hollow); 30 % of shots a cyan tongue runs back down the right feather vein.
+ * Sized for the first-person distance (the beak is ~1 m from the eye): feathers 0.2-0.26 m, the card's 0.12 m
+ * reads as a speck there.
  */
 export function crestFan(g, L, shot = 0) {
   const vm = g.vm, P = g.fx?.particles;
   const c = vm?.socketCam?.('crest', _a), b = vm?.socketCam?.('beak', _b);
   if (!P || !c || !b) return;
   gunAxes(vm);
-  // white core in the gape (one frame)
-  P.spawn({ additive: true, vm: true, x: b.x, y: b.y, z: b.z, life: 0.03, size: 0.05, size1: 0.07, color: [8, 7.4, 6, 1], color1: [3, 1.8, 0.6, 0], frame: FRAME.glow });
+  // white core in the gape (one frame) + a short warm bloom round it
+  P.spawn({ additive: true, vm: true, x: b.x, y: b.y, z: b.z, life: 0.035, size: 0.075, size1: 0.1, color: [9, 8, 6.5, 1], color1: [3, 1.8, 0.6, 0], frame: FRAME.glow });
+  P.spawn({ additive: true, vm: true, x: b.x, y: b.y, z: b.z, life: 0.12, size: 0.16, size1: 0.24, color: [L.flame[0] * 0.28, L.flame[1] * 0.28, L.flame[2] * 0.28, 1], color1: [0, 0, 0, 0], frame: FRAME.glow });
+  // hollow ring round the gape, facing down the barrel
+  P.spawn({ additive: true, vm: true, x: c.x - _f.x * 0.03, y: c.y - _f.y * 0.03, z: c.z - _f.z * 0.03, mode: 'flat', dir: [-_f.x, -_f.y, -_f.z], life: 0.13, size: 0.05, size1: 0.26, sizePow: 0.5,
+    color: [L.root[0] * 0.7, L.root[1] * 0.7, L.root[2] * 0.7, 1], color1: [L.flame[0] * 0.3, L.flame[1] * 0.3, L.flame[2] * 0.3, 0], frame: FRAME.thinRing ?? 62 });
   const rot = (shot % 2) * 0.09;
   for (let i = 0; i < 5; i++) {
-    const th = (-40 + i * 20) * Math.PI / 180 + rot + (R() - 0.5) * 0.06;
-    _d.copy(_u).multiplyScalar(Math.cos(th)).addScaledVector(_r, Math.sin(th)).addScaledVector(_f, 0.18).normalize();
+    const th = (-44 + i * 22) * Math.PI / 180 + rot + (R() - 0.5) * 0.06;
+    _d.copy(_u).multiplyScalar(Math.cos(th)).addScaledVector(_r, Math.sin(th)).addScaledVector(_f, 0.22).normalize();
     // feather roots sit on a small ring round the crest point: the centre stays clear
-    const x = c.x + _d.x * 0.012, y = c.y + _d.y * 0.012, z = c.z + _d.z * 0.012;
-    const mid = i === 2 ? 1.12 : 1;
-    P.spawn({ additive: true, vm: true, x, y, z, mode: 'align', dir: [_d.x, _d.y, _d.z], aspect: 4.2, anchor: 0.5, mirror: i < 2,
-      life: 0.2, size: 0.03 * 0.6 * mid, size1: 0.03 * 1.2 * mid, sizePow: 0.6, color: [1.2, 1.1, 1, 1], color1: [1, 0.9, 0.8, 0], colorPow: 1.3,
-      frame: FRAME.cone + 1, ramp: L.flameRamp, heat: 1.15, heat1: 0.55, inertia: 0.3 });
+    const x = c.x + _d.x * 0.02, y = c.y + _d.y * 0.02, z = c.z + _d.z * 0.02;
+    const mid = i === 2 ? 1.18 : 1;
+    P.spawn({ additive: true, vm: true, x, y, z, mode: 'align', dir: [_d.x, _d.y, _d.z], aspect: 4.4, anchor: 0.5, mirror: i < 2,
+      life: 0.2, size: 0.05 * 0.6 * mid, size1: 0.05 * 1.2 * mid, sizePow: 0.6, color: [1.3, 1.15, 1, 1], color1: [1, 0.9, 0.8, 0], colorPow: 1.3,
+      frame: FRAME.cone + 1, ramp: L.flameRamp, heat: 1.2, heat1: 0.55, inertia: 0.3 });
     // a soft hot glow along the same feather (reads as a lit plume, not a thin line)
-    P.spawn({ additive: true, vm: true, x, y, z, mode: 'align', dir: [_d.x, _d.y, _d.z], aspect: 3.2, anchor: 0.5, life: 0.16, size: 0.04 * mid, size1: 0.055 * mid,
-      color: [L.flame[0] * 0.45, L.flame[1] * 0.45, L.flame[2] * 0.45, 1], color1: [L.flame[0] * 0.1, L.flame[1] * 0.1, L.flame[2] * 0.1, 0], frame: FRAME.glow, inertia: 0.3 });
+    P.spawn({ additive: true, vm: true, x, y, z, mode: 'align', dir: [_d.x, _d.y, _d.z], aspect: 3.2, anchor: 0.5, life: 0.16, size: 0.065 * mid, size1: 0.09 * mid,
+      color: [L.flame[0] * 0.4, L.flame[1] * 0.4, L.flame[2] * 0.4, 1], color1: [L.flame[0] * 0.08, L.flame[1] * 0.08, L.flame[2] * 0.08, 0], frame: FRAME.glow, inertia: 0.3 });
     // two sparks flung off the tip
-    const tip = 0.13 * mid;
+    const tip = 0.24 * mid;
     for (let k = 0; k < 2; k++) {
-      const sp = 0.7 + R() * 0.6;
+      const sp = 0.9 + R() * 0.8;
       P.spawn({ additive: true, vm: true, x: x + _d.x * tip, y: y + _d.y * tip, z: z + _d.z * tip,
         vx: (_d.x + (R() - 0.5) * 0.6) * sp, vy: (_d.y + (R() - 0.5) * 0.6) * sp + 0.1, vz: (_d.z + (R() - 0.5) * 0.6) * sp,
-        life: 0.22 + R() * 0.12, size: 0.0025, stretch: 0.012, color: [...L.ember, 1], color1: [L.ember[0] * 0.3, L.ember[1] * 0.2, L.ember[2] * 0.2, 0], frame: FRAME.spark, gravity: 0.6, drag: 3, inertia: 0.4 });
+        life: 0.24 + R() * 0.14, size: 0.0035, stretch: 0.014, color: [...L.ember, 1], color1: [L.ember[0] * 0.3, L.ember[1] * 0.2, L.ember[2] * 0.2, 0], frame: FRAME.spark, gravity: 0.6, drag: 3, inertia: 0.4 });
     }
   }
   if (R() < 0.3) veinTongue(g, L, 'r', L.teal, 0.12);
@@ -137,6 +143,18 @@ export function plume(g, L, p, owner = 'bfp') {
   M.spawn(L.moteKind, p, { vel: [(R() - 0.5) * 0.3, 0.8, (R() - 0.5) * 0.3], fall: -0.6, life: 0.42 + R() * 0.1, size: 0.1, color: L.mote, color2: L.mote2, owner });
   g.fx.particles.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vy: 0.5, life: 0.22, size: 0.08, size1: 0.14, color: [1, 1, 1, 0.8], color1: [1, 1, 1, 0],
     frame: FRAME.flick[(R() * 4) | 0], ramp: L.flameRamp, heat: 1, heat1: 0.3, mode: 'align', dir: [0, 1, 0], aspect: 1.2, anchor: 0.3 });
+}
+
+/** Pellet impact on a body: a hot pin-flash and a few embers kicked back towards the shooter (on top of the blood). */
+export function emberHit(g, L, p, dir) {
+  const P = g.fx?.particles;
+  if (!P) return;
+  P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.07, size: 0.16, size1: 0.26, color: [L.mote2[0] * 0.5, L.mote2[1] * 0.5, L.mote2[2] * 0.5, 1], color1: [L.flame[0] * 0.2, L.flame[1] * 0.2, L.flame[2] * 0.2, 0], frame: FRAME.glow });
+  for (let k = 0; k < 3; k++) {
+    const sp = 1.6 + R() * 2.4;
+    P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, vx: (-(dir?.x || 0) + (R() - 0.5) * 1.4) * sp, vy: (0.4 + R() * 0.9) * sp, vz: (-(dir?.z || 0) + (R() - 0.5) * 1.4) * sp,
+      life: 0.25 + R() * 0.25, size: 0.008, stretch: 0.02, color: [...L.ember, 1], color1: [L.ember[0] * 0.3, L.ember[1] * 0.15, L.ember[2] * 0.1, 0], frame: FRAME.spark, gravity: 7, drag: 1.2 });
+  }
 }
 
 /** KE_PLUME (§1.10): 3 small fire plumes rise from the body and burn out; a feather-shaped scorch stays 2 s. */
@@ -265,79 +283,126 @@ function tubeAlong(pts, r0, r1, radial = 7, seg = 10) {
   g.computeVertexNormals();
   return g;
 }
-/** A fan wing (one side): `n` long primaries (thin tapered strips) splaying from the shoulder, raised in a V. */
-function wing(s, { span = 0.5, n = 7, lift = 0.24, sweep = 0.1 } = {}) {
-  const parts = [];
-  // inner arm (covert) surface
-  const arm = new THREE.BufferGeometry();
+// A leaf / feather blade: root at `root`, running along `dir` for `len`, `wid` wide, the across axis ⟂ dir and
+// `up`, a ridge raised by `camber` (so the fresnel rim has something to catch), lens-shaped outline.
+const _lx = new THREE.Vector3(), _ly = new THREE.Vector3(), _lz = new THREE.Vector3();
+function leaf(root, dir, up, len, wid, { camber = 0.25, seg = 6, tipW = 0.3, fn = still } = {}) {
+  const d = _lx.set(...dir).normalize(), ac = _ly.crossVectors(d, _lz.set(...up)).normalize(), n = _lz.crossVectors(ac, d).normalize();
   const P = [], I = [];
-  const cols = 6;
+  for (let i = 0; i <= seg; i++) {
+    const u = i / seg, hw = wid * 0.5 * Math.pow(Math.sin(Math.PI * Math.min(1, u * 0.96 + 0.04)), 0.6) * (1 - (1 - tipW) * u * u);
+    for (const v of [-1, 0, 1]) {
+      const c = camber * hw * (1 - v * v);
+      P.push(root[0] + d.x * u * len + ac.x * v * hw + n.x * c, root[1] + d.y * u * len + ac.y * v * hw + n.y * c, root[2] + d.z * u * len + ac.z * v * hw + n.z * c);
+    }
+  }
+  for (let i = 0; i < seg; i++) for (let j = 0; j < 2; j++) { const a = i * 3 + j, b = a + 3; I.push(a, b, a + 1, a + 1, b, b + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals();
+  return anim(g, fn);
+}
+/**
+ * One side of a spirit wing (s = -1 left / +1 right), spread in the heraldic "displayed" pose (the wing surface
+ * faces fore and aft, so it reads broad from the caster's view behind the bird): a cambered arm membrane raised
+ * from the shoulder to the wrist, a row of secondaries hanging off its lower edge and a fan of long primaries from
+ * the wrist, from straight up to out. Flap weight grows to the tips (rotation about z through the shoulders).
+ * o: span (wrist x), lift (wrist y), prim (count), primLen, sec (count), ragged (鬼車: torn, uneven primaries).
+ */
+function wing(s, { span = 0.34, lift = 0.3, prim = 8, primLen = 0.36, sec = 7, ragged = 0 } = {}) {
+  const wf = (x) => [s * Math.min(1, Math.abs(x) / span), 0, 0.3];
+  const parts = [];
+  // arm membrane: leading edge on top, the chord hanging down (and a little back), bulged forward
+  const arm = new THREE.BufferGeometry(), P = [], I = [], cols = 8;
+  const lead = (u) => [s * (0.06 + u * (span - 0.06)), 0.06 + u * (lift - 0.06) + Math.sin(Math.PI * u) * 0.04, -0.03 + u * 0.03];
   for (let i = 0; i <= cols; i++) {
-    const u = i / cols, x = s * (0.05 + u * span * 0.62), y = u * lift * 0.62, z0 = -0.07 + u * 0.03, z1 = 0.16 - u * 0.06;
-    P.push(x, y, z0, x, y - 0.01, z1);
+    const u = i / cols, [x, y, z] = lead(u), ch = 0.16 - u * 0.08;
+    P.push(x, y, z, x + s * 0.01, y - ch, z + 0.05 - Math.sin(Math.PI * u) * 0.025);
   }
   for (let i = 0; i < cols; i++) { const a = i * 2; I.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
   arm.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); arm.setIndex(I); arm.computeVertexNormals();
-  parts.push(anim(arm, (x) => [x / span, 0, 0.3]));
-  // primaries: each a thin leaf from the wrist, fanned backwards
-  for (let k = 0; k < n; k++) {
-    const a = (k / (n - 1)) * 1.1 - 0.15, len = 0.2 + 0.08 * Math.sin(Math.PI * k / (n - 1));
-    const x0 = s * span * 0.6, y0 = lift * 0.6, z0 = -0.02 + k * 0.012;
-    const dx = s * Math.cos(a) * 0.95, dz = Math.sin(a) + sweep;
-    const g = new THREE.PlaneGeometry(1, 0.08, 4, 1).translate(0.5, 0, 0);
-    const pp = g.attributes.position;
-    for (let i = 0; i < pp.count; i++) {
-      const u = pp.getX(i), w = pp.getY(i) * Math.sin(Math.PI * Math.min(1, u * 1.08 + 0.05));
-      const x = x0 + dx * u * len, y = y0 + u * len * 0.45 + w * 0.0, z = z0 + dz * u * len * 0.6 + w * 0.9;
-      pp.setXYZ(i, x, y, z);
-    }
-    g.computeVertexNormals();
-    parts.push(anim(g, (x) => [x / span, 0, 0.3]));
+  parts.push(anim(arm, wf));
+  // leading-edge bone (a thin tube: gives the wing a crisp top line)
+  parts.push(anim(tubeAlong([lead(0), lead(0.5), lead(1)], 0.017, 0.009, 5, 8), wf));
+  // secondaries: hanging off the lower edge, down and out, a little back
+  for (let k = 0; k < sec; k++) {
+    const u = 0.1 + 0.84 * k / Math.max(1, sec - 1), [x, y, z] = lead(u), ch = 0.16 - u * 0.08;
+    const L = 0.15 + 0.06 * Math.sin(Math.PI * u) - (ragged ? 0.04 * ((k * 7) % 3) / 2 : 0);
+    parts.push(leaf([x, y - ch * 0.75, z + 0.04], [s * (0.15 + u * 0.55), -1, 0.22], [0, 0, 1], L, 0.058, { fn: wf, camber: 0.3 }));
   }
-  return mergeGeometries(parts);
+  // primaries: a fan from the wrist, from straight up to out (slightly down), in the wing plane
+  const [wx, wy, wz] = lead(1);
+  for (let k = 0; k < prim; k++) {
+    const u = k / Math.max(1, prim - 1), a = 0.12 + u * 1.55;          // angle from vertical towards the outside
+    const dir = [s * Math.sin(a), Math.cos(a), 0.12 + u * 0.18];
+    const L = primLen * (0.72 + 0.38 * Math.sin(Math.PI * Math.min(1, u * 0.9 + 0.2))) * (ragged ? 0.78 + 0.38 * (((k * 5) % 4) / 3) : 1);
+    parts.push(leaf([wx, wy, wz + u * 0.02], dir, [0, 0, 1], L, ragged ? 0.05 : 0.066, { fn: wf, camber: 0.28, tipW: ragged ? 0.6 : 0.3 }));
+  }
+  return parts;
+}
+function tail(n, len, z = 0.3, spread = 0.16) {
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    const f = n > 1 ? k / (n - 1) - 0.5 : 0;
+    out.push(leaf([f * 0.05, -0.01, z], [f * spread * 2, -0.3 - Math.abs(f) * 0.2, 1], [0, 1, 0], len * (1 - Math.abs(f) * 0.35), 0.065, { fn: (x, y, zz) => [0, 0.15, 0.6 + zz] }));
+  }
+  return out;
+}
+function body(rMax = 0.14) {
+  const pts = [[0, -0.19], [0.06, -0.17], [rMax * 0.82, -0.1], [rMax, 0.0], [rMax * 0.93, 0.1], [rMax * 0.7, 0.2], [rMax * 0.36, 0.29], [0, 0.33]].map(([r, y]) => new THREE.Vector2(r, y));
+  const g = new THREE.LatheGeometry(pts, 12).rotateX(Math.PI / 2).scale(1, 0.86, 1).translate(0, -0.02, 0);
+  return anim(g, (x, y, z) => [0, 0.1, 0.4 + z]);
+}
+function leg() {
+  const parts = [anim(tubeAlong([[0, -0.08, 0.05], [0, -0.33, 0.09], [0, -0.6, 0.03]], 0.026, 0.014, 6, 8), still)];
+  parts.push(anim(new THREE.SphereGeometry(0.026, 8, 5).translate(0, -0.33, 0.09), still));
+  for (const a of [-0.5, 0, 0.5, Math.PI]) {
+    const L = a === Math.PI ? 0.06 : 0.11;
+    parts.push(anim(new THREE.ConeGeometry(0.011, L, 5).rotateX(-Math.PI / 2).translate(0, 0, -L / 2).rotateY(a).translate(0, -0.615, 0.03), still));
+  }
+  return parts;
 }
 
 let craneCache = null;
-/** 畢方: one-legged crane, wings raised, long neck and beak, crest; standing height ≈ 0.62 below the shoulders. */
+/**
+ * 畢方 GHOST (≤ 3k tris): a one-legged crane with a full teardrop body, an S-neck, a crested head and a long beak,
+ * broad wings spread in the displayed pose (arm membrane, secondaries, a fan of primaries), a fan of tail plumes.
+ * 1 unit ≈ 1 m at size 1: span ≈ 1.2, standing height ≈ 1.1 (feet 0.62 below the shoulders). The light-wing cards attach at the
+ * wrists (CRANE_WRIST) at runtime.
+ */
+export const CRANE_WRIST = [0.34, 0.34, 0];
 export function craneGeo() {
   if (craneCache) return craneCache;
-  const parts = [];
-  parts.push(anim(new THREE.SphereGeometry(0.5, 12, 8).scale(0.13, 0.12, 0.3).translate(0, -0.03, 0.03), (x, y, z) => [0, 0.1, 0.4 + z]));
-  // neck: S-curve up and forward, head, crest, long beak
-  parts.push(anim(tubeAlong([[0, 0.02, -0.12], [0, 0.16, -0.17], [0, 0.3, -0.13], [0, 0.4, -0.2]], 0.045, 0.026, 7, 12), (x, y) => [0, 0.25 + y, 0]));
-  parts.push(anim(new THREE.SphereGeometry(0.5, 10, 7).scale(0.06, 0.055, 0.1).translate(0, 0.42, -0.24), still));
-  parts.push(anim(new THREE.ConeGeometry(0.018, 0.2, 6).rotateX(-Math.PI / 2).translate(0, 0.41, -0.38), still));
-  parts.push(anim(new THREE.ConeGeometry(0.02, 0.12, 5).rotateX(0.9).translate(0, 0.48, -0.19), still));
-  parts.push(anim(new THREE.ConeGeometry(0.014, 0.09, 5).rotateX(1.1).translate(0.012, 0.47, -0.17), still));
-  // tail: three long plumes
-  for (let k = -1; k <= 1; k++) parts.push(anim(new THREE.PlaneGeometry(0.06, 0.34, 1, 3).rotateX(-Math.PI / 2 + 0.35).rotateY(k * 0.3).translate(k * 0.03, -0.07, 0.36), still));
-  // wings
-  parts.push(wing(-1), wing(1));
-  // the one leg: thigh, shin, knee, three toes
-  parts.push(anim(tubeAlong([[0, -0.08, 0.04], [0, -0.3, 0.06], [0, -0.6, 0.02]], 0.018, 0.012, 6, 6), still));
-  parts.push(anim(new THREE.SphereGeometry(0.022, 6, 4).translate(0, -0.3, 0.06), still));
-  for (const a of [-0.45, 0.45, Math.PI]) parts.push(anim(new THREE.ConeGeometry(0.01, 0.1, 4).rotateX(-Math.PI / 2).rotateY(a).translate(-Math.sin(a) * 0.04, -0.615, -Math.cos(a) * 0.04), still));
+  const parts = [body(0.14)];
+  parts.push(anim(tubeAlong([[0, 0.04, -0.13], [0, 0.2, -0.19], [0, 0.34, -0.14], [0, 0.44, -0.2]], 0.056, 0.032, 8, 12), (x, y) => [0, 0.25 + y, 0]));
+  parts.push(anim(new THREE.SphereGeometry(0.06, 10, 8).scale(0.85, 0.82, 1.25).translate(0, 0.46, -0.24), still));
+  parts.push(anim(new THREE.ConeGeometry(0.021, 0.25, 8).rotateX(-Math.PI / 2).translate(0, 0.445, -0.42), still));
+  for (const [x, l, t] of [[0, 0.17, 0.75], [-0.022, 0.13, 0.55], [0.022, 0.13, 0.55]]) parts.push(leaf([x, 0.5, -0.24], [x * 3, t, 1 - t * 0.4], [1, 0, 0], l, 0.038, { camber: 0.4, tipW: 0.15 }));
+  parts.push(...wing(-1), ...wing(1));
+  parts.push(...tail(5, 0.42));
+  parts.push(...leg());
   craneCache = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)));
   craneCache.computeBoundingBox();
   return craneCache;
 }
 
 let nineCache = null;
-/** 鬼車: a dark bird with nine heads on swaying necks fanned in front, ragged wings, long tail. */
+/** 鬼車 GHOST: a heavy night bird, nine heads on swaying necks fanned in front, ragged wings, a long tail. */
 export function nineHeadGeo() {
   if (nineCache) return nineCache;
-  const parts = [];
-  parts.push(anim(new THREE.SphereGeometry(0.5, 12, 8).scale(0.16, 0.13, 0.3).translate(0, -0.02, 0.04), (x, y, z) => [0, 0.05, 0.5 + z]));
+  const parts = [body(0.16)];
   for (let i = 0; i < 9; i++) {
-    const a = (i / 8 - 0.5) * 2.2, len = i === 4 ? 0.36 : 0.26 + 0.04 * Math.cos(a);
-    const ex = Math.sin(a) * len, ey = 0.12 + Math.cos(a) * len * 0.5, ez = -0.14 - Math.cos(a) * len * 0.55;
-    parts.push(anim(tubeAlong([[0, 0.02, -0.1], [ex * 0.45, ey * 0.7, -0.18], [ex, ey, ez]], 0.03, 0.014, 5, 7), (x, y, z) => [0, 0.6 + Math.abs(x), (i / 8)]));
-    parts.push(anim(new THREE.SphereGeometry(0.5, 7, 5).scale(0.04, 0.035, 0.06).translate(ex, ey, ez - 0.03), (x, y, z) => [0, 1, i / 8]));
-    parts.push(anim(new THREE.ConeGeometry(0.012, 0.06, 4).rotateX(-Math.PI / 2 - 0.4).translate(ex, ey - 0.01, ez - 0.08), (x, y, z) => [0, 1, i / 8]));
+    const a = (i / 8 - 0.5) * 2.2, len = i === 4 ? 0.38 : 0.27 + 0.04 * Math.cos(a);
+    const ex = Math.sin(a) * len, ey = 0.12 + Math.cos(a) * len * 0.55, ez = -0.14 - Math.cos(a) * len * 0.55;
+    const fn = () => [0, 1, i / 8];
+    parts.push(anim(tubeAlong([[0, 0.03, -0.1], [ex * 0.45, ey * 0.7, -0.18], [ex, ey, ez]], 0.034, 0.016, 6, 8), (x) => [0, 0.6 + Math.abs(x), i / 8]));
+    parts.push(anim(new THREE.SphereGeometry(0.5, 8, 6).scale(i === 4 ? 0.06 : 0.045, i === 4 ? 0.05 : 0.04, i === 4 ? 0.085 : 0.065).translate(ex, ey, ez - 0.03), fn));
+    // hooked beak
+    parts.push(anim(new THREE.ConeGeometry(0.013, 0.07, 5).rotateX(-Math.PI / 2 - 0.5).translate(ex, ey - 0.012, ez - 0.09), fn));
   }
-  for (let k = -2; k <= 2; k++) parts.push(anim(new THREE.PlaneGeometry(0.05, 0.42, 1, 3).rotateX(-Math.PI / 2 + 0.25).rotateY(k * 0.22).translate(k * 0.025, -0.05, 0.42), still));
-  parts.push(wing(-1, { span: 0.55, n: 8, lift: 0.18, sweep: 0.25 }), wing(1, { span: 0.55, n: 8, lift: 0.18, sweep: 0.25 }));
-  parts.push(anim(tubeAlong([[0, -0.06, 0.05], [0, -0.3, 0.06], [0, -0.55, 0.03]], 0.016, 0.01, 5, 5), still));
+  const W = { span: 0.38, lift: 0.26, prim: 9, primLen: 0.4, sec: 8, ragged: 1 };
+  parts.push(...wing(-1, W), ...wing(1, W));
+  parts.push(...tail(7, 0.5, 0.32, 0.22));
+  parts.push(...leg());
   nineCache = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)));
   nineCache.computeBoundingBox();
   return nineCache;

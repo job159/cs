@@ -441,6 +441,16 @@ export const PREMIUM_ALBEDO = /* glsl */`
     float far = smoothstep(0.35, 0.8, length(fwidth(sp)));   // cells < ~2 px: fade to flat
     float grout = (1.0 - smoothstep(gw - aa, gw + aa, sv.y)) * (1.0 - far);
     grout *= mix(1.0, 0.35 + 0.5 * fract(sv.z * 3.17), mono);
+    if (mono > 0.5) {
+      // 金絲鐵線 (哥窯): a finer second crackle (2.6x) of faint amber "gold thread" lines between the dark "iron
+      // wire" ones; it fades out first with distance
+      vec3 sp2 = sp * 2.6 + 11.3;
+      vec3 sv2 = pBiVor(sp2, vObjNor);
+      float gw2 = pGroutW * 0.001 * pShardScale * 2.6 * 0.42 * (0.6 + 0.8 * fract(sv2.z * 5.31));
+      float aa2 = fwidth(sv2.y) * 1.5 + 1e-4;
+      float g2 = (1.0 - smoothstep(gw2 - aa2, gw2 + aa2, sv2.y)) * (1.0 - smoothstep(0.3, 0.7, length(fwidth(sp2))));
+      sc = mix(sc, mix(sc, vec3(0.62, 0.46, 0.24), 0.62) * 0.92, g2 * (0.3 + 0.35 * fract(sv2.z * 2.7)));
+    }
     diffuseColor.rgb = mix(sc, pGrout, grout);
     // glazed shards are glossy dielectrics whatever the part's base material; grout is matte (or gold wire);
     // crackle lines lie under the glaze, so the surface stays glossy

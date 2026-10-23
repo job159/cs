@@ -8,16 +8,22 @@
 //               = TRAIL_DROP), 冠羽扇 crest fan at the beak, the lower jaw kicks 4°; every pellet hit stacks 灼羽 (≤ 5,
 //               8/s each, 3 s, DOT ticks every 0.5 s, pips over the target) and sends up a small fire feather
 //   ◎ 焚翼      ≥ 40 % 羽能: bones swing open 69°, cloisonné light wings spread (outBack 0.25 s), 6 s or ◎ again, 10 %/s:
-//               3 m burn 40/s, slows cleared / ignored, +10 % speed, teammates within 4 m cleansed (every 6 s);
-//               folding after ≥ 40 % spent fires 焚天光 (鬼車: 晦天墜 falling from the sky): 600 + 120/s for 1.2 s,
-//               30 m x 1.4 m, piercing, a gold scorch line
-//   ★ 羽落      25 %: 12 burning feather lances in 6 m round the crosshair over 1.2 s, 60 + 2 stacks each
-//   ★ held      畢方降臨 (天火 from damage): card, sigil 10 m, pillar, the porcelain one-legged crane (9 m span) descends,
-//               one wing beat (10 m 60° cone, 300 + 3 stacks, knockback), a 25 m low dive leaving a 4 s fire path
-//               (30/s), bursts into fire feathers. 鬼車夜啼: the nine-headed silhouette circles, screams (zombies in
-//               10 m flee 1.5 s, 300), then dives
+//               3 m burn 40/s, slows cleared / ignored, +10 % speed, teammates within 4 m cleansed (every 6 s).
+//               First person the fans grow from the bone tips and open upwards (left fan to the upper left, right to
+//               the upper right): the centre 20 % stays clear. Once 40 % is spent the bones flick and the fans flare
+//               ("fold now"); folding then fires 焚天光 (鬼車: 晦天墜 falling from the sky): 600 + 120/s for 1.2 s,
+//               30 m x 1.4 m, piercing, rings racing down the shaft, a feather helix, a pillar where it ends, a scorch line
+//   ★ 羽落      25 %: 12 burning feather lances in 6 m round the crosshair over 1.2 s, 60 + 2 stacks each (aim 'target':
+//               a zombie under the crosshair pins the circle to its feet)
+//   ★ held      畢方降臨 (天火 from damage): card, sigil 10 m, pillar, the porcelain one-legged crane (≈ 6 m tall, the gun's
+//               cloisonné light wings on its wrists: ≈ 9 m span) descends on the mark (≥ 8 m away so it is seen), one
+//               wing beat (60° cone, 300 + 3 stacks, knockback; the cone starts 5 m behind the crane so it covers the
+//               horde round the mark and blows it away from the caster), a 25 m low dive leaving a 4 s fire path
+//               (30/s), bursts into fire feathers. 鬼車夜啼: the nine-headed bird circles, screams (zombies in 10 m
+//               flee 1.5 s, 300), then dives
 //   crisis 羽衣  the light wings wrap the player (cocoon) and burst into feathers (crisis.js does the blocking)
-//   kill        KE_PLUME (鬼車: KE_SOUL ghost-fire wisp to the gun, +2 % 晦羽); km_bifang / km_guiche
+//   kill        KE_PLUME (鬼車: KE_SOUL ghost-fire wisp to the gun, +2 % 晦羽); km_bifang / km_guiche; 鬼車's 灼羽 burns
+//               violet (hit info.burnFx 'ghostfire', fx/zfx.js)
 // Sound cues are named per §1.12 (bifang_* / ready_*); the twin plays the same cues -4 semitones with an echo.
 import * as THREE from 'three';
 import { registerSpecial, registerSkill, startSkill, endSkill, meterAdd, canCast, chargeState } from '../specials.js';
@@ -26,7 +32,7 @@ import { registerCrosshair, injectCSS } from '../../ui/crosshairs.js';
 import { registerKillMark } from '../../ui/killmarks.js';
 import { FRAME, DECAL } from '../../fx/fx.js';
 import { haptic, clipComfort } from '../arsenal.js';
-import { LOOKS, lookOf, sfx, crestFan, veinTongue, veinEmber, featherTracer, plume, killPlume, soulWisp, fallingFeather, FirePath, craneGeo, nineHeadGeo, BurnPips } from './bifang_fx.js';
+import { LOOKS, lookOf, sfx, CRANE_WRIST, crestFan, veinTongue, veinEmber, featherTracer, plume, emberHit, killPlume, soulWisp, fallingFeather, FirePath, craneGeo, nineHeadGeo, BurnPips } from './bifang_fx.js';
 
 const D2R = Math.PI / 180;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -60,10 +66,17 @@ function vmWings(g, ws, opts = {}) {
     if (!part || !sock) continue;
     const ex = part.extras, h = ex.hinge || [0, 0, 1];
     const qOpen = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(h[2], h[1], -h[0]).normalize(), (ex.open || 0) * D2R);
-    const anchor = sock.pos.clone().sub(part.pos);
+    // first person the fans grow from the bone tips (the middle rivet sits near the crosshair with the gun on the
+    // right): both fans open upwards, the left one towards the upper left, the right one towards the upper right,
+    // so the central 20 % stays clear (§1.7.5 WING, §1.14)
+    // (clips that swing the gun round -- first draw, inspect -- pass fan: false: the kit's face-on fan at the rivet)
+    const fanOn = opts.fan !== false;
+    const anchor = sock.pos.clone().sub(part.pos).multiplyScalar(opts.tip ?? (fanOn ? 1.95 : 1));
     const cl = opts.style === 'cloisonne';
-    const wg = kit.attach(part.node, { vm: true, side, anchors: { [side]: anchor }, style: opts.style || 'glow', count: opts.count ?? 7, scale: opts.scale ?? 0.85,
-      spacing: opts.spacing ?? 15, sweep: opts.sweep ?? 25, open: false, core: L.wing.core, tip: L.wing.tip, enamel: L.wing.enamel, gold: L.wing.gold, shape: cl ? 1 : 0 });
+    const fan = !fanOn ? null : side === 'L' ? { L: { a: [0.12, 1, 0.42], o: [-1, 0.12, 0.3] } } : { R: { a: [-0.08, 1, 0.42], o: [1, -0.05, 0.3] } };
+    const wg = kit.attach(part.node, { vm: true, side, anchors: { [side]: anchor }, style: opts.style || 'glow', count: opts.count ?? 7, scale: opts.scale ?? 0.7,
+      spacing: opts.spacing ?? 13, sweep: opts.sweep ?? 25, open: false, core: L.wing.core, tip: L.wing.tip, enamel: L.wing.enamel, gold: L.wing.gold, shape: cl ? 1 : 0,
+      fan, alpha: opts.alpha ?? (cl ? 0.62 : 0.92), guardMin: 0.2 });
     wg.group.quaternion.copy(qOpen).invert();
     wg.openWing(opts.dur ?? 0.25);
     out.list.push(wg);
@@ -99,7 +112,8 @@ function backWings(g, by, L, scale = 2.2) {
 function hitInfo(k, t, dmg, dir, o) {
   const g = k.game;
   return { amount: dmg * (g.arsenal?.dmgMul ?? 1), part: 'body', point: t.center(new THREE.Vector3()), dir: dir.clone(), knock: o.knock ?? 3, stagger: o.stagger ?? 0.8,
-    weapon: k.def.id, shooter: g.localId, skill: k.id, burn: !!o.burn, explosive: !!o.explosive, burnAdd: o.burnAdd ?? 0, elem: o.burn ? k.data.L?.elem : undefined };
+    weapon: k.def.id, shooter: g.localId, skill: k.id, burn: !!o.burn, explosive: !!o.explosive, burnAdd: o.burnAdd ?? 0, elem: o.burn ? k.data.L?.elem : undefined,
+    burnFx: k.data.L?.burnFx };
 }
 /** Flat area damage (no falloff) round c. Returns the targets hit. */
 function hurtArea(k, c, r, dmg, o = {}) {
@@ -176,7 +190,7 @@ function burnTick(ws, g, dt) {
       e.acc = 0;
       const point = z.center(new THREE.Vector3());
       // a DOT tick: no knockback, no blood (burn), the zombie's burning shell flickers; numbers, no hit marker
-      const info = { amount, part: 'body', point, dir: UP, knock: 0.01, stagger: 0, weapon: ws.def.id, shooter: g.localId, burn: true, skill: 'bf_dot', elem: L.elem };
+      const info = { amount, part: 'body', point, dir: UP, knock: 0.01, stagger: 0, weapon: ws.def.id, shooter: g.localId, burn: true, burnFx: L.burnFx, skill: 'bf_dot', elem: L.elem };
       const res = z.damage(info);
       // DOT feeds 天火 like any damage, except while the ultimate itself runs (v2Hit's rule)
       if (res?.damage > 0 && ![...s.run].some((k) => k.slot === 'ult' && !k.done)) meterAdd(ws, 'ult', res.damage / per * 100, true);
@@ -194,7 +208,7 @@ function killFx(ws, g, L, z, point) {
   if (!p) return;
   if (L.id === 'guiche') {
     const tick = soulWisp(g, L, p, (out) => (mine(g, ws) ? g.vm.socketApparent('pearl', out) : null) || out.copy(g.camera.position).add(_a.set(0, -0.3, 0)),
-      () => { meterAdd(ws, 'feather', 2); if (mine(g, ws)) { g.vm.glowTo(1.8, 0.05); later(ws, 0.12, () => g.vm?.glowTo(1, 0.3)); } sfx(g, L, 'bifang_soul', null, { volume: 0.4 }); });
+      () => { meterAdd(ws, 'feather', 2); if (mine(g, ws)) { g.vm.glowTo(1.8, 0.05); later(ws, 0.12, () => g.vm?.glowTo(1, 0.3)); } sfx(g, L, 'bifang_soul', 'xh_node', { volume: 0.4, pitch: 0.7 }); });
     ws.sp.wisps.push(tick);
   } else {
     const fy = g.world?.collision?.floorBelow?.(_a.set(p.x, p.y + 0.3, p.z), 0.4, 3);
@@ -205,7 +219,8 @@ function killFx(ws, g, L, z, point) {
 // ------------------------------------------------------------------------------------- the special (v2 overrides)
 registerSpecial('bifang', {
   init(ws) {
-    Object.assign(ws.sp, { burn: new Map(), q: [], wisps: [], hitPts: [], shot: 0, view: null, vmw: null, wingK: null, wingsOn: false, idleT: 0, wc: null, wasReady: false });
+    Object.assign(ws.sp, { burn: new Map(), q: [], wisps: [], hitPts: [], shot: 0, view: null, vmw: null, wingK: null, wingsOn: false, idleT: 0, wc: null, wasReady: false,
+      shotHit: new Map(), shotKills: 0 });
   },
   // every pellet hit: 灼羽 stack, a small fire feather; no 羽能 while the wings are spread; kills: KE_PLUME / KE_SOUL
   onHit(ws, info, res, target) {
@@ -214,7 +229,14 @@ registerSpecial('bifang', {
     if (s.wingsOn) meterAdd(ws, 'feather', -(ws.def.special.meters?.feather?.onHit ?? 0.6), true);
     const stacks = info.skill ? info.burnAdd || 0 : 1;
     if (z && !res.killed) addBurn(ws, z, stacks);
-    if (!info.skill && info.point) { if (s.hitPts.length < 8) s.hitPts.push(info.point.clone()); plume(g, L, info.point, 'bfp' + g.localId); }
+    if (!info.skill && info.point) {
+      if (s.hitPts.length < 8) s.hitPts.push(info.point.clone());
+      plume(g, L, info.point, 'bfp' + g.localId);
+      emberHit(g, L, info.point, info.dir);
+      // per-shot tally for the weight of the shot (onFire): pellets per target, kills
+      if (z) s.shotHit.set(z, (s.shotHit.get(z) || 0) + 1);
+      if (res.killed) s.shotKills++;
+    }
     if (res.killed) killFx(ws, g, L, z, info.point);
   },
   onFire(ws, ctx) {
@@ -222,6 +244,18 @@ registerSpecial('bifang', {
     s.shot++;
     if (mine(g, ws)) { crestFan(g, L, s.shot); s.beakKick = 1; }
     sfx(g, L, 'bifang_fire', 'fire_burst', { volume: 0.16 });
+    // weight of the shot: a point-blank volley (5+ pellets in one body) or a kill stops time for a beat, harder
+    // with every extra kill; kills also get their own bell-and-flame cue
+    let most = 0;
+    for (const n of s.shotHit.values()) most = Math.max(most, n);
+    const kills = s.shotKills;
+    s.shotHit.clear(); s.shotKills = 0;
+    if (kills > 0 || most >= 5) {
+      g.arsenal?._clipEvent?.('hitstop', kills > 0 ? 40 + 14 * Math.min(3, kills - 1) : 26);
+      g.arsenal?._clipEvent?.('shake', kills > 0 ? 0.1 + 0.06 * Math.min(3, kills) : 0.06);
+      if (kills > 0) { sfx(g, L, 'bifang_kill', 'kill_confirm_thud', { volume: 0.5 + 0.12 * Math.min(3, kills) }); if (mine(g, ws)) { g.vm.glowTo(1.7, 0.04); later(ws, 0.08, () => g.vm?.glowTo(1, 0.25)); } }
+      else sfx(g, L, 'bifang_hit_heavy', 'melee_heavy_hit', { volume: 0.4 });
+    }
     // feather streaks: the pellets that hit (their real points) + rays inside the cone for the rest (visual only)
     const from = vm?.socketApparent?.('muzzle', new THREE.Vector3()) || ctx.origin.clone();
     const hits = s.hitPts.splice(0);
@@ -255,7 +289,7 @@ registerSpecial('bifang', {
     const ready = canCast(ws, 'ult').ok, held = g.arsenal?.current === ws, L = lookOf(ws.def);
     if (ready && !s.wasReady && held) {
       const cue = ws.def.premium?.ready?.sfx;
-      if (cue && g.audio?.has && !g.audio.has(cue)) sfx(g, L, 'ready_bifang', null, { volume: 0.8 });
+      if (cue && g.audio?.has && !g.audio.has(cue)) sfx(g, L, 'ready_bifang', 'killmark_ding', { volume: 0.8, pitch: 0.75 });
       if (mine(g, ws)) { g.vm.setPart('fx_wingRoot*', 0.14, 0.3, 0.05); g.vm.glowTo(2.2, 0.08); later(ws, 0.15, () => g.vm?.glowTo(1, 0.4)); vmSparkle(ws, 12); }
     }
     s.wasReady = ready;
@@ -435,7 +469,7 @@ registerSkill('pyrewing', {
     s.wingK = k; s.wingsOn = true;
     if (mine(g, ws)) {
       g.vm.setPart('fx_wingRoot*', 1, 0.25, 0.02);
-      vmWings(g, ws, { style: 'cloisonne', count: 7, scale: 1, dur: 0.25 });
+      vmWings(g, ws, { style: 'cloisonne', count: 7, scale: 0.8, dur: 0.25 });
       later(ws, 0.06, () => vmSparkle(ws, 12));
       gunClip(g, ws, 'bifang_wing_buck');
       sfx(g, L, 'bifang_crane_cry', null, { volume: 0.6 });
@@ -455,6 +489,20 @@ registerSkill('pyrewing', {
     wingStatus(g, p.speedMul);
     if ((d.tick -= dt) <= 0) { d.tick = 0.25; hurtArea(k, k.feet(_a), p.r, p.dps * 0.25, { burn: true, knock: 0.8, stagger: 0.2 }); }
     if ((d.spark -= dt) <= 0) { d.spark = 0.35; vmSparkle(k.ws, 2); }
+    // 蓄滿必須有變形 (§1.17): the moment folding would fire the beam, the bones flick wide, the fans flare and stay
+    // brighter, a bell, a stronger border: "release now"
+    if (!d.charged && d.spent >= p.beamMin - 1e-3) {
+      d.charged = true;
+      const ws = k.ws, L = d.L;
+      sfx(g, L, 'bifang_beam_ready', 'xh_node', { volume: 0.8 });
+      g.hud?.border?.(hexOf(L.root), 0.26, Math.max(0.5, p.dur - k.t));
+      g.arsenal?._clipEvent?.('haptic', 'tick');
+      if (mine(g, ws)) {
+        g.vm.setPart('fx_wingRoot*', 1.14, 0.07, 0); later(ws, 0.09, () => g.vm?.setPart('fx_wingRoot*', 1, 0.22, 0));
+        for (const w of ws.sp.vmw?.list || []) w.set({ glow: 1.6 });
+        vmSparkle(ws, 18); g.vm.glowTo(2.2, 0.05); later(ws, 0.12, () => g.vm?.glowTo(1.35, 0.3));
+      }
+    }
     if (m.feather <= 0.01) return false;
   },
   end(k) {
@@ -484,6 +532,42 @@ function castBeam(k) {
   if (b) g.net?.sendSkill?.(ev);
 }
 
+/** Rings snapping open along a beam, racing from a to b (~90 m/s): reads as a shaft of light even end-on. */
+function beamRings(g, L, a, b, t = 0, k = 1) {
+  const fx = g.fx, len = a.distanceTo(b), dir = _d.subVectors(b, a).normalize().clone();
+  // flat particles are one-sided: each ring faces the viewer
+  if (dir.dot(_e.subVectors(g.camera.position, a)) < 0) dir.negate();
+  for (let s = 1.5, i = 0; s < len; s += 2.6, i++) {
+    const p = a.clone().addScaledVector(_c.subVectors(b, a).normalize(), s);
+    later2(g, s / 90, () => fx?.shockwave?.(p, { normal: dir, r0: 0.25 * k, r1: (1.5 + (i % 2) * 0.4) * k, life: 0.32, color: [L.ring[0] * k, L.ring[1] * k, L.ring[2] * k], thin: true }));
+  }
+}
+/** Light feathers spiralling down the beam (a double helix at ~0.6 m), streaking forward. */
+function beamHelix(g, L, a, b, rng, n) {
+  const P = g.fx?.particles;
+  if (!P) return;
+  const dir = _d.subVectors(b, a), len = dir.length();
+  dir.multiplyScalar(1 / len);
+  const side = _e.set(-dir.z, 0, dir.x).normalize(), up = _c.crossVectors(side, dir).normalize();
+  for (let i = 0; i < n; i++) {
+    const s = rng() * len, a0 = s * 0.9 + (i % 2) * Math.PI, r = 0.45 + rng() * 0.3;
+    const ox = Math.cos(a0) * r, oy = Math.sin(a0) * r;
+    const x = a.x + dir.x * s + side.x * ox + up.x * oy, y = a.y + dir.y * s + side.y * ox + up.y * oy, z = a.z + dir.z * s + side.z * ox + up.z * oy;
+    const v = 10 + rng() * 8, tv = 3;
+    P.spawn({ additive: true, x, y, z, vx: dir.x * v + (-Math.sin(a0) * side.x + Math.cos(a0) * up.x) * tv, vy: dir.y * v + (-Math.sin(a0) * side.y + Math.cos(a0) * up.y) * tv,
+      vz: dir.z * v + (-Math.sin(a0) * side.z + Math.cos(a0) * up.z) * tv, life: 0.35 + rng() * 0.3, mode: 'align', dir: [dir.x, dir.y, dir.z], aspect: 3.6, anchor: 0.5,
+      size: 0.16, size1: 0.08, color: [L.mote2[0] * 0.8, L.mote2[1] * 0.8, L.mote2[2] * 0.8, 1], color1: [L.flame[0] * 0.3, L.flame[1] * 0.3, L.flame[2] * 0.3, 0], frame: FRAME.cone + 1, drag: 1.5 });
+  }
+}
+/** First person: the beak flares white as the beam leaves (a hot bloom + the crest fan twice over). */
+function beamFlare(g, L) {
+  const vm = g.vm, P = g.fx?.particles, b = vm?.socketCam?.('beak', _a);
+  if (!P || !b) return;
+  P.spawn({ additive: true, vm: true, x: b.x, y: b.y, z: b.z, life: 0.09, size: 0.3, size1: 0.45, color: [8, 7, 5.5, 1], color1: [L.flame[0] * 0.5, L.flame[1] * 0.5, L.flame[2] * 0.5, 0], frame: FRAME.glow });
+  P.spawn({ additive: true, vm: true, x: b.x, y: b.y, z: b.z, life: 0.5, size: 0.4, size1: 0.7, color: [L.root[0] * 0.25, L.root[1] * 0.25, L.root[2] * 0.25, 1], color1: [0, 0, 0, 0], frame: FRAME.glow });
+  crestFan(g, L, 0); crestFan(g, L, 1);
+}
+
 // 焚天光 / 晦天墜 ---------------------------------------------------------------------------------------------
 registerSkill('pyrewing_beam', {
   level: 'L2',
@@ -497,15 +581,16 @@ registerSkill('pyrewing_beam', {
     const near = eye.clone().addScaledVector(dir, Math.min(2.5, len));
     if (L.id === 'guiche') {
       // 晦天墜: a ghost-fire meteor beam falling slantwise from the sky onto the line; a purple seam along the ground
-      const sky = eye.clone().addScaledVector(dir, len * 0.35).add(_a.set(-dir.z * 6, 18, dir.x * 6));
+      const sky = d.sky = eye.clone().addScaledVector(dir, len * 0.35).add(_a.set(-dir.z * 6, 18, dir.x * 6));
       d.beams = [fx?.beam?.(sky, d.b.clone(), { core: L.beamCore, glow: L.beamGlow, wCore: 0.28, wGlow: 1.3, life: B.dur ?? 1.2, shrink: 0.55, scroll: 4 }),
         fx?.beam?.(near, d.b.clone(), { core: L.flame, glow: L.beamGlow, wCore: 0.1, wGlow: 0.6, life: B.dur ?? 1.2, shrink: 0.6, scroll: -3 })];
       fx?.sigils?.pillar?.(d.b, { radius: 1.1, height: 10, color: L.beamCore, color1: L.beamGlow, life: 0.6 });
     } else {
       // 焚天光: white core / gold sheath from the beak along the aim (thin near the eye: the screen stays readable)
       const m = k.muzzle(new THREE.Vector3());
-      d.beams = [fx?.beam?.(near, d.b.clone(), { core: L.beamCore, glow: L.beamGlow, wCore: 0.26, wGlow: 1.4, life: B.dur ?? 1.2, shrink: 0.5, scroll: 3 }),
-        fx?.beam?.(m, near.clone(), { core: L.beamCore, glow: L.beamGlow, wCore: 0.04, wGlow: 0.3, life: B.dur ?? 1.2, shrink: 0.5, scroll: 3 })];
+      d.beams = [fx?.beam?.(near, d.b.clone(), { core: L.beamCore, glow: L.beamGlow, wCore: 0.34, wGlow: 1.6, life: B.dur ?? 1.2, shrink: 0.5, scroll: 3 }),
+        fx?.beam?.(near, d.b.clone(), { core: [L.beamGlow[0] * 0.5, L.beamGlow[1] * 0.5, L.beamGlow[2] * 0.5], glow: [L.flame[0] * 0.12, L.flame[1] * 0.12, L.flame[2] * 0.12], wCore: 0.9, wGlow: 3.2, life: (B.dur ?? 1.2) * 0.8, shrink: 0.7, scroll: -2 }),
+        fx?.beam?.(m, near.clone(), { core: L.beamCore, glow: L.beamGlow, wCore: 0.07, wGlow: 0.5, life: B.dur ?? 1.2, shrink: 0.5, scroll: 3 })];
     }
     // gold scorch line along the floor under the beam, feathers drifting off it, a flash where it ends
     const floor = (p) => g.world?.collision?.floorBelow?.(_a.set(p.x, p.y + 0.3, p.z), 0.6, 4);
@@ -514,20 +599,31 @@ registerSkill('pyrewing_beam', {
       if (Number.isFinite(fy) && p.y - fy < 2.4) fx?.decals?.add(_c.set(p.x, fy, p.z), UP, { frame: DECAL.scorch, size: 0.7, aspect: 0.35, along: dir, alpha: 0.85, life: 4, fade: 1.5, fit: false });
     }
     fx?.motes?.trailDrop?.(near, d.b, L.moteKind, { owner: 'bfbeam' + k.by, spacing: 1.6, max: 18, color: L.mote, color2: L.mote2, size: 0.13 });
-    fx?.sparkBurst?.(d.b, { color: L.root, color1: L.flame, count: 16, speed: 7, glow: 0.8 });
-    fx?.lights?.flash?.(d.b, L.light, 40, 9, 0.4);
+    fx?.sparkBurst?.(d.b, { color: L.root, color1: L.flame, count: 24, speed: 9, glow: 1 });
+    fx?.lights?.flash?.(d.b, L.light, 60, 12, 0.5);
+    // the shaft the rings / helix ride: the beam itself (鬼車: the sky line)
+    d.s0 = L.id === 'guiche' ? d.sky : near.clone(); d.s1 = d.b.clone();
+    beamRings(g, L, d.s0, d.s1, 0);
+    beamHelix(g, L, d.s0, d.s1, k.rng, 46);
+    fx?.sigils?.pillar?.(d.b, { radius: 0.9, height: 7, color: L.beamCore, color1: L.flame, life: 0.55, motes: 8 });
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; fx?.knockDust?.(_a.set(d.b.x + Math.cos(a), d.b.y, d.b.z + Math.sin(a)), _c.set(Math.cos(a) * 4, 0, Math.sin(a) * 4), 0.8); }
+    d.ring = 0.16;
     sfx(g, L, 'bifang_beam', 'explosion_small', k.local ? { volume: 0.9 } : { pos: d.b, volume: 0.8 });
     if (!k.local) return;
     hurtSeg(k, d.a, d.b, d.half, B.dmg ?? 600, { knock: 5, stagger: 1, burn: true, burnAdd: 2 });
     g.addShake?.(clipComfort.shake ? 0.3 : 0);
     g.arsenal?._clipEvent?.('tint', { rgb: '#ffffff', a: 0.2, in: 0.03, hold: 0.06, out: 0.3 });
     g.arsenal?._clipEvent?.('haptic', 'thud');
-    if (mine(g, k.ws)) gunClip(g, k.ws, 'bifang_beam_kick');
+    g.arsenal?.fovKick?.(-3, 0.35);
+    if (clipComfort.overlay) fx?.overlay?.radial?.(0.45, 0.35, { color: L.root });
+    if (mine(g, k.ws)) { gunClip(g, k.ws, 'bifang_beam_kick'); beamFlare(g, L); g.vm.glowTo(2.4, 0.04); later(k.ws, 0.2, () => g.vm?.glowTo(1, 0.6)); }
   },
   update(k, dt) {
     const d = k.data, B = k.def.special.beam || {};
     if (k.t > (B.dur ?? 1.2)) return;
     if (k.rng() < 0.6) k.game.fx?.sparkBurst?.(d.b, { color: d.L.root, color1: d.L.flame, count: 2, speed: 3, glow: 0 });
+    // the beam keeps pulsing: a ring wave every 0.16 s, a few feathers peeling off
+    if ((d.ring -= dt) <= 0 && d.s0) { d.ring = 0.16; beamRings(k.game, d.L, d.s0, d.s1, k.t, 0.6); beamHelix(k.game, d.L, d.s0, d.s1, k.rng, 6); }
     if (k.local && (d.tick -= dt) <= 0) { d.tick = 0.2; hurtSeg(k, d.a, d.b, d.half, (B.dps ?? 120) * 0.2, { knock: 0.6, stagger: 0.3, burn: true }); }
   },
   end(k) { for (const b of k.data.beams || []) b?.stop?.(); },
@@ -535,7 +631,7 @@ registerSkill('pyrewing_beam', {
 
 // ★ 羽落 / 晦羽落 ---------------------------------------------------------------------------------------------
 registerSkill('featherfall', {
-  level: 'L2', aim: true, defaults: { n: 12, r: 6, dmg: 60, burn: 2, fall: 1.2, range: 30 },
+  level: 'L2', aim: 'target', defaults: { n: 12, r: 6, dmg: 60, burn: 2, fall: 1.2, range: 30 },
   start(k) {
     const g = k.game, p = k.p, d = k.data, L = d.L = lookOf(k.def), c = k.at || k.feet();
     k.dur = p.fall + 0.7;
@@ -564,9 +660,40 @@ registerSkill('featherfall', {
   end(k) { k.data.sig?.stop?.(0.4); },
 });
 
+/**
+ * The spirit's light wings: the weapon's own cloisonné feather fans (fx.wings, 'back' frame) on two pivots at the
+ * shoulders that follow the ghost shader's wing flap, rooted at the wrists, so the porcelain crane carries the
+ * 掐絲琺瑯 wings of the gun (≈ 9 m span at size 5.6). Detaches by itself when the ghost is removed.
+ */
+function spiritWings(g, gh, L) {
+  const kit = g.fx?.wings;
+  if (!kit || !gh?.obj) return null;
+  const piv = [], list = [];
+  for (const [side, s] of [['L', -1], ['R', 1]]) {
+    const p = new THREE.Group();
+    gh.obj.add(p);
+    piv.push([p, s]);
+    const wr = L.id === 'guiche' ? [0.38, 0.3, 0] : CRANE_WRIST;
+    list.push(kit.attach(p, { preset: 'back', side, anchors: { [side]: new THREE.Vector3(s * wr[0], wr[1], wr[2]) }, count: 7, scale: 1.6,
+      spacing: 15, style: 'cloisonne', core: L.wing.core, tip: L.wing.tip, enamel: L.wing.enamel, gold: L.wing.gold, open: false, alpha: 0.85 }).openWing(0.35));
+  }
+  return {
+    list,
+    update() {
+      // the ghost vertex shader's flap (summons.js GHOST_VERT): (sin(uTime·hz·2π)·amp + 0.12) about z through the shoulders
+      const u = gh.mats?.[0]?.u, f = u?.uFlap?.value;
+      if (!f) return;
+      const A = Math.sin(u.uTime.value * f.y * Math.PI * 2) * f.x + 0.12;
+      for (const [p, s] of piv) p.rotation.z = A * s;
+    },
+    close(dur = 0.3) { for (const w of list) w.close(dur); },
+    sparkle(n = 12) { for (const w of list) w.sparkle(n); },
+  };
+}
+
 // ★ held 畢方降臨 / 鬼車夜啼 -------------------------------------------------------------------------------------
 registerSkill('bifang_descent', {
-  level: 'L3', aim: true, defaults: { range: 25 },
+  level: 'L3', aim: 'target', defaults: { range: 25 },
   start(k) {
     const g = k.game, d = k.data, L = d.L = lookOf(k.def), S = k.def.special;
     d.flap = S.flap || { r: 10, cone: 60, dmg: 300, burn: 3, knock: 9 };
@@ -575,16 +702,20 @@ registerSkill('bifang_descent', {
     d.c = (k.at || k.feet()).clone();
     d.dir = _a.set(k.dir.x, 0, k.dir.z).normalize().clone();
     if (d.dir.lengthSq() < 0.5) d.dir.set(0, 0, -1);
+    // the spirit needs room to be seen: a mark closer than 8 m moves out along the aim (same on every client: k.pos)
+    const hz = Math.hypot(d.c.x - k.pos.x, d.c.z - k.pos.z);
+    if (hz < 8) { d.c.set(k.pos.x + d.dir.x * 8, d.c.y, k.pos.z + d.dir.z * 8); d.c.y = k.floorY(d.c); }
+    d.sz = L.id === 'guiche' ? 5.2 : 5.6; d.hip = 0.62 * d.sz;       // shoulders above the ground (feet on it)
     d.beat = 0; d.tick = 0; d.feared = [];
     sfx(g, L, 'bifang_ult_rise', 'drawHeavy', k.local ? { volume: 0.9 } : { pos: d.c, volume: 0.9 });
     if (!k.local) { if (k.level >= 2) d.back = backWings(g, k.by, L, 3.2); return; }
     const ws = k.ws;
     g.hud?.card?.(k.cardText(), { color: hexOf(L.root), sub: k.def.en });
     if (mine(g, ws)) {
+      // the bones spread, but the light wings belong to the spirit this time (first-person fans would fight it)
       g.vm.setPart('fx_wingRoot*', 1, 0.25, 0.02);
-      vmWings(g, ws, { style: 'cloisonne', count: 7, scale: 1, dur: 0.3 });
       gunClip(g, ws, 'bifang_cast_ult');
-      later(ws, 0.1, () => vmSparkle(ws, 16));
+      later(ws, 0.1, () => vmFeathers(g, ws, L, 6));
     }
     g.arsenal?.fovKick?.(3, 0.8);
     g.arsenal?._clipEvent?.('haptic', 'thud');
@@ -603,9 +734,10 @@ registerSkill('bifang_descent', {
       fx?.lights?.flash?.(_a.set(c.x, c.y + 3, c.z), L.light, 90, 18, 0.5);
       sfx(g, L, 'bifang_crane_cry', null, { pos: c, volume: 1 });
       if (big && fx?.summons?.ghost) {
-        d.ghost = fx.summons.ghost({ geometry: guiche ? nineHeadGeo() : craneGeo(), pos: _b.copy(c).add(_e.set(0, 5.6 + 3, 0)), size: 9,
+        d.ghost = fx.summons.ghost({ geometry: guiche ? nineHeadGeo() : craneGeo(), pos: _b.copy(c).add(_e.set(0, d.hip + 3, 0)), size: d.sz,
           yaw: Math.atan2(-d.dir.x, -d.dir.z), ...L.ghost, appear: 0.35, life: Infinity, motion: 'none', flap: { amp: 0.32, hz: 0.7 }, big: true, seed: k.ev.seed,
           exit: { kind: L.moteKind, count: 30, color: L.mote, speed: 3.2, scale: 2.2 } });
+        d.sw = spiritWings(g, d.ghost, L);
       }
       if (k.local) { g.addShake?.(0.3); if (clipComfort.overlay) fx?.overlay?.radial?.(0.8, 0.4, { color: L.root }); }
     }
@@ -615,10 +747,11 @@ registerSkill('bifang_descent', {
       const u = smooth((t - 0.6) / 0.4);
       if (guiche) {
         const a = (t - 0.6) * 3.2, rr = 5 * (1 - smooth((t - 1.1) / 0.5));
-        gh.obj.position.set(c.x + Math.cos(a) * rr, c.y + 5.6 + 2.5 - u * 1.8, c.z + Math.sin(a) * rr);
+        gh.obj.position.set(c.x + Math.cos(a) * rr, c.y + d.hip + 2.5 - u * 1.8, c.z + Math.sin(a) * rr);
         gh.obj.rotation.y = rr > 0.6 ? Math.PI - a : Math.atan2(-d.dir.x, -d.dir.z);   // along the circle, then the aim
-      } else gh.obj.position.set(c.x, c.y + 5.6 + 3 * (1 - u), c.z);
+      } else gh.obj.position.set(c.x, c.y + d.hip + 3 * (1 - u), c.z);
     }
+    d.sw?.update(dt);
     if (d.beat < 3 && t >= 1.0 && !guiche) {   // landing on the one foot
       d.beat = 3;
       fx?.shockwave?.(_a.set(c.x, c.y + 0.06, c.z), { normal: UP, r0: 0.5, r1: 5, life: 0.5, color: L.ring });
@@ -628,7 +761,7 @@ registerSkill('bifang_descent', {
     if (d.beat < 4 && t >= 1.15) {           // ④ the wing beat (畢方) / the scream (鬼車)
       d.beat = 4;
       const F = d.flap;
-      if (gh) { for (const m of gh.mats) m.u.uFlap.value.set(1.1, 2.2, 0, 0.6); later2(g, 0.5, () => { for (const m of gh.mats || []) m.u.uFlap.value.set(0.5, 1.6, guiche ? 0.05 : 0, 0.6); }); gh.flash(1); }
+      if (gh) { for (const m of gh.mats) m.u.uFlap.value.set(1.1, 2.2, 0, 0.6); later2(g, 0.5, () => { for (const m of gh.mats || []) m.u.uFlap.value.set(0.5, 1.6, guiche ? 0.05 : 0, 0.6); }); gh.flash(1); d.sw?.sparkle(14); }
       if (guiche) {
         for (let i = 0; i < 3; i++) later2(g, i * 0.12, () => fx?.shockwave?.(_a.set(c.x, c.y + 2.5, c.z), { r0: 0.5, r1: F.r * (0.8 + i * 0.25), life: 0.55, color: L.ring, thin: true }));
         sfx(g, L, 'bifang_scream', 'explosion_far', { pos: c, volume: 1 });
@@ -640,7 +773,9 @@ registerSkill('bifang_descent', {
         fx?.shockwave?.(_b.copy(c).addScaledVector(d.dir, 4).setY(c.y + 0.08), { normal: UP, r0: 1, r1: F.r, life: 0.5, color: L.ring });
         for (let i = 0; i < 12; i++) { const a = (k.rng() - 0.5) * F.cone * 2 * D2R, dd = _b.copy(d.dir).applyAxisAngle(UP, a); fx?.knockDust?.(_e.copy(c).addScaledVector(dd, 3 + k.rng() * 6), dd.multiplyScalar(7), 1); }
         sfx(g, L, 'bifang_ult_flap', 'explosion_large', { pos: c, volume: 0.8 });
-        if (k.local) hurtCone(k, c, d.dir, F.r, F.cone, F.dmg, { knock: F.knock, stagger: 1, explosive: true, burnAdd: F.burn });
+        // the gale starts 5 m behind the crane (towards the caster): the cone covers the horde round the mark, not
+        // only what is past it, and blows everything away from the caster
+        if (k.local) hurtCone(k, c.clone().addScaledVector(d.dir, -5), d.dir, F.r + 5, F.cone, F.dmg, { knock: F.knock, stagger: 1, explosive: true, burnAdd: F.burn });
       }
       if (k.local) { g.hitStop?.(clipComfort.hitstop ? 0.08 : 0); g.addShake?.(0.35); g.arsenal?._clipEvent?.('haptic', 'thud'); }
     }
@@ -661,7 +796,7 @@ registerSkill('bifang_descent', {
       if (gh) {
         const e = u * u * (3 - 2 * u);
         gh.obj.position.copy(d.p0).lerp(d.p1, e);
-        gh.obj.position.y += 3.4 + Math.sin(u * Math.PI) * 0.6;
+        gh.obj.position.y += d.hip * 0.62 + Math.sin(u * Math.PI) * 0.6;
         gh.obj.rotation.set(-0.42 * Math.sin(Math.min(1, u * 2) * Math.PI / 2), Math.atan2(-d.dir.x, -d.dir.z), 0, 'YXZ');
         if (u < 1 && k.rng() < 0.5) fx?.motes?.spawn?.(L.moteKind, gh.obj.position, { vel: [0, -0.5, 0], color: L.mote, color2: L.mote2, size: 0.25, life: 1.4 });
       }
@@ -675,7 +810,7 @@ registerSkill('bifang_descent', {
     }
     if (d.beat < 6 && t >= 3.0) {           // ⑤ exit: the spirit bursts into fire feathers at the end of its run
       d.beat = 6;
-      gh?.dissolveOut(0.6);
+      gh?.dissolveOut(0.6); d.sw?.close(0.45);
       const end = d.p1 || c;
       fx?.shockwave?.(_a.set(end.x, end.y + 0.06, end.z), { normal: UP, r0: 0.5, r1: 6, life: 0.6, color: L.ring });
       fx?.sparkBurst?.(_a.set(end.x, end.y + 2.5, end.z), { color: L.root, color1: L.flame, count: 24, speed: 8, glow: 1.4 });
@@ -689,6 +824,7 @@ registerSkill('bifang_descent', {
   end(k) {
     const d = k.data;
     d.sig?.stop?.(0.4); d.path?.stop(); if (d.ghost?.alive && d.ghost.outT < 0) d.ghost.dissolveOut(0.3);
+    d.sw?.close(0.3);
     d.back?.remove();
     for (const f of d.feared) unfear(f.z);
     d.feared.length = 0;
@@ -733,7 +869,7 @@ registerSkill('bifang_cocoon', {
     const g = k.game, L = lookOf(k.def), c = k.feet(new THREE.Vector3());
     g.fx?.motes?.burst?.(L.moteKind, _a.set(c.x, c.y + 1.1, c.z), 16, { speed: 4.5, spread: 1, radius: 0.5, color: L.mote, color2: L.mote2, size: 0.2, seed: k.ev.seed });
     g.fx?.sparkBurst?.(_a.set(c.x, c.y + 1.1, c.z), { color: L.root, color1: L.flame, count: 18, speed: 6, glow: k.local ? 0 : 1 });
-    sfx(g, L, 'bifang_cocoon', null, k.local ? { volume: 0.9 } : { pos: c });
+    sfx(g, L, 'bifang_cocoon', 'impact_glass', k.local ? { volume: 0.9 } : { pos: c });
     if (!k.local || !mine(g, k.ws)) { const b = backWings(g, k.by, L, 2.6); if (b) later2(g, 0.35, () => { b.w.close(0.15); later2(g, 0.25, () => b.remove()); }); return; }
     // first person: the wings snap shut round the view (fan wide, fold fast), feathers left floating
     g.vm.setPart('fx_wingRoot*', 1, 0.08);
@@ -758,7 +894,7 @@ registerClip('bifang_first', {
     fx_beak: [[0, 0], [0.86, 0], [0.89, 0.6, 'out3'], [0.93, 0, 'in3'], [1, 0]],
     env: [[0, 0], [0.3, 1], [0.8, 1], [1, 0]],
   },
-  events: [[0, 'anchorL', ['rest', 0.05]], [0.02, 'snd', 'drawHeavy'], [0.25, 'haptic', 'tick'], [0.27, 'bf', { wing: 'open', style: 'glow', count: 6, scale: 0.8, dur: 0.25 }],
+  events: [[0, 'anchorL', ['rest', 0.05]], [0.02, 'snd', 'drawHeavy'], [0.25, 'haptic', 'tick'], [0.27, 'bf', { wing: 'open', style: 'glow', count: 6, scale: 0.8, dur: 0.25, fan: false }],
     [0.29, 'bf', { sparkle: 16, cry: 0.7 }], [0.3, 'glow', { to: 1.8, sec: 0.15 }], [0.45, 'snd', 'cloth'], [0.5, 'bf', { wing: 'close', dur: 0.35 }], [0.52, 'bf', { feathers: 6 }],
     [0.72, 'anchorL', ['grip_l', 0.14]], [0.75, 'poseL', 'wrap'], [0.75, 'glow', { to: 1, sec: 0.4 }], [0.89, 'haptic', 'tick'], [0.9, 'bf', { bell: 0.7 }]],
 });
@@ -794,8 +930,10 @@ registerClip('bifang_idle_rare', { duration: 1.2, tracks: {
 // reload 2.8 s: the gate drops open, the spent feather cell comes out smoking, a new one in, the gate slapped shut + bell
 function reloadClip(rare) {
   const tracks = {
-    gunPos: [[0, Z3], [0.12, [-0.03, -0.01, 0.02]], [0.66, [-0.03, -0.012, 0.022]], [0.74, [-0.028, 0.0, 0.02], 'out3'], [0.82, [-0.03, -0.008, 0.02]], [0.92, [-0.01, 0, 0.01]], [1, Z3]],
-    gunRot: [[0, Z3], [0.12, [6, 12, 26]], [0.66, [7, 12, 28]], [0.74, [9, 12, 25], 'out3'], [0.82, [7, 11, 26]], [0.92, [2, 2, 6]], [1, Z3]],
+    // lifted and rolled onto its right side: the underside, the gate and the feather cell face the eye (the cell is
+    // the thing a reload shows, §1.7.1)
+    gunPos: [[0, Z3], [0.12, [-0.06, 0.1, 0.035]], [0.66, [-0.065, 0.11, 0.04]], [0.74, [-0.06, 0.125, 0.035], 'out3'], [0.82, [-0.05, 0.09, 0.03]], [0.92, [-0.02, 0.03, 0.01]], [1, Z3]],
+    gunRot: [[0, Z3], [0.12, [26, 24, -46]], [0.66, [28, 25, -50]], [0.74, [32, 25, -46], 'out3'], [0.82, [24, 20, -40]], [0.92, [8, 6, -12]], [1, Z3]],
     fx_cover: [[0, 0], [0.14, 0], [0.2, 1, 'outBack'], [0.74, 1], [0.79, 0, 'in3'], [1, 0]],
     'mag.pos': rare
       ? [[0, Z3], [0.2, Z3], [0.25, [-0.03, -0.05, 0.0], 'out3'], [0.34, [-0.16, -0.28, 0.05], 'in'], [0.4, [-0.16, -0.28, 0.05]], [0.5, [0, -0.16, 0], 'snap'], [0.6, [0, -0.01, 0], 'out3'], [0.63, Z3, 'outBack'], [1, Z3]]
@@ -833,9 +971,9 @@ registerClip('bifang_inspect', {
     'fx_wingRootR.rot': [[0, Z3], [0.37, Z3], [0.385, [0, 0, -9], 'out3'], [0.41, [0, 0, 5]], [0.44, [0, 0, -2]], [0.47, Z3]],
     env: [[0, 0], [0.05, 1], [0.95, 1], [1, 0]],
   },
-  events: [[0.03, 'snd', 'cloth'], [0.27, 'anchorL', ['point', 0.22]], [0.33, 'bf', { wing: 'open', style: 'glow', count: 5, scale: 0.6, dur: 0.3 }], [0.35, 'snd', 'cloth'],
+  events: [[0.03, 'snd', 'cloth'], [0.27, 'anchorL', ['point', 0.22]], [0.33, 'bf', { wing: 'open', style: 'glow', count: 5, scale: 0.6, dur: 0.3, fan: false }], [0.35, 'snd', 'cloth'],
     [0.38, 'bf', { sparkle: 8, orbit: 1.5 }], [0.38, 'haptic', 'tick'], [0.5, 'bf', { wing: 'close', dur: 0.3 }], [0.56, 'anchorL', ['grip_l', 0.2]], [0.58, 'poseL', 'wrap'],
-    [0.62, 'bf', { vein: 1 }], [0.62, 'glow', { to: 1.8, sec: 0.25 }], [0.7, 'glow', { to: 1, sec: 0.5 }], [0.8, 'bf', { wing: 'open', style: 'glow', count: 5, scale: 0.6, dur: 0.3 }],
+    [0.62, 'bf', { vein: 1 }], [0.62, 'glow', { to: 1.8, sec: 0.25 }], [0.7, 'glow', { to: 1, sec: 0.5 }], [0.8, 'bf', { wing: 'open', style: 'glow', count: 5, scale: 0.6, dur: 0.3, fan: false }],
     [0.83, 'bf', { bell: 0.4 }], [0.95, 'bf', { wing: 'close', dur: 0.25 }]],
 });
 // rare inspect (1/10): wings fully spread, a fire feather drifts into the left palm and becomes a 6 cm one-legged crane
@@ -856,9 +994,10 @@ registerClip('bifang_inspect_rare', {
 // ------------------------------------------------------------------------------------- crosshair (§1.9 #2)
 // xh_feather: three feather-shaped short arms (up, lower left, lower right: a crest / a footprint), a hollow diamond
 // centre. Stroke only; arms take the hit colour (class "a"); ready = the shared 4 nodes; act = arms glow and spread.
+// The diamond is wide enough to frame the always-on centre dot the HUD adds (settings.dot) with a clear gap.
 registerCrosshair('xh_feather', {
   draw(gap, c) {
-    const g0 = 4 + gap * 0.75, L = 9;
+    const g0 = 5.6 + gap * 0.75, L = 9;
     const arm = (deg) => {
       const a = deg * D2R, ux = Math.sin(a), uy = -Math.cos(a), nx = -uy, ny = ux;
       const P = (s, o) => `${(ux * s + nx * o).toFixed(2)} ${(uy * s + ny * o).toFixed(2)}`;
@@ -866,7 +1005,7 @@ registerCrosshair('xh_feather', {
       return `<path class="a" d="M${P(g0, 0)} Q${P(g0 + L * 0.55, 2.6)} ${P(g0 + L, 0)} Q${P(g0 + L * 0.55, -1.9)} ${P(g0, 0)} Z" fill="none" stroke="${c}" stroke-width="1.3" stroke-linejoin="round"/>`
         + `<path class="a" d="M${P(g0 - 1, 0)} L${P(g0 + L * 0.82, 0)}" stroke="${c}" stroke-width="0.9"/>`;
     };
-    return arm(0) + arm(120) + arm(240) + `<path d="M0 -2.6 L2 0 L0 2.6 L-2 0 Z" fill="none" stroke="${c}" stroke-width="1.1"/>`;
+    return arm(0) + arm(120) + arm(240) + `<path d="M0 -4 L3.2 0 L0 4 L-3.2 0 Z" fill="none" stroke="${c}" stroke-width="1.1"/>`;
   },
   nodes: 26,
 });
@@ -972,3 +1111,4 @@ registerKillMark('km_guiche', { draw(ctx, S, t, o) { drawCraneMark(ctx, S, t, o,
 // colour-dependent element tag for damage numbers / DOT (fire for 畢方, the purple 'shock' skin for 鬼車)
 LOOKS.bifang.elem = 'fire';
 LOOKS.guiche.elem = 'shock';
+LOOKS.guiche.burnFx = 'ghostfire';   // 灼羽 on 鬼車 burns violet (zfx SHELL.ghostfire)

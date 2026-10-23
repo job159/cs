@@ -1,8 +1,10 @@
 // 螭吻．吞潮 Chiwen Tidewarden — 神兵 M07 (docs/PREMIUM_WEAPONS.md M07 card; the Appendix A def is in defs.js, the
 // model tools/assets/weapons/chiwen.mjs). Mechanics on the specials v2 engine (registerSpecial 'chiwen' + skills)
-// and the whole presentation (viewmodel driver, clips, crosshair, kill mark, FX) live in this one file.
+// and the presentation (viewmodel driver, clips, crosshair, kill mark, FX) live in this file; the summoned 螭吻
+// spirit's geometry is chiwen_fx.js.
 //   fire     潮彈: 46 + 20 splash within 1.5 m of the impact; an ice-cyan hollow crown and water mist at the mouth,
-//            the jaw snaps open 3° a shot. A hit may mark 寒潮 (25 %, 10 s: three ice scales circle the target);
+//            the jaw snaps open 3° a shot, a hollow ice ring on every body hit (x1.3 + a second ring on a headshot),
+//            a short hit-stop + shake on kills and bursts. A hit may mark 寒潮 (25 %, 10 s: three ice scales circle the target);
 //            the next hit on it bursts (80 in 2 m, +4 % tide). Kills +4 % tide, 30 % loose a homing water bead
 //            (60), and frost over before shattering (KE_FROST); the wave's last kill raises a water column
 //   ◎ held   冰流光束 frostRay (20 % tide, <= 2.5 s): white-cored ice beam 280/s piercing 3, a line of ice spikes
@@ -10,8 +12,10 @@
 //   ★ tap    潮球 tideOrb (15 %): a slow water orb (6 m/s, 12 m); three pulses 0.6 s apart (120 in 3 m, pull 1 m)
 //   both     水幕反衝: a water wall bursts round the caster, zombies within 3 m are shoved 4 m and take 40
 //   ★ held   吞潮 swallowTide (ult, ~4,000 damage): cast (the gun dips, CARD) -> a reversed vortex sigil -> the water
-//            螭吻 bursts out of it (GHOST) -> 吞: everything within 12 m is pulled 4 m and bitten (500) -> 吐: three
-//            water pillars on the densest groups (400 in 4 m, tossed) -> it sinks back, the ground frosts 3 s (slow)
+//            螭吻 (chiwen_fx.js spirit, sized so its head stays in view) bursts out of it, roars, its fish tail breaches
+//            behind -> 吞: everything within 12 m is pulled 4 m, the head dives and bites (500, hit-stop) as the tail
+//            slaps the water -> 吐: three water pillars on the densest groups (400 in 4 m, tossed) -> it sinks back,
+//            the ground frosts 3 s (slow)
 //   crisis   螭吻護甲: a water-dragon vortex wraps the player, knockback 6 m (crisis.js + 'chiwen_crisis')
 //   aura     潮汐回流: anyone within 4 m of the ice line or the orb reloads 20 % faster (each client, its own player)
 // Teammates replay every skill from its network event (visuals, their own aura; the host applies the slows).
@@ -24,6 +28,7 @@ import { registerKillMark } from '../../ui/killmarks.js';
 import { FRAME, DECAL, DECAL_TINT } from '../../fx/fx.js';
 import { SURF } from '../../world/collision.js';
 import { clipComfort } from '../arsenal.js';
+import { chiwenSpirit, spiritParts } from './chiwen_fx.js';
 
 const ID = 'chiwen';
 const ICE = [1.3, 3.6, 5.0];        // HDR ice cyan (#6fe3ff)
@@ -37,15 +42,17 @@ const _a = V3(), _b = V3(), _c = V3(), _d = V3(), _e = V3(), _f = V3(), _g = V3(
 const R = Math.random;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
+/** screen shake, off with the comfort setting (§1.14 #6) */
+const shake = (g, a) => { if (clipComfort.shake) g.addShake?.(a); };
 // sound cues: name -> fallback (existing sample) | null
 const SFX = {
   chiwen_fire: null, chiwen_mark: null, chiwen_mark_burst: 'impact_glass', chiwen_splash: 'impact_water', chiwen_bead: null,
   chiwen_frost_kill: 'impact_glass', chiwen_ray_start: 'impact_water', chiwen_ray_loop: null, chiwen_ray_end: null, chiwen_barrier: 'impact_water',
   chiwen_orb_cast: 'impact_water', chiwen_orb_pulse: 'impact_water', chiwen_orb_burst: 'impact_water', chiwen_ult_inhale: null,
   chiwen_ult_vortex: null, chiwen_ult_roar: 'explosion_far', chiwen_ult_bite: 'bone_crunch', chiwen_ult_spit: 'explosion_small',
-  chiwen_ult_fall: 'debris_fall', chiwen_ult_end: null, chiwen_draw_first: 'cloth', chiwen_scales: null, chiwen_gurgle: null,
+  chiwen_ult_fall: 'debris_fall', chiwen_ult_end: null, chiwen_ult_tail: 'impact_water', chiwen_draw_first: 'cloth', chiwen_scales: null, chiwen_gurgle: null,
   chiwen_roar_low: null, chiwen_bubble: null, chiwen_tank: 'magIn', chiwen_eyes: null, chiwen_inspect: null, chiwen_crisis: 'impact_water',
-  chiwen_final: 'impact_water', chiwen_idle: null,
+  chiwen_final: 'impact_water', chiwen_idle: null, chiwen_head: 'impact_glass',
 };
 function sfx(g, name, o = {}) {
   const au = g.audio;
@@ -79,7 +86,7 @@ function sys(g) {
   // 寒潮 mark scales: a small fish-scale card, double sided, additive ice
   const sh = new THREE.Shape();
   sh.moveTo(0.05, -0.035); sh.lineTo(0.05, 0.035); sh.lineTo(-0.012, 0.035); sh.absarc(-0.012, 0, 0.035, Math.PI / 2, Math.PI * 1.5, false); sh.lineTo(0.05, -0.035);
-  S.scaleMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(sh, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 2.6, 3.6), transparent: true, opacity: 0.85,
+  S.scaleMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(sh, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 3.2, 4.4), transparent: true, opacity: 0.9,
     blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), SCALE_MAX);
   S.scaleMesh.frustumCulled = false; S.scaleMesh.count = 0; S.scaleMesh.renderOrder = 12;
   g.scene.add(S.scaleMesh);
@@ -146,7 +153,7 @@ function sysUpdate(g, S, dt) {
         // tangent-facing card, tilted like a scale lifting off the body
         _q.setFromEuler(new THREE.Euler(0.35, -ang, 0.25 * Math.sin(now * 3 + j)));
         const pop = Math.min(1, (now - mk.born) / 0.18);
-        _m.compose(_b, _q, _s.setScalar(0.7 + 0.5 * pop));
+        _m.compose(_b, _q, _s.setScalar((1.2 + 1.0 * pop) * (1 + 0.08 * Math.sin(now * 5 + j))));
         S.scaleMesh.setMatrixAt(m++, _m);
       }
     }
@@ -228,6 +235,7 @@ function detonate(ws, g, z) {
   sfx(g, 'chiwen_mark_burst', { pos: c, volume: 0.8 });
   areaHit(ws, g, c, mk.r ?? 2, mk.burst ?? 80, { knock: 3, falloff: 0.6, tag: 'burst' });
   meterEvent(ws, 'detonate');
+  heavy(ws, g, 0.04, 0.09);
 }
 
 /** 回潮 water bead: rises off the kill, then homes on the nearest zombie (60). */
@@ -284,27 +292,57 @@ function splashFx(g, p, k = 1) {
   P.spawn({ x: p.x, y: p.y, z: p.z, vy: 0.2, life: 0.6, size: 0.18 * k, size1: 0.55 * k, sizePow: 0.5, color: [...MIST, 0.3], color1: [...MIST, 0], frame: FRAME.puff + ((R() * 4) | 0), lit: true, drag: 2 });
 }
 
-/** Mouth crown for each shot: a hollow ice ring, six short rays, a breath of mist (viewmodel layer). */
+/**
+ * Mouth crown for each shot (§1.7.1 beat 4: "冰青光冠，中心挖空＋小水霧"): two hollow ice rings punched out of the
+ * 螭吻's mouth, eight short rays (white / ice), a crown of water drops thrown forward, a breath of mist. Viewmodel
+ * layer; the gun's own fireball is kept small (def.fx.flashScale) so this reads as the muzzle.
+ */
 function crown(g, n) {
   const vm = g.vm, P = g.fx?.particles, c = vm?.socketCam?.('muzzle', _a);
   if (!P || !c) return;
   const f = _b.set(0, 0, -1).applyQuaternion(vm.gunRoot.quaternion);
   const u = _c.set(0, 1, 0).applyQuaternion(vm.gunRoot.quaternion), w = _d.crossVectors(f, u).normalize();
-  const rot = (n % 2) * 0.5236;
-  for (let i = 0; i < 6; i++) {
-    const a = rot + i * 1.0472, col = i % 2 ? ICE : WHITE;
+  const rot = (n % 2) * 0.3927;
+  for (let i = 0; i < 8; i++) {
+    const a = rot + i * 0.7854, col = i % 2 ? ICE : WHITE, L = i % 2 ? 1 : 1.35;
     _e.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a));
-    P.spawn({ additive: true, vm: true, x: c.x + _e.x * 0.012 + f.x * 0.008, y: c.y + _e.y * 0.012 + f.y * 0.008, z: c.z + _e.z * 0.012 + f.z * 0.008,
-      vx: _e.x * 2.2 + f.x * 0.6, vy: _e.y * 2.2 + f.y * 0.6, vz: _e.z * 2.2 + f.z * 0.6, life: 0.065, size: 0.0045, stretch: 0.02,
-      color: [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5, 1], color1: [col[0] * 0.2, col[1] * 0.2, col[2] * 0.2, 0], frame: FRAME.spark, drag: 8 });
+    P.spawn({ additive: true, vm: true, x: c.x + _e.x * 0.016 + f.x * 0.01, y: c.y + _e.y * 0.016 + f.y * 0.01, z: c.z + _e.z * 0.016 + f.z * 0.01,
+      vx: (_e.x * 2.6 + f.x * 0.9) * L, vy: (_e.y * 2.6 + f.y * 0.9) * L, vz: (_e.z * 2.6 + f.z * 0.9) * L, life: 0.07, size: 0.005, stretch: 0.028 * L,
+      color: [col[0] * 1.6, col[1] * 1.6, col[2] * 1.6, 1], color1: [col[0] * 0.2, col[1] * 0.2, col[2] * 0.2, 0], frame: FRAME.spark, drag: 9 });
   }
-  P.spawn({ additive: true, vm: true, x: c.x + f.x * 0.012, y: c.y + f.y * 0.012, z: c.z + f.z * 0.012, mode: 'flat', dir: [f.x, f.y, f.z], life: 0.075,
-    size: 0.03, size1: 0.11, sizePow: 0.5, color: [ICE[0] * 0.9, ICE[1] * 0.9, ICE[2] * 0.9, 1], color1: [DEEP[0] * 0.2, DEEP[1] * 0.2, DEEP[2] * 0.2, 0], frame: FRAME.thinRing, rot });
-  // water mist and a couple of droplets out of the mouth (ignore part of the camera motion: they hang in the air)
+  // the crown: an outer ice ring and an inner white one, both hollow (the centre stays clear)
+  P.spawn({ additive: true, vm: true, x: c.x + f.x * 0.014, y: c.y + f.y * 0.014, z: c.z + f.z * 0.014, mode: 'flat', dir: [f.x, f.y, f.z], life: 0.085,
+    size: 0.03, size1: 0.13, sizePow: 0.45, color: [ICE[0], ICE[1], ICE[2], 1], color1: [DEEP[0] * 0.3, DEEP[1] * 0.3, DEEP[2] * 0.3, 0], frame: FRAME.thinRing, rot });
+  P.spawn({ additive: true, vm: true, x: c.x + f.x * 0.03, y: c.y + f.y * 0.03, z: c.z + f.z * 0.03, mode: 'flat', dir: [f.x, f.y, f.z], life: 0.06,
+    size: 0.018, size1: 0.07, sizePow: 0.5, color: [WHITE[0] * 0.8, WHITE[1] * 0.8, WHITE[2] * 0.8, 1], color1: [ICE[0] * 0.2, ICE[1] * 0.2, ICE[2] * 0.2, 0], frame: FRAME.thinRing, rot: rot + 0.4 });
+  P.spawn({ additive: true, vm: true, x: c.x, y: c.y, z: c.z, life: 0.035, size: 0.03, size1: 0.012, color: [5, 6.5, 7, 1], color1: [1, 2.5, 3.5, 0], frame: FRAME.glow });
+  // water crown: drops thrown forward and out of the mouth (they keep part of the camera motion: they hang)
+  for (let i = 0; i < 5; i++) {
+    const a = R() * 6.283, sp = 0.8 + R() * 0.9;
+    _e.copy(u).multiplyScalar(Math.cos(a)).addScaledVector(w, Math.sin(a));
+    P.spawn({ vm: true, x: c.x + f.x * 0.01, y: c.y + f.y * 0.01, z: c.z + f.z * 0.01, vx: f.x * 1.6 + _e.x * sp, vy: f.y * 1.6 + _e.y * sp + 0.25, vz: f.z * 1.6 + _e.z * sp,
+      life: 0.3 + R() * 0.15, size: 0.0028, stretch: 0.012, color: [0.9, 0.96, 1, 0.95], color1: [0.9, 0.96, 1, 0], frame: FRAME.drop, gravity: 4, inertia: 0.45 });
+  }
+  // a breath of mist out of the mouth
   P.spawn({ vm: true, x: c.x + f.x * 0.02, y: c.y + f.y * 0.02, z: c.z + f.z * 0.02, vx: f.x * 0.5 + (R() - 0.5) * 0.1, vy: f.y * 0.5 + 0.05, vz: f.z * 0.5,
-    life: 0.35, size: 0.02, size1: 0.07, sizePow: 0.5, color: [...MIST, 0.22], color1: [...MIST, 0], frame: FRAME.smoke + ((R() * 2) | 0), drag: 3, inertia: 0.6 });
-  if (R() < 0.5) P.spawn({ vm: true, x: c.x, y: c.y, z: c.z, vx: f.x * 0.8 + (R() - 0.5) * 0.3, vy: 0.3 + R() * 0.3, vz: f.z * 0.8 + (R() - 0.5) * 0.3, life: 0.35, size: 0.0025,
-    stretch: 0.01, color: [0.9, 0.96, 1, 0.9], color1: [0.9, 0.96, 1, 0], frame: FRAME.drop, gravity: 3, inertia: 0.4 });
+    life: 0.4, size: 0.022, size1: 0.08, sizePow: 0.5, color: [...MIST, 0.24], color1: [...MIST, 0], frame: FRAME.smoke + ((R() * 2) | 0), drag: 3, inertia: 0.6 });
+}
+
+/** 潮彈 impact on a body: water burst + a hollow ice ring (x1.3 and a second ring for a headshot, §1.10). */
+function impact(g, p, head = false) {
+  const P = g.fx?.particles;
+  splashFx(g, p, head ? 0.6 : 0.45);
+  if (!P) return;
+  const k = head ? 1.3 : 1;
+  P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.13, size: 0.12 * k, size1: 0.5 * k, sizePow: 0.5, color: [ICE[0] * 0.7, ICE[1] * 0.7, ICE[2] * 0.7, 0.9], color1: [DEEP[0] * 0.2, DEEP[1] * 0.2, DEEP[2] * 0.2, 0], frame: FRAME.thinRing, rot: R() * 6 });
+  P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.07, size: 0.22 * k, size1: 0.08, color: [...WHITE, 1], color1: [...ICE, 0], frame: FRAME.glint, rot: R() * 6 });
+  if (head) P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.15, size: 0.2, size1: 0.9, sizePow: 0.4, color: [...ICE, 0.8], color1: [0, 0, 0, 0], frame: FRAME.thinRing, rot: R() * 6 });
+}
+/** Heavy-hit feel: a short hit-stop (rate-limited so a spray never stutters) and a bump of shake. */
+function heavy(ws, g, stop, trauma) {
+  const cw = cwOf(ws);
+  if (g.time - (cw.stopAt ?? -9) > 0.28) { cw.stopAt = g.time; if (clipComfort.hitstop) g.hitStop?.(stop); }
+  shake(g, trauma);
 }
 
 /** KE_FROST: white frost covers the body for 0.3 s, then it breaks into ice crystals (+ a couple of glaze shards). */
@@ -379,12 +417,13 @@ function pop(g, c, k = 1) {
   P?.spawn({ additive: true, vm: true, x: c.x, y: c.y, z: c.z, life: 0.12, size: 0.01 * k, size1: 0.03 * k, color: [1.4, 2.4, 3, 1], color1: [0, 0, 0, 0], frame: FRAME.thinRing });
 }
 /** Scale groups ripple rear -> front (setPart staggers by extras.order) and the seams flare. */
-function ripple(g, k = 1) {
+function ripple(g, k = 1, rest = 0) {
   const vm = g.vm;
   if (!vm?.weapon?.parts?.fx_scale1) return;
   vm.setPart('fx_scale*', k, 0.07, 0.045);
   vm.glowTo(2.6 * k, 0.08, { mat: 'glow_ice' });
-  const back = () => { vm.setPart('fx_scale*', 0, 0.16, 0.045); vm.glowTo(1, 0.4, { mat: 'glow_ice' }); };
+  // back to rest: closed, or (ready) held a little open so the lit seams show (§1.17: a full meter moves a part)
+  const back = () => { vm.setPart('fx_scale*', rest, 0.16, 0.045); vm.glowTo(rest ? 1.5 : 1, 0.4, { mat: 'glow_ice' }); };
   setTimeout(back, 140);   // presentation-only: wall clock is fine (a stale call just re-closes them)
 }
 
@@ -401,6 +440,8 @@ function view(ws, g, dt) {
     later(ws, 0.05, () => { if (vm.weapon === w) vm.glowTo(st?.u?.pCharge?.value ?? 0.4, 0.3, { u: 'pCharge' }); });
   }
   v.t += dt;
+  // idle hum (§1.12: 55-110 Hz + a swept band of noise, 24-30 dB under the shot): while held, stopped in tick()
+  if (!cw.hum && g.audio?.has?.('chiwen_idle')) cw.hum = sfx(g, 'chiwen_idle', { loop: true, volume: 0.1 });
   const ready = canCast(ws, 'ult').ok, act = !!cw.beam || !!cw.ult;
   // ---- jaw: per-shot kick (3°), wide for the beam / ultimate, a slow breathing gape while ready
   const jp = ps(vm, 'fx_jaw');
@@ -426,11 +467,19 @@ function view(ws, g, dt) {
     if (ar) ar.fireCd = Math.max(ar.fireCd, 0.08);
     if ((v.kickT -= dt) <= 0) { v.kickT = 0.06; vm.kick({ back: 0.003, up: 0.25, side: 0.25, roll: 0.3 }); }
   }
+  // ---- the scales breathe (0.4 Hz, ~0.5°) at rest; held a little open while ready (unless a ripple / clip moves them)
+  const sb = ready && !act ? 0.4 : 0.06 + 0.06 * Math.sin(v.t * 2.513);
+  for (let i = 1; i <= 6; i++) { const q = ps(vm, 'fx_scale' + i); if (!q.tw) q.v = sb; }
   // ---- ready (§1.7.1 beat 7): eyes light + the scales flare in a wave, droplets; again every 2.5 s
   if (ready && !act) {
-    if (!cw.readyN) { cw.readyN = true; cw.readyT = 0; eyes(g); ripple(g); droplets(g, 8); sfx(g, 'chiwen_eyes', { volume: 0.5 }); }
-    else if ((cw.readyT += dt) >= 2.5) { cw.readyT = 0; if (g.hud?.settings?.readyReminder !== false) { eyes(g, 0.8); ripple(g, 0.7); droplets(g, 4, ['mouth']); } }
-  } else cw.readyN = false;
+    if (!cw.readyN) { cw.readyN = true; cw.readyT = 0; eyes(g); ripple(g, 1, 0.4); droplets(g, 8); sfx(g, 'chiwen_eyes', { volume: 0.5 }); }
+    else if ((cw.readyT += dt) >= 2.5) {
+      cw.readyT = 0;
+      // at rest the ready layer's 'chiwen_shiver' clip runs the scale wave; in a fight the ripple does
+      const calm = ar?.state === 'idle' && (ar.sinceShot ?? 9) > 1;
+      if (g.hud?.settings?.readyReminder !== false) { eyes(g, 0.8); if (!calm) ripple(g, 0.8, 0.4); droplets(g, 4, ['mouth']); }
+    }
+  } else if (cw.readyN) { cw.readyN = false; vm.setPart('fx_scale*', 0, 0.3, 0.03); vm.glowTo(1, 0.3, { mat: 'glow_ice' }); }
   // ---- idle life: up to 6 frost glints round the gun, a bubble every 12 s (rare idle)
   const idle = ar?.state === 'idle' && !vm.clip.active && (ar.sinceShot ?? 9) > 1.5 && !act;
   if (idle && (v.glintT -= dt) <= 0) {
@@ -464,7 +513,7 @@ function cwEvent(ws, g, a) {
     const c = vm.socketCam('tube', _a);
     if (c) for (let i = 0; i < 3; i++) g.fx?.particles.spawn({ additive: true, vm: true, x: c.x, y: c.y, z: c.z, delay: i * 0.08, mode: 'flat', dir: [1, 0, 0], life: 0.35, size: 0.01, size1: 0.05, color: [...ICE, 1], color1: [0, 0, 0, 0], frame: FRAME.thinRing, rot: i });
     sfx(g, 'chiwen_gurgle', { volume: 0.6 });
-  } else if (what === 'world') worldInspect(ws, g);
+  } else if (what === 'world') { worldInspect(ws, g); sfx(g, 'chiwen_inspect', { volume: 0.6 }); }
   else if (what === 'tail') cw.view.tailV += a?.v ?? 18;
 }
 
@@ -491,6 +540,7 @@ registerSpecial(ID, {
     const g = ctx.game, cw = cwOf(ws);
     if (g.arsenal?.current === ws) { crown(g, ws.shots); if (g.vm?.partState) ps(g.vm, 'fx_jaw').kick = 1; }
     sfx(g, 'chiwen_fire', { volume: 0.25 });
+    shake(g, 0.025);
     // a round that struck no body still splashes where it lands (wall / floor), not in open sky
     if (!cw.shotHit && ctx.end && ctx.end.distanceTo(ctx.origin) < (ws.def.range?.[1] ?? 90)) {
       splashFx(g, ctx.end, 0.55);
@@ -505,16 +555,18 @@ registerSpecial(ID, {
     if (!z?.center) return;
     cw.shotHit = true;
     const p = info.point || z.center(V3());
-    splashFx(g, p, 0.45);
+    impact(g, p, !!info.headshot);
+    if (info.headshot) sfx(g, 'chiwen_head', { pos: p, volume: 0.35 });
     const sp = ws.def.splash;
     if (sp) areaHit(ws, g, p, sp.r, sp.dmg, { exclude: z, knock: 0.6, falloff: 0.5, tag: 'splash' });
     if (cw.marks.has(z)) detonate(ws, g, z);
     else if (z.alive && R() < (ws.def.special.passive?.mark?.chance ?? 0.25)) mark(ws, g, z);
-    if (res?.killed) killFx(ws, g, z, p, true);
+    if (res?.killed) { killFx(ws, g, z, p, true); heavy(ws, g, info.headshot ? 0.045 : 0.03, info.headshot ? 0.1 : 0.06); }
   },
   update(ws, dt, g) { view(ws, g, dt); },
   tick(ws, dt, g) {
     const cw = cwOf(ws);
+    if (cw.hum && g.arsenal?.current !== ws) { cw.hum.stop?.(0.2); cw.hum = null; }
     runQueue(cw, dt);
     for (const [z, mk] of cw.marks) if (!z.alive || mk.until <= g.time) cw.marks.delete(z);
     if (cw.beads.length) tickBeads(ws, g, dt);
@@ -525,6 +577,7 @@ registerSpecial(ID, {
     cw.marks.clear();
     for (const b of cw.beads) b.trail?.stop();
     cw.beads.length = 0;
+    cw.hum?.stop?.(0.1); cw.hum = null;
     if (g?._cw?.marksWs === ws) g._cw.marksWs = null;
   },
   meterInfo(ws, key, m) {
@@ -569,7 +622,7 @@ registerSkill('frostRay', {
     const cw = cwOfK(k);
     if (cw) cw.beam = k;
     // L4 for the caster only: the 浪管 wave pipe (a 220° curl of water over the top and right), FOV -2°
-    if (k.level >= 4 && clipComfort.overlay) d.tunnel = g.fx?.overlay?.tunnel?.(Infinity, { look: 'wave' });
+    if (k.level >= 4 && clipComfort.overlay) d.tunnel = g.fx?.overlay?.tunnel?.(Infinity, { look: 'wave', amt: 0.8 });
     g.arsenal?.fovHold?.(-2, 0.25);
     g.hud?.border?.(CY, 0.12, k.p.dur);
   },
@@ -582,21 +635,27 @@ registerSkill('frostRay', {
     const m = k.muzzle(_f);
     // the ray: white core in an ice sheath, two wobbling water strands round it
     if (!d.beam && fx?.beam) {
-      d.beam = fx.beam(m.clone(), end.clone(), { core: WHITE, glow: [0.5, 1.5, 2.8], wCore: 0.06, wGlow: 0.24, life: Infinity, scroll: 3 });
+      d.beam = fx.beam(m.clone(), end.clone(), { core: WHITE, glow: [0.5, 1.5, 2.8], wCore: 0.07, wGlow: 0.32, life: Infinity, scroll: 3 });
       d.s1 = fx.bolt?.(m.clone(), end.clone(), { col: ICE, glow: [0.25, 0.7, 1.5], width: 0.11, core: 0.12, levels: 4, jitter: 0.012, branches: 0, regen: 0.045, life: Infinity });
       d.s2 = fx.bolt?.(m.clone(), end.clone(), { col: [0.9, 2.2, 4], glow: [0.15, 0.4, 1.2], width: 0.07, core: 0.15, levels: 3, jitter: 0.02, branches: 0, regen: 0.06, life: Infinity });
     }
     d.beam?.set(m, end); d.s1?.set(m, end); d.s2?.set(m, end);
-    // the struck end: frost sparks, spray and mist
+    // the struck end: a white-hot bloom, an ice ring every 0.25 s, frost sparks, spray and mist
+    if ((d.ringT = (d.ringT ?? 0) - dt) <= 0) {
+      d.ringT = 0.25;
+      fx?.particles.spawn({ additive: true, x: end.x, y: end.y, z: end.z, life: 0.22, size: 0.25, size1: 1.1, sizePow: 0.5, color: [...ICE, 0.9], color1: [0, 0, 0, 0], frame: FRAME.thinRing, rot: k.rng() * 6 });
+    }
     if ((d.endT -= dt) <= 0) {
       d.endT = 0.05;
+      fx?.particles.spawn({ additive: true, x: end.x, y: end.y, z: end.z, life: 0.08, size: 0.55 + k.rng() * 0.2, size1: 0.4, color: [WHITE[0] * 0.6, WHITE[1] * 0.6, WHITE[2] * 0.6, 1], color1: [...ICE, 0], frame: FRAME.glow });
       fx?.sparkBurst(end, { color: WHITE, color1: ICE, count: 3, speed: 4, glow: 0.3 });
       if (k.rng() < 0.4) splashFx(g, end, 0.6);
       if (k.rng() < 0.3) fx?.motes?.burst?.('frost', end, 2, { speed: 1.2, radius: 0.2, seed: k.ev.seed + ((k.t * 100) | 0) });
     }
-    // mist off the mouth (world layer, it drifts back over the hands)
+    // mist off the mouth (world layer, it drifts back over the hands) and the mouth's glow
     if ((d.mistT -= dt) <= 0) {
       d.mistT = 0.07;
+      fx?.particles.spawn({ additive: true, x: m.x, y: m.y, z: m.z, life: 0.09, size: 0.09, size1: 0.07, color: [WHITE[0] * 0.5, WHITE[1] * 0.5, WHITE[2] * 0.5, 1], color1: [...ICE, 0], frame: FRAME.glow });
       fx?.particles.spawn({ x: m.x, y: m.y, z: m.z, vx: _d.x * 0.6, vy: 0.15, vz: _d.z * 0.6, life: 0.5, size: 0.06, size1: 0.22, sizePow: 0.5, color: [...MIST, 0.25], color1: [...MIST, 0], frame: FRAME.smoke + (k.rng() < 0.5 ? 1 : 0), drag: 2.5 });
     }
     // ice spikes stride out along the floor under the ray (near -> far), each cluster a slow zone + aura source
@@ -612,7 +671,7 @@ registerSkill('frostRay', {
     }
     if (!k.local) return;
     if ((d.acc += dt) >= p.tick) { d.acc -= p.tick; k.hitRay(eye, _d, len, p.dps * p.tick, { pierce: p.pierce, knock: 0.3, stagger: 0.4, headMul: 1.2 }); }
-    if (g.shake < 0.05) g.addShake(0.05 - g.shake);   // a steady 0.05 trauma while it runs
+    if (g.shake < 0.05) shake(g, 0.05 - g.shake);   // a steady 0.05 trauma while it runs
   },
   end(k) {
     const g = k.game, d = k.data;
@@ -649,14 +708,18 @@ registerSkill('tideOrb', {
   },
   update(k, dt) {
     const g = k.game, d = k.data, p = k.p, P = g.fx?.particles;
-    // roll forward (stops at a wall), riding ~ the cast height above the floor (0.6 .. 1.3 m)
+    // roll forward riding ~ the cast height above the floor (0.6 .. 1.3 m); it climbs over a lip / kerb / crate (clear
+    // 1 m higher) and stops at a wall
     if (!d.blocked && d.dist < p.range) {
-      const step = p.speed * dt;
-      if (g.world?.collision?.raycast(d.pos, d.dir, step + 0.35)) d.blocked = true;
-      else { d.pos.addScaledVector(d.dir, step); d.dist += step; }
+      const step = p.speed * dt, col = g.world?.collision;
+      if (col?.raycast(d.pos, d.dir, step + 0.35)) {
+        if (!col.raycast(_b.copy(d.pos).setY(d.pos.y + 1.0), d.dir, step + 0.35) && (d.lift || 0) < 1.6) d.lift = (d.lift || 0) + 4 * dt;
+        else d.blocked = true;
+      } else { d.pos.addScaledVector(d.dir, step); d.dist += step; d.lift = Math.max(0, (d.lift || 0) - 1.5 * dt); }
     }
     const fy = k.floorY(d.pos);
-    d.pos.y = damp(d.pos.y, fy + clamp(d.h, 0.6, 1.3), 6, dt);
+    const ride = fy + clamp(d.h, 0.6, 1.3) + (d.lift || 0);
+    d.pos.y = d.lift > 0 && d.pos.y < ride ? Math.min(ride, d.pos.y + 3 * dt) : damp(d.pos.y, ride, 6, dt);
     if (d.ghost) { d.ghost.obj.position.copy(d.pos); d.ghost.base.copy(d.pos); d.ghost.obj.rotation.y += dt * 4; d.ghost.obj.rotation.x += dt * 2.5; }
     // dripping, misting, a swirl of light inside
     if ((d.dripT -= dt) <= 0) {
@@ -697,7 +760,7 @@ function pulse(k, last) {
   if (!k.local) return;
   // pull ~1 m toward the centre (knock < 0) with the damage; falloff keeps the edge meaningful
   k.hurt(_a.set(c.x, fy + 0.9, c.z), p.r, p.dmg, { knock: -p.pull * 7 / 1.2, stagger: 0.7, falloffMin: 0.6, explosive: false });
-  g.addShake(last ? 0.12 : 0.06);
+  shake(g, last ? 0.12 : 0.06);
 }
 
 // 吞潮 (★ held, ultimate): the 5-beat summon (§1.7.3) at the aimed floor point.
@@ -740,26 +803,42 @@ registerSkill('swallowTide', {
       d.sigil = fx?.sigils?.sigil?.(c, { design: 'vortex', radius: p.r, color: ICE, color1: DEEP, intensity: 1.3, life: 3.3, grow: 0.3, spin: -1.6, seed: k.ev.seed });
       fx?.sigils?.ring?.(c, { r1: p.r, color: [1.4, 3, 4], life: 0.5 });
       sfx(g, 'chiwen_ult_vortex', { pos: c, volume: 0.9 });
-      if (k.local) g.addShake(0.1);
+      if (k.local) shake(g, 0.1);
     }
     // ③ 0.6 the water 螭吻 bursts out of it (rising GHOST), water and rubble thrown up, the screen streaks (caster)
     if (d.beat < 2 && t >= 0.6) {
       d.beat = 2;
       const big = k.level >= 3;
-      d.ghost = fx?.summons?.ghost?.({ shape: 'serpent', pos: c, yaw: d.yaw, size: big ? 9.5 : 6, motion: 'rise', appear: 0.42, life: Infinity, out: 0.55,
-        base: [0.5, 0.74, 1.0], core: [1.0, 2.8, 4.2], rim: [1.2, 3.0, 5.2], edge: WHITE, opacity: 0.52, glaze: 1.4, flowSpeed: 0.9,
-        wave: { amp: 0.05, hz: 0.6, axis: [1, 0, 0], len: 1.2 }, exit: { kind: 'spray', count: big ? 70 : 30, speed: 5 }, seed: k.ev.seed });
-      if (d.ghost) d.ghost.obj.rotation.order = 'YXZ';
+      // 8-10 m of spirit, but its head (0.79 of its height) is kept where the caster can see it: <= ~20° above eye
+      // level at the vortex distance (a 10 m spirit cast at 10 m would roar off the top of the screen)
+      const dist = Math.hypot(c.x - k.pos.x, c.z - k.pos.z);
+      const size = big ? Math.min(10, Math.max(6.2, (1.7 + dist * Math.tan(20 * Math.PI / 180)) / 0.79)) : 5.5;
+      d.ghost = fx?.summons?.ghost?.({ mesh: chiwenSpirit(), pos: c, yaw: d.yaw, size, motion: 'rise', appear: 0.42, life: Infinity, out: 0.55,
+        base: [0.46, 0.72, 1.0], core: [1.0, 2.8, 4.2], rim: [1.2, 3.0, 5.2], edge: WHITE, opacity: 0.5, glaze: 1.5, flowSpeed: 0.9,
+        wave: { amp: 0.035, hz: 0.55, axis: [1, 0, 0], len: 1.1 }, exit: { kind: 'spray', count: big ? 80 : 34, speed: 5 }, seed: k.ev.seed });
+      if (d.ghost) { d.ghost.obj.rotation.order = 'YXZ'; d.parts = spiritParts(d.ghost); d.parts.setJaw(0); d.parts.setTail(0); }
       burstUp(k, c, big ? 1 : 0.6);
       sfx(g, 'chiwen_ult_roar', k.local ? { volume: 1 } : { pos: c });
-      if (k.local) { g.addShake(0.3); if (clipComfort.overlay) fx?.overlay?.radial?.(0.85, 0.5, { color: [0.7, 1.4, 2] }); }
+      if (k.local) { shake(g, 0.3); if (clipComfort.overlay) fx?.overlay?.radial?.(0.85, 0.5, { color: [0.7, 1.4, 2] }); }
     }
     const h = d.ghost;
     if (h?.alive) {
-      // posture: rise, lean to roar (1.0), duck and bite (1.1-1.7), rear back and spit (1.8-3.0), sink (3.0+)
-      const lean = t < 1.0 ? 0 : t < 1.6 ? -0.28 * Math.sin((t - 1.0) / 0.6 * Math.PI) : t < 3.0 ? 0.12 * Math.sin((t - 1.8) * 7.85) * Math.max(0, 1 - (t - 2.8) * 4) : 0;
-      h.obj.rotation.x = damp(h.obj.rotation.x, lean, 10, dt);
-      if (t >= 1.05 && !d.ducked) { d.ducked = true; h.lunge?.(_a.set(c.x, c.y - 2.6, c.z), 0.6); }
+      // posture (rotation.x > 0 rears back): rise and rear to roar (0.6-1.1), dive at the vortex with the jaws wide
+      // (1.1-1.55), snap shut (1.62), rear up, a forward jerk for each spit (1.8 / 2.2 / 2.6), settle and sink (3.0+)
+      const sp = (a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+      const spitK = d.spits > 0 ? Math.max(0, 1 - (t - (1.8 + (d.spits - 1) * 0.4)) / 0.3) : 0;
+      const lean = t < 1.1 ? 0.18 * sp(0.6, 1.0) : t < 1.62 ? 0.18 - 0.62 * Math.sin(sp(1.1, 1.55) * Math.PI * 0.5) : t < 1.8 ? -0.44 + 0.62 * sp(1.62, 1.8) : t < 3.0 ? 0.18 - 0.22 * spitK : 0.18 - 0.3 * sp(3.0, 3.5);
+      h.obj.rotation.x = damp(h.obj.rotation.x, lean, 14, dt);
+      if (t >= 1.12 && !d.ducked) { d.ducked = true; h.lunge?.(_a.set(c.x, c.y - 2.2, c.z), 0.62); }
+      const jaw = t < 0.75 ? 0 : t < 1.1 ? 0.55 * sp(0.75, 0.95) : t < 1.55 ? 0.55 + 0.25 * sp(1.1, 1.3) : t < 1.62 ? 0.8 * (1 - sp(1.55, 1.62)) : t < 3.0 ? 0.08 + 0.5 * spitK : 0.1;
+      d.jaw = damp(d.jaw ?? 0, jaw, t > 1.5 && t < 1.65 ? 60 : 16, dt);
+      d.parts?.setJaw(d.jaw);
+      // the fish tail breaches behind it (1.15-1.45), sways, slaps the water with the bite, sinks at 3.0
+      const rise = t < 1.15 ? 0 : t < 3.0 ? sp(1.15, 1.45) : 1 - sp(3.0, 3.4);
+      const slap = t > 1.5 && t < 1.95 ? Math.sin(sp(1.5, 1.95) * Math.PI) * 0.7 : 0;
+      d.parts?.setTail(rise, Math.sin(t * 3.1) * 0.35, slap);
+      if (!d.tailUp && t >= 1.18) { d.tailUp = true; tailSplash(k, h, 1); }
+      if (!d.tailSlap && t >= 1.72) { d.tailSlap = true; tailSplash(k, h, 1.6); }
     }
     // ④a 1.1-1.6 吞: everything within 12 m is dragged toward the mouth; 1.6 the bite
     if (d.beat < 3 && t >= 1.1) {
@@ -776,7 +855,7 @@ registerSkill('swallowTide', {
       groundDust(k, c, 2.5, 10);
       h?.flash?.(1.5);
       sfx(g, 'chiwen_ult_bite', { pos: c, volume: 1 });
-      if (k.local) { k.hurt(_a.set(c.x, c.y + 0.9, c.z), p.biteR, p.bite, { knock: 3, stagger: 1, falloffMin: 1, explosive: false }); g.hitStop?.(clipComfort.hitstop ? 0.1 : 0); g.addShake(0.4); }
+      if (k.local) { k.hurt(_a.set(c.x, c.y + 0.9, c.z), p.biteR, p.bite, { knock: 3, stagger: 1, falloffMin: 1, explosive: false }); g.hitStop?.(clipComfort.hitstop ? 0.1 : 0); shake(g, 0.4); }
     }
     // ④b 1.8 / 2.2 / 2.6 吐: three water columns on the densest groups
     if (d.beat >= 4 && d.spits < 3 && t >= 1.8 + d.spits * 0.4) {
@@ -884,7 +963,7 @@ function spit(k, tp) {
   const g = k.game, fx = g.fx, d = k.data, p = k.p;
   const at = V3().set(tp.x, k.floorY(_a.set(tp.x, tp.y + 1, tp.z)), tp.z);
   const head = V3();
-  if (d.ghost?.alive) d.ghost.obj.localToWorld(head.set(0, 1.0, -0.12)); else head.set(d.c.x, d.c.y + 6, d.c.z);
+  if (d.ghost?.alive) d.ghost.obj.localToWorld(head.set(0, 0.71, -0.36)); else head.set(d.c.x, d.c.y + 6, d.c.z);
   fx?.beam?.(head, _a.set(at.x, at.y + 0.5, at.z), { core: WHITE, glow: [0.5, 1.4, 2.8], wCore: 0.12, wGlow: 0.5, life: 0.28, shrink: 0.2 });
   for (let i = 0; i < 10; i++) {
     const u = k.rng();
@@ -893,6 +972,7 @@ function spit(k, tp) {
   }
   later2(k, 0.12, () => {
     fx?.sigils?.pillar?.(at, { radius: 1.3, height: 9, color: [1.2, 3.2, 4.6], color1: [3, 4.6, 5.6], life: 0.8, rise: true, motes: 10, ring: true });
+    geyser(k, at, 1);
     fx?.impact?.(SURF.water, _a.set(at.x, at.y + 0.02, at.z), UP, _b.set(0, -1, 0), { decal: false, big: 2.6 });
     splashFx(g, _a.set(at.x, at.y + 0.3, at.z), 2.2);
     groundDust(k, at, 1.6, 7);
@@ -902,9 +982,35 @@ function spit(k, tp) {
     k.hurt(_a.set(at.x, at.y + 0.9, at.z), p.spitR, p.spit, { knock: 5, stagger: 1, falloffMin: 0.55, explosive: false });
     // 拋起: the host tosses them up (a guest's caster only shoves)
     if (g.zombies?.authority) for (const z of g.zombies.inRadius(at, p.spitR)) if (z.alive && z.kvel && !z.def?.boss) z.kvel.y = Math.max(z.kvel.y || 0, 5.5);
-    g.addShake(0.25);
+    shake(g, 0.25);
     g.arsenal?._clipEvent?.('haptic', 'thud');
   });
+}
+/** A water column bursting up: a sheath of streaking drops, a foaming cap that falls back, mist (every client). */
+function geyser(k, at, s = 1) {
+  const P = k.game.fx?.particles;
+  if (!P) return;
+  for (let i = 0; i < 46 * s; i++) {
+    const a = k.rng() * 6.283, r = k.rng() * 1.1 * s, up = 7 + k.rng() * 9;
+    P.spawn({ x: at.x + Math.cos(a) * r, y: at.y + 0.2, z: at.z + Math.sin(a) * r, vx: Math.cos(a) * (0.6 + k.rng() * 1.6), vy: up, vz: Math.sin(a) * (0.6 + k.rng() * 1.6),
+      life: 1.1 + k.rng() * 0.6, size: 0.05 + k.rng() * 0.05, stretch: 0.06, color: [0.88, 0.95, 1, 0.9], color1: [0.88, 0.95, 1, 0], frame: FRAME.drop, gravity: 9.8 });
+  }
+  for (let i = 0; i < 7 * s; i++) {
+    const a = (i / 7) * 6.283;
+    P.spawn({ x: at.x + Math.cos(a) * 0.6, y: at.y + 1 + k.rng() * 5, z: at.z + Math.sin(a) * 0.6, vx: Math.cos(a) * 0.8, vy: 1.5 + k.rng() * 2, vz: Math.sin(a) * 0.8,
+      life: 1.4, size: 0.7 * s, size1: 1.9 * s, sizePow: 0.5, color: [...MIST, 0.32], color1: [...MIST, 0], frame: FRAME.puff + (i % 4), lit: true, drag: 1.2, gravity: 1.5 });
+  }
+}
+/** The spirit's tail breaking / slapping the water behind it. */
+function tailSplash(k, h, s = 1) {
+  const fx = k.game.fx, p = h.obj.localToWorld(_d.set(0.05, 0.02, 0.62));
+  p.y = k.floorY(_e.set(p.x, p.y + 1, p.z));
+  fx?.impact?.(SURF.water, _e.set(p.x, p.y + 0.02, p.z), UP, _f.set(0, -1, 0), { decal: false, big: 2.2 * s });
+  splashFx(k.game, _e.set(p.x, p.y + 0.3, p.z), 1.8 * s);
+  fx?.shockwave(_e.set(p.x, p.y + 0.06, p.z), { normal: UP, r0: 0.4, r1: 2.6 * s, life: 0.5, color: [1.2, 2.6, 3.4], thin: false });
+  groundDust(k, p, 1.4, 6);
+  sfx(k.game, 'chiwen_ult_tail', { pos: p, volume: 0.8 * s });
+  if (k.local && s > 1) shake(k.game, 0.12);
 }
 /** Skill-time delayed calls: queued on the instance, run by its own update (they die with it). */
 function later2(k, sec, fn) { (k.data.q ||= []).push([k.t + sec, fn]); }
@@ -915,14 +1021,15 @@ registerSkill('chiwen_crisis', {
   level: 'L1',
   start(k) {
     const g = k.game, fx = g.fx, c = k.feet(V3());
-    const h = fx?.summons?.ghost?.({ shape: 'serpent', pos: c, size: 2.6, motion: 'rise', appear: 0.18, life: 0.85, out: 0.35, base: [0.5, 0.75, 1], core: [1, 2.6, 4],
-      rim: [1.4, 3.2, 5], edge: WHITE, opacity: 0.48, glaze: 1.4, wave: { amp: 0.1, hz: 1.4, axis: [1, 0, 0], len: 1 }, exit: { kind: 'spray', count: 24, speed: 4 }, seed: k.ev.seed });
+    // the water dragon circles the player 1.5 m out (centred on the player it would sweep through the camera)
+    const h = fx?.summons?.ghost?.({ shape: 'serpent', pos: _a.set(c.x + 1.5, c.y, c.z), size: 2.3, motion: 'rise', appear: 0.18, life: 0.85, out: 0.35, base: [0.5, 0.75, 1], core: [1, 2.6, 4],
+      rim: [1.4, 3.2, 5], edge: WHITE, opacity: k.local ? 0.36 : 0.48, glaze: 1.4, wave: { amp: 0.1, hz: 1.4, axis: [1, 0, 0], len: 1 }, exit: { kind: 'spray', count: 24, speed: 4 }, seed: k.ev.seed, big: false });
     // two water ribbons spiral up round the player for a second
     const rib = [0, 1].map(() => fx?.trail?.({ width: 0.14, life: 0.32, color: [1.8, 3.6, 4.6, 0.9], color1: [0.4, 1.1, 2.4, 0], segs: 20 }));
     let t = 0;
     const run = { update: (dt) => {
       t += dt;
-      if (h?.alive) h.obj.rotation.y += dt * 9;
+      if (h?.alive) { const a = t * 6.5; h.base.set(c.x + Math.cos(a) * 1.5, c.y, c.z + Math.sin(a) * 1.5); h.obj.rotation.y = -a; }
       rib.forEach((r, i) => { const a = t * 11 + i * Math.PI, rr = 0.95 + 0.25 * Math.sin(t * 6); r?.push(_a.set(c.x + Math.cos(a) * rr, c.y + 0.15 + t * 1.9, c.z + Math.sin(a) * rr)); });
       if (t > 1.0) { rib.forEach((r) => r?.stop()); g.systems.splice(g.systems.indexOf(run), 1); }
     } };
@@ -942,6 +1049,7 @@ registerSkill('chiwen_final', {
     if (!k.local) { fx?.sigils?.pillar?.(c, { radius: 0.45, height: 7, color: [0.8, 2.4, 3.4], life: 0.7, motes: 4, ring: false }); return; }
     fx?.sigils?.sigil?.(c, { design: 'vortex', radius: 2.2, color: ICE, color1: DEEP, life: 1.2, spin: -1.2, seed: k.ev.seed });
     fx?.sigils?.pillar?.(c, { radius: 0.9, height: 8, color: [1.2, 3.2, 4.6], color1: [3, 4.6, 5.6], life: 0.9, rise: true, motes: 10 });
+    geyser(k, c, 0.7);
     fx?.impact?.(SURF.water, _b.set(c.x, c.y + 0.02, c.z), UP, _e.set(0, -1, 0), { decal: false, big: 2 });
     splashFx(g, _b.set(c.x, c.y + 0.3, c.z), 1.8);
     sfx(g, 'chiwen_final', { pos: c, volume: 0.9 });
@@ -950,6 +1058,9 @@ registerSkill('chiwen_final', {
 
 // ------------------------------------------------------------------------------------------ clips
 const Z3 = [0, 0, 0];
+// inspect "lift": the muzzle raised and swung in so the 螭吻 head shows three-quarter at the upper left, its mouth
+// towards the camera side (a full turn would put the stock through the camera)
+const LIFT_P = [0.05, 0.035, 0.0], LIFT_R = [18, 72, -10];
 const scaleWave = (t0, step, up = 0.05, down = 0.1) => {
   const tr = {};
   for (let i = 1; i <= 6; i++) { const a = t0 + (i - 1) * step; tr['fx_scale' + i] = [[0, 0], [a, 0], [a + up, 1, 'out3'], [a + up + down, 0, 'in3'], [1, 0]]; }
@@ -986,11 +1097,11 @@ registerClip('chiwen_inspect', (vm) => ({
   tracks: {
     gunPos: [[0, Z3], [0.08, [-0.03, 0.02, 0.03]], [0.13, [-0.04, 0.026, 0.024]], [0.17, [-0.03, 0.02, 0.03]],
       [0.26, [-0.05, 0.035, 0.05], 'inOut'], [0.5, [-0.054, 0.038, 0.054]],
-      [0.6, [0.03, 0.05, -0.01], 'inOut'], [0.65, [0.034, 0.052, -0.014]], [0.83, [0.032, 0.05, -0.012]],
+      [0.6, LIFT_P, 'inOut'], [0.65, [LIFT_P[0] - 0.003, LIFT_P[1] + 0.003, LIFT_P[2]]], [0.83, LIFT_P],
       [0.93, [0, 0.004, 0], 'inOut'], [1, Z3]],
     gunRot: [[0, Z3], [0.08, [8, 28, -24]], [0.13, [11, 36, -32]], [0.17, [8, 28, -24]],
       [0.26, [-4, 20, -56], 'inOut'], [0.5, [-2, 23, -52]],
-      [0.6, [12, 92, -6], 'inOut'], [0.65, [14, 96, -8]], [0.83, [13, 94, -7]],
+      [0.6, LIFT_R, 'inOut'], [0.65, [LIFT_R[0] + 2, LIFT_R[1] + 3, LIFT_R[2] - 2]], [0.83, LIFT_R],
       [0.93, [1, -2, 2], 'inOut'], [1, Z3]],
     fx_jaw: [[0, 0], [0.64, 0], [0.655, 0.5, 'out3'], [0.7, 0.12], [0.76, 0], [1, 0]],
     env: [[0, 0], [0.1, 1], [0.88, 1], [1, 0]],
@@ -1009,9 +1120,9 @@ registerClip('chiwen_bubble_mirror', (vm) => ({
   duration: 4.6, loop: [0.05, 0.14],
   tracks: {
     gunPos: [[0, Z3], [0.07, [-0.03, 0.02, 0.03]], [0.11, [-0.038, 0.025, 0.026]], [0.14, [-0.03, 0.02, 0.03]],
-      [0.26, [0.03, 0.05, -0.01], 'inOut'], [0.72, [0.034, 0.052, -0.012]], [0.84, [0.03, 0.05, -0.01]], [0.94, [0, 0.004, 0], 'inOut'], [1, Z3]],
+      [0.26, LIFT_P, 'inOut'], [0.72, [LIFT_P[0] - 0.003, LIFT_P[1] + 0.003, LIFT_P[2]]], [0.84, LIFT_P], [0.94, [0, 0.004, 0], 'inOut'], [1, Z3]],
     gunRot: [[0, Z3], [0.07, [8, 28, -24]], [0.11, [10, 34, -30]], [0.14, [8, 28, -24]],
-      [0.26, [12, 92, -6], 'inOut'], [0.72, [14, 96, -8]], [0.84, [13, 94, -7]], [0.94, [1, -2, 2], 'inOut'], [1, Z3]],
+      [0.26, LIFT_R, 'inOut'], [0.72, [LIFT_R[0] + 2, LIFT_R[1] + 3, LIFT_R[2] - 2]], [0.84, LIFT_R], [0.94, [1, -2, 2], 'inOut'], [1, Z3]],
     fx_jaw: [[0, 0], [0.3, 0], [0.34, 0.6, 'out3'], [0.5, 0.45], [0.56, 0.1], [0.62, 0], [1, 0]],
     env: [[0, 0], [0.1, 1], [0.88, 1], [1, 0]],
   },
@@ -1096,108 +1207,161 @@ registerCrosshair('xh_wave', {
 injectCSS('cf-xh-wave', '.xh2.act .a { filter: drop-shadow(0 0 2px currentColor); }');
 
 // ------------------------------------------------------------------------------------------ kill mark (§1.9 #8)
-// km_chiwen: (1) ink-wash wave strokes sweep in and curl, (2) the 螭吻 head rises out of the wave and takes its glaze
-// (white porcelain, cobalt scales, jade fin, gilt lines), (3) full glow, (4) 點睛: the eye flashes with the ding.
-// Headshot: a cross-star from the eye + an ice ring. All drawn procedurally (original art).
+// km_chiwen: a 瓦當 (roof-tile end) roundel -- the ridge the 螭吻 guards. (1) an ink brush draws the ring and three
+// wave strokes, (2) the cobalt field rises like a tide, the porcelain 螭吻 head (open jaws, upturned snout, horns,
+// flame mane, jade gill fin) surfaces out of it and the gilt ring with its 連珠 beads closes round it, (3) full glow,
+// (4) 點睛: the eye flashes with the ding. Headshot: a cross-star from the eye + an ice ring. All original, procedural.
 const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 const seg = (t, a, b) => ease((t - a) / (b - a));
-function headPath(S) {
-  const P = (x, y) => [x * S, y * S];
+/** The head in profile (facing right) in roundel units (centre 0, radius 1, y down). */
+function headPath(c, R) {
+  const P = (x, y) => [c + x * R, c + y * R];
   const p = new Path2D();
   const q = (cx, cy, x, y) => p.quadraticCurveTo(...P(cx, cy), ...P(x, y));
-  p.moveTo(...P(0.27, 0.66)); q(0.2, 0.52, 0.3, 0.42);    // back of the neck
-  q(0.36, 0.3, 0.47, 0.3);                                // crown
-  q(0.58, 0.29, 0.63, 0.35);                              // forehead
-  q(0.72, 0.36, 0.79, 0.34);                              // snout ridge
-  q(0.86, 0.33, 0.87, 0.41);                              // nose
-  q(0.88, 0.47, 0.8, 0.49);                               // upper lip
-  p.lineTo(...P(0.6, 0.5));                               // mouth corner
-  p.lineTo(...P(0.79, 0.555));                            // lower lip
-  q(0.84, 0.6, 0.77, 0.63);                               // chin
-  q(0.6, 0.68, 0.45, 0.66);                               // throat
-  q(0.36, 0.7, 0.27, 0.66);
+  p.moveTo(...P(-0.44, 0.46));
+  q(-0.64, 0.2, -0.5, -0.06);     // back of the neck
+  q(-0.4, -0.3, -0.12, -0.33);    // crown
+  q(0.04, -0.36, 0.13, -0.27);    // brow ridge
+  q(0.31, -0.23, 0.47, -0.21);    // snout
+  q(0.62, -0.28, 0.67, -0.17);    // upturned nose
+  q(0.72, -0.06, 0.61, -0.03);    // nose tip down to the lip
+  q(0.42, 0.0, 0.1, 0.06);        // upper jaw back to the corner of the mouth
+  p.lineTo(...P(0.5, 0.25));      // open lower jaw
+  q(0.58, 0.31, 0.47, 0.36);      // chin
+  q(0.2, 0.41, 0.0, 0.43);        // jaw underside
+  q(-0.2, 0.5, -0.44, 0.46);      // throat
+  p.closePath();
+  return p;
+}
+/** a mane lock: a tapered flame tongue from (x, y) along ang (rad), length len, half width w (roundel units) */
+function flame(c, R, x, y, len, ang, w) {
+  const P = (u, o) => [c + (x + Math.cos(ang) * u * len - Math.sin(ang) * o) * R, c + (y + Math.sin(ang) * u * len + Math.cos(ang) * o) * R];
+  const p = new Path2D();
+  p.moveTo(...P(0, -w)); p.quadraticCurveTo(...P(0.55, -w * 1.3), ...P(1, -w * 0.2 - 0.05 / len));
+  p.quadraticCurveTo(...P(0.7, w * 0.2), ...P(0.62, w * 0.7)); p.quadraticCurveTo(...P(0.4, w * 0.4), ...P(0, w));
   p.closePath();
   return p;
 }
 registerKillMark('km_chiwen', {
   draw(ctx, S, t, o) {
     const p1 = seg(t, 0, 0.45), p2 = seg(t, 0.45, 0.8), p3 = seg(t, 0.8, 1.0), p4 = seg(t, 1.0, 1.15);
+    const c = S / 2, R = S * 0.4, X = (u) => c + u * R;
     ctx.clearRect(0, 0, S, S);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const X = (x) => x * S;
-    // (1) ink-wash wave: three brush strokes drawn in (dash), a curl on the left
-    const strokes = [
-      [[0.08, 0.86], [0.3, 0.74], [0.5, 0.82], [0.72, 0.76], [0.94, 0.84]],
-      [[0.12, 0.78], [0.18, 0.66], [0.3, 0.64], [0.34, 0.74], [0.26, 0.78]],
-      [[0.36, 0.9], [0.56, 0.86], [0.76, 0.9], [0.9, 0.88]],
-    ];
-    strokes.forEach((pts, i) => {
-      const u = seg(t, i * 0.08, 0.3 + i * 0.08);
+    // (2) the tide: a cobalt field rising inside the ring, a foaming wavy surface
+    if (p2 > 0) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(c, c, R * 0.86, 0, Math.PI * 2); ctx.clip();
+      const lvl = 1 - 2.1 * p2;
+      const gr = ctx.createRadialGradient(c, c - R * 0.4, R * 0.1, c, c, R);
+      gr.addColorStop(0, '#3a6fd0'); gr.addColorStop(0.6, '#244aa5'); gr.addColorStop(1, '#0f2560');
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.moveTo(0, S);
+      for (let i = 0; i <= 24; i++) { const u = i / 24; ctx.lineTo(u * S, X(lvl) + Math.sin(u * 12 + t * 9) * R * 0.04); }
+      ctx.lineTo(S, S); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // (1) ink: the ring and three wave strokes, brushed in (dash reveal); the waves turn to foam once the tide rises
+    const ink = 'rgba(10,20,40,0.92)';
+    const peri = Math.PI * 2 * R * 0.93;
+    ctx.save();
+    ctx.setLineDash([peri * Math.min(1, p1 * 1.15), peri]);
+    ctx.beginPath(); ctx.arc(c, c, R * 0.93, Math.PI * 0.62, Math.PI * 2.62); ctx.lineWidth = S * 0.05; ctx.strokeStyle = ink; ctx.stroke();
+    ctx.restore();
+    const waves = [[[-0.78, 0.5], [-0.45, 0.36], [-0.12, 0.52], [0.2, 0.38], [0.52, 0.5], [0.8, 0.4]], [[-0.7, 0.66], [-0.3, 0.58], [0.1, 0.7], [0.5, 0.6], [0.72, 0.66]], [[-0.5, 0.8], [0, 0.76], [0.45, 0.82]]];
+    waves.forEach((pts, i) => {
+      const u = seg(t, 0.1 + i * 0.08, 0.42 + i * 0.06);
       if (u <= 0) return;
       ctx.save();
       ctx.beginPath(); ctx.moveTo(X(pts[0][0]), X(pts[0][1]));
       for (let j = 1; j < pts.length - 1; j++) ctx.quadraticCurveTo(X(pts[j][0]), X(pts[j][1]), X((pts[j][0] + pts[j + 1][0]) / 2), X((pts[j][1] + pts[j + 1][1]) / 2));
       ctx.lineTo(X(pts.at(-1)[0]), X(pts.at(-1)[1]));
       ctx.setLineDash([S * 2 * u, S * 2]);
-      ctx.lineWidth = S * (i ? 0.035 : 0.06); ctx.strokeStyle = 'rgba(12,26,52,0.92)'; ctx.stroke();
-      ctx.lineWidth = S * (i ? 0.014 : 0.022); ctx.strokeStyle = p2 > 0 ? `rgba(111,227,255,${(0.35 + 0.6 * p2).toFixed(2)})` : 'rgba(60,110,170,0.8)'; ctx.stroke();
+      ctx.lineWidth = S * (i ? 0.024 : 0.034); ctx.strokeStyle = p2 > 0.3 ? `rgba(232,244,255,${(0.5 + 0.5 * p2).toFixed(2)})` : ink; ctx.stroke();
       ctx.restore();
     });
-    // foam flecks on the crest
-    if (p1 > 0.6) {
-      ctx.fillStyle = `rgba(232,244,255,${((p1 - 0.6) * 2.5).toFixed(2)})`;
-      for (const [x, y, r] of [[0.31, 0.71, 0.012], [0.52, 0.79, 0.01], [0.74, 0.73, 0.012], [0.2, 0.62, 0.009]]) { ctx.beginPath(); ctx.arc(X(x), X(y), S * r, 0, 6.283); ctx.fill(); }
-    }
-    // (2) the head rises out of the wave and fills (clip reveal from the bottom)
+    // the 螭吻 surfaces out of the tide (clip reveal from the waterline up) and takes its glaze
     if (p2 > 0) {
-      const head = headPath(S), rise = (1 - p2) * 0.12;
       ctx.save();
-      ctx.translate(0, X(rise));
-      ctx.beginPath(); ctx.rect(0, X(0.18), S, X(0.74) * Math.min(1, p2 * 1.4)); ctx.clip();
-      // jade gill fin behind the head, gilt edge
-      ctx.beginPath(); ctx.moveTo(X(0.3), X(0.46)); ctx.quadraticCurveTo(X(0.16), X(0.4), X(0.1), X(0.48)); ctx.quadraticCurveTo(X(0.18), X(0.52), X(0.12), X(0.6)); ctx.quadraticCurveTo(X(0.2), X(0.62), X(0.28), X(0.6)); ctx.closePath();
-      ctx.fillStyle = '#2f8f4e'; ctx.fill(); ctx.lineWidth = S * 0.01; ctx.strokeStyle = '#e3b04b'; ctx.stroke();
-      // porcelain head with a cool gradient, cobalt scale arcs on the neck, red lacquer mouth
-      const gr = ctx.createLinearGradient(0, X(0.3), 0, X(0.68));
-      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, '#e8f4ff'); gr.addColorStop(1, '#a9c7e8');
-      ctx.fillStyle = gr; ctx.fill(head);
+      ctx.beginPath(); ctx.rect(0, X(0.55 - 1.3 * Math.min(1, p2 * 1.25)), S, S); ctx.clip();
+      ctx.translate(0, R * 0.12 * (1 - p2));
+      // horns (gilt), behind the head
+      ctx.lineWidth = S * 0.026; ctx.strokeStyle = '#e3b04b';
+      ctx.beginPath(); ctx.moveTo(X(-0.1), X(-0.3)); ctx.quadraticCurveTo(X(-0.35), X(-0.62), X(-0.62), X(-0.6)); ctx.quadraticCurveTo(X(-0.72), X(-0.5), X(-0.62), X(-0.46)); ctx.stroke();
+      ctx.lineWidth = S * 0.018;
+      ctx.beginPath(); ctx.moveTo(X(-0.3), X(-0.5)); ctx.quadraticCurveTo(X(-0.28), X(-0.72), X(-0.18), X(-0.76)); ctx.stroke();
+      // flame mane (cobalt with a gilt edge)
+      for (const [x, y, L, a, w] of [[-0.42, -0.2, 0.42, Math.PI * 1.06, 0.1], [-0.52, 0.06, 0.4, Math.PI * 0.98, 0.1], [-0.48, 0.3, 0.34, Math.PI * 0.9, 0.09]]) {
+        const f = flame(c, R, x, y, L, a, w);
+        ctx.fillStyle = '#8fb6ee'; ctx.fill(f); ctx.lineWidth = S * 0.009; ctx.strokeStyle = '#e3b04b'; ctx.stroke(f);
+      }
+      // porcelain head, cool shading, red mouth, cobalt scale arcs on the neck, jade gill fin
+      const head = headPath(c, R);
+      const hg = ctx.createLinearGradient(0, X(-0.35), 0, X(0.45));
+      hg.addColorStop(0, '#ffffff'); hg.addColorStop(0.55, '#e8f4ff'); hg.addColorStop(1, '#9ebfe6');
+      ctx.fillStyle = hg; ctx.fill(head);
       ctx.save(); ctx.clip(head);
+      ctx.fillStyle = '#9a1420';
+      ctx.beginPath(); ctx.moveTo(X(0.1), X(0.06)); ctx.lineTo(X(0.62), X(0.0)); ctx.lineTo(X(0.5), X(0.25)); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#244aa5'; ctx.lineWidth = S * 0.011;
-      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { const x = 0.3 + c * 0.06 + (r % 2) * 0.03, y = 0.5 + r * 0.05; ctx.beginPath(); ctx.arc(X(x), X(y), S * 0.03, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke(); }
-      ctx.fillStyle = '#9a1420'; ctx.beginPath(); ctx.moveTo(X(0.6), X(0.5)); ctx.lineTo(X(0.8), X(0.49)); ctx.lineTo(X(0.79), X(0.555)); ctx.closePath(); ctx.fill();
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) { const x = -0.42 + k * 0.11 + (r % 2) * 0.055, y = 0.08 + r * 0.1; ctx.beginPath(); ctx.arc(X(x), X(y), R * 0.06, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke(); }
       ctx.restore();
-      // gilt outline, flame brow, horn
-      ctx.lineWidth = S * 0.016; ctx.strokeStyle = '#e3b04b'; ctx.stroke(head);
-      ctx.beginPath(); ctx.moveTo(X(0.47), X(0.36)); ctx.lineTo(X(0.45), X(0.24)); ctx.lineTo(X(0.52), X(0.33)); ctx.lineTo(X(0.55), X(0.22)); ctx.lineTo(X(0.59), X(0.33)); ctx.lineTo(X(0.64), X(0.27)); ctx.lineTo(X(0.63), X(0.36));
-      ctx.lineWidth = S * 0.014; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(X(0.42), X(0.32)); ctx.quadraticCurveTo(X(0.3), X(0.2), X(0.2), X(0.27)); ctx.quadraticCurveTo(X(0.16), X(0.31), X(0.21), X(0.33)); ctx.lineWidth = S * 0.018; ctx.stroke();
+      ctx.fillStyle = '#2f8f4e';
+      ctx.beginPath(); ctx.moveTo(X(-0.18), X(0.1)); ctx.quadraticCurveTo(X(-0.36), X(0.0), X(-0.46), X(0.12)); ctx.quadraticCurveTo(X(-0.34), X(0.18), X(-0.44), X(0.3)); ctx.quadraticCurveTo(X(-0.28), X(0.3), X(-0.16), X(0.22)); ctx.closePath(); ctx.fill();
+      ctx.lineWidth = S * 0.007; ctx.strokeStyle = '#e3b04b'; ctx.stroke();
+      // teeth
+      ctx.fillStyle = '#ffffff';
+      for (const [x, y, d] of [[0.5, 0.0, 1], [0.32, 0.03, 1], [0.44, 0.22, -1], [0.27, 0.15, -1]]) { ctx.beginPath(); ctx.moveTo(X(x - 0.035), X(y)); ctx.lineTo(X(x + 0.035), X(y)); ctx.lineTo(X(x), X(y + d * 0.08)); ctx.closePath(); ctx.fill(); }
+      // gilt outline, flame brow, whisker curl
+      ctx.lineWidth = S * 0.015; ctx.strokeStyle = '#e3b04b'; ctx.stroke(head);
+      ctx.beginPath(); ctx.moveTo(X(-0.04), X(-0.25)); ctx.lineTo(X(-0.02), X(-0.4)); ctx.lineTo(X(0.06), X(-0.3)); ctx.lineTo(X(0.12), X(-0.42)); ctx.lineTo(X(0.17), X(-0.29)); ctx.lineWidth = S * 0.013; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(0.58), X(-0.04)); ctx.quadraticCurveTo(X(0.48), X(0.14), X(0.28), X(0.12)); ctx.quadraticCurveTo(X(0.18), X(0.1), X(0.22), X(0.04)); ctx.lineWidth = S * 0.01; ctx.stroke();
       ctx.restore();
     }
-    // (3) glow round the head
+    // the gilt ring closing round it: outer band, 連珠 beads, inner line
+    if (p2 > 0.2) {
+      const u = seg(p2, 0.2, 1);
+      ctx.save();
+      ctx.globalAlpha = u;
+      ctx.lineWidth = S * 0.038; ctx.strokeStyle = '#d9a948';
+      ctx.beginPath(); ctx.arc(c, c, R * 0.93, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * u); ctx.stroke();
+      ctx.lineWidth = S * 0.008; ctx.strokeStyle = '#fff1b8';
+      ctx.beginPath(); ctx.arc(c, c, R * 0.86, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * u); ctx.stroke();
+      ctx.fillStyle = '#fff1b8';
+      const n = Math.floor(18 * u);
+      for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i / 18) * Math.PI * 2; ctx.beginPath(); ctx.arc(X(Math.cos(a) * 0.93), X(Math.sin(a) * 0.93), S * 0.009, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
+    // (3) full glow: an ice rim round the ring and the head
     if (p3 > 0) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = CY; ctx.shadowBlur = S * 0.06 * p3;
-      ctx.globalAlpha = 0.35 * p3; ctx.lineWidth = S * 0.01; ctx.strokeStyle = CY; ctx.stroke(headPath(S)); ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = CY; ctx.shadowBlur = S * 0.07 * p3;
+      ctx.globalAlpha = 0.45 * p3; ctx.lineWidth = S * 0.012; ctx.strokeStyle = CY;
+      ctx.beginPath(); ctx.arc(c, c, R * 0.97, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.3 * p3; ctx.stroke(headPath(c, R));
+      ctx.restore();
     }
     // (4) 點睛: the eye
-    const ex = X(0.585), ey = X(0.385);
-    if (p2 > 0.5) { ctx.fillStyle = '#0b1d3a'; ctx.beginPath(); ctx.arc(ex, ey, S * 0.026, 0, 6.283); ctx.fill(); }
+    const ex = X(0.07), ey = X(-0.18);
+    if (p2 > 0.6) { ctx.fillStyle = '#0b1d3a'; ctx.beginPath(); ctx.arc(ex, ey, S * 0.024, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#e3b04b'; ctx.lineWidth = S * 0.007; ctx.stroke(); }
     const fl = Math.sin(Math.PI * p4) + (o.head ? Math.max(0, 1 - Math.abs(t - 1.1) / 0.08) * 0.8 : 0);
     if (p3 > 0 || fl > 0.01) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const gw = ctx.createRadialGradient(ex, ey, 0, ex, ey, S * (0.03 + 0.06 * fl));
+      const gw = ctx.createRadialGradient(ex, ey, 0, ex, ey, S * (0.03 + 0.07 * fl));
       gw.addColorStop(0, `rgba(255,255,255,${(0.6 * p3 + 0.4 * Math.min(1, fl)).toFixed(2)})`); gw.addColorStop(0.4, 'rgba(111,227,255,0.6)'); gw.addColorStop(1, 'rgba(111,227,255,0)');
-      ctx.fillStyle = gw; ctx.fillRect(ex - S * 0.12, ey - S * 0.12, S * 0.24, S * 0.24);
+      ctx.fillStyle = gw; ctx.fillRect(ex - S * 0.14, ey - S * 0.14, S * 0.28, S * 0.28);
       if (fl > 0.01) {
-        const L = S * (0.04 + fl * (o.head ? 0.14 : 0.06));
+        const L = S * (0.05 + fl * (o.head ? 0.16 : 0.07));
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = S * 0.008; ctx.globalAlpha = Math.min(1, fl);
-        ctx.beginPath(); ctx.moveTo(ex - L, ey); ctx.lineTo(ex + L, ey); ctx.moveTo(ex, ey - L * 0.7); ctx.lineTo(ex, ey + L * 0.7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex - L, ey); ctx.lineTo(ex + L, ey); ctx.moveTo(ex, ey - L * 0.7); ctx.lineTo(ex, ey + L * 0.7);
+        if (o.head) { const d = L * 0.4; ctx.moveTo(ex - d, ey - d); ctx.lineTo(ex + d, ey + d); ctx.moveTo(ex + d, ey - d); ctx.lineTo(ex - d, ey + d); }
+        ctx.stroke();
       }
       ctx.restore();
     }
     if (o.head && t > 1.0) {
       const u = Math.min(1, (t - 1.0) / 0.17);
       ctx.save(); ctx.globalAlpha = 1 - u; ctx.strokeStyle = o.tint || CY; ctx.lineWidth = S * 0.012;
-      ctx.beginPath(); ctx.arc(ex, ey, S * (0.04 + 0.4 * u), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      ctx.beginPath(); ctx.arc(ex, ey, S * (0.04 + 0.42 * u), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     }
   },
 });

@@ -100,11 +100,13 @@ void main() {
     float n = fbm2(ca * 0.55 + vec2(0.0, T * 0.01));
     float n2 = n1(ca * 1.9 + 0.5);
     float e = r2 + (n - 0.5) * 0.4 + (n2 - 0.5) * 0.06;
-    float m = smoothstep(0.16, 0.36, e);
+    // a weaker dose hugs the screen edges (frame pushed out, shorter drips): splashes stay readable mid-fight
+    float lo = 1.0 - s;
+    float m = smoothstep(0.16 + 0.18 * lo, 0.36 + 0.1 * lo, e);
     // drips: columns along the top edge, each with its own length and a round head
     float cx = uv.x * 26.0, col = floor(cx);
     float h = hash11(col + 3.7);
-    float len = (0.05 + 0.3 * h * h) * (0.75 + 0.25 * sin(T * 0.6 + h * 9.0));
+    float len = (0.05 + 0.3 * h * h) * (0.75 + 0.25 * sin(T * 0.6 + h * 9.0)) * (0.2 + 0.8 * s);
     float w = 0.14 + 0.16 * h;
     float xin = abs(fract(cx) - 0.5);
     float yt = 1.0 - uv.y;

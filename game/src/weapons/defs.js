@@ -144,22 +144,27 @@ def({ id: 'dualphase_r', zh: '雙相-R', en: 'Dual-Phase R', cat: 'rifle', tier:
 // 寒潮 (25 %, 10 s): the next hit on it bursts (80 in 2 m, +4 % tide); kills +4 % tide and 30 % loose a homing
 // water bead (60). ◎ held 冰流光束 (20 % tide), ★ tap 潮球 (15 %), ★ held 吞潮 (ultimate, ~4,000 damage dealt);
 // both skills shove back what stands within 3 m (水幕反衝). Teammates near the ice line / orb reload 20 % faster.
+// hidden: playable through ?w=chiwen, kept out of the shop / armory / bots until the refine stage releases it (delete `hidden`)
 def({ id: 'chiwen', zh: '螭吻．吞潮', en: 'Chiwen Tidewarden', cat: 'rifle', tier: 'mythic', line: 'jiuzi', element: ['frost', 'jade'], model: 'chiwen',
-  price: 6800, wear: 0.2, dmg: 46, head: 4, rpm: 450, mode: 'auto', mag: 40, reserve: Infinity, reload: 2.3, reloadEmpty: 2.7, pen: 1.5,
+  price: 6800, hidden: true, wear: 0.2, dmg: 46, head: 4, rpm: 450, mode: 'auto', mag: 40, reserve: Infinity, reload: 2.3, reloadEmpty: 2.7, pen: 1.5,
   range: [35, 90, 0.75], speed: 4.8, knock: 1.6, stagger: 0.34, splash: { r: 1.5, dmg: 20 }, assist: 1.2,
   spread: [1.5, 0.12, 1.7, 6, 0.4, 3.8, 7.5], recoil: { up: 1.25, side: 0.5, upMax: 10, recover: 13, first: 1.3, pattern: [0, 0.2, -0.25, 0.35, -0.3, 0.4, -0.4] },
-  kick: { back: 0.03, up: 3.6, side: 1.2, roll: 1.8 }, sound: 'rifle762', shell: '762', flash: 'rifle', tracer: 3,
-  fx: { ramp: 3, flashScale: 0.75, tracer: { color: [2.2, 4.6, 6], glow: [0.5, 1.1, 1.8], width: 0.018, length: 3.2 }, tracerEvery: 2 },
+  kick: { back: 0.034, up: 4.2, side: 1.3, roll: 2.1 }, sound: 'rifle762', shell: '762', flash: 'rifle', tracer: 3,
+  // the gun's own fireball stays small: the ice crown + water mist (premium/chiwen.js crown()) is the muzzle look;
+  // 潮彈 每發拖一條細白尾 (a thin white water trail on every round)
+  fx: { ramp: 3, flashScale: 0.45, tracer: { color: [3.6, 5.4, 6.6], glow: [0.45, 1.1, 1.9], width: 0.011, length: 2.4 }, tracerEvery: 1 },
   premium: {
     element: ['frost', 'jade'],
-    palette: { base: '#e8f4ff', trim: '#b9c7d6', core: '#6fe3ff', rim: '#2f8bff', mote: '#ffffff', accent: '#2f8f4e', crackle: '#3a4a44', twin: '#ff5a1f' },
+    palette: { base: '#e8f4ff', trim: '#b9c7d6', core: '#6fe3ff', rim: '#2f8bff', mote: '#ffffff', accent: '#2f8f4e', crackle: '#7d8884', twin: '#ff5a1f' },
     presets: { glow_ice: 'pv_energy', glaze_cobalt: 'pv_glaze', porcelain: 'pv_glaze', glaze_jade: 'pv_glaze', lacquer_red: 'pv_glaze', crystal: 'pv_crystal', gold: 'pv_metal', chrome: 'pv_metal' },
-    // 開片 crackle: absolute 160 cells/m, 0.2 mm dark grout, one colour per glaze (only the lines read), faint cool sheen
-    pv: { pv_glaze: { shardScale: 160, groutW: 0.25, grout: '#3a4a44', irid: 0.12, iridCool: 1, shine: 1.4, sweepT: 5 }, pv_metal: { shine: 1.6, sweepT: 5 }, pv_energy: { veinFreq: 14 } },
-    pvKey: { porcelain: { shardPal: ['#e8f4ff', '#e8f4ff', '#e8f4ff', '#e8f4ff'] }, glaze_cobalt: { shardPal: ['#244aa5', '#244aa5', '#244aa5', '#244aa5'] },
-      glaze_jade: { shardPal: ['#2f8f4e', '#2f8f4e', '#2f8f4e', '#2f8f4e'], irid: 0.06 }, lacquer_red: { shardScale: 0, irid: 0 } },
+    // 開片 crackle: one colour per glaze (only the lines read), faint cool sheen. 金絲鐵線: "iron wire" cells of ~6.5 mm
+    // (150 /m, 0.18 mm lines, low contrast: a surface read, the sculpt carries the detail) with a 2.6x finer amber
+    // "gold thread" crackle between them (premium.js mono path); each glaze has its own grout (dark blue on cobalt)
+    pv: { pv_glaze: { shardScale: 150, groutW: 0.17, grout: '#7d8884', irid: 0.12, iridCool: 1, shine: 1.1, sweepT: 5 }, pv_metal: { shine: 1.6, sweepT: 5 }, pv_energy: { veinFreq: 14 } },
+    pvKey: { porcelain: { shardPal: ['#dde5ea', '#dde5ea', '#dde5ea', '#dde5ea'] }, glaze_cobalt: { shardPal: ['#1d3c8f', '#1d3c8f', '#1d3c8f', '#1d3c8f'], grout: '#122660' },
+      glaze_jade: { shardPal: ['#2f8f4e', '#2f8f4e', '#2f8f4e', '#2f8f4e'], irid: 0.06, grout: '#1c4a2e' }, lacquer_red: { shardScale: 0, irid: 0 } },
     hero: 'fx_tube', crosshair: 'xh_wave', meters: ['arc', 'ring', 'stack'],
-    ready: { sfx: 'ready_chiwen', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.6, glowMul: 1.5, idleExtra: 'chiwen_bubble' } },
+    ready: { sfx: 'ready_chiwen', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.6, glowMul: 1.5, idleExtra: 'chiwen_shiver' } },
     idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'chiwen_flick', every: 7 }],   // §1.17 idle tiers
     firstDraw: 'chiwen_first', inspect: ['chiwen_inspect'], rareInspect: 'chiwen_bubble_mirror', rareReload: 'chiwen_vortex',
     killFx: 'KE_FROST', killMark: 'km_chiwen', dmgSkin: 'mythic',
@@ -167,6 +172,12 @@ def({ id: 'chiwen', zh: '螭吻．吞潮', en: 'Chiwen Tidewarden', cat: 'rifle'
     aura: { type: 'reloadSpeed', mul: 1.2, radius: 4, when: 'source', source: ['iceLine', 'orb'] },
     twin: 'chiwen_searing', phases: ['shuangchao', 'cuichao', 'mochao'], kiln: { chance: 0.01, special: 'jun_kiln' },
     showcase: ['chiwen_first', 'fire:3', 'tap', 'alt', 'ult', 'chiwen_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '潮彈', desc: '全自動・命中 1.5 m 濺射・25% 掛寒潮，再中引爆' }, { key: 'RMB', zh: '冰流光束', desc: '潮能 20%・按住 2.5 秒・貫穿 3・留冰刺' },
+      { key: 'Q', zh: '潮球', desc: '潮能 15%・水球 3 次脈衝往中心拉' }, { key: 'hold Q', zh: '吞潮', desc: '吞潮 100%（或 Q 再按 F）' },
+      { key: 'R', zh: '換彈' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
   },
   special: {
     type: 'chiwen',
@@ -176,10 +187,11 @@ def({ id: 'chiwen', zh: '螭吻．吞潮', en: 'Chiwen Tidewarden', cat: 'rifle'
       marks: { max: 5, hud: 'stack', label: '寒潮', color: '#bfe9ff', src: '命中 25% 掛寒潮' },   // live marks (display only)
     },
     skills: {
-      alt: { id: 'frostRay', zh: '冰流光束', desc: '按住 2.5 秒・每秒 280・貫穿 3・冰刺緩速', meter: 'tide', hold: true, cost: 20, dps: 280, dur: 2.5, pierce: 3, level: 'L4',
+      // key: desktop binding (◎ = right mouse, ★ = Q; the HUD dock / hint card read the live bindings)
+      alt: { id: 'frostRay', key: 'RMB', zh: '冰流光束', desc: '按住 2.5 秒・每秒 280・貫穿 3・冰刺緩速', meter: 'tide', hold: true, cost: 20, dps: 280, dur: 2.5, pierce: 3, level: 'L4',
         overlay: { fx: 'TUNNEL', look: 'wave_pipe' } },
-      tap: { id: 'tideOrb', zh: '潮球', desc: '慢速水球・3 次脈衝 120・往中心拉', meter: 'tide', cost: 15, pulses: 3, every: 0.6, r: 3, dmg: 120, pull: 1, speed: 6, range: 12, level: 'L2' },
-      ult: { id: 'swallowTide', zh: '吞潮', desc: '螭吻破地吞噬 500・吐出 3 道水柱各 400', meter: 'ult', script: 'chiwen_ult', level: 'L3' },
+      tap: { id: 'tideOrb', key: 'Q', zh: '潮球', desc: '慢速水球・3 次脈衝 120・往中心拉', meter: 'tide', cost: 15, pulses: 3, every: 0.6, r: 3, dmg: 120, pull: 1, speed: 6, range: 12, level: 'L2' },
+      ult: { id: 'swallowTide', key: 'hold Q', zh: '吞潮', desc: '螭吻破地吞噬 500・吐出 3 道水柱各 400', meter: 'ult', script: 'chiwen_ult', level: 'L3' },
     },
     passive: { mark: { chance: 0.25, dur: 10, burst: 80, r: 2 }, barrier: { r: 3, knock: 4, dmg: 40 }, orb: { chance: 0.3, dmg: 60 } },
   } });
@@ -193,10 +205,13 @@ def({ id: 'chiwen', zh: '螭吻．吞潮', en: 'Chiwen Tidewarden', cat: 'rifle'
 // stacks each; ★ held 畢方降臨 (天火 from damage, ~50 s): one wing beat 300 + knock in a 10 m cone, a 25 m dive leaving
 // a 4 s fire path (30/s). The twin keeps the numbers; names, colours, audio (-4 st + echo), a sky-falling beam and its
 // own ultimate signature (九首夜啼: fear 1.5 s within 10 m) differ.
-const PYRE = { cat: 'heavy', tier: 'mythic', line: 'twin', price: 9500, wear: 0.15, dmg: 18, head: 2, pellets: 8, rpm: 180, mode: 'auto',
+// hidden: built and playable through ?w=bifang / ?w=guiche, kept out of the shop / armory / bots until the refine
+// stage releases it (delete `hidden`)
+const PYRE = { cat: 'heavy', tier: 'mythic', line: 'twin', price: 9500, hidden: true, wear: 0.15, dmg: 18, head: 2, pellets: 8, rpm: 180, mode: 'auto',
   mag: 50, reserve: Infinity, reload: 2.8, reloadEmpty: 2.8, draw: 0.7, pen: 0.3, range: [12, 30, 0.35], speed: 4.6, knock: 2.2, stagger: 0.45,
   spread: [4.4, 3.4, 1.0, 2, 0.3, 5.4, 10], recoil: { up: 3.0, side: 1.0, upMax: 12, recover: 14, first: 1, pattern: [0, 0.4, -0.5, 0.3] },
-  kick: { back: 0.045, up: 6, side: 1.4, roll: 2.2 }, sound: 'shotgunAuto', shell: null, flash: 'shotgun', tracer: 0 };
+  kick: { back: 0.045, up: 6, side: 1.4, roll: 2.2 }, sound: 'shotgunAuto', shell: null, flash: 'shotgun', tracer: 0,
+  vm: { hip: [0.15, -0.215, -0.36, 1, -5, -2.5] } };   // the tall crane receiver sits lower / further than the heavy default
 const PYRE_SPECIAL = (look, zh) => ({
   type: 'bifang', look,
   meters: {
@@ -204,23 +219,34 @@ const PYRE_SPECIAL = (look, zh) => ({
     ult: { max: 100, source: 'damage', per: 9000, skillFill: false, hud: 'ring', label: zh.ultMeter, src: '傷害累積（約 50 秒）' },
   },
   skills: {
-    alt: { id: 'pyrewing', zh: zh.alt, desc: zh.altDesc, meter: 'feather', cost: 40, drain: 10, dur: 6, r: 3, dps: 40, speedMul: 1.1, beamMin: 40, level: 'L2' },
-    tap: { id: 'featherfall', zh: zh.tap, desc: '準星處 6 m 落下 12 根燃燒羽柱・各 60＋灼羽 2 層', meter: 'feather', cost: 25, n: 12, r: 6, dmg: 60, burn: 2, fall: 1.2, range: 30, level: 'L2' },
-    ult: { id: 'bifang_descent', zh: zh.ult, desc: zh.ultDesc, meter: 'ult', range: 25, level: 'L3' },
+    // key: desktop binding (◎ = right mouse, ★ = Q; the HUD dock / hint card read the live bindings)
+    alt: { id: 'pyrewing', key: 'RMB', zh: zh.alt, desc: zh.altDesc, meter: 'feather', cost: 40, drain: 10, dur: 6, r: 3, dps: 40, speedMul: 1.1, beamMin: 40, level: 'L2' },
+    tap: { id: 'featherfall', key: 'Q', zh: zh.tap, desc: '準星處 6 m 落下 12 根燃燒羽柱・各 60＋灼羽 2 層', meter: 'feather', cost: 25, n: 12, r: 6, dmg: 60, burn: 2, fall: 1.2, range: 30, level: 'L2' },
+    ult: { id: 'bifang_descent', key: 'hold Q', zh: zh.ult, desc: zh.ultDesc, meter: 'ult', range: 25, level: 'L3' },
   },
   burn: { max: 5, dps: 8, dur: 3 },                                   // 灼羽 stacks
   beam: { len: 30, width: 1.4, dmg: 600, dps: 120, dur: 1.2 },        // 焚天光 / 晦天墜
   flap: { r: 10, cone: 60, dmg: 300, burn: 3, knock: 9 }, dive: { len: 25, dps: 30, life: 4, width: 2.6 },
   cleanse: { r: 4, every: 6 },                                        // 解縛 team aura while the wings are spread
 });
+// desktop controls for the hint card / help (premium.hints; the ★ dock reads special.skills)
+const PYRE_HINTS = (n) => [
+  { key: 'LMB', zh: n.fire, desc: '8 枚羽彈・每中一枚疊灼羽' }, { key: 'RMB', zh: n.alt, desc: `${n.feather} ≥40% 展翼；再按 RMB 收翼，這次耗 ≥40% 就放${n.beam}` },
+  { key: 'Q', zh: n.tap, desc: `${n.feather} 25%` }, { key: 'hold Q', zh: n.ult, desc: `${n.ultMeter} 100%（或 Q 再按 F）` },
+  { key: 'R', zh: '換彈' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+];
 def({ ...PYRE, id: 'bifang', zh: '畢方．焚翼', en: 'Bifang Pyrewing', element: ['radiant', 'inferno'], model: 'bifang',
-  fx: { flashScale: 0.42, ramp: 7, tracerEvery: 0 },
+  fx: { flashScale: 0.62, ramp: 7, tracerEvery: 0 },
   premium: {
     element: ['radiant', 'inferno'], look: 'bifang',
     palette: { base: '#f3efe6', trim: '#e3b04b', core: '#fff2b0', rim: '#ffc74a', mote: '#fffbe0', accent: ['#6ec8ff'], twin: '#b54bff', feather: ['#1fb5a8', '#ff5a2a'] },
     shard: ['#1f8f8a', '#c8302a', '#f3efe6', '#1f8f8a'],                // cloisonné cells: 青釉 朱釉 白瓷 青釉, gold wire
-    presets: { porcelain: 'pv_glaze', lacquer_red: 'pv_glaze', gold: 'pv_metal', bronze_aged: 'pv_metal', glow_sun: 'pv_energy', glow_vermilion: 'pv_energy', crystal: 'pv_crystal', obsidian: 'pv_core' },
+    presets: { porcelain: 'pv_glaze', lacquer_red: 'pv_glaze', glaze_teal: 'pv_glaze', glaze_turquoise: 'pv_glaze', glaze_vermilion: 'pv_glaze', glaze_cobalt: 'pv_glaze', glaze_black: 'pv_glaze',
+      gold: 'pv_metal', bronze_aged: 'pv_metal', glow_sun: 'pv_energy', glow_vermilion: 'pv_energy', crystal: 'pv_crystal', obsidian: 'pv_core' },
     pv: { pv_glaze: { shine: 1.5, sweepT: 5 }, pv_metal: { shine: 1.4, sweepT: 5 }, pv_energy: { veinFreq: 16, veinSpeed: 0.42 } },
+    // 掐絲琺瑯 cloisonné is modelled (gold cloisons along the barbs, enamel recessed by row: glaze_teal / turquoise /
+    // vermilion, white tips); the porcelain carries a fine 開片 crackle (one-colour SHARD: hairlines + gold threads)
+    pvKey: { porcelain: { shardScale: 78, shardPal: ['#f3efe6', '#f3efe6', '#f3efe6', '#f3efe6'], grout: '#b4a68c', groutW: 0.12 } },
     hero: 'fx_pearl', crosshair: 'xh_feather', meters: ['arc', 'ring'],
     ready: { sfx: 'ready_bifang', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.5, glowMul: 1.5, idleExtra: 'bifang_ready' } },
     idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15 }],
@@ -230,17 +256,22 @@ def({ ...PYRE, id: 'bifang', zh: '畢方．焚翼', en: 'Bifang Pyrewing', eleme
     aura: { type: 'cleanse', radius: 4, when: 'skill', source: ['pyrewing'] },
     twin: 'guiche', phases: ['qingyu', 'chiyu'], kiln: { chance: 0.01, special: 'fengcai' },
     showcase: ['bifang_first', 'fire:3', 'alt', 'tap', 'ult', 'bifang_inspect'],
+    hints: PYRE_HINTS({ fire: '焰羽散射', alt: '焚翼', tap: '羽落', ult: '畢方降臨', feather: '羽能', ultMeter: '天火', beam: '焚天光' }),
   },
   special: PYRE_SPECIAL('bifang', { feather: '羽能', ultMeter: '天火', alt: '焚翼', altDesc: '羽能 ≥40%・展翼 6 秒：灼燒、免控、收翼放焚天光',
     tap: '羽落', ult: '焚天', ultDesc: '畢方降臨：振翼 300＋擊退，俯衝 25 m 留下火徑' }) });
 def({ ...PYRE, id: 'guiche', zh: '鬼車．晦翼', en: 'Guiche Gloomwing', element: ['void'], model: 'guiche',
-  fx: { flashScale: 0.42, ramp: 5, tracerEvery: 0 },
+  fx: { flashScale: 0.62, ramp: 5, tracerEvery: 0 },
   premium: {
     element: ['void'], look: 'guiche',
-    palette: { base: '#121012', trim: '#9aa0a6', core: '#b54bff', rim: '#3fffe0', mote: '#d9b8ff', accent: ['#3fffe0'], twin: '#ffc74a', feather: ['#7a3cff', '#3fffe0'] },
+    palette: { base: '#121012', trim: '#9aa0a6', core: '#b54bff', rim: '#2a9f92', mote: '#d9b8ff', accent: ['#3fffe0'], twin: '#ffc74a', feather: ['#7a3cff', '#3fffe0'] },
     shard: ['#5b2b5e', '#1d3f4a', '#121012', '#5b2b5e'],                // 茄紫釉 墨青釉 黑漆, antique-silver wire
-    presets: { lacquer_black: 'pv_glaze', glaze_aubergine: 'pv_glaze', chrome: 'pv_metal', glow_purple: 'pv_energy', glow_vermilion: 'pv_energy', crystal: 'pv_crystal', obsidian: 'pv_core' },
-    pv: { pv_glaze: { shine: 1.7, sweepT: 5 }, pv_metal: { shine: 1.2, sweepT: 5 }, pv_energy: { veinFreq: 16, veinSpeed: 0.36 } },
+    presets: { lacquer_black: 'pv_glaze', glaze_aubergine: 'pv_glaze', glaze_inkteal: 'pv_glaze', glaze_coldteal: 'pv_glaze', glaze_black: 'pv_glaze',
+      silver_aged: 'pv_metal', steel_bright: 'pv_metal', glow_purple: 'pv_energy', glow_vermilion: 'pv_energy', crystal: 'pv_crystal', obsidian: 'pv_core' },
+    // black lacquer: a tight, dim cold-teal rim (少量 per the card) -- a broad one turns the whole gun teal at grazing angles
+    pv: { pv_glaze: { shine: 1.7, sweepT: 5, rimPower: 6 }, pv_metal: { shine: 1.2, sweepT: 5, rimPower: 4.5 }, pv_energy: { veinFreq: 16, veinSpeed: 0.36 } },
+    // modelled cloisonné in antique-silver wire; the black lacquer carries faint 斷紋 (aged-lacquer crackle, one-colour SHARD)
+    pvKey: { lacquer_black: { shardScale: 55, shardPal: ['#141016', '#141016', '#141016', '#141016'], grout: '#3a2c40', groutW: 0.16 } },
     hero: 'fx_eye', crosshair: 'xh_feather', meters: ['arc', 'ring'],
     ready: { sfx: 'ready_guiche', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.5, glowMul: 1.5, idleExtra: 'bifang_ready' } },
     idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15 }],
@@ -250,6 +281,7 @@ def({ ...PYRE, id: 'guiche', zh: '鬼車．晦翼', en: 'Guiche Gloomwing', elem
     aura: { type: 'cleanse', radius: 4, when: 'skill', source: ['pyrewing'] },
     twin: 'bifang', phases: ['yeyu', 'shuangyu'],
     showcase: ['bifang_first', 'fire:3', 'alt', 'tap', 'ult', 'bifang_inspect'],
+    hints: PYRE_HINTS({ fire: '晦羽散射', alt: '晦翼', tap: '晦羽落', ult: '鬼車夜啼', feather: '晦羽', ultMeter: '幽火', beam: '晦天墜' }),
   },
   special: PYRE_SPECIAL('guiche', { feather: '晦羽', ultMeter: '幽火', alt: '晦翼', altDesc: '晦羽 ≥40%・展翼 6 秒：灼燒、免控、收翼降晦天墜',
     tap: '晦羽落', ult: '夜啼', ultDesc: '九首鬼車盤旋夜啼：10 m 恐懼 1.5 秒，再俯衝 25 m' }) });
@@ -266,7 +298,7 @@ def({ id: 'knife', zh: '戰術刀', en: 'Field Knife', cat: 'melee', price: 0, d
 //   premium  神兵 still in production (mechanics / presentation unfinished)
 //   model    no first-person model yet (game/assets/weapons/<id>.glb): it would equip as an invisible gun
 const WIP = {
-  premium: ['chiwen', 'bifang', 'guiche'],
+  premium: [],
   model: ['scar', 'aug', 'm870', 'usas', 'db', 'm249', 'mg42', 'm134', 'awp', 'barrett', 'kar98', 'rpg', 'knife'],
 };
 for (const [why, ids] of Object.entries(WIP)) for (const id of ids) { const w = W.find((o) => o.id === id); if (w) w.wip = why; }

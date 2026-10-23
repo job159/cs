@@ -81,7 +81,7 @@ void main() {
 }`;
 const FRAG = /* glsl */`
 uniform sampler2D tFeather;
-uniform float uTime, uAmt, uStyle, uGlow;
+uniform float uTime, uAmt, uStyle, uGlow, uAlpha;
 uniform vec3 uCore, uTip, uE0, uE1, uE2, uGold;
 ${GLSL_NOISE}
 varying vec2 vUv;
@@ -105,8 +105,8 @@ void main() {
     en *= t.g * (0.8 + 0.4 * flow) * uGlow;
     vec3 gold = uGold * (0.8 + 0.6 * flow);
     vec3 c = mix(en, gold, t.a);
-    float a = t.r * k * 0.92;
-    gl_FragColor = vec4(c * a, a);
+    float a = t.r * k * uAlpha;
+    gl_FragColor = vec4(c * a, a * mix(1.0, 0.55, t.g * (1.0 - t.a) * step(uAlpha, 0.9)));   // thin enamel lets the world through
   }
 }`;
 
@@ -141,6 +141,9 @@ class Wing {
     this.target = o.open === false ? 0 : 1; this.from = 0; this.openT = 0; this.openDur = o.openDur ?? 0.25;
     this.glow = 1; this.t = 0; this.guard = { '-1': 1, '1': 1 };
     this.anchors = o.anchors || {};
+    // first person: optional per-side fan directions in the parent's frame { L: { a, o }, R: { a, o } } (a = innermost
+    // card, o = the direction the fan opens towards) and the guard's floor (how far a side may shrink)
+    this.fan = o.fan || null; this.guardMin = o.guardMin ?? 0.35;
     const cnt = this.n * this.sides.length;
     const geo = new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0);
     const card = new Float32Array(cnt * 4);
@@ -150,7 +153,7 @@ class Wing {
     geo.setAttribute('aCard', this.cardAttr);
     this.u = {
       tFeather: wings.tex, tNoise: this.kit.noise, uTime: this.kit.time, uAmt: { value: 1 }, uStyle: { value: this.style }, uGlow: { value: 1 },
-      uVm: { value: this.vm ? 1 : 0 }, vmProj: materialUniforms.vmProj,
+      uAlpha: { value: o.alpha ?? 0.92 }, uVm: { value: this.vm ? 1 : 0 }, vmProj: materialUniforms.vmProj,
       uCore: { value: hdr(o.core ?? [1.7, 1.45, 1.05]) }, uTip: { value: hdr(o.tip ?? [1.9, 0.6, 0.16]) }, uGold: { value: hdr(o.gold ?? [2.6, 1.7, 0.55]) },
       uE0: { value: hdr(o.enamel?.[0] ?? [0.1, 0.9, 1.0]) }, uE1: { value: hdr(o.enamel?.[1] ?? [1.4, 0.18, 0.12]) }, uE2: { value: hdr(o.enamel?.[2] ?? [0.15, 0.45, 1.3]) },
     };
@@ -202,6 +205,9 @@ class Wing {
     if (this.preset === 'back') {
       a.set(s * 0.25, 1, 0.35).normalize();     // up, a little out and back
       o.set(s, -0.15, 0.3).normalize();          // outwards, slightly down
+    } else if (this.fan?.[s < 0 ? 'L' : 'R']) {
+      const f = this.fan[s < 0 ? 'L' : 'R'];
+      a.set(...f.a).normalize(); o.set(...f.o).normalize();
     } else {
       // viewmodel: the fan stands roughly face-on to the eye, leaning back `sweep` (25°): innermost card points
       // up, outermost outwards (an edge-on fan would read as a few thin lines from behind the gun)
@@ -258,8 +264,10 @@ class Wing {
           // card ≈ triangle root -> tip corners (NDC area / 4 = screen fraction)
           area += Math.abs((pr[2].x - pr[0].x) * (pr[3].y - pr[0].y) - (pr[3].x - pr[0].x) * (pr[2].y - pr[0].y)) / 8;
         }
-        const big = area > 0.125 / (this.sides.length === 1 ? 0.5 : 1);
-        this.guard[s] = hit || big ? Math.max(0.35, this.guard[s] * 0.94) : Math.min(1, this.guard[s] + dt * 0.3);
+        const lim = 0.125 / (this.sides.length === 1 ? 0.5 : 1), big = area > lim;
+        // hysteresis: regrow only well inside the limits (no pumping between shrink and regrow)
+        if (hit || big) this.guard[s] = Math.max(this.guardMin, this.guard[s] * 0.94);
+        else if (area < lim * 0.8) this.guard[s] = Math.min(1, this.guard[s] + dt * 0.3);
       }
     }
   }
@@ -283,7 +291,9 @@ export class Wings {
    * ('both' | 'L' | 'R'), preset ('vm' | 'back'), anchors { L: Vector3, R: Vector3 } (local positions on the
    * parent), count (cards per side, 5–7), spacing (deg), sweep (deg), scale (1 vm; 3.2 back), style ('glow' |
    * 'cloisonne'), shape (0–3 feather silhouette), core / tip (HDR, glow style), enamel [c0, c1, c2] + gold
-   * (cloisonné), open (false = start folded). Returns a Wing { openWing(dur), close(dur), set(o), sparkle(n),
+   * (cloisonné), open (false = start folded), alpha (cloisonné enamel opacity, default 0.92; lower = the world
+   * shows through the cells), fan { L: { a, o }, R: { a, o } } (first person: innermost-card and opening directions
+   * in the parent's frame, e.g. to keep a fan above the crosshair), guardMin (centre guard floor, 0.35). Returns a Wing { openWing(dur), close(dur), set(o), sparkle(n),
    * detach(), glow }.
    */
   attach(parent, opts = {}) {

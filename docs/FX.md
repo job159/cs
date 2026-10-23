@@ -283,7 +283,7 @@ Budget: ≤ 6 sigils alive (L2: 2 per player); the oldest fades early.
 | Call | Effect |
 |---|---|
 | `vm(opts)` → Wing | first-person fans on the current gun at `S_wingL` / `S_wingR` (fallback: receiver flanks, scale 0.7); detached automatically when the gun is swapped |
-| `attach(parent, { vm, side, preset, anchors, count = 7, spacing = 15, sweep = 25, scale, style, shape, core, tip, enamel, gold, open })` → Wing | any Object3D; `preset: 'back'` (3P `S_back`, scale 3.2 ≈ 2.4 m span) or `'vm'`; `anchors { L, R }` local positions |
+| `attach(parent, { vm, side, preset, anchors, count = 7, spacing = 15, sweep = 25, scale, style, shape, core, tip, enamel, gold, open, alpha, fan, guardMin })` → Wing | any Object3D; `preset: 'back'` (3P `S_back`, scale 3.2 ≈ 2.4 m span) or `'vm'`; `anchors { L, R }` local positions; `alpha` cloisonné enamel opacity (0.92; lower lets the world through the cells); `fan { L: { a, o }, R: { a, o } }` first-person fan directions in the parent frame (innermost card, opening direction), `guardMin` the centre guard's floor (0.35) |
 | Wing: `openWing(dur = 0.25)`, `close(dur = 0.2)`, `set({ core, tip, gold, enamel, glow })`, `sparkle(n = 16)`, `detach()` | open = easeOutBack with a 20 ms stagger; `glow` 1.5 for the ready state; `sparkle` sheds light dust from the feather tips |
 
 Cards: innermost 0.22×0.05 m, +12 % length per card, outermost ≈ 0.42×0.07 m, idle sway, light flowing out at

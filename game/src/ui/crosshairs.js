@@ -6,7 +6,10 @@
 //   registerCrosshair(id, { draw(gap, c, s, c2) -> SVG markup (centre 0,0, px; c2 = second colour), dynamic: redraw on gap changes,
 //                           nodes: radius of the 4 ready nodes, hit: hit-reactive (default true) })
 //     parts with class "a" take the hit colour; the default 'xh_default' follows the settings (colour, size, dot)
-//   new CrosshairView(parent) .update({ id, gap, settings, color, color2, hitColor, react, ready, active, nodes, visible })  .hit()
+//     settings.dot puts the centre dot on every crosshair (the user wants it always there), in its own group so it can stay
+//     while the rest is hidden (melee, ADS); its size follows crosshairThick
+//   new CrosshairView(parent) .update({ id, gap, settings, color, color2, hitColor, react, ready, active, nodes, visible, dot })  .hit()
+//     dot (default = visible): show the centre dot even when visible is false
 //     classes on the <svg>: hit, ready, act (a skill / buff running)
 //   new MeterView(type, index) .set(m)        m from specials.hudInfo(): arc ring segments timing dial stack lock dual
 //   TIERS, tierIcon(tier, size, color)        tier frame colours and icon shapes (§1.2)
@@ -56,13 +59,13 @@ export const CROSSHAIRS = {};
 export function registerCrosshair(id, spec) { CROSSHAIRS[id] = { dynamic: true, hit: true, nodes: 22, ...spec }; return CROSSHAIRS[id]; }
 
 const OL = 'stroke="rgba(0,0,0,.55)" stroke-width="1" paint-order="stroke"';
+const centreDot = (c, s) => { const T = Math.max(2, s.crosshairThick ?? 2); return `<rect class="a" x="${-T / 2}" y="${-T / 2}" width="${T}" height="${T}" fill="${c}" ${OL}/>`; };
 // CS four-line, follows the settings; the arms are the hit-reactive parts
 registerCrosshair('xh_default', {
   draw(gap, c, s) {
     const L = s.crosshairLen ?? 9, T = s.crosshairThick ?? 2, g = gap;
     const r = (x, y, w, h) => `<rect class="a" x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" ${OL}/>`;
-    return r(-T / 2, -g - L, T, L) + r(-T / 2, g, T, L) + r(-g - L, -T / 2, L, T) + r(g, -T / 2, L, T) +
-      (s.dot ? `<rect class="a" x="-1" y="-1" width="2" height="2" fill="${c}" ${OL}/>` : '');
+    return r(-T / 2, -g - L, T, L) + r(-T / 2, g, T, L) + r(-g - L, -T / 2, L, T) + r(g, -T / 2, L, T);
   },
   nodes: 0,
 });
@@ -105,19 +108,24 @@ export class CrosshairView {
     this.body = document.createElementNS(NS, 'g');
     this.nodesG = document.createElementNS(NS, 'g');
     this.nodesG.setAttribute('class', 'nds');
-    this.el.append(this.body, this.nodesG);
+    this.dotG = document.createElementNS(NS, 'g');
+    this.el.append(this.body, this.nodesG, this.dotG);
     parent.appendChild(this.el);
-    this.key = ''; this.nodeKey = ''; this.hitT = 0; this.readyOn = false;
+    this.key = ''; this.nodeKey = ''; this.dotKey = ''; this.hitT = 0; this.readyOn = false; this.bodyOn = true;
   }
   /** Hit frame: arms take the hit colour and grow to 1.15x for 90 ms (§1.9 #1). */
   hit() { this.hitT = 0.09; }
-  update(dt, { id = 'xh_default', gap = 4, settings = {}, color = '#4dff6a', color2 = color, hitColor = '#ffffff', react = false, ready = false, active = false, nodes = false, visible = true }) {
-    this.el.style.opacity = visible ? '' : '0';
-    if (!visible) return;
+  update(dt, { id = 'xh_default', gap = 4, settings = {}, color = '#4dff6a', color2 = color, hitColor = '#ffffff', react = false, ready = false, active = false, nodes = false, visible = true, dot = visible }) {
+    const showDot = !!settings.dot && dot;
+    this.el.style.opacity = visible || showDot ? '' : '0';
+    if (visible !== this.bodyOn) { this.bodyOn = visible; this.body.style.display = this.nodesG.style.display = visible ? '' : 'none'; }
+    const dk = showDot ? `${color}|${settings.crosshairThick}` : '';
+    if (dk !== this.dotKey) { this.dotKey = dk; this.dotG.innerHTML = dk ? centreDot(color, settings) : ''; }
+    if (!visible && !showDot) return;
     const spec = CROSSHAIRS[id] || CROSSHAIRS.xh_default;
     const g = Math.round(gap);
-    const key = `${id}|${spec.dynamic ? g : 0}|${color}|${color2}|${settings.crosshairLen}|${settings.crosshairThick}|${settings.dot}`;
-    if (key !== this.key) { this.key = key; this.body.innerHTML = spec.draw(g, color, settings, color2); }
+    const key = `${id}|${spec.dynamic ? g : 0}|${color}|${color2}|${settings.crosshairLen}|${settings.crosshairThick}`;
+    if (visible && key !== this.key) { this.key = key; this.body.innerHTML = spec.draw(g, color, settings, color2); }
     const nk = nodes && spec.nodes ? `${spec.nodes}` : '';
     if (nk !== this.nodeKey) { this.nodeKey = nk; this.nodesG.innerHTML = nk ? nodeMarkup(spec.nodes) : ''; }
     if (ready !== this.readyOn) { this.readyOn = ready; this.el.classList.toggle('ready', ready); }
