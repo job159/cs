@@ -55,6 +55,12 @@ export const SHELL = {
   ghostfire: { col: [1.5, 0.45, 2.7], amt: 0.3, hz: 7, depth: 0.35, flicker: true, fres: 0.97, exp: 2.6, prio: 1 },
   // M03 kill: a warm rim flash instead of the white body flash (the corpse catches fire, it does not turn to glass)
   emberkill: { col: [2.8, 1.1, 0.25], amt: 0.6, fres: 0.95, exp: 1.8, prio: 9, decay: true },
+  // X02 kill: a star-blue rim flash (a pack cut down at once must not turn into a crowd of white glass bodies)
+  starkill: { col: [0.9, 1.5, 3.4], amt: 0.45, fres: 0.97, exp: 2.6, prio: 9, decay: true },
+  // X05 kill (KE_CLEAVE): a molten crimson rim on the cut body (smouldering, not a white flash)
+  cleavekill: { col: [2.8, 0.42, 0.16], amt: 0.55, fres: 0.95, exp: 2.0, prio: 9, decay: true },
+  // X04 連霆 / KE_THUNDER: a flickering cold-white rim (electrocuted), never a solid blue body
+  shocked: { col: [1.4, 2.6, 3.6], amt: 0.42, hz: 22, depth: 0.5, flicker: true, fres: 0.95, exp: 2.2, prio: 6 },
   frozen: { col: [0.8, 1.8, 2.6], amt: 0.5, fres: 1, prio: 5 },
   poisoned: { col: [0.6, 1.6, 0.2], amt: 0.4, hz: 2, depth: 0.3, fres: 0.7, prio: 4 },
   // enraged boss: a thin ember-red rim; the readable cue is the model's own vein glow + embers (_rageStep)

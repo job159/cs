@@ -1,0 +1,269 @@
+{
+  "category": "premium_starsword",
+  "producer": "premium_starsword",
+  "sounds": {
+    "ready_starsword": [
+      "fs:375550"
+    ],
+    "ready_starsword_night": [],
+    "starsword_block": [
+      "kenney_impact/Audio/impactMetal_heavy_001",
+      "fs:406562",
+      "fs:201094"
+    ],
+    "starsword_charge": [],
+    "starsword_charge_full": [
+      "kenney_impact/Audio/impactMetal_heavy_002"
+    ],
+    "starsword_charge_stage": [
+      "kenney_impact/Audio/impactMetal_light_001"
+    ],
+    "starsword_close": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "starsword_counter": [
+      "fs:60024",
+      "fs:263595",
+      "fs:507466"
+    ],
+    "starsword_crack": [
+      "fs:342546",
+      "fs:321477",
+      "fs:232137",
+      "fs:386799",
+      "fs:569510"
+    ],
+    "starsword_crisis": [
+      "fs:565642",
+      "fs:203381",
+      "kenney_impact/Audio/impactGlass_heavy_001"
+    ],
+    "starsword_draw": [
+      "fs:375550",
+      "fs:494797",
+      "kenney_impact/Audio/impactMetal_light_000"
+    ],
+    "starsword_draw_first": [
+      "fs:375550",
+      "fs:163164",
+      "kenney_impact/Audio/impactMetal_light_003"
+    ],
+    "starsword_far": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "starsword_final": [
+      "fs:522099",
+      "fs:201094",
+      "fs:374274"
+    ],
+    "starsword_first_sting": [
+      "fs:374273",
+      "fs:374274",
+      "fs:764329",
+      "fs:372835",
+      "fs:375531"
+    ],
+    "starsword_guard_up": [
+      "fs:494797",
+      "kenney_impact/Audio/impactMetal_light_002",
+      "fs:375550"
+    ],
+    "starsword_hit": [
+      "fs:420674",
+      "fs:504615",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040"
+    ],
+    "starsword_hit_flesh": [
+      "fs:420674",
+      "fs:504615",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040"
+    ],
+    "starsword_hit_ring": [],
+    "starsword_hit_wall": [
+      "kenney_impact/Audio/impactMetal_heavy_000",
+      "fs:406562",
+      "fs:201094",
+      "fs:321477",
+      "fs:569510"
+    ],
+    "starsword_idle": [],
+    "starsword_inspect": [
+      "fs:764341",
+      "fs:494797"
+    ],
+    "starsword_kill": [],
+    "starsword_parry": [
+      "fs:374274",
+      "fs:374273",
+      "kenney_impact/Audio/impactMetal_heavy_003"
+    ],
+    "starsword_recover": [
+      "fs:494797"
+    ],
+    "starsword_sever": [
+      "fs:420674",
+      "fs:504615",
+      "fs:355052",
+      "fs:488659",
+      "fs:134025",
+      "fs:414296",
+      "fs:641046"
+    ],
+    "starsword_skyspan": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "starsword_skyspan_charge": [],
+    "starsword_skyspan_end": [
+      "kenney_impact/Audio/impactGlass_light_001"
+    ],
+    "starsword_slam": [
+      "fs:522099",
+      "fs:523089",
+      "fs:258195",
+      "fs:201094",
+      "fs:569510",
+      "fs:703247"
+    ],
+    "starsword_star": [],
+    "starsword_swing": [
+      "fs:60024",
+      "fs:263595",
+      "fs:507466"
+    ],
+    "starsword_swing_light": [
+      "fs:60024",
+      "fs:263595",
+      "fs:507466"
+    ],
+    "starsword_swing_night": [],
+    "starsword_tail": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "starsword_ult_bed": [
+      "fs:373944",
+      "fs:373919",
+      "fs:375497",
+      "fs:764329",
+      "fs:764339",
+      "fs:372835",
+      "fs:372829",
+      "fs:374274",
+      "fs:375531"
+    ],
+    "starsword_ult_bed_night": [],
+    "starsword_ult_fall": [],
+    "starsword_ult_impact": [
+      "fs:258195",
+      "fs:523089",
+      "fs:522099",
+      "fs:201094",
+      "fs:703247",
+      "fs:366086"
+    ],
+    "starsword_ult_impact_night": [],
+    "starsword_ult_pulse": [
+      "fs:375532",
+      "fs:374273"
+    ],
+    "starsword_ult_rise": [
+      "fs:375497",
+      "fs:374274"
+    ],
+    "starsword_ult_rise_night": [],
+    "starsword_ult_shatter": [
+      "fs:249549",
+      "fs:244238",
+      "fs:565642",
+      "fs:202093",
+      "kenney_impact/Audio/impactGlass_light_000"
+    ],
+    "starsword_ult_shatter_night": [],
+    "starsword_ult_sigil": [
+      "fs:375531"
+    ],
+    "starsword_wave": [
+      "fs:758580",
+      "fs:703248"
+    ],
+    "starsword_wheel": [
+      "fs:60024",
+      "fs:263595",
+      "fs:507466"
+    ]
+  },
+  "loaded": [
+    "fs:134025",
+    "fs:163164",
+    "fs:201094",
+    "fs:202093",
+    "fs:203381",
+    "fs:232137",
+    "fs:244238",
+    "fs:249549",
+    "fs:258195",
+    "fs:263595",
+    "fs:321477",
+    "fs:342546",
+    "fs:355052",
+    "fs:366086",
+    "fs:372829",
+    "fs:372835",
+    "fs:373919",
+    "fs:373944",
+    "fs:374273",
+    "fs:374274",
+    "fs:375497",
+    "fs:375531",
+    "fs:375532",
+    "fs:375550",
+    "fs:386799",
+    "fs:406562",
+    "fs:414296",
+    "fs:420674",
+    "fs:488659",
+    "fs:494797",
+    "fs:504615",
+    "fs:507466",
+    "fs:522099",
+    "fs:523089",
+    "fs:565642",
+    "fs:569510",
+    "fs:60024",
+    "fs:626405",
+    "fs:641040",
+    "fs:641046",
+    "fs:703247",
+    "fs:703248",
+    "fs:758580",
+    "fs:764329",
+    "fs:764339",
+    "fs:764341",
+    "fs:779805",
+    "kenney_impact/Audio/impactGlass_heavy_001",
+    "kenney_impact/Audio/impactGlass_heavy_002",
+    "kenney_impact/Audio/impactGlass_light_000",
+    "kenney_impact/Audio/impactGlass_light_001",
+    "kenney_impact/Audio/impactGlass_light_002",
+    "kenney_impact/Audio/impactGlass_light_003",
+    "kenney_impact/Audio/impactGlass_light_004",
+    "kenney_impact/Audio/impactMetal_heavy_000",
+    "kenney_impact/Audio/impactMetal_heavy_001",
+    "kenney_impact/Audio/impactMetal_heavy_002",
+    "kenney_impact/Audio/impactMetal_heavy_003",
+    "kenney_impact/Audio/impactMetal_heavy_004",
+    "kenney_impact/Audio/impactMetal_light_000",
+    "kenney_impact/Audio/impactMetal_light_001",
+    "kenney_impact/Audio/impactMetal_light_002",
+    "kenney_impact/Audio/impactMetal_light_003",
+    "kenney_impact/Audio/impactMetal_light_004"
+  ],
+  "original": false
+}

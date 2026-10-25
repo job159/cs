@@ -244,9 +244,6 @@ const PYRE_HINTS = (n) => [
   { key: 'R', zh: '換彈' }, { key: 'F', zh: '檢視', desc: '按住循環' },
 ];
 def({ ...PYRE, id: 'bifang', zh: '畢方．焚翼', en: 'Bifang Pyrewing', element: ['radiant', 'inferno'], model: 'bifang',
-  // held back from the shop: holding fire switches it to the sidearm after a few shots (2026-10-24 release check);
-  // its twin guiche (same handler) works — unhide once fixed
-  hidden: true,
   fx: { flashScale: 1.1, ramp: 7, tracerEvery: 0 },
   premium: {
     element: ['radiant', 'inferno'], look: 'bifang',
@@ -315,9 +312,12 @@ def({ ...PYRE, id: 'guiche', zh: '鬼車．晦翼', en: 'Guiche Gloomwing', elem
 // its own attacks (mode 'melee' -> special.melee): LMB taps chain 星流三式 (110 / 110 / 170, every target in the arc),
 // LMB held 墜星 (3 charge stages: a ground slam + a 星痕 wave running along the street), RMB held 鎮河 guard (-70 %
 // from the front; a hit in the first 0.25 s is a perfect guard -> 迴瀾 counter), Q 橫天 (40 星能: a 9 m projected
-// blade sweeps 220°), hold Q 天劍 (a 14 m star sword falls from the sky). Hidden until the refine stage releases it.
+// blade sweeps 220°), hold Q 天劍 (a 14 m star sword falls from the sky). Released 2026-10-26 (shop + armory).
 def({ id: 'starsword', zh: '星河．斬嶽', en: 'Xinghe Peakcleaver', cat: 'melee', tier: 'mythic', line: 'xingxiu', element: ['cosmic'], model: 'starsword',
-  hidden: true, price: 7600, wear: 0.15, dmg: 110, head: 1.5, rpm: 100, mode: 'melee', mag: 0, reserve: 0, draw: 0.6,
+  price: 7600, wear: 0.15, dmg: 110, head: 1.5, rpm: 100, mode: 'melee', mag: 0, reserve: 0, draw: 0.6,
+  // shop card bars: the slam (to 450 + a 300 wave) and the 9 m 橫天 are what the derived melee bars missed
+  shopStats: [['傷害', 0.62], ['攻速', 0.5], ['重擊', 0.95], ['範圍', 0.9], ['機動', 0.8]],
+  icon: { roll: -90 },   // shop / HUD silhouette (ui/icons.js): laid along the strip, the point to the right (upright it was a hairline)
   range: [3.2, 3.2, 1], speed: 5.2, knock: 3, stagger: 0.6, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
   kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'starsword', shell: null, flash: null, tracer: 0,
   // first person: the blade rises from the lower right, its flat half turned to the camera, the tip leaning left
@@ -330,21 +330,26 @@ def({ id: 'starsword', zh: '星河．斬嶽', en: 'Xinghe Peakcleaver', cat: 'me
     // (chrome), dark mirror ricasso (black_chrome), ivory ray skin (leather_pebble), five designed enamels (glaze_* /
     // porcelain: one tone per cell, wires are geometry; the shader only adds a faint crackle under the glaze)
     presets: { glow_arc: 'pv_energy', glow_blue: 'pv_energy', glow_white: 'pv_energy', silver_aged: 'pv_metal', gold: 'pv_metal', gold_leaf: 'pv_metal', steel_bright: 'pv_metal', steel_blued: 'pv_metal',
-      chrome: 'pv_metal', brass: 'pv_metal', black_chrome: 'pv_metal', leather_pebble: 'pv_metal',
+      chrome: 'pv_metal', brass: 'pv_metal', black_chrome: 'pv_metal', leather_pebble: 'pv_metal', steel: 'pv_metal', glass: 'pv_crystal',
       glaze_cobalt: 'pv_glaze', glaze_inkteal: 'pv_glaze', glaze_turquoise: 'pv_glaze', glaze_aubergine: 'pv_glaze', porcelain: 'pv_glaze', crystal: 'pv_crystal', obsidian: 'pv_core' },
     pv: { pv_metal: { shine: 0.9, sweepT: 5 }, pv_glaze: { shine: 0.7, sweepT: 4.5, shardScale: 300, groutW: 0.03, grout: '#0c1634', groutMetal: 0 },
       pv_energy: { veinFreq: 10, veinSpeed: 0.6, veinAxis: 0 }, pv_core: { coreMode: 0, coreScale: 1.4 } },
     // the projected edge reads star-white-blue (glow_arc is violet-white)
     mat: {
       glow_arc: { emissive: '#bcd2ff', glow: 3.6 }, glow_blue: { emissive: '#6f8dff', glow: 2.4 },
-      steel_blued: { color: '#34405f', rough: 0.36, metal: 0.85, env: 1.0, dStr: 0.1 },
-      chrome: { color: '#c9ced6', rough: 0.08, metal: 1, detail: 'brushed', dScale: 14, dStr: 0.03 },
-      brass: { color: '#8d8167', rough: 0.2, metal: 1, detail: 'brushed', dScale: 30, dStr: 0.05 },
-      steel_bright: { color: '#4c5071', rough: 0.22, metal: 1, dStr: 0.05 },
+      // night-blue flats: saturated, part diffuse and a low env so the sky reflection does not wash them silver-white
+      steel_blued: { color: '#2c3f7a', rough: 0.38, metal: 0.55, env: 0.6, dStr: 0.1 },
+      chrome: { color: '#e2e7ef', rough: 0.05, metal: 1, detail: 'brushed', dScale: 14, dStr: 0.03 },
+      brass: { color: '#b09358', rough: 0.18, metal: 1, detail: 'brushed', dScale: 30, dStr: 0.05 },
+      steel_bright: { color: '#5d4f9c', rough: 0.2, metal: 1, dStr: 0.05 },
+      // 錯銀: the silver floor of the engraving -- satin, so it catches broad light against the blued plate in any
+      // surroundings (a mirror finish reflected the same dark as the plate and the scrolls vanished)
+      steel: { color: '#f2f4f8', rough: 0.3, metal: 1, detail: 'brushed', dScale: 60, dStr: 0.04, env: 1.5 },
       black_chrome: { color: '#222a3f', rough: 0.14, metal: 1, detail: 'brushed', dScale: 34, dStr: 0.06 },
       leather_pebble: { color: '#d3c9b0', rough: 0.5, metal: 0, detail: 'stipple', dScale: 120, dStr: 0.85 },
       glaze_cobalt: { color: '#2449a6' }, glaze_inkteal: { color: '#15255c' }, glaze_turquoise: { color: '#3d7fd2' }, glaze_aubergine: { color: '#3e2c78' }, porcelain: { color: '#eef0f6' },
-      crystal: { color: '#86aef0', env: 1.3 },
+      crystal: { color: '#a8c8ff', rough: 0.03, env: 1.7 },
+      glass: { color: '#2f5ee0', rough: 0.03, metal: 0.2, env: 0.9 },   // the 天樞 sapphire (focal point: a deep blue fire, not a white disc)
     },
     // per key: the rim light (nebula violet) stays on the energy parts (metals / enamel only at grazing edges); the
     // blade's sheen a slow cool sweep; the galaxy floor deep blue with a violet second nebula, stars white
@@ -374,7 +379,7 @@ def({ id: 'starsword', zh: '星河．斬嶽', en: 'Xinghe Peakcleaver', cat: 'me
   special: {
     type: 'starsword',
     meters: {
-      star: { max: 100, start: 40, onHit: 2, onKill: 4, onParry: 15, skillFill: false, hud: 'arc', label: '星能', src: '每刀每個命中 +2、擊殺 +4、完美格擋 +15' },
+      star: { max: 100, start: 40, onHit: 2, onKill: 4, onParry: 15, skillFill: false, hud: 'arc', label: '星能', src: '劍招每個命中 +2、擊殺 +4、完美格擋 +15（技能命中不回補）' },
       charge: { max: 3, hud: 'segments', segments: 3, label: '墜星', color: '#bcd2ff', src: '按住開火蓄力' },   // live stage (display only)
       ult: { max: 100, source: 'damage', per: 6000, skillFill: false, hud: 'ring', label: '天劍', src: '傷害累積（約 45 秒）' },
     },
@@ -401,13 +406,15 @@ def({ id: 'starsword', zh: '星河．斬嶽', en: 'Xinghe Peakcleaver', cat: 'me
 // pins the survivors 1.2 s and hurls the dead). 九陽: 9 arrows that relight by themselves (R = 續陽 refill). RMB 分曦
 // splits the drawn arrow into a 5-arrow fan (3 arrows), Q 懸日 (30 日精) hangs a small sun that burns, pulls and turns
 // every arrow through it into 貫日, hold Q 落九陽 (4,500 damage) shoots nine suns out of the sky onto the crosshair.
-// Hidden until the refine stage releases it.
+// Released (shop / armory, mythic frame).
 def({ id: 'sunbow', zh: '彤弓．落陽', en: 'Tonggong Sunfall', cat: 'heavy', tier: 'mythic', line: 'sheri', element: ['inferno', 'radiant'], model: 'sunbow',
-  hidden: true, price: 8400, wear: 0.15, dmg: 460, head: 3, rpm: 40, mode: 'bow', mag: 9, reserve: Infinity, reload: 1.0, reloadEmpty: 1.0, draw: 0.7,
+  price: 8400, wear: 0.15, dmg: 460, head: 3, rpm: 40, mode: 'bow', mag: 9, reserve: Infinity, reload: 1.0, reloadEmpty: 1.0, draw: 0.7,
   pen: 8, range: [999, 999, 1], speed: 5.0, knock: 3.6, stagger: 1,
   // the spread is the draw's: hip 0 + a bloom the special sets every frame (2.2° undrawn -> 0° at 貫日); move / air add
   spread: [0, 0, 1.2, 4, 0, 9, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 14 }, kick: { back: 0, up: 0, side: 0, roll: 0 },
   sound: 'sunbow', shell: null, flash: null, tracer: 0,
+  // HUD / shop silhouette (ui/icons.js): the upright bow rolled to lie along the icon strip
+  icon: { roll: 90, zoom: 1.08 },
   // first person: vm.hip = the aimed pose (bow hand left of the crosshair, canted right, the arrow rising to the centre);
   // vm.rest = undrawn (lowered to the lower left, more cant): premium/sunbow.js blends them with the draw
   vm: { hip: [-0.16, -0.13, -0.72, 10, 20, -6], rest: [-0.3, -0.2, -0.62, -2, 24, 12] },
@@ -415,7 +422,7 @@ def({ id: 'sunbow', zh: '彤弓．落陽', en: 'Tonggong Sunfall', cat: 'heavy',
     stages: [0.35, 0.85, 1.45], dmg: [55, 120, 240, 460], speed: [60, 85, 110, 150], pierce: [1, 2, 3, 8], burn: [0, 0, 1, 3],
     spread: [2.2, 0.9, 0.35, 0], gravity: [5, 3, 1.5, 0], knock: [0.8, 1.4, 2.4, 3.6], stagger: [0.3, 0.6, 0.9, 1], headMul: 3,
     renock: 0.32, tire: 3, tireRate: 0.4, tireMax: 1.5, regen: { delay: 0.6, every: 0.7 }, moveMul: 0.85, pin: 1.2,
-    burnDps: 20, burnDur: 3, burnMax: 3, fan: { n: 5, deg: 14, mul: 0.55, cost: 3, cd: 0.7 },
+    burnDps: 20, burnDur: 3, burnMax: 3, fan: { n: 5, deg: 18, mul: 0.55, cost: 3, cd: 0.7 },
   },
   premium: {
     element: ['inferno', 'radiant'], look: 'sunbow',
@@ -425,12 +432,15 @@ def({ id: 'sunbow', zh: '彤弓．落陽', en: 'Tonggong Sunfall', cat: 'heavy',
     // red lacquer: sweep + a tight warm rim, no shards; the 日珠 burns gold-orange from inside
     pv: { pv_glaze: { shine: 1.7, sweepT: 5, shardScale: 0, irid: 0, rimPower: 5 }, pv_metal: { shine: 1.4, sweepT: 5.5 }, pv_energy: { veinFreq: 12, veinSpeed: 0.5 } },
     // the red lacquer carries a fine 斷紋 crackle (one-colour shards = crackle under the glaze)
-    pvKey: { crystal: { coreTint: '#ffb43a' }, glaze_jade: { irid: 0.08 },
+    // the 日珠 holds a sun (gemSun = the stone's radius about the rotor pivot): white-gold disc, slow ray corona, vermilion girdle
+    pvKey: { crystal: { coreTint: '#e8902c', gemSun: 0.0142, irid: 0.12 }, glaze_jade: { irid: 0.08 },
       lacquer_red: { shardScale: 115, shardPal: ['#9a1420', '#9a1420', '#9a1420', '#9a1420'], grout: '#3a0c0e', groutW: 0.05 } },
     // the 日珠 burns from inside (emissive: clip glow events and the draw drive it with the gun's other glows)
-    // bronze a shade lighter than the stock aged bronze (the cast relief must read under neutral light); the nine sun
-    // cores rest dimmer so the cup metalwork reads before the glow
-    mat: { crystal: { color: '#ffcf7a', emissive: '#ff8a1e', glow: 0.75 }, bronze_aged: { color: '#86663a', dScale: 78, dStr: 0.13 }, glow_gold: { glow: 4.5 } },
+    // bronze a shade lighter than the stock aged bronze (the cast relief must read under neutral light) with a fine,
+    // quiet casting skin (the relief + baked cavity patina carry it, not noise); the nine sun cores rest at about half
+    // the 日珠 (§2.30 ≤ 0.5x the focal) so the cup metalwork reads before the glow; the stone's own glow stays low
+    // under its inner sun (no blown-out white disc)
+    mat: { crystal: { color: '#c87a34', emissive: '#ff7a1e', glow: 0.35, env: 0.6, rough: 0.1 }, bronze_aged: { color: '#86663a', dScale: 130, dStr: 0.06 }, glow_gold: { glow: 2 } },
     hero: 'fx_sun', crosshair: 'xh_sunbow', meters: ['arc', 'ring'],
     ready: { sfx: 'ready_sunbow', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.4, glowMul: 1.5, idleExtra: 'sunbow_ready' } },
     idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.15, glowMul: 1.15, idleExtra: 'sunbow_glint', every: 7 }],   // §1.17 idle tiers
@@ -462,6 +472,161 @@ def({ id: 'sunbow', zh: '彤弓．落陽', en: 'Tonggong Sunfall', cat: 'heavy',
       ult: { id: 'sunbow_ult', key: 'hold Q', zh: '落九陽', desc: '九顆太陽從天射落：8×240＋正中 650', meter: 'ult', range: 35,
         ring: 4.5, dmg: 240, r: 3.5, burn: 2, knock: 5, final: 650, finalR: 6.5, finalKnock: 10, every: 0.22, level: 'L3' },
     },
+  } });
+
+// ---------------------------------------------------------------- 神兵 雷澤 X04 (docs/PREMIUM_WEAPONS.md §2.31, Appendix A)
+// 應龍．御霆: a mythic magic staff (presentation + mechanics: weapons/premium/staff.js). Mana, not a magazine (ws.ammo of
+// 100, refills by itself; R 引雷 tops it up). The special runs the trigger (mode 'staff' -> special.trigger): LMB held casts
+// 雷矢 homing darts (400 rpm, 36, 4 mana) that leave 雷印 marks; RMB held channels 連霆, a chain of lightning from the
+// 雷珠 jumping through five zombies (marked ones take more; three marks = 雷爆); Q 雷池 (35 霆勢) plants a thunder field that
+// strikes, slows and throws back whatever tries to cross its edge; hold Q 應龍．震霄 (5,000 damage) calls the winged dragon
+// out of a storm cloud. Hidden until the refine stage releases it (?w=staff for development).
+def({ id: 'staff', zh: '應龍．御霆', en: 'Yinglong Stormherald', cat: 'staff', tier: 'mythic', line: 'leize', element: ['storm', 'jade'], model: 'staff', hidden: true,
+  price: 9800, wear: 0.15, dmg: 36, head: 2, rpm: 400, mode: 'staff', mag: 100, reserve: Infinity, reload: 1.2, reloadEmpty: 1.2, draw: 0.65,
+  resource: { kind: 'mana', max: 100, regen: 20, label: '法力', color: '#8fe6ff' },
+  pen: 0, range: [42, 42, 1], speed: 5.1, knock: 0.6, stagger: 0.25,
+  spread: [0.6, 0.6, 0.8, 2, 0, 1.5, 10], recoil: { up: 0, side: 0, upMax: 0, recover: 14 }, kick: { back: 0, up: 0, side: 0, roll: 0 },
+  sound: 'staff', shell: null, flash: null, tracer: 0,
+  shopStats: [['傷害', 0.55], ['射速', 0.7], ['追蹤', 1], ['範圍', 0.85], ['控場', 0.95]],
+  icon: { roll: 90, zoom: 1.08 },   // HUD / shop silhouette (ui/icons.js): the upright staff laid along the strip
+  // first person: the staff held high in the right hand, the head up right of the crosshair, the dragon looking forward
+  vm: { hip: [0.25, -0.33, -0.52, 4, -58, 14] },
+  staff: {
+    bolt: { cost: 4, dmg: 36, headMul: 2, speed: 40, speed1: 62, accel: 0.3, range: 42, cone: 12, turn: 600, delay: 0.08, knock: 0.6, stagger: 0.25 },
+    regen: { delay: 0.5, rate: 20 },
+    mark: { max: 3, dur: 4, mul: 0.2, burst: 120, burstR: 2.5, cd: 0.8 },
+  },
+  premium: {
+    element: ['storm', 'jade'], look: 'staff',
+    palette: { base: '#7a5a2e', trim: '#e3b04b', core: '#9fe8ff', rim: '#e8f6ff', mote: '#d8f6ff', accent: ['#2f8f6e', '#ffe27a'], twin: '#ffd36b' },
+    presets: { bronze_aged: 'pv_metal', gold: 'pv_metal', lacquer_black: 'pv_glaze', glaze_jade: 'pv_glaze', glaze_teal: 'pv_glaze', glaze_vermilion: 'pv_glaze',
+      glow_cyan: 'pv_energy', crystal: 'pv_crystal', glass: 'pv_crystal' },
+    // black lacquer: a slow sweep and a fine one-colour crackle; bronze a warm cast skin under a quiet sweep; the jade
+    // wings a faint irid; the 雷珠 holds a cold white-blue light, the dragon's eyes a dimmer one (≤ 0.4 x the focus)
+    pv: { pv_metal: { shine: 1.2, sweepT: 5.5 }, pv_glaze: { shine: 1.3, sweepT: 5, shardScale: 0, irid: 0, rimPower: 6 }, pv_energy: { veinFreq: 14, veinSpeed: 0.7 } },
+    pvKey: { lacquer_black: { shardScale: 120, shardPal: ['#121012', '#121012', '#121012', '#121012'], grout: '#2a2420', groutW: 0.04 },
+      glaze_jade: { irid: 0.1, rimPower: 8 }, glaze_teal: { irid: 0.12, rimPower: 8 }, bronze_aged: { rimPower: 10 }, gold: { rimPower: 10 },
+      crystal: { coreTint: '#7fd8ff', irid: 0.15 }, glass: { coreTint: '#5fd0ff', gem: 1.2 } },
+    mat: {
+      crystal: { color: '#cdeeff', emissive: '#7fd8ff', glow: 0.55, env: 1.4, rough: 0.05 },
+      glass: { color: '#1b3a52', emissive: '#4fc8ff', glow: 0.5, rough: 0.05, metal: 0.2, env: 1.0 },
+      glow_cyan: { emissive: '#9fe8ff', glow: 2.2 },
+      bronze_aged: { color: '#86663a', dScale: 120, dStr: 0.08 },
+      glaze_jade: { color: '#2f8f6e' }, glaze_teal: { color: '#1f7f86' }, glaze_vermilion: { color: '#b3202a' },
+    },
+    hero: 'fx_pearl', crosshair: 'xh_staff', meters: ['arc', 'ring'],
+    ready: { sfx: 'ready_staff', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.4, glowMul: 1.5, idleExtra: 'staff_ready' } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.15, glowMul: 1.15, idleExtra: 'staff_glint', every: 7 }],   // §1.17 idle tiers
+    firstDraw: 'staff_first', drawClip: 'staff_drawn', inspect: ['staff_inspect'], rareInspect: 'staff_inspect_rare', reload: 'staff_reload', rareReload: 'staff_reload_rare',
+    killFx: 'KE_THUNDER', killMark: 'km_staff', dmgSkin: 'staff',
+    crisis: { name: '雷鱗甲', kind: 'knock', fx: 'staff_crisis' },
+    aura: { type: 'regen', mul: 6, radius: 9, when: 'source', source: ['staff_ult'] },
+    twin: 'staff_hui', phases: ['yuting', 'huiting'],
+    showcase: ['staff_first', 'fire:8', 'alt', 'tap', 'ult', 'staff_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'hold LMB', zh: '雷矢', desc: '連發追蹤雷矢（每發 4 法力），命中留雷印' },
+      { key: 'hold RMB', zh: '連霆', desc: '引導鏈狀閃電，跳 5 隻；打到 3 層雷印＝雷爆' },
+      { key: 'Q', zh: '雷池', desc: '霆勢 35：雷池 5 秒，落雷、緩速，殭屍過不了池邊' }, { key: 'hold Q', zh: '應龍．震霄', desc: '震霄 100%（或 Q 再按 F）' },
+      { key: 'R', zh: '引雷', desc: '法力自己會回；R 一次補滿' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'staff',
+    meters: {
+      thunder: { max: 100, start: 40, onKill: 4, onBurst: 4, skillFill: false, hud: 'arc', label: '霆勢', src: '雷矢每中 +1.5、擊殺 +4、雷爆 +4（技能命中不回補）' },
+      ult: { max: 100, source: 'damage', per: 5000, skillFill: false, hud: 'ring', label: '震霄', src: '傷害累積（約 45 秒）' },
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q; the HUD dock / hint card read the live bindings)
+      alt: { id: 'staff_chain', key: 'RMB', zh: '連霆', desc: '按住引導・主目標每秒 150・跳 4 次 ×0.8・每秒 22 法力', hold: true, cost: 0,
+        range: 22, cone: 8, jumps: 4, jumpR: 6, dps: 150, falloff: 0.8, slow: 0.45, mana: 22, tick: 0.1, level: 'L2' },
+      tap: { id: 'staff_pool', key: 'Q', zh: '雷池', desc: '6.5 m 雷池 5 秒：開池 220、每秒 40、落雷 110、池邊彈開', meter: 'thunder', cost: 35,
+        range: 30, r: 6.5, dur: 5, open: 220, openR: 3.5, dps: 40, slow: 0.5, strike: 110, strikeR: 1.5, every: 0.5, repel: 2.5, repelCd: 1.5, level: 'L2' },
+      ult: { id: 'staff_ult', key: 'hold Q', zh: '震霄', desc: '應龍俯衝 3 次 260＋連鎖，再化雷柱 650；之後甘霖回血', meter: 'ult', range: 35,
+        r: 9, dive: 260, diveR: 5, chain: 100, chainN: 3, final: 650, finalR: 7, rain: 6, rainR: 9, rainDur: 5, level: 'L4' },
+    },
+  } });
+
+// ---------------------------------------------------------------- 神兵 山海 X05 (docs/PREMIUM_WEAPONS.md §2.32, Appendix A)
+// 刑天．舞戚: a mythic two-handed bronze great axe whose blade is Xingtian's face (presentation + mechanics:
+// weapons/premium/greataxe.js). The special drives its own attacks (mode 'melee' -> special.melee): LMB taps chain 開山三劈
+// (140 / 140 / 240, everything in the arc; the third cleaves the street and runs a fissure), LMB held 天墜 (2 stages: a
+// leap to the marked ground and a smash, 220 -> 450, then three shockwave rings), RMB held 狂旋 (whirlwind: 60 every
+// 0.28 s all round, pulls zombies in, drains 戰意), Q 迴戚 (35 戰意: the axe thrown spinning through the horde and back),
+// hold Q 猛志 (a 14 m headless war spirit sweeps the street and cleaves the mark). Hidden until the refine stage
+// releases it (?w=greataxe).
+def({ id: 'greataxe', zh: '刑天．舞戚', en: 'Xingtian Wardancer', cat: 'melee', tier: 'mythic', line: 'shanhai', element: ['demonic'], model: 'greataxe', hidden: true,
+  price: 7800, wear: 0.2, dmg: 140, head: 1.5, rpm: 90, mode: 'melee', mag: 0, reserve: 0, draw: 0.65,
+  // shop card bars: the leap smash + rings and the whirlwind are what the derived melee bars miss
+  shopStats: [['傷害', 0.72], ['攻速', 0.4], ['重擊', 1.0], ['範圍', 0.85], ['機動', 0.8]],
+  icon: { roll: -90 },   // shop / HUD silhouette (ui/icons.js): the haft along the strip, the head to the right
+  range: [3.0, 3.0, 1], speed: 5.0, knock: 3.5, stagger: 0.7, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
+  kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'greataxe', shell: null, flash: null, tracer: 0,
+  // first person: the haft rises from the lower right, the head over the right of the frame with the mask turned to
+  // the eye, the edge pointing right
+  vm: { hip: [0.27, -0.36, -0.5, -6, -68, 20] },
+  premium: {
+    element: ['demonic'], look: 'greataxe',
+    palette: { base: '#8a6a3a', trim: '#e3b04b', core: '#ff3a2a', rim: '#ff8a3a', mote: '#ffb070', accent: ['#3aa99b'], twin: '#cfe8ff', ember: '#ffd27a' },
+    // bronze (cast detail, cavity patina from the bake), gold, a forged iron edge; black lacquer with a fine 斷紋 crackle,
+    // cinnabar bands; turquoise chips; crimson crystal eyes; molten glows
+    presets: { bronze_aged: 'pv_metal', gold: 'pv_metal', gold_leaf: 'pv_metal', steel: 'pv_metal', steel_bright: 'pv_metal', chrome: 'pv_metal',
+      lacquer_black: 'pv_glaze', lacquer_red: 'pv_glaze', glaze_turquoise: 'pv_glaze', crystal: 'pv_crystal',
+      glow_red: 'pv_energy', glow_orange: 'pv_energy', glow_white: 'pv_energy' },
+    pv: { pv_metal: { shine: 1.1, sweepT: 5.5 }, pv_glaze: { shine: 1.3, sweepT: 5, shardScale: 0, irid: 0, rimPower: 6 }, pv_energy: { veinFreq: 14, veinSpeed: 0.45, veinAxis: 0 } },
+    pvKey: { lacquer_black: { shardScale: 140, shardPal: ['#121012', '#121012', '#121012', '#121012'], grout: '#2a1a12', groutW: 0.04, rimPower: 8 },
+      lacquer_red: { shardScale: 120, shardPal: ['#9a1420', '#9a1420', '#9a1420', '#9a1420'], grout: '#3a0c0e', groutW: 0.04 },
+      glaze_turquoise: { irid: 0.05, rimPower: 10 }, bronze_aged: { rimPower: 10 }, gold: { rimPower: 10 }, gold_leaf: { rimPower: 10 },
+      steel: { rimPower: 12 }, steel_bright: { rimPower: 12, shine: 1.6 }, chrome: { rimPower: 14 }, crystal: { coreTint: '#ff2a1a' } },
+    // bronze a shade warmer and lighter than stock (the relief must read under neutral light); the iron a cold forged grey;
+    // the eyes a deep red stone with a low glow (the gem shader's inner fire does the rest); the glows are molten crimson
+    mat: {
+      bronze_aged: { color: '#8f6b38', dScale: 110, dStr: 0.1 }, steel: { color: '#41454c', rough: 0.42, metal: 0.85, detail: 'brushed', dScale: 40, dStr: 0.25 },
+      steel_bright: { color: '#a8aeb6', rough: 0.2, metal: 1 }, crystal: { color: '#b0141e', emissive: '#ff1e10', glow: 0.6, env: 0.9, rough: 0.04 },
+      glow_red: { emissive: '#ff3a1c', glow: 2.2 }, glow_orange: { emissive: '#ff4a14', glow: 2.6 }, glow_white: { emissive: '#ff6a48', glow: 3.2 },
+    },
+    hero: 'fx_eyes', crosshair: 'xh_axe', meters: ['arc', 'segments', 'ring'],
+    ready: { sfx: 'ready_greataxe', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.5, glowMul: 1.5, idleExtra: 'greataxe_ready' } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'greataxe_glint', every: 7 }],   // §1.17 idle tiers
+    firstDraw: 'greataxe_first', drawClip: 'greataxe_draw', inspect: ['greataxe_inspect'], rareInspect: 'greataxe_inspect_rare',
+    killFx: 'KE_CLEAVE', killMark: 'km_greataxe', dmgSkin: 'mythic', skillSkin: 'axe',
+    crisis: { name: '干盾', kind: 'counter', fx: 'greataxe_crisis' },
+    aura: { type: 'dmg', mul: 1.12, radius: 8, when: 'skill', source: ['greataxe_ult'] },
+    twin: 'greataxe_night', phases: ['wuqi', 'yewu'],
+    showcase: ['greataxe_first', 'fire:3', 'charge', 'alt', 'tap', 'ult', 'greataxe_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '開山三劈', desc: '點按連劈：斜劈 → 回掄 → 開山（劈地裂街）' }, { key: 'hold LMB', zh: '天墜', desc: '按住蓄力 2 階、瞄準落點，放開躍斬＋三重震波' },
+      { key: 'RMB', zh: '狂旋', desc: '按住旋風斬，把殭屍吸進來（耗戰意）' },
+      { key: 'Q', zh: '迴戚', desc: '戰意 35：擲斧穿過整排再飛回（飛行中再按 Q 召回）' }, { key: 'hold Q', zh: '猛志', desc: '猛志 100%（或 Q 再按 F）' },
+      { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'greataxe',
+    meters: {
+      fury: { max: 100, start: 40, onHit: 3, onKill: 5, skillFill: false, hud: 'arc', label: '戰意', src: '劈砍每個命中 +3、擊殺 +5、天墜每中 +2（技能命中不回補）' },
+      charge: { max: 2, hud: 'segments', segments: 2, label: '天墜', color: '#ff7a4a', src: '按住開火蓄力' },   // live stage (display only)
+      ult: { max: 100, source: 'damage', per: 6000, skillFill: false, hud: 'ring', label: '猛志', src: '傷害累積（約 45 秒）' },
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q). 狂旋 drains 戰意 while held (needs 20 to start)
+      alt: { id: 'greataxe_spin', key: 'RMB', zh: '狂旋', desc: '按住旋風斬・每 0.28 秒 60・7 m 內吸怪・每秒 16 戰意', meter: 'fury', hold: true, cost: 20, drain: 16,
+        r: 3.4, every: 0.28, dmg: 60, pull: 7, pullSpeed: 2.4, speedMul: 0.85, burst: 120, burstR: 4, burstKnock: 7, level: 'L2' },
+      tap: { id: 'greataxe_throw', key: 'Q', zh: '迴戚', desc: '擲斧 16 m 貫穿全部・去 180 回 140・再按 Q 召回', meter: 'fury', cost: 35,
+        speed: 24, range: 16, r: 1.1, dmg: 180, back: 140, hang: 0.15, bulge: 3, level: 'L2' },
+      ult: { id: 'greataxe_ult', key: 'hold Q', zh: '猛志', desc: '14 m 無首戰魂：橫掃 450、開山 900＋三重震波', meter: 'ult', range: 30,
+        sweep: 450, sweepR: 11, sweepArc: 200, chop: 900, chopR: 7, ring: 80, ringR: 10, level: 'L4' },
+    },
+    combo: [
+      { id: 'cleave', dur: 0.62, hit: 0.26, dmg: 140, r: 3.0, arc: 110, knock: 3.5, stagger: 0.7 },
+      { id: 'backhand', dur: 0.62, hit: 0.24, dmg: 140, r: 3.0, arc: 120, knock: 3.5, stagger: 0.7 },
+      { id: 'mountain', dur: 0.95, hit: 0.42, dmg: 240, r: 2.3, reach: 3.2, knock: 2, stagger: 1, heavy: true, fissure: { len: 4, width: 1.6, dmg: 60 } },
+    ],
+    chain: 0.45, recover: 1.1,
+    leap: { hold: 0.2, stages: [0.55, 1.1], max: 3, range: [5, 8, 11], dmg: [220, 320, 450], r: [3.0, 3.5, 4.0], rings: 3, ringEvery: 0.12,
+      ringR: [5, 6.5, 8], ringDmg: [60, 80, 100], invuln: 0.25, cd: 2.5, flight: [0.45, 0.58, 0.7], apex: [1.6, 2.2, 2.8] },
   } });
 
 // ---------------------------------------------------------------- melee

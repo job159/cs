@@ -69,6 +69,13 @@ QA 檢視器（dev server `node scripts/dev.mjs` → http://127.0.0.1:5190）：
     archetype, gender, tris, lod }
   ```
   半徑 = 該骨主導頂點到骨頭線段距離的 80 百分位（含衣服）。
+  **遊戲端怎麼用**（`game/src/zombies/manager.js`）：`[bone, r, toBone]` 有 `toBone` → 膠囊 bone→toBone；沒有時，
+  `chest`/`neck`/`pelvis`/`belly` 用預設終點骨（`defs.js DEFAULT_HITBOXES`：chest = spine_03→**neck_01**，所以 chest 半徑
+  太大時頂端球會蓋住駝背姿勢的臉——walker_a 0.213 時從正面打眼睛 100% 算胸口，已壓到 0.15；建議 ≤ 0.16）；
+  其餘（`head`、`spine`、`hand_*`、`foot_*`）沿**骨頭自身 +Y 軸**、長度取 `capsules[name].length`（隨骨頭轉，不再是
+  世界 +Y 的短樁），`head` 另外在載入時貼合頭骨：從頭關節上方 2 cm 到「頭頂皮膚最高點 − 半徑」，並往眼睛方向偏移
+  30 %（頭關節在顱骨後下方，原本臉和鼻子在頭部膠囊外）。新角色若自己加 `head_top` 之類終點骨（brute / riot /
+  bloater / boss），就照 `toBone` 走。
 
 ## 2. 新增一種殭屍：`tools/assets/zombies/types/<type>.mjs`
 
@@ -185,3 +192,27 @@ AO／污垢／腐敗色一層層乘進 baseColor（皮膚只剩 sRGB ≈ 40、�
 - 嘴巴靠 expression target 烘進 rest mesh（game_engine 沒有下巴骨）；張太大會看到 proxy 頭內部，建議 `mouth-open` ≤ 0.6。
 - 挖洞布料是 alpha MASK（手機上比 blend 便宜，可以投影）；破洞邊緣的纖維細節在 2048 才看得出來。
 - sohh 殭屍皮膚原本是女性皮膚改的，男性角色臉部稍顯陰柔；換 `skins/*_male/*.png` 當 `base` 再加大 `pallor`/`mottle` 也能做出殭屍膚色。
+
+## 5. 全陣容整合 QA（2026-10-26，遊戲內實測）
+
+腳本 = 在遊戲裡跑的 `tools/shot.mjs --eval`（測試場 `?map=test&match=0`、Lost Town 預設地圖）。
+
+- **模型**：walker_a/b/c、runner、brute、spitter、bloater、crawler、screamer、riot（+ 兩隻 boss）全部用自己的 GLB 生成
+  （非 stand-in、非 mannequin），root scale 1，`_seg` 每個網格都有，LOD0 7.3k–9.0k / LOD1 2.3k–2.5k 三角形，
+  每種該用的 clip 都在。stand-in 仍可用（GLB 讀不到時的保險，已實測 riot / crawler / spitter 改用 stand-in 正常）。
+- **命中判定**（從 6 / 15 m、1.62 m 眼高對眼睛、頭骨、胸口開槍，每種 6–14 個姿勢）：修正前 walker_a 打眼睛 100 % 算胸口、
+  walker_b 30 %；修正後（walker_a chest 0.213→0.15、遊戲端頭部膠囊貼合頭骨 / 無終點骨的盒沿骨軸）全部 10 型打眼睛 = 爆頭。
+  對臉部頂點的射線算爆頭：walker_a 10→85 %、walker_b 24→65 %、spitter 81→84 %、screamer 79→93 %、runner 85→95 %，
+  其餘 88–100 %；打軀幹頂點誤判爆頭 0–6 %。粗篩圓柱 0.45→0.8 m（runner 撲擊手 0.96、brute 1.26、crawler 1.07 m 原本打不到）。
+- **斷肢**：10 型手肘 / 小腿 / 頭都能斷（肉塊蓋、噴血、斷後動畫正常、無 NaN）；riot 正面護甲讓同一發不夠斷（設計如此）。
+- **特殊行為**：brute 衝鋒（run→命中 35 / 撞牆 stagger）、spitter 保持 9–16 m 吐酸 + 酸池、bloater 身體擊殺爆炸（毒雲、
+  鄰近殭屍受傷）/ 爆頭只洩氣、crawler 撲擊（離地 0.57 m）+ crawl_attack、screamer 尖叫（玩家緩速、8 m 內同伴回血 + 加速）、
+  riot 正面減傷 80 %（頭 50 %、背後 / 爆炸全傷）。75 s 第 8 回合實戰 soak：無錯誤、無 NaN、無卡死。
+- **狀態殼 / 菁英**：burning / frozen / poisoned / berserk / healed / hardened / shocked 與菁英紫邊 + 菱形標記在 10 型上都正常，
+  所有 LOD0 / LOD1 材質都有 patch。**LOD**：22 m 換 LOD1，24 m 並排比較幾乎看不出差。
+- **Lost Town 37 隻混合屍潮**：在街上 6–34 m 都讀得出輪廓與衣服顏色；`ZombieManager.update` CPU 中位 0.5–1 ms、p95 2.6–3.6 ms。
+  這台機器（Intel Core 5 210H 內顯、同時有其他工作）1600×900 high 空場景就要 32–40 ms / 幀，37 隻多 0–9 ms（量測雜訊內）。
+- **修掉的整合問題**：bloater 爆炸後屍體又出現 0.1 s；畫面剔除用上一幀相機（快速轉身時屍潮晚一幀才出現）→ 改在
+  `scene.onBeforeRender` 用本幀相機剔除；crawler 的死亡 / 受擊 / 撲擊會「彈成站姿」→ `defs.js anim.over`。
+- **仍待處理**：crawler 有腿卻用無腿拖行的 `crawl`（需要四足爬行 / 撲擊 / 死亡新 clip）；screamer 的 walk_c 仍有一點垂頭；
+  walker_b / spitter 駝背時下巴附近 15–34 % 的射線先打到胸口膠囊頂端（眼睛 / 頭頂都正常）。

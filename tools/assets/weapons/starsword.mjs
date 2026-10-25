@@ -492,14 +492,14 @@ function bladeAt(t) {
   const hw = hwOf(t);
   if (t < TR) return { hw, th: RIC, thO: RIC, eb: 0.6, ew: RIC * 0.78, sw: 1.0, stepS: 0.6 * hw, stepF: 0.6 * hw + 0.8, c: 0, d: 0, ridge: 0 };
   const th = thOf(t), k = th / FLAT, pl = smooth(TR, TR + 16, t);
-  const eb = lerp(1.0, Math.min(9.5, hw * 0.4), pl), ew = lerp(th * 0.72, Math.min(2.4, th * 0.46), pl), sw = lerp(1.0, Math.min(5, hw * 0.16), pl);
+  const eb = lerp(1.0, Math.min(9.5, hw * 0.4), pl), ew = lerp(th * 0.72, Math.min(2.4, th * 0.46), pl), sw = lerp(1.0, Math.min(10, hw * 0.17), pl);   // a temper band wide enough to read at arm's length
   const fl = hw - eb - sw, stepS = 0.72 * fl;
   const c = cwOf(t);
   return { hw, th, thO: th - 1.1 * k, eb, ew, sw, stepS, stepF: stepS + Math.min(0.8, 0.2 * fl), c, d: c > 0 ? CHD : 0, ridge: t > 1040 ? smooth(1040, 1078, t) * k : 0 };
 }
 const flOf = (t) => { const p = bladeAt(t); return p.hw - p.eb - p.sw; };
 const railS = (t) => flOf(t) - 2.4;              // emitter rail centre line (|s|), just inside the slope
-const PLATE = 0.4;                               // engraved plate: its top above the outer flat
+const PLATE = 0.85;                              // engraved plate: its top above the outer flat (the cut is 0.9 mm, silver-filled)
 
 // the 7 stars of 北斗 on the +w flat (s, t, size): bowl 天樞 天璇 天璣 天權, handle 玉衡 開陽 搖光
 const STARS = [[24, 262, 1.15], [-25, 338, 1], [-22, 440, 1], [21, 478, 1], [21, 596, 1], [-21, 706, 1], [19, 826, 1.05]];
@@ -601,7 +601,8 @@ export default function build() {
     const lower = [], upper = [];
     for (let t = B0; t <= B1 + 1e-6; t += 16.5) { const [a, b] = edge(t); lower.push([a, t]); upper.push([b, t]); }
     const poly = [...lower, ...upper.reverse()];
-    // strokes: S scrolls (two spirals joined by a line) alternating with four-point stars; centred in the band
+    // strokes: S scrolls (two spirals joined by a line) alternating with four-point stars; centred in the band; ~1 mm
+    // wide so the bright inlay still reads at arm's length (0.55 mm aliased away)
     const holes = [], fills = [];
     const H = 5.8, Rr = H / 4 * 0.95, r0 = Rr * 0.36, Lx = 14, P = 22, n = 8;
     const sp = [];
@@ -611,17 +612,19 @@ export default function build() {
       const mid = (tt) => { const p = bladeAt(tt), fl = p.hw - p.eb - p.sw; return (p.stepF + fl - 3.5) / 2; };   // between the step and the rail
       const f = k % 2 ? -1 : 1;
       const pts = S.map(([x, y]) => [mid(t + x) + f * y, t + x]);
-      const st = strokePoly(pts, 0.55);
+      const st = strokePoly(pts, 1.0);
       holes.push(st); fills.push(st);
-      const tc = t + P / 2, sc = mid(tc), star = starPts(sc, tc, 2.1, 0.55, 4, 0);
+      const tc = t + P / 2, sc = mid(tc), star = starPts(sc, tc, 2.6, 0.75, 4, 0);
       holes.push(star); fills.push(star);
     }
     const sil = [], blu = [];
     blu.push(slab(poly, plateW0, 1, -0.05, PLATE, holes, { crease: 30 }));
-    for (const f of fills) sil.push(slab(f, plateW0, 1, -0.05, 0.1, [], { walls: false }));
+    // the silver fills the cut up to just under the plate face (錯銀 is flush: a fill at the bottom of a 0.75 mm groove
+    // baked black under its own AO)
+    for (const f of fills) sil.push(slab(f, plateW0, 1, -0.05, PLATE - 0.1, [], { walls: false }));
     const plateB = merge(blu), fillB = merge(sil);
     g.add(merge([plateB, mirW(plateB), mirS(plateB), mirW(mirS(plateB))]), 'steel_blued');
-    g.add(merge([fillB, mirW(fillB), mirS(fillB), mirW(mirS(fillB))]), 'silver_aged');
+    g.add(merge([fillB, mirW(fillB), mirS(fillB), mirW(mirS(fillB))]), 'steel');   // bright inlay silver (retinted in defs.js)
   }
 
   // ---- emitter rails on the engraved plates + projector ports (gold rims, glow dots), gold terminals
@@ -829,7 +832,7 @@ export default function build() {
     // the hero gem 天樞: one stone through the block, a brilliant crown proud of each face: girdle band, upper girdle,
     // bezel and star facets (alternate rows turned half a facet, alternate points pulled in: kites and triangles at
     // 32-fold), a flat table
-    const gem = g.part('fx_gem', { pivot: [0, 22, 0], extras: { hero: true } });
+    const gem = g.part('fx_gem', { pivot: [0, 22, 0], extras: { hero: true, pv: { gem: 3.2, coreTint: '#4f80ff', irid: 0.5 } } });   // the focal point: a strong blue core, facet fire
     const crown = (() => {
       const n = 32, rows = [[13.4, 0, 0], [13.4, 0.9, 0], [11.7, 2.4, 0.5, 11.0], [8.6, 3.9, 0, 7.8], [6.7, 4.6, 0.5]];
       const rings = rows.map(([r, h, ph, r2]) => Array.from({ length: n }, (_, j) => {
@@ -839,7 +842,9 @@ export default function build() {
       const base = V(0, 22, 22.2);
       return faceOut(loftRings(rings, { capB: true, crease: 4 }), (p) => p.clone().sub(base), 4);
     })();
-    gem.add(merge([crown, mirW(crown), revW([[0, -22.3], [13.4, -22.3], [13.4, 22.3], [0, 22.3]], [0, 22, 0], 1, { seg: 48, what: 'gem body' })]), 'crystal');
+    // its own material key (glass, retinted sapphire in defs.js): the shared crystal of the seven stars read as a
+    // frosted white disc on the focal point
+    gem.add(merge([crown, mirW(crown), revW([[0, -22.3], [13.4, -22.3], [13.4, 22.3], [0, 22.3]], [0, 22, 0], 1, { seg: 48, what: 'gem body' })]), 'glass');
 
     // cloud-head arms (fx_guardR at +s, fx_guardL at -s) on the hinge pins: open 18° about w (the heads rise towards
     // the blade). Sculpted 如意 head (three lobes + core, smooth fillets, a pierced curl in each lobe) on a rising stem,
@@ -847,14 +852,14 @@ export default function build() {
     // medallion; the tongue rides in the block's slot round the pin
     const HC = [146, 47], L1 = [137.2, 63.9], L2 = [159.8, 58.3], L3 = [161, 38.3];
     const P1 = [135.5, 65.3], P2 = [161.8, 60], P3 = [162.8, 37.5];
-    const stem = [[62, 17], [86, 22.4], [108, 29.6], [128, 38.5]], stemR = [11.5, 10.0, 8.8, 8.2];
+    const stem = [[62, 17], [86, 22.4], [108, 29.6], [128, 38.5]], stemR = [12.5, 11.6, 10.6, 10.0];
     const armUnion = U(3.2,
       ...stem.slice(1).map((p, i) => sdCapsule(stem[i], p, stemR[i], stemR[i + 1])),
-      sdCircle(HC, 15), sdCircle(L1, 13.75), sdCircle(L2, 11.9), sdCircle(L3, 10));
+      sdCircle(HC, 16.5), sdCircle(L1, 14.6), sdCircle(L2, 12.8), sdCircle(L3, 11));
     const armSDF = SUB(armUnion,
     sdCircle(PIV, 14.6), sdCircle(P1, 3.6), U(0.6, sdCircle(P2, 2.9), sdCapsule(P2, [P2[0] + 3.2, P2[1] - 3.0], 1.8, 1.4)), sdCircle(P3, 2.4));
-    const HW = 8.5, BS = 1.6, BT = 1.8;
-    const kOf = (s) => lerp(1, 0.41, smooth(66, 172, s));
+    const HW = 8.0, BS = 1.8, BT = 2.0;
+    const kOf = (s) => lerp(1, 0.72, smooth(66, 172, s));   // 16 -> 11.5 mm: thinner read as bent rods in first person
     const armShape = shapes(armSDF, [55, 2, 184, 86], 0.3, 0.07).sort((a, b) => loopArea(b.outer) - loopArea(a.outer))[0];
     const armGeo = sculpt(armShape, { w: 2 * HW, bs: BS, bt: BT, seg: 2, crease: 45 });
     const deco = { gold: [], silver_aged: [] };
@@ -869,8 +874,8 @@ export default function build() {
     })();
     deco.silver_aged.push(rib);
     // (the rim follows the silhouette only: an inset of the pierced field opened the thin side of a lobe and filled the hole)
-    deco.gold.push(...insetRing(SUB(armUnion, sdCircle(PIV, 17.5)), [55, 2, 184, 86], BS + 0.9, 0.6, HW, 1, -0.1, 0.35, 0.35));
-    for (const [c, r0, r1, a0] of [[P1, 5.6, 8.2, 200], [P2, 4.8, 7.0, 120], [P3, 4.3, 6.1, 290]]) deco.gold.push(inlayLine(spiral(c[0], c[1], r1, r0, a0, a0 - 300, 30), HW, 1, 0.55, -0.1, 0.4));
+    deco.gold.push(...insetRing(SUB(armUnion, sdCircle(PIV, 17.5)), [55, 2, 184, 86], BS + 1.0, 1.3, HW, 1, -0.1, 0.75, 0.35));   // gold piping
+    for (const [c, r0, r1, a0] of [[P1, 5.6, 8.2, 200], [P2, 4.8, 7.0, 120], [P3, 4.3, 6.1, 290]]) deco.gold.push(inlayLine(spiral(c[0], c[1], r1 + 0.6, r0, a0, a0 - 320, 34), HW, 1, 1.05, -0.1, 0.75));   // scroll curls
     for (const [s, t] of [[80, 16.0], [100, 22.0], [118, 27.8]]) deco.gold.push(stud(s, t, HW, 1, 1.3, 0.9, 10));
     const sq = [[HC[0] - 9.5, HC[1] - 9.5], [HC[0] + 9.5, HC[1] - 9.5], [HC[0] + 9.5, HC[1] + 9.5], [HC[0] - 9.5, HC[1] + 9.5]];
     const med = polarCells(HC, [0, 2.75, 7.5], [{ n: 1 }, { n: 8 }], sq, (i, j) => (i ? (j % 2 ? 1 : 0) : 2));

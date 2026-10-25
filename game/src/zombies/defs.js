@@ -1,7 +1,8 @@
 // Zombie archetypes. HP values are wave-1 Normal difficulty for ONE player; the match scales them by
 // round, difficulty and player count. Speeds in m/s. knockRes: 0 = full knockback, 1 = immune.
 // anim: clip names from game/assets/zombies/anims.glb (see docs/ZOMBIE_ANIMS.md); `nominal` = the
-// ground speed (m/s) at which the locomotion clip plays at timeScale 1.
+// ground speed (m/s) at which the locomotion clip plays at timeScale 1. anim.over: per-type overrides of one-shot clips
+// (Zombie.playOnce): 'other' plays another clip, null none, { from (s), speed, fade } tweaks it.
 export const ZOMBIES = {
   walker: {
     zh: '行屍', models: ['walker_a', 'walker_b', 'walker_c'], hp: 150, walk: [0.9, 1.4], run: 3.4, runChance: 0.15,
@@ -36,7 +37,17 @@ export const ZOMBIES = {
   crawler: {
     zh: '爬牆者', models: ['crawler'], hp: 140, walk: [3.8, 4.4], run: 4.6, runChance: 1, leap: { range: [3, 8], speed: 9, cd: 4, dmg: 14 },
     dmg: 10, atkRange: 1.3, atkTime: 0.9, atkHit: 0.4, knockRes: 0.1, staggerRes: 0, radius: 0.32, height: 0.8, crawl: true,
-    anim: { walk: ['crawl'], run: 'crawl', attack: ['crawl_attack'], idle: ['crawl'], leap: 'leap' }, nominal: { walk: 1.2, run: 1.2 },
+    anim: {
+      walk: ['crawl'], run: 'crawl', attack: ['crawl_attack'], idle: ['crawl'], leap: 'leap',
+      // prone body: the library's hit / stagger / knockdown clips are upright (the flinch spring still plays on top),
+      // every death is the face-down end of death_front (from the ground contact, a slow fade = the collapse), and
+      // the pounce starts in leap's crouch, timed so takeoff -> land fits the 0.65 s jump the brain moves it along
+      over: {
+        stagger: null, hit_front: null, hit_back: null, hit_left: null, hit_right: null, knockdown: null, get_up: null,
+        death_back: 'death_front', death_front: { from: 0.95, fade: 0.4 }, leap: { from: 0.3, speed: 1.4, fade: 0.15 },
+      },
+    },
+    nominal: { walk: 1.2, run: 1.2 },
     money: 200, xp: 16, voice: 'crawler',
   },
   screamer: {

@@ -86,6 +86,8 @@ export const MATS = {
   glaze_coldteal: { color: '#2b8c86', metal: 0, rough: 0.14, detail: 'flat', env: 1.3, wear: { color: '#9adcd4', metal: 0, rough: 0.5, amount: 0.12 } },
   silver_aged:  { color: '#9aa0a6', metal: 1, rough: 0.3, detail: 'brushed', dScale: 50, dStr: 0.12, cavity: 1.0, cavCol: '#141016', wear: { color: '#e2e6ea', metal: 1, rough: 0.14, amount: 0.6 } },
   leather_pebble: { color: '#4a3020', metal: 0, rough: 0.62, detail: 'stipple', dScale: 300, dStr: 0.4, wear: { color: '#5a3d28', metal: 0, rough: 0.45, amount: 0.5 } },
+  // X03 bow grip: a coarser, deeper pebble that reads as hide in the inspect close-up (the M03 leather stays fine)
+  leather_grain: { color: '#4a2c1c', metal: 0, rough: 0.7, detail: 'stipple', dScale: 190, dStr: 1.0, wear: { color: '#6a452c', metal: 0, rough: 0.45, amount: 0.6 } },
   leather_black: { color: '#19151a', metal: 0, rough: 0.55, detail: 'stipple', dScale: 300, dStr: 0.55, wear: { color: '#3a3238', metal: 0, rough: 0.4, amount: 0.5 } },
   crystal:      { color: '#bfe6ff', metal: 0.2, rough: 0.08, detail: 'flat', env: 1.6, wear: { color: '#bfe6ff', metal: 0.2, rough: 0.08, amount: 0 } },
   glass_clear:  { color: '#0a0c0e', metal: 0, rough: 0.04, detail: 'flat', env: 2, opacity: 0.3, fres: 1, wear: { color: '#0a0c0e', metal: 0, rough: 0.04, amount: 0 }, noBake: true },

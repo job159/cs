@@ -127,6 +127,32 @@ function space(b, { wet = 0.3, seed = 'sp', shimmer = -18, env = PLAZA, ch = 1, 
   return L.mix([at(out), at(sh, 0.02, shimmer + 20 * Math.log10(L.peak(out) / Math.max(1e-9, L.peak(sh))))], { channels: ch });
 }
 
+// ------------------------------------------------------------------------------------------------ seamless loops
+// An equal-power crossfade only suits uncorrelated material: a tone crossfaded onto a phase-shifted copy of itself dips
+// (or swells +3 dB in phase) and smears once per period. So a loop of period P is built in two parts: `noisy` (rendered
+// P + X) is crossfaded onto its own head; `tonal` (every component periodic in P: frequencies on the 1/P grid, LFOs
+// with whole cycles in P) is rendered W + P and cut [W, W + P] after its filters have settled -- seamless by itself.
+const onGrid = (f, P) => Math.round(f * P) / P;
+function seamless(P, X, noisy, tonal, W = 0.5) {
+  const a = L.loopCrossfade(L.fitLength(noisy, P + X), X);
+  return tonal ? L.mix([at(a), at(L.slice(tonal, W, W + P))], { length: P }) : a;
+}
+/** A periodic tone (sine + `oct` dB of octave) with vibrato, every rate snapped to the 1/P grid. */
+function ptone(dur, f, P, { vib = 0, vibHz = 5, oct = -40, seed = 'pt', type = 'sine' } = {}) {
+  const F = onGrid(f, P), h = Math.max(1, Math.round(vibHz * P)) / P, ph = L.rng(L.hashSeed(seed)).next() * 6.283;
+  const fq = (t) => F * (1 + vib * Math.sin(6.283 * h * t + ph));
+  return L.mix([at(L.tone(dur, { type, freq: fq })), at(L.tone(dur, { type: 'sine', freq: (t) => 2 * fq(t) }), 0, oct)]);
+}
+/** Loop QA: the wrap step against the file's typical sample step, and the level either side of the seam. */
+function seamCheck(name, b) {
+  const d = L.toMono(b).data[0], n = d.length, w = Math.round(0.2 * SR);
+  let step = 0; for (let i = 1; i < n; i++) step += Math.abs(d[i] - d[i - 1]); step /= n - 1;
+  const r = (a, z) => { let s = 0; for (let i = a; i < z; i++) s += d[i] * d[i]; return 10 * Math.log10(s / (z - a) + 1e-20); };
+  const jump = Math.abs(d[0] - d[n - 1]) / Math.max(1e-9, step), lv = r(n - w, n) - r(0, w);
+  ctx.log(`  loop ${name}: wrap step x${jump.toFixed(1)}, level across the seam ${lv.toFixed(1)} dB`);
+  if (jump > 4 || Math.abs(lv) > 2.5) ctx.warn(`${name}: loop seam (step x${jump.toFixed(1)}, ${lv.toFixed(1)} dB)`);
+}
+
 // ------------------------------------------------------------------------------------------------ instruments
 // partial sets [ratio, amp, t60 scale]
 const BELL = {
@@ -362,16 +388,19 @@ async function drawSet(add, SP, D2) {
   // through two resonances, slowly varying), timber creaks from the ship recording (horn and bamboo bending), the white
   // silk forming into a shaft (a faint sizzle), a low strain under it all. 3.4 s rendered, crossfaded to a 3.0 s loop.
   {
-    const D = 3.4;
+    const P = 3.0, X = 0.4, D = P + X, W = 0.5;
     const slip = L.automate(stickSlip(D, { rate: 44, res: [1300, 2600], seed: 'ck' }), (t) => 0.55 + 0.45 * Math.max(0, Math.sin(6.283 * t / 1.5 + 0.4)) ** 2);
     const slip2 = stickSlip(D, { rate: 71, res: [950, 3300], seed: 'ck2' });
     const parts = [at(slip, 0, -4), at(slip2, 0, -15)];
     for (const [i, t, g] of [[0, 0.15, -2], [2, 1.2, -5], [4, 2.15, -3], [5, 2.9, -7]]) parts.push(at(L.fadeOut(await creakAt(i, { semis: -4, len: 0.5 }), 0.15, 'exp'), t, g));
     const siz = L.fadeIn(await src(S.sizzle, 30, 30 + D, { hp: 3500 }), 0.1);
-    const strain = L.eq(L.mix([at(L.tone(D, { type: 'saw', freq: (t) => 92 * (1 + 0.01 * Math.sin(6.283 * 0.7 * t)) })), at(L.tone(D, { type: 'saw', freq: 138.5 }), 0, -6)]), [{ type: 'lp', f: 700, order: 2 }, { type: 'hp', f: 70, order: 2 }]);
-    let m = L.mix([...parts, at(siz, 0, -22), at(L.lp(nrm(strain), 500), 0, -28)], { length: D });
-    m = L.eq(m, [{ type: 'hp', f: 80, order: 2 }]);
-    await add('sunbow_creak', L.loopCrossfade(m, 0.4), D2({ lufs: -21, loop: true, channels: 1, voices: 1, pitch: [1, 1] }));
+    // the low strain: two saws (92 Hz with a slow 2/3 Hz waver, a fifth up), periodic in P
+    const strain = L.eq(L.mix([at(ptone(W + P, 92, P, { type: 'saw', vib: 0.01, vibHz: 0.7, seed: 'cks' })), at(ptone(W + P, 138.5, P, { type: 'saw' }), 0, -6)]),
+      [{ type: 'lp', f: 700, order: 2 }, { type: 'hp', f: 70, order: 2 }, { type: 'lp', f: 500, order: 2 }, { type: 'hp', f: 80, order: 2 }]);
+    const noisy = L.eq(L.mix([...parts, at(siz, 0, -22)], { length: D }), [{ type: 'hp', f: 80, order: 2 }]);
+    const m = seamless(P, X, noisy, L.gain(nrm(L.slice(strain, W)), -28), 0);
+    seamCheck('sunbow_creak', m);
+    await add('sunbow_creak', m, D2({ lufs: -21, loop: true, channels: 1, voices: 1, pitch: [1, 1] }));
   }
 
   // the three stages (the code plays them at pitch 1 / 1.12 / 1.26 and vol 0.67 / 0.79 / 0.91): 引 a low bronze bell and
@@ -400,16 +429,23 @@ async function drawSet(add, SP, D2) {
   for (let s = 0; s < 3; s++) await add(`sunbow_stage${s + 1}`, stages[s], D2({ lufs: [-19, -18, -17][s], channels: 2, voices: 2, pitch: [1, 1], note: `rendered x1/${STAGE_RATE[s]}: the code plays it at pitch ${STAGE_RATE[s]}` }));
 
   // 貫日 held (loop, vol 0.5): the white-hot head -- a flame roar band that breathes, a sun "scream" (B6 / E7 whistles
-  // with slow vibrato, far down), crackle and sizzle. Seamless: 3.4 s crossfaded to 3.0.
+  // with slow vibrato, far down), crackle and sizzle. A 3.0 s loop: the noise crossfaded, the tones periodic in it.
   {
-    const D = 3.4;
-    const fl = roar(D, { f0: 650, f1: 950, f2: 700, q: 0.8, flicker: 0.45, crack: -12, seed: 'fu', env: [[0, 1], [D, 1]] });
-    const sc = L.mix([at(whistle(D, PENTA[13], { vib: 0.006, vibHz: 4.3, air: -6, seed: 'fus1', env: [[0, 1], [D, 1]] })), at(whistle(D, PENTA[15] * 1.003, { vib: 0.005, vibHz: 3.1, air: -6, seed: 'fus2', env: [[0, 1], [D, 1]] }), 0, -6)]);
+    const P = 3.0, X = 0.4, D = P + X;
+    // the flame band breathes (its centre swings 700 -> 950 -> 700 Hz once per loop instead of sweeping across it)
+    const fj = wobble('fuf', [7, 13, 21]);
+    const band = L.automate(L.sweep(L.noise(D, { color: 'pink', seed: 'fu' }), 'bp', (t) => 820 * 1.16 ** Math.sin(6.283 * t / P), { q: 0.8 }), (t) => Math.max(0, 1 + 0.45 * fj(t)));
+    const fl = L.mix([at(nrm(band)), at(nrm(L.crackle(D, { density: 70, decay: 0.003, hp: 2200, seed: 'fuk' })), 0, -12)]);
+    // the scream: B6 + E7 (the E a few cents sharp: a slow beat) -- the tones periodic in P, their breath of noise crossfaded
+    const sc = L.mix([at(nrm(ptone(D, PENTA[13], P, { vib: 0.006, vibHz: 4.3, oct: -12, seed: 'fus1' }))), at(nrm(ptone(D, PENTA[15] * 1.003, P, { vib: 0.005, vibHz: 3.1, oct: -12, seed: 'fus2' })), 0, -6)]);
+    const air = L.mix([at(nrm(L.eq(L.noise(D, { color: 'pink', seed: 'fusn1' }), [{ type: 'bp', f: PENTA[13], q: 5 }]))), at(nrm(L.eq(L.noise(D, { color: 'pink', seed: 'fusn2' }), [{ type: 'bp', f: PENTA[15], q: 5 }])), 0, -6)]);
     const cr = L.crackle(D, { density: 45, decay: 0.003, hp: 1800, seed: 'fuc' });
     const siz = await src(S.sizzle, 60, 60 + D, { hp: 2500 });
     const low = L.eq(L.noise(D, { color: 'brown', seed: 'ful' }), [{ type: 'lp', f: 300, order: 2 }, { type: 'hp', f: 60, order: 2 }]);
-    let m = L.mix([at(nrm(fl), 0, 0), at(nrm(sc), 0, -13), at(nrm(cr), 0, -13), at(siz, 0, -16), at(nrm(low), 0, -12)], { length: D });
-    await add('sunbow_full', L.loopCrossfade(m, 0.4), D2({ lufs: -21, loop: true, channels: 1, voices: 1, pitch: [1, 1] }));
+    const noisy = L.mix([at(nrm(fl), 0, 0), at(nrm(air), 0, -19), at(nrm(cr), 0, -13), at(siz, 0, -16), at(nrm(low), 0, -12)], { length: D });
+    const m = seamless(P, X, noisy, L.gain(nrm(sc), -14), 0);
+    seamCheck('sunbow_full', m);
+    await add('sunbow_full', m, D2({ lufs: -21, loop: true, channels: 1, voices: 1, pitch: [1, 1] }));
   }
 
   // a new arrow burns onto the string (vol 0.5): a rising "fsss" of white silk catching, a soft flame "pf", the nock
@@ -555,17 +591,21 @@ async function skillSet(add, SP) {
   await add('sunbow_hang', hang, SP([10, 120], { lufs: -15, voices: 2, pitch: [0.98, 1.02], priority: 3 }));
 
   // the hanging sun (positional loop, 3.5 s): a low flame roar, an E2/B2/E3 hum throbbing at 1.25 Hz (the pull), a
-  // high shimmer beating slowly, crackle. Everything periodic divides 4 s: seamless after the crossfade.
+  // high shimmer beating slowly (0.5 Hz), crackle. The tones sit on the 1/4 Hz grid: a 4 s loop with no crossfade dip.
   {
-    const D = 4.4;
-    const rr = roar(D, { f0: 260, f1: 420, f2: 300, q: 0.7, flicker: 0.5, crack: -14, seed: 'hl', env: [[0, 1], [D, 1]] });
-    const hum = L.automate(L.mix([at(L.tone(D, { type: 'sine', freq: E2 })), at(L.tone(D, { type: 'sine', freq: B2 }), 0, -5), at(L.tone(D, { type: 'triangle', freq: E3 }), 0, -9)]),
-      (t) => 0.65 + 0.35 * Math.sin(6.283 * 1.25 * t));
-    const sh = L.mix([at(L.tone(D, { type: 'sine', freq: PENTA[10] })), at(L.tone(D, { type: 'sine', freq: PENTA[10] + 0.5 }), 0, -1), at(L.tone(D, { type: 'sine', freq: PENTA[13] }), 0, -6)]);
+    const P = 4.0, X = 0.4, D = P + X, W = 0.5;
+    const rr = roar(D, { f0: 300, f1: 420, f2: 300, q: 0.7, flicker: 0.5, crack: -14, seed: 'hl', env: [[0, 1], [D, 1]] });
+    const pt = (f, type = 'sine') => L.tone(W + P, { type, freq: onGrid(f, P) });
+    const hum = L.automate(L.mix([at(pt(E2)), at(pt(B2), 0, -5), at(pt(E3, 'triangle'), 0, -9)]), (t) => 0.65 + 0.35 * Math.sin(6.283 * 1.25 * (t - W)));
+    const sh = L.mix([at(pt(PENTA[10])), at(L.tone(W + P, { type: 'sine', freq: onGrid(PENTA[10], P) + 0.5 }), 0, -1), at(pt(PENTA[13]), 0, -6)]);
     const cr = L.crackle(D, { density: 50, decay: 0.003, hp: 1800, seed: 'hlc' });
     const fire = await src(S.crackle, 5, 5 + D, { hp: 300 });
-    let m = L.mix([at(nrm(rr), 0, 0), at(L.psychoBass(nrm(hum), { freq: 90, amount: -6 }), 0, -6), at(nrm(sh), 0, -22), at(nrm(cr), 0, -15), at(fire, 0, -9)], { length: D });
-    await add('sunbow_hang_loop', L.loopCrossfade(m, 0.4), SP([6, 45], { lufs: -19, loop: true, voices: 2, pitch: [1, 1] }));
+    const noisy = L.mix([at(nrm(rr), 0, 0), at(nrm(cr), 0, -15), at(fire, 0, -9)], { length: D });
+    // the hum's psycho-bass harmonics (filters) settle during W before the cut
+    const tonal = L.mix([at(L.psychoBass(nrm(hum), { freq: 90, amount: -6 }), 0, -6), at(nrm(sh), 0, -22)], { length: W + P });
+    const m = seamless(P, X, noisy, tonal, W);
+    seamCheck('sunbow_hang_loop', m);
+    await add('sunbow_hang_loop', m, SP([6, 45], { lufs: -19, loop: true, voices: 2, pitch: [1, 1] }));
   }
 
   // the burst (positional; also the ult's exit at pitch 0.7, vol 0.4): a meaty blast + a fire whoosh + sub, then a
@@ -757,16 +797,20 @@ async function foleySet(add, SP, D2) {
 
   // 待機 hum (§1.12, the code plays it at vol 0.18 with a 0.4 s fade-in: ~26 dB under a loose): E2 sine + B2 / E3, a
   // band of noise 400-1200 Hz swept by a 0.2 Hz LFO, the 日珠's embers -- a soft flame breathing at 0.4 Hz and sparse pops
+  // (the first version clicked at the wrap -- a 0.05 step every 5 s -- and swelled 3 dB at the head: the sines are now
+  // on the 0.2 Hz grid and every LFO has whole cycles in the 5 s loop; only the noise is crossfaded)
   {
-    const D = 5.0;
-    const sine = L.mix([at(L.tone(D, { type: 'sine', freq: E2 })), at(L.tone(D, { type: 'sine', freq: B2 }), 0, -10), at(L.tone(D, { type: 'sine', freq: E3 }), 0, -14)]);
+    const P = 5.0, X = 0.5, D = P + X;
+    const pt = (f) => L.tone(P, { type: 'sine', freq: onGrid(f, P) });
+    const sine = L.mix([at(pt(E2)), at(pt(B2), 0, -10), at(pt(E3), 0, -14)]);
     const band = L.sweep(L.noise(D, { color: 'pink', seed: 'ih' }), 'bp', (t) => 700 * 1.7 ** Math.sin(6.283 * 0.2 * t), { q: 1.6 });
     const breathE = (t) => 0.35 + 0.65 * Math.max(0, Math.sin(6.283 * 0.4 * t)) ** 2;
-    const flame = L.automate(roar(D, { f0: 520, f1: 640, q: 0.8, flicker: 0.25, crack: -10, seed: 'ifl', env: [[0, 1], [D, 1]] }), breathE);
+    const flame = L.automate(roar(D, { f0: 580, f1: 580, q: 0.8, flicker: 0.25, crack: -10, seed: 'ifl', env: [[0, 1], [D, 1]] }), breathE);
     const pops = L.crackle(D, { density: 5, decay: 0.006, hp: 1400, seed: 'ipp' });
-    const m = L.mix([at(nrm(sine), 0, -3), at(nrm(band), 0, -9), at(nrm(flame), 0, -12), at(nrm(pops), 0, -16)], { length: D });
-    const loop = L.loopCrossfade(L.mix([at(m), at(L.slice(m, 0, 0.4), D)], { length: D + 0.4 }), 0.4);
-    await add('sunbow_idle', loop, D2({ lufs: -26, loop: true, channels: 1, voices: 1, pitch: [1, 1] }));
+    const noisy = L.mix([at(nrm(band), 0, -9), at(nrm(flame), 0, -12), at(nrm(pops), 0, -16)], { length: D });
+    const m = seamless(P, X, noisy, L.gain(nrm(sine), -3), 0);
+    seamCheck('sunbow_idle', m);
+    await add('sunbow_idle', m, D2({ lufs: -26, loop: true, channels: 1, voices: 1, pitch: [1, 1] }));
   }
 
   // the bow coming up (the card's 弓臂低響): a big object's air, a timber creak low (horn and bamboo), the grip seating

@@ -275,7 +275,12 @@ await cat.add('rifle762_far', fars, { target: 'gunFar', spatial: true, range: [4
 **Impacts / gore**: Kenney or Freesound hit + short noise/debris layer + transient shaping; -18 LUFS, mono, spatial,
 6–10 variants. **Voices**: trim, pitch/formant variety via `varispeedSemis`, `saturate({ type: 'tube' })` for rasp,
 -20 LUFS, mono. **Footsteps**: per surface 6–8 variants, heel/toe from takes(), -26 LUFS. **Ambience**: long take,
-`timeStretch` if needed, `loopCrossfade(buf, 2)`, `loop: true`, `bus: 'amb'`, stereo, -30 LUFS. **Music**: `loop: true`,
+`timeStretch` if needed, `loopCrossfade(buf, 2)`, `loop: true`, `bus: 'amb'`, stereo, -30 LUFS.
+**Loops with steady tones** (hums, drones, whistles): `loopCrossfade` is equal-power, right for noise but a tone
+crossfaded onto a phase-shifted copy of itself dips or swells and smears once per period, and mixing the head onto the
+end before the crossfade does not close the seam (it clicks every period). Put every tonal frequency on the 1/P grid
+(P = loop length; LFOs and vibrato with whole cycles in P), render the tones exactly P long (cut after filters settle),
+crossfade only the noise, sum (`premium_sunbow.mjs` `seamless()` / `seamCheck()`). **Music**: `loop: true`,
 `bus: 'music'`, -18 LUFS, stereo, seamless (`loopCrossfade`).
 
 ## 5. Build, QA and inspection

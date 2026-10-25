@@ -130,6 +130,13 @@ Screenshots: `node tools/shot.mjs "<url>" --w 1600 --h 900 --out captures/anim/x
   root where it was, hold the last frame (`clampWhenFinished`) or switch to ragdoll after `events.ground`.
 - **`crawl` / `crawl_attack`** are for legless crawlers (legs drag behind the body, prone); `climb` assumes a
   wall about 0.4 m in front of the root.
+- **Per-type clip overrides** (`defs.js` `anim.over`, applied in `Zombie.playOnce` for every caller, replicated
+  clips included): a string plays another clip, `null` plays none (the current clip goes on, the procedural flinch
+  still plays), `{ from, speed, fade }` tweaks one. The prone `crawler` uses it so it never pops upright: no
+  hit / stagger / knockdown clip, every death is the face-down end of `death_front` (from 0.95 s, 0.4 s fade = the
+  collapse), and `leap` starts in its crouch (0.3 s, x1.4) so takeoff -> land fits the 0.65 s the game moves it.
+  The crawler model has legs (on all fours), so the legless `crawl` drag and the upright `leap` flight are a
+  compromise until a quadruped crawl / pounce / death set exists.
 - Clip tracks never touch `Root`; if the character's armature has a rotated root (Blender Z-up export) use
   `retargetClips`, which handles it.
 

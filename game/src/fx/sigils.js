@@ -31,6 +31,7 @@ export const SIGIL = {
   wind:        { g: 2, ch: 2, spin: [80, 30, -18] },
   square:      { g: 2, ch: 3, spin: [0, 0, 0] },
   starmap:     { g: 3, ch: 0, spin: [14, -9, 5] },                // 星圖: 28 mansion ring + constellation glyphs + 北斗 (X02 天劍)
+  leiwen:      { g: 3, ch: 1, spin: [0, 12, -16] },               // 雲雷紋戰陣: thunder spirals, eyes + axe blades, 亞-framed dancer (X05 猛志)
 };
 
 // ------------------------------------------------------------------ procedural drawing (Canvas 2D, white on black)
@@ -350,6 +351,39 @@ const DESIGNS = {
     for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]]) { ctx.moveTo(p.C + D[a][0] * p.R, p.C + D[a][1] * p.R); ctx.lineTo(p.C + D[b][0] * p.R, p.C + D[b][1] * p.R); }
     ctx.stroke();
     D.forEach(([x, y], i) => { ctx.beginPath(); ctx.arc(p.C + x * p.R, p.C + y * p.R, (i === 0 ? 0.03 : 0.018) * p.R, 0, TAU); ctx.fill(); });
+  },
+  leiwen(ctx, p, r) {
+    // 雲雷紋戰陣 (X05 猛志): double rims round a band of square thunder spirals; a middle band of almond eyes and
+    // crescent axe blades, alternating; in the centre an original clan emblem: a 亞-shaped frame holding a headless
+    // dancer with a shield and a raised axe (pictogram drawn from strokes, no real character)
+    p.circle(0.99, 0.012); p.circle(0.958, 0.004); p.circle(0.665, 0.012); p.circle(0.695, 0.004);
+    meander(ctx, p, 0.72, 0.93, 28, 0.013);
+    p.circle(0.61, 0.007); p.circle(0.39, 0.007);
+    for (let i = 0; i < 8; i++) {
+      p.at(0.5, (i / 8) * TAU, i % 2 === 0 ? () => {
+        ctx.lineWidth = 0.012; ctx.beginPath(); ctx.moveTo(-0.075, 0); ctx.quadraticCurveTo(0, 0.062, 0.075, 0); ctx.quadraticCurveTo(0, -0.062, -0.075, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 0.022, 0, TAU); ctx.fill();
+      } : () => {
+        ctx.lineWidth = 0.012; ctx.beginPath(); ctx.moveTo(-0.055, -0.035); ctx.lineTo(-0.075, 0.03); ctx.quadraticCurveTo(0, 0.09, 0.075, 0.03); ctx.lineTo(0.055, -0.035); ctx.closePath(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-0.075, -0.06); ctx.lineTo(0.075, -0.06); ctx.stroke();
+      });
+    }
+    ctx.save(); ctx.translate(p.C, p.C); ctx.scale(p.R, p.R); ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
+    const a = 0.2, b = 0.27, n = 0.07;
+    ctx.lineWidth = 0.016; ctx.beginPath();
+    [[-a + n, -b], [a - n, -b], [a - n, -b + n], [a, -b + n], [a, b - n], [a - n, b - n], [a - n, b], [-a + n, b], [-a + n, b - n], [-a, b - n], [-a, -b + n], [-a + n, -b + n]]
+      .forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath(); ctx.stroke();
+    ctx.lineWidth = 0.036; ctx.beginPath(); ctx.moveTo(0, -0.11); ctx.lineTo(0, 0.05); ctx.stroke();                      // torso
+    ctx.lineWidth = 0.013; ctx.beginPath(); ctx.moveTo(-0.075, 0.19); ctx.lineTo(0, 0.05); ctx.lineTo(0.075, 0.19); ctx.stroke();   // legs
+    ctx.beginPath(); ctx.moveTo(-0.1, -0.03); ctx.lineTo(0, -0.09); ctx.lineTo(0.085, -0.13); ctx.lineTo(0.085, -0.2); ctx.stroke(); // arms
+    ctx.beginPath(); ctx.ellipse(-0.105, -0.03, 0.035, 0.055, 0, 0, TAU); ctx.stroke();                                    // 干
+    ctx.beginPath(); ctx.moveTo(0.085, -0.17); ctx.lineTo(0.14, -0.185); ctx.quadraticCurveTo(0.16, -0.22, 0.14, -0.255); ctx.lineTo(0.085, -0.24); ctx.closePath(); ctx.fill();   // 戚
+    ctx.globalCompositeOperation = 'destination-out';                                                                        // eyes and mouth cut into the torso
+    for (const x of [-0.009, 0.009]) { ctx.beginPath(); ctx.arc(x, -0.07, 0.006, 0, TAU); ctx.fill(); }
+    ctx.fillRect(-0.011, -0.03, 0.022, 0.007);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
   },
   square(ctx, p, r) {
     // square court: nested squares, corner seals, centre glyph (bands do not spin)

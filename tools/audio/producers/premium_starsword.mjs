@@ -337,7 +337,9 @@ async function hits(lib, ctx, cat, H, keep) {
       { buf: H.norm(H.glass([N.E7, N.Fs7, N.B6][k % 3], 0.5, { seed: `hg${k}`, t60: 0.3, tick: -30 })), at: 0.006, gain: -20 },
       { buf: H.tinkles(0.3, 5, { lo: 4500, hi: 9500, t60: 0.06, seed: `ht${k}` }), at: 0.01, gain: -19 },
     ]);
-    hit.push(H.shape(H.cut(H.verb(v, 'smallRoom', 0.1, 0.4, `hv${k}`, 1), 0.6, 0.45), -15));
+    // (a body under the cut: v1's 150-600 Hz sat 6 dB under the 3-8 kHz bite and the sub; a 1.1 m blade lands heavy)
+    const e = lib.eq(v, [{ type: 'peak', f: 280, gain: 3, q: 0.9 }, { type: 'highshelf', f: 6000, gain: -1.5 }]);
+    hit.push(H.shape(H.cut(H.verb(e, 'smallRoom', 0.1, 0.4, `hv${k}`, 1), 0.6, 0.45), -15));
   }
   await cat.add('starsword_hit', hit, { lufs: -15, spatial: true, range: [4, 60], voices: 4, pitch: [0.95, 1.05], priority: 2, sources: [X.gash, X.slice, X.meaty, X.wet, X.gross] });
 
@@ -367,8 +369,10 @@ async function hits(lib, ctx, cat, H, keep) {
   await cat.add('starsword_hit_flesh', flesh, { lufs: -17, spatial: true, range: [3, 45], voices: 3, pitch: [0.94, 1.06], sources: [X.gash, X.slice, X.meaty, X.wet, X.gross] });
 
   // starsword_hit_wall: the blade meets the street / a wall — a heavy clang, concrete, sparks, a stone chip, the ring
+  // (v1: the -2 st deep clang rang 40-150 Hz for 0.6 s and was clipped 8 dB: centroid 290 Hz, highs at -21 dB, a
+  // dull thud; now its low is kept short and the steel 「鏘」 and the ring lead)
   const wall = [];
-  const deep = await H.ld(X.clangDeep, 0, 0.6, { hp: 70, semis: -2 });
+  const deep = H.tight(H.strike(await H.ld(X.clangDeep, 0, 0.6, { hp: 90, semis: -2 })), 0.3);
   const metal = await H.ld(X.metalHit, 0, 0.25, { hp: 120 });
   const conc = await H.ld(X.concHit, 0, 0.47, { hp: 90 });
   const chips = await H.ld(X.stoneDebris, 0, 0.39, { hp: 300 });
@@ -377,14 +381,17 @@ async function hits(lib, ctx, cat, H, keep) {
     const sparks = lib.automate(lib.crackle(0.3, { density: 160, decay: 0.002, hp: 3500, seed: `wsp${k}` }), (t) => Math.exp(-t * 12));
     const v = lib.mix([
       { buf: H.strike(await H.ld(X.metalH(k), 0, 0.4, { hp: 150, semis: r.range(-3, -1) })) },
-      { buf: H.strike(deep), gain: -5 },
+      { buf: H.strike(deep), gain: -7 },
       ...(k % 2 ? [{ buf: H.strike(metal), gain: -10 }] : []),   // (fs:406562 is a needle: a touch of it only)
+      { buf: H.strike(await H.ld(X.metalL(k + 1), 0, 0.3, { hp: 900, semis: r.range(-1, 1) })), gain: -7 },
+      { buf: H.K.crack(`wcr${k}`, { dur: 0.012, decay: 0.003, hp: 2500 }), gain: -9 },
       { buf: H.strike(conc), gain: -4 },
-      { buf: H.norm(sparks), at: 0.004, gain: -13 },
-      { buf: H.norm(H.bladeRing([N.E5, N.Fs5, N.Gs5, N.B5, N.E5][k] * r.range(0.99, 1.01), 0.9, { t60: 0.55, bright: 1.1, seed: `wr${k}` })), at: 0.002, gain: -12 },
-      { buf: H.strike(chips), at: 0.02, gain: -11 },
+      { buf: H.norm(sparks), at: 0.004, gain: -11 },
+      { buf: H.norm(H.bladeRing([N.E5, N.Fs5, N.Gs5, N.B5, N.E5][k] * r.range(0.99, 1.01), 0.9, { t60: 0.55, bright: 1.1, seed: `wr${k}` })), at: 0.002, gain: -9 },
+      { buf: H.strike(chips), at: 0.02, gain: -10 },
     ]);
-    wall.push(H.shape(H.cut(H.verb(v, 'alley', 0.14, 0.7, `wv${k}`, 1), 0.85, 0.45), -18, { max: 8 }));
+    const e = lib.eq(v, [{ type: 'hp', f: 50, order: 2 }, { type: 'lowshelf', f: 140, gain: -4 }, { type: 'peak', f: 3000, gain: 3, q: 0.8 }]);
+    wall.push(H.shape(H.cut(H.verb(e, 'alley', 0.14, 0.7, `wv${k}`, 1), 0.85, 0.45), -18, { max: 6 }));
   }
   // metal clangs are peaky (natural PLR ~24): mastered at -18 and lifted, rather than limited flat
   await cat.add('starsword_hit_wall', wall, { lufs: -18, vol: 1.3, spatial: true, range: [3, 50], voices: 3, pitch: [0.95, 1.05], sources: [X.metalH(0), X.metalHit, X.clangDeep, X.concHit, X.stoneDebris] });
@@ -433,13 +440,15 @@ async function charge(lib, ctx, cat, H, keep) {
   // Hz), every modulation too (2 Hz throb, 6 Hz shimmer, the 1/3 Hz vowel sweep); only the noise / crackle textures
   // go through the loop crossfade (a coherent tone through an equal-power crossfade swells +3 dB at the seam).
   {
-    const P = 3, L = 4, q = (f) => Math.round(f * P) / P;
-    const pair = (f, g, type = 'saw') => [{ buf: lib.tone(P, { type, freq: q(f) + 1 / 3 }), gain: g, pan: -0.35 }, { buf: lib.tone(P, { type, freq: q(f) - 1 / 3 }), gain: g, pan: 0.35 }];
+    // the tonal part is rendered W s longer and its first W s dropped: the low-pass / swept band-pass start from rest,
+    // and a period cut from t = 0 jumped 0.12 at the seam (a click on every wrap); after W s they are periodic too
+    const P = 3, L = 4, W = 1, q = (f) => Math.round(f * P) / P;
+    const pair = (f, g, type = 'saw') => [{ buf: lib.tone(P + W, { type, freq: q(f) + 1 / 3 }), gain: g, pan: -0.35 }, { buf: lib.tone(P + W, { type, freq: q(f) - 1 / 3 }), gain: g, pan: 0.35 }];
     let drone = lib.mix([...pair(N.E2, -4), ...pair(N.B2, -5), ...pair(N.E3, -5), ...pair(N.E4, -14, 'triangle')], { channels: 2 });
     drone = lib.saturate(lib.eq(drone, [{ type: 'lp', f: 1600, order: 2 }]), { drive: 3, type: 'tube' });
     const vowel = lib.sweep(drone, 'bp', (t) => 520 + 260 * Math.sin(2 * Math.PI * t / P), { q: 1.3 });
     const throb = (t) => 0.82 + 0.18 * Math.sin(2 * Math.PI * 2 * t);
-    const body = H.env(lib.mix([{ buf: H.norm(drone), gain: -4 }, { buf: H.norm(vowel), gain: -3 }], { channels: 2 }), throb);
+    const body = lib.slice(H.env(lib.mix([{ buf: H.norm(drone), gain: -4 }, { buf: H.norm(vowel), gain: -3 }], { channels: 2 }), throb), W, W + P);
     const shimmer = H.env(lib.mix([{ buf: lib.tone(P, { freq: q(N.E6) }), pan: -0.4 }, { buf: lib.tone(P, { freq: q(N.B6) }), gain: -3, pan: 0.4 }, { buf: lib.tone(P, { freq: q(N.Fs7) }), gain: -9 }], { channels: 2 }),
       (t) => 0.55 + 0.45 * Math.sin(2 * Math.PI * 6 * t));
     const wind = H.env(lib.eq(lib.noise(L, { color: 'pink', seed: 'chw', channels: 2 }), [{ type: 'bp', f: 2600, q: 0.8 }]), (t) => 0.6 + 0.4 * Math.sin(2 * Math.PI * 4 * t));
@@ -602,7 +611,7 @@ async function guard(lib, ctx, cat, H, keep) {
   // starsword_block: a blow taken on the flat — clang, a dull thud through the arms, the veil absorbing it (a low
   // "thoom" and a zap), sparks, a short ring
   const block = [];
-  const deep = await H.ld(X.clangDeep, 0, 0.5, { hp: 80, semis: -4 });
+  const deep = H.tight(H.strike(await H.ld(X.clangDeep, 0, 0.5, { hp: 80, semis: -4 })), 0.35);
   const metal = await H.ld(X.metalHit, 0, 0.25, { hp: 150 });
   for (let k = 0; k < 5; k++) {
     const r = H.rng(`blk${k}`);
@@ -615,9 +624,12 @@ async function guard(lib, ctx, cat, H, keep) {
       { buf: lib.noiseBurst({ dur: 0.18, decay: 0.07, lp: 900, seed: `bkn${k}` }), gain: -9 },
       { buf: H.norm(zap), gain: -14 },
       { buf: H.norm(sparks), at: 0.003, gain: -15 },
-      { buf: H.norm(H.bladeRing(N.E5 * r.range(0.99, 1.01), 0.6, { t60: 0.35, seed: `bkr${k}` })), gain: -13 },
+      { buf: H.norm(H.bladeRing(N.E5 * r.range(0.99, 1.01), 0.6, { t60: 0.35, seed: `bkr${k}` })), gain: -10 },
+      { buf: H.K.crack(`bkc${k}`, { dur: 0.01, decay: 0.003, hp: 2500 }), gain: -10 },
     ]);
-    block.push(H.shape(H.cut(H.verb(lib.stereoize(v, { width: 0.25, hp: 600, seed: `bkw${k}` }), 'smallRoom', 0.12, 0.6, `bkv${k}`), 0.65, 0.45), -16));
+    // (the arms take the thud; the ear gets the steel: low kept short, 2-3 kHz lifted)
+    const e = lib.eq(v, [{ type: 'hp', f: 45, order: 2 }, { type: 'lowshelf', f: 130, gain: -3 }, { type: 'peak', f: 2600, gain: 2.5, q: 0.8 }]);
+    block.push(H.shape(H.cut(H.verb(lib.stereoize(e, { width: 0.25, hp: 600, seed: `bkw${k}` }), 'smallRoom', 0.12, 0.6, `bkv${k}`), 0.65, 0.45), -16));
   }
   await cat.add('starsword_block', block, { lufs: -16, vol: 1.2, spatial: false, channels: 2, voices: 3, pitch: [0.95, 1.05], sources: [X.metalH(1), X.metalHit, X.clangDeep] });
 
@@ -773,35 +785,43 @@ async function ult(lib, ctx, cat, H, keep) {
   }
   await cat.add('starsword_ult_fall', fall, { lufs: -15, vol: 1.2, spatial: true, range: [12, 140], voices: 2, pitch: [0.99, 1.01], maxHeadMs: 400 });
 
-  // ④ the impact (0.9, §1.12 layer 2): the 40-60 Hz blow — a long boom, a deep explosion and a blast, concrete, a
-  // giant steel TANG (the sword plants; its ring beats on E2), the glazed blade ringing (E4 / B4 / E5), debris rain,
-  // star dust thrown up
+  // ④ the impact (0.9, §1.12 layer 2): the 40-60 Hz blow (~0.3 s: a punch, not a held drone), a deep explosion and a
+  // blast, concrete, a giant steel TANG (the sword plants; its ring beats on E2 / E3), the glazed blade ringing (E4 /
+  // B4 / E5), debris rain, star dust thrown up; the tail is a noise rumble + debris, not sub tone
+  // (v1 held a clipped 40 Hz block for 2 s: 72 % of the energy under 60 Hz, mids at -18 dB, it read thin on speakers)
   const impact = [];
   {
-    const deepB = await H.ld(X.deepBoom, 0, 2.6, { hp: 25 });
-    const blast = await H.ld(X.blast, 0, 1.24, { hp: 30 });
-    const smash = await H.ld(X.concSmash, 0, 1.27, { hp: 30 });
-    const clang = await H.ld(X.clangDeep, 0, 1.12, { hp: 40, semis: -5 });
+    // (trimmed to the transient first, so the decay counts from the blow)
+    const deepB = H.tight(H.strike(await H.ld(X.deepBoom, 0, 2.6, { hp: 28 })), 1.3);
+    const blast = H.tight(H.strike(await H.ld(X.blast, 0, 1.24, { hp: 45 })), 0.9);
+    const smash = H.tight(H.strike(await H.ld(X.concSmash, 0, 1.27, { hp: 45 })), 0.8);
+    const clang = H.tight(H.strike(await H.ld(X.clangDeep, 0, 1.12, { hp: 60, semis: -5 })), 1.4);
     for (let k = 0; k < 2; k++) {
       const D = 3.4;
       const debris = await H.ld(X.debrisBig, 0.05 + k * 0.4, 3.3, { hp: 60 });
       const crash = await H.ld(X.longCrash, 0.3 + k * 1.5, 3.4 + k * 1.5, { hp: 60 });
+      const rumble = lib.automate(lib.eq(lib.noise(D, { color: 'brown', seed: `uiru${k}` }), [{ type: 'lp', f: 220, order: 2 }, { type: 'hp', f: 32, order: 2 }]), (t) => Math.min(1, t / 0.02) * Math.exp(-t * 6.9 / 2.4));
       const v = lib.mix([
-        { buf: H.boom(`uib${k}`, { f0: 64, f1: 40, sweep: 0.08, decay: 1.1, drive: 3, amount: -3 }) },
-        { buf: H.strike(deepB), gain: -3 },
-        { buf: H.strike(blast), gain: -5 },
-        { buf: H.strike(smash), gain: -4 },
-        { buf: H.K.crack(`uic${k}`, { dur: 0.02, decay: 0.005, hp: 1200 }), gain: -4 },
-        { buf: H.strike(clang), gain: -6 },
-        { buf: H.norm(H.bladeRing(N.E2 * (k ? 1.004 : 1), D, { t60: 2.4, bright: 1.2, seed: `uir${k}`, beat: 0.006 })), gain: -9 },
-        { buf: H.norm(H.run([N.E4, N.B4, N.E5], 0.006, { seed: `uig${k}`, t60: 2.2, dur: D, gains: [0, -2, -4], tick: -30 })), at: 0.01, gain: -13 },
+        { buf: H.boom(`uib${k}`, { f0: 96, f1: 46, sweep: 0.06, decay: 0.55, drive: 2, amount: -3 }) },
+        { buf: H.strike(deepB), gain: -4 },
+        { buf: H.strike(blast), gain: -4 },
+        { buf: H.strike(smash), gain: -3 },
+        { buf: H.K.crack(`uic${k}`, { dur: 0.02, decay: 0.005, hp: 1200 }), gain: -3 },
+        { buf: H.strike(clang), gain: -4 },
+        { buf: H.strike(await H.ld(X.metalH(k + 2), 0, 0.4, { hp: 150, semis: -6 })), gain: -6 },
+        { buf: H.norm(H.bladeRing(N.E2 * (k ? 1.004 : 1), D, { t60: 1.8, bright: 1.2, seed: `uir${k}`, beat: 0.006 })), gain: -11 },
+        { buf: H.norm(H.bladeRing(N.E3 * (k ? 0.997 : 1), D, { t60: 1.4, bright: 1.0, seed: `uiq${k}`, beat: 0.005 })), at: 0.004, gain: -13 },
+        { buf: H.norm(H.run([N.E4, N.B4, N.E5], 0.006, { seed: `uig${k}`, t60: 2.2, dur: D, gains: [0, -2, -4], tick: -30 })), at: 0.01, gain: -11 },
+        { buf: H.norm(rumble), gain: -12 },
         { buf: H.strike(debris), at: 0.1, gain: -6 },
-        { buf: H.strike(crash), at: 0.25, gain: -10 },
-        { buf: H.tinkles(1.8, 28, { lo: 2500, hi: 8500, t60: 0.15, seed: `uit${k}`, skew: 1.3 }), at: 0.05, gain: -13 },
+        { buf: H.strike(crash), at: 0.25, gain: -9 },
+        { buf: H.tinkles(1.8, 28, { lo: 2500, hi: 8500, t60: 0.15, seed: `uit${k}`, skew: 1.3 }), at: 0.05, gain: -12 },
       ]);
-      impact.push(H.shape(H.cut(H.verb(v, 'urban', 0.22, 2.4, `uiv${k}`, 1), D, 0.4), -12.5, { max: 7 }));
+      const e = lib.eq(v, [{ type: 'hp', f: 28, order: 2 }, { type: 'lowshelf', f: 70, gain: -3 }, { type: 'peak', f: 1800, gain: 2.5, q: 0.7 }]);
+      impact.push(H.shape(H.cut(H.verb(e, 'urban', 0.22, 2.4, `uiv${k}`, 1), D, 0.4), -14, { max: 5 }));
     }
-    await cat.add('starsword_ult_impact', impact, { lufs: -12.5, maxLimitDb: 6, spatial: true, range: [15, 160], voices: 2, pitch: [0.99, 1.01], priority: 3, sources: [X.deepBoom, X.blast, X.concSmash, X.clangDeep, X.debrisBig, X.longCrash] });
+    // (a 3.4 s blow: mastered at -14 and lifted with vol, so the clipper leaves the punch above the tail)
+    await cat.add('starsword_ult_impact', impact, { lufs: -14, vol: 1.25, maxLimitDb: 6, spatial: true, range: [15, 160], voices: 2, pitch: [0.99, 1.01], priority: 3, sources: [X.deepBoom, X.blast, X.concSmash, X.clangDeep, X.debrisBig, X.longCrash] });
     keep.impact = impact[0];
   }
 
@@ -890,7 +910,7 @@ async function ult(lib, ctx, cat, H, keep) {
   // the whole ultimate as the caster hears it at the handler's volumes (spatial layers ~10 m away, no attenuation
   // inside their ref distance) — logged and previewed (compare with the combo reference)
   const at = (b, l, t, vol = 1) => ({ buf: H.atLufs(b, l), at: t, gainLin: vol });
-  const tl = lib.mix([at(keep.rise, -15, 0, 1.1), at(bed, -18, 0.3, 0.8), at(sigil[0], -18, 0.2, 1.4 * 0.9), at(fall[0], -15, 0.3, 1.2), at(impact[0], -12.5, 0.9, 1.2),
+  const tl = lib.mix([at(keep.rise, -15, 0, 1.1), at(bed, -18, 0.3, 0.8), at(sigil[0], -18, 0.2, 1.4 * 0.9), at(fall[0], -15, 0.3, 1.2), at(impact[0], -14, 0.9, 1.2 * 1.25),
     at(pulse[0], -16, 1.6, 1.3 * 0.9), at(pulse[1], -16, 2.35, 1.3 * 0.9), at(pulse[2], -16, 3.1, 1.3 * 0.9), at(shatter[0], -15, 3.25, 1.2)], { channels: 2 });
   const L = lib.loudness(tl);
   ctx.log(`  ult timeline: ${L.integrated.toFixed(1)} LUFS integrated, momentary max ${L.momentaryMax.toFixed(1)}, short-term max ${L.shortTermMax.toFixed(1)}, peak ${lib.lin2db(lib.peak(tl)).toFixed(1)} dBFS`);
@@ -1085,22 +1105,23 @@ async function other(lib, ctx, cat, H, keep) {
   // impact (boom, concrete, a clang, a glass chord), a bell, star dust
   {
     const out = [];
-    const smash = await H.ld(X.concSmash, 0, 1.0, { hp: 35 });
-    const clang = await H.ld(X.clangDeep, 0, 0.8, { hp: 60, semis: -3 });
+    const smash = H.tight(H.strike(await H.ld(X.concSmash, 0, 1.0, { hp: 40 })), 0.7);
+    const clang = H.tight(H.strike(await H.ld(X.clangDeep, 0, 0.8, { hp: 60, semis: -3 })), 0.8);
     for (let k = 0; k < 2; k++) {
       const D = 2.0, B = 0.3;
       const f = (t) => 3000 * Math.pow(0.45, t / B);
       const whistle = lib.automate(lib.mix([{ buf: lib.tone(B, { freq: f }) }, { buf: lib.sweep(lib.noise(B, { seed: `fnw${k}` }), 'bp', f, { q: 5 }), gain: -6 }]), (t) => (t / B) ** 1.5 * (t > B - 0.015 ? Math.max(0, (B - t) / 0.015) : 1));
       const v = lib.mix([
         { buf: H.norm(whistle), gain: -10 },
-        { buf: H.boom(`fnb${k}`, { f0: 86, f1: 44, decay: 0.5, drive: 2.5 }), at: B },
-        { buf: H.strike(smash), at: B, gain: -5 },
-        { buf: H.strike(clang), at: B, gain: -9 },
+        { buf: H.boom(`fnb${k}`, { f0: 92, f1: 46, decay: 0.42, drive: 2 }), at: B },
+        { buf: H.strike(smash), at: B, gain: -4 },
+        { buf: H.strike(clang), at: B, gain: -7 },
         { buf: H.norm(H.run([N.E5, N.B5, N.E6], 0.005, { seed: `fng${k}`, t60: 1.1, dur: 1.4, tick: -24 })), at: B + 0.005, gain: -8 },
         { buf: H.norm(await H.tubular(N.E5, 1.5, { t60: 1.4 })), at: B + 0.01, gain: -9 },
         { buf: H.tinkles(1.0, 16, { lo: 2800, hi: 9000, t60: 0.12, seed: `fnt${k}`, skew: 1.2 }), at: B + 0.02, gain: -11 },
       ]);
-      out.push(H.shape(H.cut(H.verb(v, 'urban', 0.18, 1.4, `fnv${k}`, 1), D, 0.4), -15));
+      const e = lib.eq(v, [{ type: 'hp', f: 32, order: 2 }, { type: 'lowshelf', f: 80, gain: -2.5 }, { type: 'peak', f: 1600, gain: 2, q: 0.7 }]);
+      out.push(H.shape(H.cut(H.verb(e, 'urban', 0.18, 1.4, `fnv${k}`, 1), D, 0.4), -15));
     }
     await cat.add('starsword_final', out, { lufs: -15, vol: 1.2, spatial: true, range: [8, 100], voices: 1, pitch: [0.99, 1.01], maxHeadMs: 300, sources: [X.concSmash, X.clangDeep, X.tbC5] });
   }
@@ -1112,7 +1133,7 @@ async function twins(lib, ctx, cat, H, keep) {
   await cat.add('ready_starsword_night', T(keep.ready), { lufs: -19, bus: 'ui', spatial: false, channels: 2, voices: 2, pitch: [1, 1], note: 'twin: ready_starsword -4 st + echo' });
   await cat.add('starsword_swing_night', keep.swing.slice(0, 4).map((b) => H.shape(lib.fadeOut(lib.slice(T(b), 0, 0.95), 0.3, 'exp'), -15)), { lufs: -15, spatial: false, channels: 2, voices: 3, pitch: [0.97, 1.03], note: 'twin: starsword_swing -4 st + echo' });
   await cat.add('starsword_ult_rise_night', T(keep.rise), { lufs: -15, vol: 1.1, spatial: true, channels: 2, range: [10, 120], voices: 2, pitch: [1, 1], maxHeadMs: 350 });
-  await cat.add('starsword_ult_impact_night', H.shape(T(keep.impact), -12.5, { max: 7 }), { lufs: -12.5, maxLimitDb: 6, spatial: true, range: [15, 160], voices: 2, pitch: [1, 1], priority: 3 });
+  await cat.add('starsword_ult_impact_night', H.shape(T(keep.impact), -14, { max: 5 }), { lufs: -14, vol: 1.25, maxLimitDb: 6, spatial: true, range: [15, 160], voices: 2, pitch: [1, 1], priority: 3 });
   await cat.add('starsword_ult_bed_night', T(keep.bed), { lufs: -18, spatial: false, channels: 2, voices: 1, pitch: [1, 1] });
   await cat.add('starsword_ult_shatter_night', H.shape(T(keep.shatter), -15), { lufs: -15, vol: 1.2, spatial: true, range: [12, 140], voices: 2, pitch: [1, 1] });
 }

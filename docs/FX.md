@@ -197,7 +197,7 @@ staggered kick up dust at their feet automatically (`knockDust()` for manual use
 | `fx.glowTracer(from, to, { color, glow, width, length, speed })` | coloured glowing tracers (energy rifles) |
 | `fx.beam(from, to, { core, glow, wCore, wGlow, life, shrink, scroll, pattern, wStart, ramp })` → `{ set(from, to), stop() }` | lasers, rail shots, charge beams (Thunderbolt / Frost Viper style); `pattern: 'feather'` = a hot rachis + herringbone barbs scrolling down the shaft (M03 焚天光), `wStart` / `ramp` (m) = width fraction where it leaves the gun and the distance to full width (a fat shaft that stays thin at the muzzle, never a disc over the crosshair) |
 | `fx.bolt(from, to, { col, glow, width, core, levels, jitter, branches, regen, life })` → `{ set, stop }` | lightning chains, arcs (JANUS / Gungnir style) |
-| `fx.trail({ width, life, color, color1, taper, profile, vm })` → `t.push(a)` / `t.push(root, tip)` / `t.stop()` | projectile streaks; blade slash trails (push the blade root and tip every frame) |
+| `fx.trail({ width, life, color, color1, taper, profile, vm })` → `t.push(a)` / `t.push(root, tip)` / `t.stop()` | projectile streaks; blade slash trails (push the blade root and tip every frame). `profile: 'crescent'` (X02): alpha on the outer half of the root→tip span, white-hot leading edge, feathered tail and cap — an energy arc instead of a filled sheet (push from mid-blade, not the root) |
 | `fx.shockwave(pos, { normal, r0, r1, life, color, thin })` | ground rings, muzzle rings, impact shocks |
 | `fx.sparkBurst(pos, { color, color1, count, speed, glow, normal })` | energy impacts |
 | `fx.explosion(pos, { color })`, `fx.particles.spawn({ ramp: RAMP.green, … })` | coloured blasts and fire |
@@ -236,7 +236,7 @@ the gun's squeezed depth range, in front of the world. One ubershader per pass, 
 |---|---|
 | `status(kind, strength = 1, dur = 1.2, { color })` | CSO status overlays (06b §6.2 / §9.8): `'burn'` licking flames rising from the bottom + embers + warm frame, `'poison'` opaque lime blotches with drips and bubbles, `'frost'` rime + feathery crystals + crack front + glints, `'electric'` arcs crawling on the border re-dealt every 50 ms (`color`, default violet). Calling again refreshes (max strength, extended time) instead of stacking |
 | `tint(color, alpha = 0.2, dur = 0.6)` | TINT: `col = mix(col, col·tint·1.6 + tint·0.05, α)`, α capped at 0.35 |
-| `radial(amt = 1, dur = 0.35, { color, ink, r0, seed })` | RADIAL speed lines from the centre (centre kept clean), re-dealt every 40 ms; `ink: true` = black lines |
+| `radial(amt = 1, dur = 0.35, { color, ink, r0, seed, density, thin })` | RADIAL speed lines from the centre (centre kept clean), re-dealt every 40 ms; `ink: true` = black lines; `density` (0.5 = half the 96 rays) and `thin` (line width ×, 1) for a lighter beat (X02: `{ r0: 0.3, density: 0.3, thin: 0.5 }`) |
 | `ink(amt = 1, dur = Infinity)` | ink-wash filter (負屓 書寫): desaturate + exposure / contrast (renderer `post` deltas), rice-paper grain, ink bleeding in from the edges |
 | `rift(dur = 1.2, { angle = 1.75, open = 1, seed })` | RIFT: rice-paper tear opening in 0.2 s (torn fibre lip, ink blooming inside) + ink speed lines |
 | `cloudsea(dur = 4, { sun, seed })` | CLOUDSEA: three parallax billowy cloud banks rising over the lower screen, gold rims, sunrise sky (玉山 雲海日出) |

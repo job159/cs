@@ -349,8 +349,9 @@ export class Arsenal {
     const sp = specialOf(ws);
     this._premiumState(ws, dt);
     if (this.state === 'reload' && s.pressed.reload && sp?.onReloadInput) sp.onReloadInput(ws, this.game);
-    // the premium first draw is a show, not a lockout: firing cuts it (§1.7.1 beat 1)
-    if (this.state === 'draw' && this.firstDrawing && (s.pressed.fire || s.held.fire)) { this.firstDrawing = false; this.vm.stopClip(); this.vm.glowTo(1, 0.15); this.timer = 0; }
+    // the premium first draw is a show, not a lockout: firing or a skill key cuts it (§1.7.1 beat 1); the press is then
+    // handled below this frame
+    if (this.state === 'draw' && this.firstDrawing && (s.pressed.fire || s.held.fire || s.pressed.special || s.pressed.alt)) { this.firstDrawing = false; this.vm.stopClip(); this.vm.glowTo(1, 0.15); this.timer = 0; }
     if (this.state === 'draw' || this.state === 'reload' || this.state === 'cycle' || this.state === 'melee' || this.state === 'action') {
       this.timer -= dt;
       if (this.state === 'reload' && def.reloadStyle === 'shell' || this.state === 'reload' && this.shellReload) {

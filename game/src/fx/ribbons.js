@@ -9,7 +9,7 @@ import { materialUniforms } from '../gfx/materials.js';
 
 const VERT = /* glsl */`
 attribute vec4 color;
-attribute vec3 prm;     // x profile (0 soft, 1 beam core+glow, 2 blade slash), y core ratio, z band scroll
+attribute vec3 prm;     // x profile (0 soft, 1 beam core+glow, 2 blade slash, 3 feather, 4 crescent), y core ratio, z band scroll
 uniform float uVm;
 uniform mat4 vmProj;
 varying vec4 vColor;
@@ -44,6 +44,16 @@ void main() {
     float band = vPrm.z > 0.0 ? 0.8 + 0.2 * sin((vUv.x - uTime * vPrm.z) * 6.2832) : 1.0;
     col = mix(col * 0.6, vec3(dot(col, vec3(0.33))) * 1.4 + col * 0.5, core);
     a = (core + glow) * band;
+  } else if (vPrm.x > 3.5) {
+    // crescent (energy blade arcs, X02): alpha weighted to the outer half (v 0 root .. 1 tip edge), a white-hot leading
+    // edge (u 0 = the newest node), a feathered tail and cap -- an arc of light, not a sheet hanging off the blade
+    float t = vUv.y, u = vUv.x;
+    float streak = 0.75 + 0.25 * hash(floor(t * 30.0 + floor(u * 6.0) * 7.0));
+    a = smoothstep(0.3, 0.96, t) * smoothstep(1.0, 0.95, t) * streak * (0.35 + 0.65 * t);
+    a += smoothstep(0.88, 0.975, t) * smoothstep(1.0, 0.975, t) * 1.2;
+    float lead = exp(-u * 9.0);
+    col = mix(col, vec3(dot(col, vec3(0.3))) * 1.3 + col * 0.35, lead * smoothstep(0.6, 0.95, t));
+    a *= (0.55 + 0.9 * lead) * (1.0 - smoothstep(0.55, 1.0, u));
   } else if (vPrm.x > 2.5) {
     // feather-vein shaft (M03 焚天光): a hot rachis, a soft wide vane and herringbone barbs (chevrons sloping back
     // from the axis) scrolling down the shaft
@@ -164,7 +174,7 @@ export class Ribbons {
   /**
    * Trail: t.push(a [, b]) every frame; b given = blade ribbon from a (root) to b (tip).
    * opts: width (m, camera-facing trails), life (s, node lifetime), color [r,g,b,a] (HDR) at the head,
-   * color1 at the tail, taper (width at the tail, 0..1), segs (max nodes), profile ('soft'|'beam'|'slash'), vm.
+   * color1 at the tail, taper (width at the tail, 0..1), segs (max nodes), profile ('soft'|'beam'|'slash'|'crescent'), vm.
    */
   trail({ width = 0.06, life = 0.25, color = [4, 3, 2, 1], color1 = null, taper = 0, segs = 24, profile = 'soft', vm = false } = {}) {
     const t = { kind: 'trail', nodes: [], width, life, color, color1: color1 || [color[0], color[1], color[2], 0], taper, segs, vm, profile: PROFILE[profile] ?? 0, stopped: false, age: 0 };
@@ -289,4 +299,4 @@ export class Ribbons {
   }
 }
 
-const PROFILE = { soft: 0, beam: 1, slash: 2 };
+const PROFILE = { soft: 0, beam: 1, slash: 2, crescent: 4 };

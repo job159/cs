@@ -2,6 +2,7 @@
 // orthographic side view drawn in flat white, cropped and cached as data URLs.
 import * as THREE from 'three';
 import { instanceGLB } from '../engine/assets.js';
+import { WEAPONS } from '../weapons/defs.js';
 
 const cache = new Map();
 const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -13,13 +14,17 @@ export async function weaponIcon(renderer, id, { w = 256, h = 96 } = {}) {
     let model;
     try { model = await instanceGLB(`weapons/${id}.glb`); } catch { return null; }
     model.traverse((o) => { if (o.isMesh) o.material = mat; if (o.userData?.restHidden) o.visible = false; });
+    // def.icon { roll (deg about the side axis), zoom }: framing for shapes a side view loses (a 1.9 m upright bow is a
+    // hairline in a 256 x 96 strip; rolled 90 deg it lies along the strip)
+    const iv = Object.values(WEAPONS).find((d) => (d.model || d.id) === id && d.icon)?.icon;
+    if (iv?.roll) { model.rotation.x = iv.roll * Math.PI / 180; model.updateMatrixWorld(true); }
     const scene = new THREE.Scene();
     scene.add(model);
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
     // orthographic side view (from +X): the muzzle (-Z) points to the right of the image
     const aspect = w / h;
-    const halfW = Math.max(size.z / 2, (size.y / 2) * aspect) * 1.04;
+    const halfW = Math.max(size.z / 2, (size.y / 2) * aspect) * 1.04 / (iv?.zoom || 1);
     const cam = new THREE.OrthographicCamera(-halfW, halfW, halfW / aspect, -halfW / aspect, 0.01, 10);
     cam.position.set(c.x + 2, c.y, c.z); // right side, muzzle points right like CS kill-feed icons
     cam.lookAt(c);

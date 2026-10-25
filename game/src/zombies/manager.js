@@ -80,7 +80,10 @@ class Zombie {
       const b0 = this.bones[bone];
       if (!b0) continue;
       const child = toBone ? this.bones[toBone] : (DEFAULT_HITBOXES[name]?.[2] ? this.bones[DEFAULT_HITBOXES[name][2]] : null);
-      this.hitboxes.push({ name, part: PART_OF[name] || 'body', b0, b1: child || null, r: r * (model.scale || 1), p0: new THREE.Vector3(), p1: new THREE.Vector3() });
+      // no end bone: a segment in the bone's own frame (ZombieManager boneCapsules: the skull fit, the exporter's
+      // bone-axis capsules) instead of a stub along world up that ignored the bone's orientation
+      const cap = !child && model.boneCaps?.[name];
+      this.hitboxes.push({ name, part: PART_OF[name] || 'body', b0, b1: child || null, l0: cap ? cap[0] : null, l1: cap ? cap[1] : null, r: r * (model.scale || 1), p0: new THREE.Vector3(), p1: new THREE.Vector3() });
     }
     // animation
     this.mixer = new THREE.AnimationMixer(this.root);
@@ -109,11 +112,21 @@ class Zombie {
     // CSO cues keyed on the clips the host replicates ('za'): crawler pounce, the end of a brute charge
     if (this.alive && this.def.leap && name === (this.def.anim.leap || 'leap')) this.zfx?.leapCue(this);
     if (this._charging) { this._charging = false; this._chargeEnd = this.mgr.time; this.zfx?.chargeImpact(this.pos, 0.8); }
+    // per-type clip overrides (defs.js anim.over), applied here so every caller (hits, weapons, deaths, the host's
+    // replicated 'za' clips on clients) gets them: a string plays another clip, null plays none (the current clip
+    // goes on; a prone crawler has no upright hit / stagger clip to pop into), { from, speed, fade } tweak the clip
+    let from = 0;
+    const ov = this.def.anim.over?.[name];
+    if (ov === null) return null;
+    if (typeof ov === 'string') name = ov;
+    const tw = typeof ov === 'string' ? this.def.anim.over[ov] : ov;
+    if (tw) { from = tw.from || 0; speed *= tw.speed || 1; fade = tw.fade ?? fade; }
     const a = this.actions[this.actions[name] ? name : this._clip(name)];
     if (!a) return null;
     a.reset();
     a.setLoop(THREE.LoopOnce, 1);
     a.clampWhenFinished = true;
+    if (from) a.time = Math.min(from, a.getClip().duration * 0.95);
     a.timeScale = speed;
     a.enabled = true;
     a.setEffectiveWeight(1);
@@ -152,8 +165,10 @@ class Zombie {
 
   updateHitboxes() {
     for (const h of this.hitboxes) {
-      h.b0.getWorldPosition(h.p0);
-      if (h.b1) h.b1.getWorldPosition(h.p1); else h.p1.copy(h.p0).addScaledVector(UP, h.r * 0.6);
+      h.b0.getWorldPosition(h.p0);   // (also brings b0.matrixWorld up to date for the bone-frame segments)
+      if (h.b1) h.b1.getWorldPosition(h.p1);
+      else if (h.l0) { h.p0.copy(h.l0).applyMatrix4(h.b0.matrixWorld); h.p1.copy(h.l1).applyMatrix4(h.b0.matrixWorld); }
+      else h.p1.copy(h.p0).addScaledVector(UP, h.r * 0.6);
     }
     this.hbFrame = this.mgr.frame;
   }
@@ -665,6 +680,26 @@ export class ZombieManager {
     this.byId = new Map();
     this.renderTime = 0;       // client interpolation clock (host time minus a delay)
     game.targets = this;
+    // render-time visibility: update() runs before the game moves the camera (Game.frame: zombies, then
+    // _updateCamera), so its frustum is a frame old - after a fast turn the zombies coming into view were hidden for
+    // a frame (QA: a whole horde popped in). The renderer calls scene.onBeforeRender after giving the camera this
+    // frame's transform and before it collects the visible objects.
+    const prev = game.scene.onBeforeRender, zm = this;
+    game.scene.onBeforeRender = function (r, s, cam, rt) {
+      prev.call(this, r, s, cam, rt);
+      if (cam === game.camera) zm._cull(cam);
+    };
+  }
+
+  /** Frustum visibility of every zombie for the camera about to render (dead ones always: their sinking corpses). */
+  _cull(cam) {
+    const fr = this._cullFr || (this._cullFr = new THREE.Frustum()), m = this._cullM || (this._cullM = new THREE.Matrix4());
+    const s = this._cullS || (this._cullS = new THREE.Sphere());
+    fr.setFromProjectionMatrix(m.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    for (const z of this.list) {
+      s.center.set(z.pos.x, z.pos.y + z.height * 0.5, z.pos.z); s.radius = z.height;
+      z.root.visible = (z.state === 'dead' || fr.intersectsSphere(s)) && !z.burst;
+    }
   }
 
   async init({ types = Object.keys(ZOMBIES) } = {}) {
@@ -706,6 +741,7 @@ export class ZombieManager {
         entry.poseQByClip = {};
         for (const [clip, set] of Object.entries(ex.poseOffsetsByClip)) entry.poseQByClip[clip] = toQ({ ...(entry.poseOffsets || {}), ...set });
       }
+      entry.boneCaps = boneCapsules(g.scene, ex.hitboxes, ex.capsules);
       try { entry.lod1 = (await loadGLB(`zombies/${id}_lod1.glb`)).scene; } catch { entry.lod1 = null; }
     } catch {
       entry = { missing: true };   // not built (yet): a stand-in (zombies/standins.js) or another model replaces it
@@ -843,7 +879,7 @@ export class ZombieManager {
     // root scale: a stand-in's own; a boss on a borrowed model / stand-in / the mannequin is scaled up to its real size
     let rs = entry.scale || 1;
     if (def.boss && (entry.standin || entry.fallback || mid !== def.models[0])) rs = def.fallbackScale || rs;
-    const z = new Zombie(this, type, def, { scene, hitboxes: entry.hitboxes, height: entry.height, scale: rs }, clips, pos);
+    const z = new Zombie(this, type, def, { scene, hitboxes: entry.hitboxes, boneCaps: entry.boneCaps, height: entry.height, scale: rs }, clips, pos);
     if (rs !== 1) z.root.scale.setScalar(rs);
     z.stride = rs;   // longer legs, longer steps: locomotion clips play slower for the same ground speed
     if (entry.severed) for (const b of entry.severed) z.severed.add(b);   // limbs the model never had (legless crawler)
@@ -1094,7 +1130,7 @@ export class ZombieManager {
       // animation LOD: near & visible every frame, far / off-screen less often
       sphere.center.set(z.pos.x, z.pos.y + z.height * 0.5, z.pos.z); sphere.radius = z.height;
       const vis = frustum.intersectsSphere(sphere);
-      z.root.visible = vis || z.state === 'dead';
+      z.root.visible = (vis || z.state === 'dead') && !z.burst;   // (a popped bloater stays gone: explode())
       const dist = z.pos.distanceTo(cam.position);
       const every = !vis ? 8 : dist < 15 ? 1 : dist < 35 ? 2 : 4;
       z.animAcc += dt;
@@ -1145,8 +1181,10 @@ export class ZombieManager {
     const out = [];
     for (const z of this.list) {
       if (!z.alive) continue;
-      // broad phase: vertical cylinder wide enough for the limbs (scaled stand-ins / elites, bosses' arm spans)
-      const r = z.radius + 0.45 * Math.max(1, z.root.scale.x) + (z.def.boss ? z.height * 0.35 : 0);
+      // broad phase: vertical cylinder wide enough for the limbs (scaled stand-ins / elites, bosses' arm spans).
+      // QA (hitbox capsule ends + radius, every clip): runner lunge 0.96 m, brute swipe 1.26, crawler head / feet 1.07
+      // off the root - the old 0.45 m margin (0.75-1.05) dropped shots at outstretched hands and the prone crawler
+      const r = z.radius + 0.8 * Math.max(1, z.root.scale.x) + (z.def.boss ? z.height * 0.35 : 0);
       const ox = origin.x - z.pos.x, oz = origin.z - z.pos.z;
       const a = dir.x * dir.x + dir.z * dir.z;
       const b = 2 * (ox * dir.x + oz * dir.z);
@@ -1273,6 +1311,7 @@ export class ZombieManager {
     if (this.authority) for (const o of this.list) if (o.alive && o !== z && o.pos.distanceTo(p) < e.radius) o.damage({ amount: e.dmg * 2, part: 'body', dir: o.pos.clone().sub(p).normalize(), knock: 6, stagger: 1, explosive: true });
     this.hazards.push({ pos: p.clone().setY(z.pos.y), r: e.radius * 0.7, t: e.poison, dps: 6, kind: 'poison' });
     z.root.visible = false;
+    z.burst = true;   // the frustum / LOD pass re-showed the corpse for its last 0.1 s (dead zombies are always visible)
     z.deathT = 6.9;
   }
 
@@ -1306,6 +1345,76 @@ function bossFadeable(root) {
   root.traverse((o) => { if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m?.userData.zshell) mats.add(m); });
   for (const m of mats) { m.alphaHash = true; m.opacity = 1; }
   return [...mats];
+}
+
+/**
+ * Hitbox segments in their bone's own frame (rest pose) for the hitboxes that name no end bone and have no default
+ * one (DEFAULT_HITBOXES), so they turn with the bone instead of standing on world up:
+ *  - head: fitted to the skull - from just above the head joint to the scalp minus the radius (the top cap ends at
+ *    the highest skin vertex along the bone axis), shifted 30 % of the way toward the eyes: the joint sits at the back
+ *    of the skull, and a stub on the joint left the face and nose outside the head box (QA: 76-90 % of the shots at
+ *    walker_a / walker_b faces counted as chest / neck hits)
+ *  - the rest, when the model exports a capsule length (extras.capsules: bone head -> tail, the segment the exporter
+ *    measured the radius around): spine, hands, feet.
+ * Returns { hitboxName: [local0, local1] } (Vector3 in the bone's space) or null.
+ */
+function boneCapsules(scene, hitboxes, capsules) {
+  if (!hitboxes) return null;
+  const meshes = [];
+  scene.traverse((o) => { if (o.isSkinnedMesh) meshes.push(o); });
+  const out = {};
+  for (const [name, spec] of Object.entries(hitboxes)) {
+    const [bone, r, to] = spec;
+    if (to || DEFAULT_HITBOXES[name]?.[2]) continue;
+    let Bi = null;
+    for (const m of meshes) { const i = m.skeleton.bones.findIndex((b) => b.name === bone); if (i >= 0) { Bi = m.skeleton.boneInverses[i]; break; } }
+    if (!Bi) continue;
+    const F = Bi.clone().invert();   // bind space <- bone space
+    const hp = new THREE.Vector3().setFromMatrixPosition(F), ax = new THREE.Vector3().setFromMatrixColumn(F, 1).normalize();
+    let a, b;
+    if (name === 'head') {
+      const fit = skullFit(scene, bone, hp, ax);
+      if (!fit) continue;
+      a = hp.clone().addScaledVector(ax, 0.02).add(fit.shift);
+      b = hp.clone().addScaledVector(ax, Math.max(0.03, fit.top - r)).add(fit.shift);
+    } else {
+      const len = capsules?.[name]?.length;
+      if (!(len > 0)) continue;
+      a = hp.clone();
+      b = hp.clone().addScaledVector(ax, len);
+    }
+    out[name] = [a.applyMatrix4(Bi), b.applyMatrix4(Bi)];
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** Rest-pose skull of a model (bind space): top = highest head-dominant skin vertex along the head axis; shift = 30 %
+ *  of the eye centroid's offset from the axis (max 4 cm). null without head skin. */
+function skullFit(scene, bone, hp, ax) {
+  let top = -1, n = 0;
+  const eye = new THREE.Vector3(), p = new THREE.Vector3();
+  scene.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const role = (Array.isArray(o.material) ? o.material[0] : o.material)?.name;
+    if (role !== 'skin' && role !== 'eye') return;
+    const hi = o.skeleton.bones.findIndex((b) => b.name === bone);
+    const pos = o.geometry.attributes.position, si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight;
+    if (hi < 0 || !pos || !si || !sw) return;
+    for (let v = 0; v < pos.count; v++) {
+      let best = -1, bw = 0;
+      for (let k = 0; k < 4; k++) { const w = sw.getComponent(v, k); if (w > bw) { bw = w; best = si.getComponent(v, k); } }
+      if (best !== hi) continue;
+      p.fromBufferAttribute(pos, v).applyMatrix4(o.bindMatrix).sub(hp);
+      const along = p.dot(ax);
+      if (role === 'skin') top = Math.max(top, along);
+      else { eye.add(p.addScaledVector(ax, -along)); n++; }
+    }
+  });
+  if (!(top > 0.05)) return null;
+  const shift = n ? eye.multiplyScalar(1 / n) : eye;
+  shift.multiplyScalar(0.3);
+  if (shift.length() > 0.04) shift.setLength(0.04);
+  return { top, shift };
 }
 
 /** Distance from point p to the segment p0-p1. */

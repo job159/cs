@@ -28,19 +28,20 @@ ${GLSL_NOISE}
 // over-compositing of premultiplied layers: c = colour, m = coverage
 void over(inout vec3 acc, inout float a, vec3 c, float m) { acc = c * m + acc * (1.0 - m); a = m + a * (1.0 - m); }
 // manga / CSO speed lines: wedges from the centre, re-dealt every 40 ms
-float speedLines(vec2 ca, float seed, float r0, float density) {
+float speedLines(vec2 ca, float seed, float r0, float density, float wk) {
   float ang = atan(ca.y, ca.x) / 6.2831853 + 0.5;
   float N = 96.0;
   float id = floor(ang * N);
   float h = hash11(id + seed * 17.0);
   float h2 = hash11(id * 1.7 + seed * 5.0 + 3.1);
   float on = step(1.0 - density, h);
-  float w = 0.18 + 0.32 * h2;
+  float w = (0.18 + 0.32 * h2) * wk;
   float x = abs(fract(ang * N) - 0.5) * 2.0;
   float rad = length(ca);
   float start = r0 + 0.22 * h2;
   return on * (1.0 - smoothstep(w * 0.4, w, x)) * smoothstep(start, start + 0.18, rad);
-}`;
+}
+float speedLines(vec2 ca, float seed, float r0, float density) { return speedLines(ca, seed, r0, density, 1.0); }`;
 
 // ------------------------------------------------------------------ front add pass (status, ink, border)
 const FRONT_ADD = /* glsl */`
@@ -221,6 +222,7 @@ const BACK = /* glsl */`
 ${COMMON}
 uniform vec4 uRadial;      // amount, seed, ink (0 white..1 ink), r0
 uniform vec3 uRadialCol;
+uniform vec2 uRadialShape; // density (0.5), line width scale (1)
 uniform vec4 uRift;        // amount, open 0..1, angle, seed
 uniform vec4 uCloud;       // amount, rise 0..1, seed, -
 uniform vec3 uSunCol;
@@ -291,7 +293,7 @@ void main() {
   }
   // ---- RADIAL: speed lines (white light or ink), centre kept clean
   if (uRadial.x > 0.001) {
-    float sl = speedLines(ca, floor(T * 25.0) + uRadial.y, uRadial.w, 0.5);
+    float sl = speedLines(ca, floor(T * 25.0) + uRadial.y, uRadial.w, uRadialShape.x, uRadialShape.y);
     vec3 c = mix(uRadialCol, vec3(0.03, 0.03, 0.035), uRadial.z);
     over(acc, a, c, sl * 0.55 * uRadial.x);
   }
@@ -446,7 +448,7 @@ export class Overlays {
     };
     this.uf = U({ uStatus: { value: new THREE.Vector4() }, uElecCol: { value: new THREE.Vector3(2, 0.7, 3.5) }, uInk: { value: 0 }, uEdge: { value: new THREE.Vector4() }, uTintAdd: { value: new THREE.Vector4() } });
     this.um = U({ uTint: { value: new THREE.Vector4() }, uInk: { value: 0 } });
-    this.ub = U({ uRadial: { value: new THREE.Vector4() }, uRadialCol: { value: new THREE.Vector3(1.6, 1.6, 1.7) }, uRift: { value: new THREE.Vector4() },
+    this.ub = U({ uRadial: { value: new THREE.Vector4() }, uRadialCol: { value: new THREE.Vector3(1.6, 1.6, 1.7) }, uRadialShape: { value: new THREE.Vector2(0.5, 1) }, uRift: { value: new THREE.Vector4() },
       uCloud: { value: new THREE.Vector4() }, uSunCol: { value: new THREE.Vector3(1.6, 1.0, 0.45) }, uCurtain: { value: new THREE.Vector4() }, uCurtainCol: { value: new THREE.Vector3(0.42, 0.02, 0.04) } });
     this.back = mk(BACK, this.ub, '-0.835', 'premul', 31, true);
     this.mul = mk(FRONT_MUL, this.um, '-1.0', 'mul', 996, false);
@@ -497,7 +499,7 @@ export class Overlays {
   tint(color = [1, 1, 1], alpha = 0.2, dur = 0.6, opts = {}) {
     return this.add('tint', { fadeIn: 0.06, fadeOut: Math.min(0.4, dur * 0.6), ...opts, amt: Math.min(0.35, alpha), dur, color });
   }
-  /** RADIAL speed lines, centre clean. opts: color (HDR), ink (black lines), r0 (clear radius). */
+  /** RADIAL speed lines, centre clean. opts: color (HDR), ink (black lines), r0 (clear radius), density (0.5), thin (line width x1). */
   radial(amt = 1, dur = 0.35, opts = {}) { return this.add('radial', { fadeIn: 0.03, fadeOut: dur * 0.6, ...opts, amt, dur }); }
   /**
    * CSO full-screen status overlays: 'burn' | 'poison' | 'frost' | 'electric'. Calling again refreshes the
@@ -565,7 +567,7 @@ export class Overlays {
         }
         case 'border': { const c = hdr(o.color, 1, _c); edge[0] += c.x * L; edge[1] += c.y * L; edge[2] += c.z * L; edgeA = Math.max(edgeA, L); break; }
         case 'radial':
-          if (L > radial) { radial = L; ub.uRadial.value.set(L, o.seed ?? 0, o.ink ? 1 : 0, o.r0 ?? 0.22); hdr(o.color || [1.6, 1.6, 1.7], 1, ub.uRadialCol.value); }
+          if (L > radial) { radial = L; ub.uRadial.value.set(L, o.seed ?? 0, o.ink ? 1 : 0, o.r0 ?? 0.22); ub.uRadialShape.value.set(o.density ?? 0.5, o.thin ?? 1); hdr(o.color || [1.6, 1.6, 1.7], 1, ub.uRadialCol.value); }
           break;
         case 'rift': {
           rift = L;

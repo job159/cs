@@ -1,0 +1,942 @@
+{
+  "sounds": {
+    "ready_starsword": {
+      "files": [
+        "premium_starsword/ready_starsword.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "ready_starsword_night": {
+      "files": [
+        "premium_starsword/ready_starsword_night.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "starsword_block": {
+      "files": [
+        "premium_starsword/starsword_block_1.ogg",
+        "premium_starsword/starsword_block_2.ogg",
+        "premium_starsword/starsword_block_3.ogg",
+        "premium_starsword/starsword_block_4.ogg",
+        "premium_starsword/starsword_block_5.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_charge": {
+      "files": [
+        "premium_starsword/starsword_charge.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "starsword_charge_full": {
+      "files": [
+        "premium_starsword/starsword_charge_full.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_charge_stage": {
+      "files": [
+        "premium_starsword/starsword_charge_stage_1.ogg",
+        "premium_starsword/starsword_charge_stage_2.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_close": {
+      "files": [
+        "premium_starsword/starsword_close_1.ogg",
+        "premium_starsword/starsword_close_2.ogg",
+        "premium_starsword/starsword_close_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        40
+      ],
+      "loop": false
+    },
+    "starsword_counter": {
+      "files": [
+        "premium_starsword/starsword_counter_1.ogg",
+        "premium_starsword/starsword_counter_2.ogg",
+        "premium_starsword/starsword_counter_3.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_crack": {
+      "files": [
+        "premium_starsword/starsword_crack_1.ogg",
+        "premium_starsword/starsword_crack_2.ogg",
+        "premium_starsword/starsword_crack_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        70
+      ],
+      "loop": false
+    },
+    "starsword_crisis": {
+      "files": [
+        "premium_starsword/starsword_crisis_1.ogg",
+        "premium_starsword/starsword_crisis_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_draw": {
+      "files": [
+        "premium_starsword/starsword_draw_1.ogg",
+        "premium_starsword/starsword_draw_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_draw_first": {
+      "files": [
+        "premium_starsword/starsword_draw_first.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_far": {
+      "files": [
+        "premium_starsword/starsword_far_1.ogg",
+        "premium_starsword/starsword_far_2.ogg"
+      ],
+      "vol": 0.4,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        40
+      ],
+      "loop": false
+    },
+    "starsword_final": {
+      "files": [
+        "premium_starsword/starsword_final_1.ogg",
+        "premium_starsword/starsword_final_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false
+    },
+    "starsword_first_sting": {
+      "files": [
+        "premium_starsword/starsword_first_sting.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_guard_up": {
+      "files": [
+        "premium_starsword/starsword_guard_up_1.ogg",
+        "premium_starsword/starsword_guard_up_2.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_hit": {
+      "files": [
+        "premium_starsword/starsword_hit_1.ogg",
+        "premium_starsword/starsword_hit_2.ogg",
+        "premium_starsword/starsword_hit_3.ogg",
+        "premium_starsword/starsword_hit_4.ogg",
+        "premium_starsword/starsword_hit_5.ogg",
+        "premium_starsword/starsword_hit_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "starsword_hit_flesh": {
+      "files": [
+        "premium_starsword/starsword_hit_flesh_1.ogg",
+        "premium_starsword/starsword_hit_flesh_2.ogg",
+        "premium_starsword/starsword_hit_flesh_3.ogg",
+        "premium_starsword/starsword_hit_flesh_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        45
+      ],
+      "loop": false
+    },
+    "starsword_hit_ring": {
+      "files": [
+        "premium_starsword/starsword_hit_ring_1.ogg",
+        "premium_starsword/starsword_hit_ring_2.ogg",
+        "premium_starsword/starsword_hit_ring_3.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_hit_wall": {
+      "files": [
+        "premium_starsword/starsword_hit_wall_1.ogg",
+        "premium_starsword/starsword_hit_wall_2.ogg",
+        "premium_starsword/starsword_hit_wall_3.ogg",
+        "premium_starsword/starsword_hit_wall_4.ogg",
+        "premium_starsword/starsword_hit_wall_5.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false
+    },
+    "starsword_idle": {
+      "files": [
+        "premium_starsword/starsword_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "starsword_inspect": {
+      "files": [
+        "premium_starsword/starsword_inspect.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_kill": {
+      "files": [
+        "premium_starsword/starsword_kill_1.ogg",
+        "premium_starsword/starsword_kill_2.ogg",
+        "premium_starsword/starsword_kill_3.ogg",
+        "premium_starsword/starsword_kill_4.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_parry": {
+      "files": [
+        "premium_starsword/starsword_parry_1.ogg",
+        "premium_starsword/starsword_parry_2.ogg"
+      ],
+      "vol": 1.4,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_recover": {
+      "files": [
+        "premium_starsword/starsword_recover_1.ogg",
+        "premium_starsword/starsword_recover_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_sever": {
+      "files": [
+        "premium_starsword/starsword_sever_1.ogg",
+        "premium_starsword/starsword_sever_2.ogg",
+        "premium_starsword/starsword_sever_3.ogg",
+        "premium_starsword/starsword_sever_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false
+    },
+    "starsword_skyspan": {
+      "files": [
+        "premium_starsword/starsword_skyspan_1.ogg",
+        "premium_starsword/starsword_skyspan_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "starsword_skyspan_charge": {
+      "files": [
+        "premium_starsword/starsword_skyspan_charge_1.ogg",
+        "premium_starsword/starsword_skyspan_charge_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_skyspan_end": {
+      "files": [
+        "premium_starsword/starsword_skyspan_end_1.ogg",
+        "premium_starsword/starsword_skyspan_end_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_slam": {
+      "files": [
+        "premium_starsword/starsword_slam_1.ogg",
+        "premium_starsword/starsword_slam_2.ogg",
+        "premium_starsword/starsword_slam_3.ogg",
+        "premium_starsword/starsword_slam_4.ogg"
+      ],
+      "vol": 1.12,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "starsword_star": {
+      "files": [
+        "premium_starsword/starsword_star_1.ogg",
+        "premium_starsword/starsword_star_2.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_swing": {
+      "files": [
+        "premium_starsword/starsword_swing_1.ogg",
+        "premium_starsword/starsword_swing_2.ogg",
+        "premium_starsword/starsword_swing_3.ogg",
+        "premium_starsword/starsword_swing_4.ogg",
+        "premium_starsword/starsword_swing_5.ogg",
+        "premium_starsword/starsword_swing_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_swing_light": {
+      "files": [
+        "premium_starsword/starsword_swing_light_1.ogg",
+        "premium_starsword/starsword_swing_light_2.ogg",
+        "premium_starsword/starsword_swing_light_3.ogg",
+        "premium_starsword/starsword_swing_light_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_swing_night": {
+      "files": [
+        "premium_starsword/starsword_swing_night_1.ogg",
+        "premium_starsword/starsword_swing_night_2.ogg",
+        "premium_starsword/starsword_swing_night_3.ogg",
+        "premium_starsword/starsword_swing_night_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_tail": {
+      "files": [
+        "premium_starsword/starsword_tail_1.ogg",
+        "premium_starsword/starsword_tail_2.ogg"
+      ],
+      "vol": 0.25,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_ult_bed": {
+      "files": [
+        "premium_starsword/starsword_ult_bed.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_ult_bed_night": {
+      "files": [
+        "premium_starsword/starsword_ult_bed_night.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "starsword_ult_fall": {
+      "files": [
+        "premium_starsword/starsword_ult_fall_1.ogg",
+        "premium_starsword/starsword_ult_fall_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "starsword_ult_impact": {
+      "files": [
+        "premium_starsword/starsword_ult_impact_1.ogg",
+        "premium_starsword/starsword_ult_impact_2.ogg"
+      ],
+      "vol": 1.25,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "starsword_ult_impact_night": {
+      "files": [
+        "premium_starsword/starsword_ult_impact_night.ogg"
+      ],
+      "vol": 1.25,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "starsword_ult_pulse": {
+      "files": [
+        "premium_starsword/starsword_ult_pulse_1.ogg",
+        "premium_starsword/starsword_ult_pulse_2.ogg",
+        "premium_starsword/starsword_ult_pulse_3.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "starsword_ult_rise": {
+      "files": [
+        "premium_starsword/starsword_ult_rise.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        120
+      ],
+      "loop": false
+    },
+    "starsword_ult_rise_night": {
+      "files": [
+        "premium_starsword/starsword_ult_rise_night.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        120
+      ],
+      "loop": false
+    },
+    "starsword_ult_shatter": {
+      "files": [
+        "premium_starsword/starsword_ult_shatter_1.ogg",
+        "premium_starsword/starsword_ult_shatter_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "starsword_ult_shatter_night": {
+      "files": [
+        "premium_starsword/starsword_ult_shatter_night.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "starsword_ult_sigil": {
+      "files": [
+        "premium_starsword/starsword_ult_sigil_1.ogg",
+        "premium_starsword/starsword_ult_sigil_2.ogg"
+      ],
+      "vol": 1.4,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "starsword_wave": {
+      "files": [
+        "premium_starsword/starsword_wave_1.ogg",
+        "premium_starsword/starsword_wave_2.ogg",
+        "premium_starsword/starsword_wave_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "starsword_wheel": {
+      "files": [
+        "premium_starsword/starsword_wheel_1.ogg",
+        "premium_starsword/starsword_wheel_2.ogg",
+        "premium_starsword/starsword_wheel_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    }
+  }
+}

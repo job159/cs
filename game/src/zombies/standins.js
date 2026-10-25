@@ -1,5 +1,6 @@
-// Stand-in models: archetypes whose own GLB is not built yet (brute, spitter, bloater, crawler, screamer, riot,
-// and the runner / colossus as contingencies) are made from a real zombie model with a distinct read instead of
+// Stand-in models: an archetype whose own GLB fails to load (every type has its own model since release 0.2 -
+// brute, spitter, bloater, crawler, screamer, riot, runner, the bosses - so this is only the safety net for a missing /
+// broken download) is made from a real zombie model with a distinct read instead of
 // the grey mannequin: root scale, bone proportions (uniform net scales, limb/neck lengths), a skinned-vertex
 // sculpt (per-bone bulk, belly swelling) baked into cloned geometry, a per-role albedo grade (tint / desaturate),
 // glowing eyes, extra pose offsets and optional rigid gear on bones. Animation clips, hitboxes, part damage and
@@ -386,7 +387,7 @@ export function buildStandin(id, R, base, baseId) {
   const poseQ = [...(base.poseQ || [])];
   for (const [bn, e] of Object.entries(R.pose || {})) poseQ.push([bn, new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0] * Math.PI / 180, e[1] * Math.PI / 180, e[2] * Math.PI / 180))]);
   return {
-    scene, lod1, hitboxes, height, scale: R.scale || 1, clips: base.clips, poseOffsets: null, poseQ: poseQ.length ? poseQ : null,
+    scene, lod1, hitboxes, boneCaps: base.boneCaps, height, scale: R.scale || 1, clips: base.clips, poseOffsets: null, poseQ: poseQ.length ? poseQ : null,
     standin: true, standinOf: baseId, severed: (R.stumps || []).filter((n) => bones[n]),
   };
 }

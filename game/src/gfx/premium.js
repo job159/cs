@@ -122,6 +122,7 @@ const PARAM_DEFAULTS = {
   rimPower: 3.5, veinFreq: 12, veinSpeed: 0.5, veinAxis: 0, shine: 2, sweepT: 4, leaf: 0, leafScale: 180,
   shardScale: 0, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, iridCool: 0, gem: 1, coreSkin: 0, runeSpeed: 0.15,
   runeAxis: 0, runeOrigin: [0, 0, 0], runeWidth: 0.006, flashMask: 1, coreMode: -1, coreScale: 1,
+  gemSun: 0,   // > 0: the stone's radius (m) about its part pivot -- a sun burns inside it (X03 日珠)
 };
 const KEY_DEFAULTS = {
   gold_leaf: { leaf: 1 }, crystal: { irid: 0.22 }, bronze_aged: { shine: 1.4 }, black_chrome: { shine: 2.6 },
@@ -154,7 +155,7 @@ export function premiumUniforms(state, prm) {
     pRimPower: f(prm.rimPower), pVeinFreq: f(prm.veinFreq), pVeinSpeed: f(prm.veinSpeed), pVeinAxis: f(prm.veinAxis),
     pShine: f(prm.shine), pSweepT: f(prm.sweepT), pLeaf: f(prm.leaf), pLeafScale: f(prm.leafScale),
     pShardScale: f(prm.shardScale), pGroutW: f(prm.groutW), pGroutMetal: f(prm.groutMetal), pIrid: f(prm.irid),
-    pIridScale: f(prm.iridScale), pGem: f(prm.gem), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pRuneSpeed: f(prm.runeSpeed),
+    pIridScale: f(prm.iridScale), pGem: f(prm.gem), pGemSun: f(prm.gemSun), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pRuneSpeed: f(prm.runeSpeed),
     pRuneAxis: f(prm.runeAxis), pRuneOrigin: f(new THREE.Vector3(...prm.runeOrigin)), pRuneWidth: f(prm.runeWidth),
     pFlashMask: f(prm.flashMask), pDpr: f(Math.min(3, globalThis.devicePixelRatio || 1)), tRunes: f(runeTexture()),
   };
@@ -355,7 +356,7 @@ uniform vec3 pGrout;
 uniform float pIrid, pIridScale, pIridCool;
 #endif
 #ifdef PREMIUM_GEM
-uniform float pGem;
+uniform float pGem, pGemSun;
 #endif
 #if defined(PREMIUM_CORE) || defined(PREMIUM_RUNE)
 uniform sampler2D tRunes;
@@ -556,7 +557,19 @@ export const PREMIUM_EMIT = /* glsl */`
       float star = smoothstep(0.0, 0.03, tw) * (1.0 - smoothstep(0.03, 0.12, tw));
       vec3 fn = floor(normal * 3.0);
       float facet = step(0.55, pH21(fn.xy + fn.z * 7.0));
-      totalEmissiveRadiance += mix(pCoreTint, pTwinColor, pTwin) * pGem * pow(pNdv, 3.0) * 1.4 * (0.5 + 0.8 * pCharge) * pGlowMul;
+      float sr = pGemSun > 0.0 ? length(vObjPos.xy) / pGemSun : 9.0;
+      if (sr < 1.3) {
+        // a sun inside the stone: a white-gold disc, a slowly turning ray corona fading to vermilion at the girdle, each
+        // facet its own shade (the cut reads as the rotor turns)
+        float an = atan(vObjPos.y, vObjPos.x);
+        float rays = 0.5 + 0.5 * sin(an * 12.0 + time * 0.6) * sin(an * 5.0 - time * 0.35);
+        float disc = 1.0 - smoothstep(0.26, 0.46, sr);
+        float corona = 1.0 - smoothstep(0.38, 1.05, sr / mix(0.85, 1.2, rays));
+        vec3 sunC = mix(vec3(0.85, 0.16, 0.03), vec3(1.0, 0.5, 0.12), corona);
+        sunC = mix(sunC, vec3(1.0, 0.8, 0.45), disc);
+        float fshade = 0.55 + 0.8 * pH21(fn.xy * 1.7 + fn.z * 5.3);
+        totalEmissiveRadiance += mix(sunC, pTwinColor, pTwin) * (disc * 1.3 + corona * 0.75 + 0.12) * fshade * pGem * (0.55 + 0.6 * pCharge) * pGlowMul;
+      } else totalEmissiveRadiance += mix(pCoreTint, pTwinColor, pTwin) * pGem * pow(pNdv, 3.0) * 1.4 * (0.5 + 0.8 * pCharge) * pGlowMul;
       totalEmissiveRadiance += vec3(1.0, 0.97, 0.9) * star * facet * 5.0 * pGem;
     }
     #endif

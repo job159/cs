@@ -1335,6 +1335,11 @@ export async function build(lib) {
   setHb('lowerarm_r', 'lowerarm_r', Math.min(0.048, Math.max(0.036, bodyHb.hitboxes.lowerarm_r[1])));
   setHb('hand_l', 'hand_l', 0.045, 'middle_01_l');
   setHb('hand_r', 'hand_r', 0.045, 'middle_01_r');
+  // chest: the game runs this capsule spine_03 -> neck_01, so its top cap is centred on the neck base. The dressed 80th
+  // percentile (0.213: worksuit collar, shoulders) put that cap in front of the face of the hunched poses: in game QA
+  // every shot at the eyes from 6-15 m counted as a chest hit. Measured naked and held to 13-15 cm (walker_b 0.16,
+  // walker_c 0.135, runner 0.15): ~85 % of the rays at face / skull vertices are head hits again.
+  setHb('chest', 'spine_03', Math.min(0.15, Math.max(0.13, bodyHb.hitboxes.chest[1])));
 
   TR.report();
   return {

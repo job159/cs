@@ -215,57 +215,121 @@ export function cutMesh() {
 }
 
 // ------------------------------------------------------------------------------------------ 天劍 spirit sword
-// Unit geometry (metres at size 1 = 1 m): tip at the origin pointing -Y, pommel at +1.0. The blade (0 .. 0.74) is a
-// lofted diamond section with a raised spine; the cloud-head guard, the grip and the pommel ride above it. aTint
-// paints the guard / pommel gold, the spine white-hot, the seven star sockets pale. ≈ 2.4k triangles.
+// The colossal sword is the weapon itself, scaled up (its silhouette must read as THIS sword from 30 m): unit geometry
+// (size 1 = 1 m), tip at the origin pointing -Y, pommel at +1.0, built from the model's own mm laws (blade outline
+// with the root ears, the percussion swell and the angled leaf point; width x1.35 / thickness x1.5 so it reads at
+// distance). Zones (per-vertex aTint over the ghost's deep-blue glaze): the 星河 channel down both flats as its own
+// emissive strip with star beads, the seven 北斗 studs, the 如意 cloud-head guard (glaze body, gold piping round the
+// silhouette, gold curls in the lobes), the 天樞 gem burning white-blue, a dark grip between gold ferrules, the
+// octagonal 斗 pommel with gold ridges. ≈ 3k triangles.
+const MM = 1 / 1495, SX = 1.35 * MM, SZ = 1.5 * MM, TIPT = 1150;
+const yOf = (t) => (TIPT - t) * MM;
+function hsHalfWidth(t) {
+  if (t >= 990) { const u = Math.min(1, (t - 990) / 160); return 57 * (1 - u) * (1 + 0.6 * u * (1 - u)); }
+  if (t >= 760) return 64 - 7 * (1 - Math.cos(Math.PI * (t - 760) / 230)) / 2;
+  if (t >= 215) return 60.6 + 3.4 * Math.sin(Math.PI / 2 * (t - 215) / 545);
+  const ear = t < 88 ? 0 : t < 99 ? Math.sin(Math.PI / 2 * (t - 88) / 11) : Math.pow(1 - Math.min(1, Math.max(0, (t - 99) / 39)), 1.4);
+  return 61 + 5.5 * ear;
+}
 export function heavenSwordGeometry() {
   const P = [], N = [], T = [], I = [];
-  const tint = (r, g, b, a) => [r, g, b, a];
-  const GOLD = tint(1.0, 0.78, 0.36, 0.85), WHITE = tint(0.92, 0.96, 1.0, 0.55), NONE = tint(0, 0, 0, 0), STAR = tint(1.0, 0.95, 0.78, 0.9);
+  const GOLD = [0.78, 0.45, 0.09, 0.65], RIVER = [0.3, 0.55, 2.6, 0.95], STAR = [2.6, 2.5, 2.1, 1], GEM = [1.6, 2.2, 3.6, 1], NONE = [0, 0, 0, 0], GRIP = [0.03, 0.035, 0.07, 0.85];
   const push = (geo, col) => {
-    const o = P.length / 3, p = geo.attributes.position, n = geo.attributes.normal, ix = geo.index;
-    for (let i = 0; i < p.count; i++) { P.push(p.getX(i), p.getY(i), p.getZ(i)); N.push(n.getX(i), n.getY(i), n.getZ(i)); T.push(...(typeof col === 'function' ? col(p.getX(i), p.getY(i), p.getZ(i)) : col)); }
-    if (ix) for (let i = 0; i < ix.count; i++) I.push(o + ix.getX(i)); else for (let i = 0; i < p.count; i++) I.push(o + i);
+    if (geo.index) geo = geo.toNonIndexed();
+    if (!geo.attributes.normal) geo.computeVertexNormals();
+    const o = P.length / 3, p = geo.attributes.position, n = geo.attributes.normal;
+    for (let i = 0; i < p.count; i++) { P.push(p.getX(i), p.getY(i), p.getZ(i)); N.push(n.getX(i), n.getY(i), n.getZ(i)); T.push(...(typeof col === 'function' ? col(p.getX(i), p.getY(i), p.getZ(i)) : col)); I.push(o + i); }
   };
-  // blade: stations along y (0 tip .. 0.74 root); section: edge, bevel, flat, spine (x across, z thickness)
+  // mm (s across, t along, w thick) -> unit, keeping the winding (two mirrored axes)
+  const fromMM = (g) => { g.scale(SX, -MM, -SZ); g.translate(0, TIPT * MM, 0); return g; };
+  // ---- blade: a lofted section (edge, bevel, flat, a low spine) from the root ears to the angled point
   {
-    const S = 26, ring = 10, pos = [], idx = [];
-    for (let i = 0; i <= S; i++) {
-      const u = i / S, y = 0.74 * u;
-      const tipU = Math.min(1, u / 0.2), hw = 0.075 * (0.82 + 0.18 * u) * Math.pow(Math.max(0.001, 1 - Math.pow(1 - tipU, 1.7)), 0.6) || 0.0005, th = 0.012 * (0.3 + 0.7 * tipU);
-      const sec = [[hw, 0], [hw * 0.72, th * 0.45], [hw * 0.2, th], [0, th * 1.35], [-hw * 0.2, th], [-hw * 0.72, th * 0.45], [-hw, 0], [-hw * 0.72, -th * 0.45], [-hw * 0.2, -th], [0, -th * 1.35]];
-      for (const [x, z] of sec) pos.push(x, y, z);
+    const ts = [48, 70, 88, 94, 99, 110, 125, 138, 170, 215, 300, 420, 540, 660, 760, 840, 920, 990, 1010, 1035, 1060, 1085, 1110, 1130, 1150];
+    const pos = [], idx = [], R = 12;
+    for (const t of ts) {
+      const hw = Math.max(0.5, hsHalfWidth(t)), th = t > 920 ? 1 + 4.2 * Math.pow(Math.max(0, 1 - (t - 920) / 230), 0.8) : 5.4;
+      const sec = [[hw, 0], [hw - Math.min(10, hw * 0.4), th * 0.55], [hw * 0.55, th], [0, th * 1.08], [-hw * 0.55, th], [-hw + Math.min(10, hw * 0.4), th * 0.55]];
+      const ring = [...sec, [-hw, 0], ...sec.slice(1).reverse().map(([s, w]) => [s, -w])].slice(0, R);
+      for (const [s, w] of ring) pos.push(s * SX, yOf(t), w * SZ);
     }
-    for (let i = 0; i < S; i++) for (let j = 0; j < ring; j++) { const a = i * ring + j, b = i * ring + (j + 1) % ring, c = a + ring, d = b + ring; idx.push(a, b, c, b, d, c); }
-    let g = new THREE.BufferGeometry();
+    for (let i = 0; i + 1 < ts.length; i++) for (let j = 0; j < R; j++) { const a = i * R + j, b = i * R + (j + 1) % R, c = a + R, d = b + R; idx.push(a, c, b, b, c, d); }
+    const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setIndex(idx);
-    g = g.toNonIndexed(); g.computeVertexNormals();
-    push(g, (x, y, z) => (Math.abs(x) < 0.012 ? WHITE : NONE));
+    const ng = g.toNonIndexed(); ng.computeVertexNormals();
+    push(ng, NONE);
   }
-  // seven star sockets along the flats (small flattened spheres, both sides)
-  const stars = [[0.03, 0.62], [-0.03, 0.56], [-0.028, 0.47], [0.027, 0.44], [0.025, 0.34], [-0.024, 0.25], [0.02, 0.15]];
-  for (const [x, y] of stars) for (const sd of [1, -1]) {
-    const g = new THREE.SphereGeometry(0.012, 8, 5); g.scale(1, 1, 0.45); g.translate(x, y, sd * 0.012);
-    push(g, STAR);
-  }
-  // guard: a bar with cloud-head lobes at both ends, swept up
+  // ---- the 星河 channel: an emissive strip proud of each flat (t 228 -> 880, tapering), star beads down its middle
   {
-    const sh = new THREE.Shape();
-    sh.moveTo(-0.05, 0.735); sh.lineTo(0.05, 0.735); sh.quadraticCurveTo(0.12, 0.735, 0.17, 0.77); sh.absarc(0.185, 0.79, 0.03, -2.3, 2.6, false);
-    sh.quadraticCurveTo(0.13, 0.79, 0.06, 0.785); sh.lineTo(0, 0.81); sh.lineTo(-0.06, 0.785); sh.quadraticCurveTo(-0.13, 0.79, -0.16, 0.81);
-    sh.absarc(-0.185, 0.79, 0.03, 0.54, 5.44, false); sh.quadraticCurveTo(-0.12, 0.735, -0.05, 0.735);
-    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.006, bevelSegments: 1, curveSegments: 5 });
-    g.translate(0, 0, -0.025); g.deleteAttribute('uv');
-    push(g, GOLD);
-    const gem = new THREE.SphereGeometry(0.02, 10, 6); gem.scale(1, 1, 1.6); gem.translate(0, 0.77, 0);
-    push(gem, STAR);
+    const ts = []; for (let t = 228; t <= 880; t += 40) ts.push(t);
+    for (const sd of [1, -1]) {
+      const pos = [], idx = [];
+      ts.forEach((t) => { const c = (12 - 5 * (t - 228) / 652) * 1.25, w = 5.4 * 1.1 * sd; pos.push(c * SX, yOf(t), w * SZ, -c * SX, yOf(t), w * SZ); });
+      for (let i = 0; i + 1 < ts.length; i++) { const a = i * 2; sd > 0 ? idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2) : idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(ts.flatMap(() => [0, 0, sd, 0, 0, sd]), 3));
+      g.setIndex(idx);
+      push(g, RIVER);
+      for (let t = 260; t < 870; t += 47) {
+        const b = new THREE.OctahedronGeometry(3.4 * MM * 1.6, 0); b.scale(1, 1.6, 0.5);
+        b.translate((((t * 7) % 9) - 4.5) * SX, yOf(t), sd * 6.4 * SZ);
+        push(b, STAR);
+      }
+    }
   }
-  // grip + pommel
+  // ---- 北斗七星 studs on both flats (gold bezel discs + a bright core)
+  for (const [s, t, k] of [[24, 262, 1.15], [-25, 338, 1], [-22, 440, 1], [21, 478, 1], [21, 596, 1], [-21, 706, 1], [19, 826, 1.05]]) for (const sd of [1, -1]) {
+    const bz = new THREE.CylinderGeometry(8.2 * k * SX, 8.2 * k * SX, 1.6 * SZ, 10, 1); bz.rotateX(Math.PI / 2); bz.translate(s * SX, yOf(t), sd * 6.0 * SZ);
+    push(bz, GOLD);
+    const core = new THREE.SphereGeometry(4.2 * k * SX, 6, 3); core.scale(1, 1, 0.6); core.translate(s * SX, yOf(t), sd * 7.0 * SZ);
+    push(core, STAR);
+  }
+  // ---- 如意 cloud-head guard (mm outline, right half mirrored): the block, arms rising towards the blade, trefoil heads
   {
-    const pts = [[0, 0.81], [0.022, 0.81], [0.02, 0.83], [0.017, 0.93], [0.02, 0.945], [0.034, 0.955], [0.03, 0.985], [0.016, 1.0], [0, 1.0]].map(([r, y]) => new THREE.Vector2(r, y));
-    const g = new THREE.LatheGeometry(pts, 10); g.deleteAttribute('uv'); g.computeVertexNormals();
-    push(g, (x, y) => (y > 0.94 || y < 0.832 ? GOLD : NONE));
+    const arc = (cx, cy, r, a0, a1, n = 7) => Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; });
+    const right = [[0, -11], [42, -11], [50, 4], [62, 6], [86, 11], [108, 18], [126, 25], ...arc(160, 37, 12, -150, 10), ...arc(161, 58, 13.5, -40, 95), ...arc(137, 65, 15, 15, 175, 8),
+      [124, 52], [108, 44], [86, 36], [62, 30], [54, 44], [48, 54], [22, 55], [0, 60]];
+    const outline = [...right, ...right.slice(1, -1).reverse().map(([s, t]) => [-s, t])];
+    const shape = new THREE.Shape(outline.map(([s, t]) => new THREE.Vector2(s, t)));
+    const body = new THREE.ExtrudeGeometry(shape, { depth: 30, bevelEnabled: true, bevelThickness: 4, bevelSize: 3, bevelSegments: 1, curveSegments: 4 });
+    body.translate(0, 0, -15); body.deleteAttribute('uv');
+    push(fromMM(body), NONE);
+    // gold piping: a band just inside the silhouette on both faces (the outline offset along its own normals)
+    const n = outline.length, area = outline.reduce((a, [x, y], i) => { const [x2, y2] = outline[(i + 1) % n]; return a + x * y2 - x2 * y; }, 0), ccw = area > 0 ? 1 : -1;
+    const inner = outline.map(([x, y], i) => {
+      const [x0, y0] = outline[(i + n - 1) % n], [x1, y1] = outline[(i + 1) % n];
+      let nx = -(y1 - y0) * ccw, ny = (x1 - x0) * ccw; const l = Math.hypot(nx, ny) || 1;   // inward normal (left of a CCW loop)
+      return [x + nx / l * 4.5, y + ny / l * 4.5];
+    });
+    for (const sd of [1, -1]) {
+      const pos = [], idx = [];
+      for (let i = 0; i < n; i++) { pos.push(outline[i][0], outline[i][1], sd * 19.6, inner[i][0], inner[i][1], sd * 19.6); }
+      for (let i = 0; i < n; i++) { const a = i * 2, b = ((i + 1) % n) * 2; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx); g.computeVertexNormals();
+      push(fromMM(g), GOLD);
+      // gold curls in the three lobes of each head
+      for (const f of [1, -1]) for (const [cx, cy, r] of [[160, 37, 6], [161, 58, 7], [137, 65, 8]]) {
+        const c = new THREE.TorusGeometry(r, 1.6, 3, 10, Math.PI * 1.5); c.translate(f * cx, cy, sd * 19.5); c.deleteAttribute('uv');
+        push(fromMM(c), GOLD);
+      }
+    }
+    // the 天樞 gem: a faceted stone burning star white-blue in a gold bezel
+    const gem = new THREE.OctahedronGeometry(1, 1); gem.scale(20 * SX, 20 * MM, 28 * SZ); gem.translate(0, yOf(22), 0);   // proud of both faces
+    push(gem, GEM);
+    for (const sd of [1, -1]) { const bez = new THREE.TorusGeometry(19, 3, 4, 16); bez.translate(0, 22, sd * 20); bez.deleteAttribute('uv'); push(fromMM(bez), GOLD); }
+  }
+  // ---- grip (dark, gold ferrules and a mid collar) + the octagonal 斗 pommel with gold ridges
+  {
+    const lathe = (pts, seg) => { const g = new THREE.LatheGeometry(pts.map(([r, t]) => new THREE.Vector2(r, t)), seg); g.deleteAttribute('uv'); return g; };
+    const tOf = (y) => TIPT - y / MM;
+    // (colours are per vertex: every band edge gets a ring of its own so the ferrules stay crisp, not smeared)
+    const grip = lathe([[0, -266], [21, -266], [19, -259], [18.2, -255], [18, -250], [18, -170], [18.4, -167], [19.5, -158], [18.4, -149], [18, -146], [18, -58], [19, -54], [20.5, -50], [22, -40], [0, -40]], 10);
+    push(fromMM(grip), (x, y) => { const t = tOf(y); return t > -55 || t < -254 || Math.abs(t + 158) < 10 ? GOLD : GRIP; });
+    const pom = lathe([[0, -346], [30, -340], [38, -322], [34, -284], [26, -264], [0, -264]], 8);
+    push(fromMM(pom), (x, y) => { const t = tOf(y); return t > -270 || t < -332 ? GOLD : NONE; });
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
@@ -279,13 +343,14 @@ export function heavenSwordGeometry() {
 // ------------------------------------------------------------------------------------------ ARC: swept ring band (world)
 // A band round a vertical axis (x/z circle, inner radius r0 at height h0, outer r1 at h1: tilted towards the eye so
 // it reads from its centre). uv.x = angle fraction (0 .. arc), uv.y = 0 inner .. 1 outer. uHead (0..1 of the arc)
-// is the blade's leading angle: the band is lit behind it over uSpan, white-hot at the head and on the outer edge,
-// star blue cooling to violet in the wake.
+// is the blade's leading angle: the band is lit behind it over uSpan, a white-hot leading edge and outer cutting
+// line, star blue cooling to violet in the wake with stars twinkling inside; every edge is feathered (the start and
+// end of the sweep over 15 %, inner and outer rims) -- a sheet of light, never a pale box with hard sides.
 const ARC_VERT = /* glsl */`
 varying vec2 vUv;
 void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const ARC_FRAG = /* glsl */`
-uniform float uHead, uSpan, uAmt, uTime;
+uniform float uHead, uSpan, uAmt, uTime, uStars;
 uniform vec3 uCore, uBody, uEdge;
 varying vec2 vUv;
 ${NOISE}
@@ -294,11 +359,18 @@ void main() {
   if (behind < 0.0 || behind > uSpan) discard;
   float w = behind / uSpan;                                  // 0 at the head .. 1 at the tail
   float y = vUv.y;
-  float rim = smoothstep(0.78, 0.97, y) * smoothstep(1.0, 0.97, y);
-  float body = smoothstep(0.0, 0.7, y) * (1.0 - w);
-  float streak = 0.6 + 0.4 * vn(vec2(vUv.x * 60.0, y * 3.0 - uTime * 2.0));
-  vec3 c = mix(uBody, uEdge, w) * body * streak + uCore * rim * (1.0 - w * 0.7) * 1.6 + uCore * exp(-behind * 90.0) * 0.8;
-  gl_FragColor = vec4(c * uAmt * smoothstep(1.0, 0.75, w), 1.0);
+  float caps = smoothstep(0.0, 0.15, vUv.x) * smoothstep(1.0, 0.85, vUv.x);
+  float band = smoothstep(0.0, 0.35, y) * smoothstep(1.0, 0.9, y);
+  float rim = exp(-pow((y - 0.88) * 13.0, 2.0));
+  float body = band * (1.0 - w) * (1.0 - w);
+  float streak = 0.5 + 0.5 * vn(vec2(vUv.x * 60.0, y * 3.0 - uTime * 2.0));
+  vec2 sc = vec2(vUv.x * uStars, y * 7.0), f = fract(sc) - 0.5;
+  float h = h21(floor(sc) + 7.0);
+  float star = step(0.8, h) * exp(-dot(f, f) * 46.0) * (0.55 + 0.45 * sin(uTime * 9.0 + h * 40.0));
+  float lead = exp(-w * 26.0) * smoothstep(0.0, 0.004, behind);   // a thin white-hot leading line, feathered
+  vec3 c = mix(uBody, uEdge, w) * body * streak * 0.35 + uCore * rim * (1.0 - w * 0.8) * 1.5 * band + uCore * lead * band * 1.4
+    + vec3(1.0, 0.97, 0.86) * star * band * (1.0 - w * 0.6) * 2.4;
+  gl_FragColor = vec4(c * uAmt * caps * smoothstep(1.0, 0.7, w), 1.0);
 }`;
 export function arcBand({ r0 = 1.8, r1 = 3.6, h0 = -0.85, h1 = 0.2, arc = Math.PI * 2, seg = 96 } = {}) {
   const pos = [], uv = [], idx = [];
@@ -313,7 +385,7 @@ export function arcBand({ r0 = 1.8, r1 = 3.6, h0 = -0.85, h1 = 0.2, arc = Math.P
   g.setIndex(idx);
   const m = new THREE.ShaderMaterial({
     vertexShader: ARC_VERT, fragmentShader: ARC_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
-    uniforms: { uHead: { value: 0 }, uSpan: { value: 0.3 }, uAmt: { value: 1 }, uTime: materialUniforms.time,
+    uniforms: { uHead: { value: 0 }, uSpan: { value: 0.3 }, uAmt: { value: 1 }, uTime: materialUniforms.time, uStars: { value: Math.max(8, Math.round(arc * r1 * 1.3)) },
       uCore: { value: new THREE.Vector3(3.0, 3.3, 4.0) }, uBody: { value: new THREE.Vector3(0.45, 0.9, 2.4) }, uEdge: { value: new THREE.Vector3(1.4, 0.45, 2.0) } },
   });
   const mesh = new THREE.Mesh(g, m);

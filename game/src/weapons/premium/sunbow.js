@@ -13,7 +13,8 @@
 //              / shake / FOV punch scale with the stage. 0.32 s later a new arrow burns onto the string.
 //   九陽       9 arrows = the nine sun cores on the riser (one goes dark per arrow); they relight by themselves (0.6 s
 //              after the last shot, one every 0.7 s); R 續陽 relights all (1 s); empty = automatic.
-//   RMB 分曦   the drawn arrow (at least 引) splits into a 5-arrow fan (±14°, 55 % each), 3 arrows, 0.7 s cooldown.
+//   RMB 分曦   the drawn arrow (at least 引) splits into a 5-arrow fan (±18°, 55 % each, a gold fan off the bow),
+//              3 arrows, 0.7 s cooldown.
 //   Q 懸日     (30 日精) a quick shot plants a small sun (on a wall / floor / a zombie) for 3.5 s: 45/s + 日灼 within 3.5 m,
 //              pulls the horde in (7 m), teammates within 5 m +15 % damage (曦照), every arrow through it turns 貫日,
 //              then it bursts (320, 5 m).
@@ -30,7 +31,8 @@ import { registerKillMark } from '../../ui/killmarks.js';
 import { SKINS } from '../../ui/dmgnums.js';
 import { FRAME, DECAL, DECAL_TINT } from '../../fx/fx.js';
 import { haptic, clipComfort } from '../arsenal.js';
-import { COL, sfx, SunOrb, arrowMesh, arrowTrail, arrowSpark, formSparks, headFire, stagePulse, releaseFx, sunEmber, rayGlint, stringDust, impact, sunMark, lick, rubble, gunAxes } from './sunbow_fx.js';
+import { COL, sfx, SunOrb, arrowMesh, arrowTrail, arrowSpark, formSparks, headFire, drawRibbon, dropRibbon, gatherMotes, stagePulse, releaseFx, sunEmber, rayGlint, stringDust, impact, sunMark, lick, rubble,
+  gunAxes, burnLine, pierceTag, warmTags, fanFlare, sunImpact, fireWave } from './sunbow_fx.js';
 
 const D2R = Math.PI / 180, TAU = Math.PI * 2;
 const UPV = new THREE.Vector3(0, 1, 0), DOWNV = new THREE.Vector3(0, -1, 0);
@@ -71,6 +73,9 @@ registerSpecial('sunbow', {
     Object.assign(ws.sp, { drawing: false, drawT: 0, stage: 0, tireT: 0, nockV: 0, nockVel: 0, aimW: 0, aimHold: 0, nockT: 0, formU: 1, arrowOn: true, vib: 0, vibT: 0,
       busy: 0, regenWait: 0, regenT: 0, burn: new Map(), pins: new Map(), arrows: [], tally: { hits: 0, kills: 0, stage: 0, head: false, at: null },
       rayShow: 9, rayUntil: -1, view: null, snd: {}, idleT: 0, emberT: 0, vig: null, crown: false });
+    // decode the bow's cues up front (samples are fetched on first play: the first draw, loose and hit would start late)
+    const au = ws.game?.audio;
+    if (au?.defs && !au._sbPre) { au._sbPre = true; au.preload?.(Object.keys(au.defs).filter((n) => /^(sunbow_|ready_sunbow$)/.test(n)))?.catch?.(() => {}); }
   },
   modifiers() { return {}; },
   // the gun trigger is ours (Arsenal asks before its own logic): draw / release run in update()
@@ -82,7 +87,7 @@ registerSpecial('sunbow', {
       if (info.sbArrow >= 1) meterAdd(ws, 'sun', 2);
       if (z && !res.killed && info.sbBurn) addBurn(ws, z, info.sbBurn);
       if (z && !res.killed && info.sbArrow === 3) pin(ws, g, z, B.pin);
-      if (res.killed && info.sbArrow === 3) meterAdd(ws, 'sun', 3);
+      if (res.killed && info.sbArrow === 3) { meterAdd(ws, 'sun', 3); if (z) hurl(g, z, info); }
     } else if (z && !res.killed && (info.skill === 'sunbow_ult' || info.skill === 'sunbow_hang')) addBurn(ws, z, info.skill === 'sunbow_ult' ? 2 : 1);
     if (res.killed && z) killFx(ws, g, z, info);
   },
@@ -111,11 +116,16 @@ registerSpecial('sunbow', {
   tick(ws, dt, g) {
     const s = ws.sp, B = ws.def.bow, ar = g.arsenal, held = ar?.current === ws;
     // arrows keep flying (and burns keep ticking) whichever weapon is in hand
-    for (let i = s.arrows.length - 1; i >= 0; i--) if (!stepArrow(g, s.arrows[i], dt)) { endArrow(s.arrows[i]); s.arrows.splice(i, 1); }
+    for (let i = s.arrows.length - 1; i >= 0; i--) {
+      const a = s.arrows[i], on = stepArrow(g, a, dt);
+      if (a.kills >= 3 && !a.tagged && (!on || a.t - a.killT > 0.1)) pierceBeat(g, a);
+      if (!on) { endArrow(g, a); s.arrows.splice(i, 1); }
+    }
     weigh(ws, g);
     burnTick(ws, g, dt);
     pinTick(ws, dt);
     stuckTick(g, dt);
+    pinnedTick(g, dt);
     // renock: a new arrow burns onto the string
     if (s.nockT > 0) {
       s.nockT -= dt;
@@ -140,7 +150,7 @@ registerSpecial('sunbow', {
   dispose(ws, g) {
     const s = ws.sp;
     stopDrawLook(ws, g);
-    for (const a of s.arrows) endArrow(a);
+    for (const a of s.arrows) endArrow(g, a);
     s.arrows.length = 0;
     for (const k of Object.keys(s.snd)) { s.snd[k]?.stop?.(0.1); s.snd[k] = null; }
   },
@@ -229,6 +239,7 @@ function endDraw(ws, g) {
   const post = g.renderer?.post;
   if (post && s.vig != null) { post.vignette = s.vig; s.vig = null; }
   if (s.crown && g.vm) { g.vm.setPart('fx_leaf*', 0, 0.3, 0.03); s.crown = false; }
+  dropRibbon(s);
 }
 function cancelDraw(ws, g) { endDraw(ws, g); ws.sp.stage = 0; }
 function stopDrawLook(ws, g) { if (ws.sp.drawing) cancelDraw(ws, g); }
@@ -275,12 +286,20 @@ function release(ws, g, { fan = false } = {}) {
   s.nockVel = -(4 + st * 2.2); s.vib = 0.6 + st * 0.15; s.vibT = 0;
   vm.kick({ back: -0.012 * kk, up: -(2 + st * 1.5), side: 1.5 * kk, roll: 4 * kk });
   releaseFx(g, st);
+  if (fan) fanFlare(g, B.fan.deg);
   handOff(g);
-  if (st === 3) { vm.glowTo(2.4, 0.03); later(ws, 0.08, () => g.vm?.glowTo(1, 0.35)); }
+  if (st === 3) {
+    vm.glowTo(2.4, 0.03); later(ws, 0.08, () => g.vm?.glowTo(1, 0.35));
+    // 貫日 RADIAL 0.15 s (§2.30 放箭), the centre left clear
+    if (clipComfort.overlay !== false) g.fx?.overlay?.radial?.(0.16, 0.15, { color: [1.3, 0.95, 0.5], r0: 0.45 });
+  }
 }
 function gauss() { let u = 0, v = 0; while (u === 0) u = R(); while (v === 0) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); }
 
-/** Release follow-through: the draw hand leaves the string where it is and drifts back with the fingers open. */
+/**
+ * Release follow-through: the draw hand springs off the string back and out to the lower right, fingers open, and is
+ * out of the frame within ~0.17 s (it comes back up to the string with the next draw).
+ */
 function handOff(g) {
   const vm = g.vm, w = vm?.weapon;
   if (!w) return;
@@ -288,8 +307,14 @@ function handOff(g) {
   if (!p) return;
   const q = vm.gunRoot.quaternion, G = vm.rightGrip;
   const F = G.F.clone().applyQuaternion(q), N = G.N.clone().applyQuaternion(q);
-  p.add(_a.set(0.035, -0.02, 0.05));
-  vm.setAnchor('R', { pos: [p.x, p.y, p.z], F: [F.x, F.y, F.z], N: [N.x, N.y, N.z], pose: 'open', palm: G.palm }, 0.07);
+  // a short snap back off the string, then away under the bottom-right edge
+  p.add(_a.set(0.05, -0.025, 0.07));
+  vm.setAnchor('R', { pos: [p.x, p.y, p.z], F: [F.x, F.y, F.z], N: [N.x, N.y, N.z], pose: 'open', palm: G.palm }, 0.05);
+  later2(g, 0.05, () => {
+    const v = g.vm;
+    if (!v?.weapon || v.anchors.R.name === 'grip_r' || v.clip.active) return;
+    v.setAnchor('R', { pos: [0.3, -0.46, -0.16], F: [0.25, -0.35, -0.9], N: [-0.85, -0.2, -0.2], pose: 'open', palm: G.palm }, 0.13);
+  });
 }
 /** The draw hand comes back to the string (the new arrow is on). */
 function handToString(g, blend = 0.22) {
@@ -303,11 +328,15 @@ function handToString(g, blend = 0.22) {
 function spawnArrow(ws, g, dir, stage, { mul = 1, fan = false, from = null } = {}) {
   const B = ws.def.bow, cam = g.camera;
   const a = { ws, pos: cam.position.clone(), vel: dir.clone().multiplyScalar(B.speed[stage]), grav: B.gravity[stage], stage, dmg: B.dmg[stage] * mul, pierce: B.pierce[stage],
-    burn: B.burn[stage], knock: B.knock[stage], stagger: B.stagger[stage], hit: new Set(), t: 0, life: 4, fan, emp: false, vis: new THREE.Vector3(), mesh: arrowMesh(stage), trail: arrowTrail(g, stage, fan) };
+    burn: B.burn[stage], knock: B.knock[stage], stagger: B.stagger[stage], hit: new Set(), t: 0, life: 4, fan, emp: false, vis: new THREE.Vector3(), mesh: arrowMesh(stage), trail: arrowTrail(g, stage, fan),
+    kills: 0, killT: 0, tagged: false, lastKill: null };
   // seen from the bow: the visible arrow leaves the drawn arrow's point and merges into the true line within 0.3 s
   a.off = from ? from.sub(a.pos) : new THREE.Vector3(0, -0.1, 0);
   g.scene.add(a.mesh);
   place(a);
+  // the trail starts at the bow (the first step is metres out at 150 m/s)
+  a.start = a.vis.clone();
+  a.trail.push(a.start);
   ws.sp.arrows.push(a);
   return a;
 }
@@ -318,7 +347,25 @@ function place(a) {
   a.mesh.position.copy(a.vis);
   a.mesh.lookAt(_e.copy(a.vis).sub(a.vel));
 }
-function endArrow(a) { a.trail.stop(); if (a.mesh.parent && !a.stuck) a.mesh.removeFromParent(); }
+function endArrow(g, a) {
+  a.trail.stop();
+  if (a.mesh.parent && !a.stuck) a.mesh.removeFromParent();
+  // 貫日: the line it burnt through the horde lingers (bow -> where it stopped)
+  if (a.stage === 3 && g && (a.lastHit || a.stuck)) burnLine(g, a.start, a.stuck ? a.pos : a.lastHit);
+}
+/** A 貫日 arrow that killed 3+: one more beat at the last victim (gold flare, "貫 ×N", a heavier kill sting). */
+function pierceBeat(g, a) {
+  a.tagged = true;
+  const p = a.lastKill || a.pos;
+  const sys = pierceTag(g, p, a.kills);
+  if (sys) { const w = { update: (dt) => { if (!sys.update(dt)) g.systems.splice(g.systems.indexOf(w), 1); } }; g.systems.push(w); }
+  play(g, 'kill', { volume: 1, pitch: 0.85 });
+  play(g, 'stage3', { volume: 0.7, pitch: 1.5 });
+  play(g, 'ultImpact', { pos: p, volume: 0.5 });
+  g.addShake?.(0.18);
+  stop(g, 70);
+  haptic(45);
+}
 /** distance from p to the segment o + d * [0, len] */
 function segDist(p, o, d, len) { const t = Math.max(0, Math.min(len, _c.subVectors(p, o).dot(d))); return _c.copy(o).addScaledVector(d, t).distanceTo(p); }
 
@@ -369,14 +416,16 @@ function arrowHit(g, a, h, dir) {
   const head = h.part === 'head', boss = !!z.def?.boss;
   const partMul = head ? (boss ? 2.5 : B.headMul) * (ar?.headMul ?? 1) : h.part === 'limb' ? 0.75 : h.part === 'weak' ? 2 : 1;
   const info = { amount: a.dmg * partMul * (ar?.dmgMul ?? 1), part: h.part, point: h.point, normal: h.normal, dir: dir.clone(), dist: h.dist, knock: a.knock * (ar?.knockMul ?? 1),
-    stagger: a.stagger, weapon: ws.def.id, shooter: g.localId, headshot: head, sbArrow: a.stage, sbBurn: a.burn };
+    stagger: a.stagger, weapon: ws.def.id, shooter: g.localId, headshot: head, sbArrow: a.stage, sbBurn: a.burn,
+    // a 貫日 headshot can take the head off (the zombie's SEVER rules decide)
+    box: a.stage === 3 && head ? h.box : undefined };
   const res = h.target.damage(info);
   g.hud?.onHit?.(info, res, h.target);
   if (ar?._special) ar._special(ws, 'onHit', info, res, h.target);
   impact(g, h.point, h.normal, dir, a.stage, true);
   const T = ws.sp.tally;
-  T.hits++; T.stage = Math.max(T.stage, a.stage); T.at = h.point.clone();
-  if (res?.killed) T.kills++;
+  T.hits++; T.stage = Math.max(T.stage, a.stage); T.at = h.point.clone(); a.lastHit = T.at;
+  if (res?.killed) { T.kills++; a.kills++; a.killT = a.t; a.lastKill = (z.center ? z.center(new THREE.Vector3()) : h.point.clone()); }
   if (head) T.head = true;
 }
 function worldHit(g, a, wh, dir) {
@@ -461,11 +510,64 @@ function pinTick(ws, dt) {
 }
 let _keAt = [];
 function killFx(ws, g, z, info) {
-  const now = g.time;
+  const now = g.time, p = info.point || z.center?.(new THREE.Vector3()) || z.pos;
   _keAt = _keAt.filter((t) => now - t < 1.2);
-  if (_keAt.length >= 3) return;                     // ≤ 3 at a time per player (§1.10)
+  // ≤ 3 full KE_SUNMARK at a time per player (§1.10); the rest of a multi-kill still flash and catch fire
+  if (_keAt.length >= 3) {
+    g.fx?.particles?.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.25, size: 0.5, size1: 0.9, color: [...k3(COL.sun, 0.45), 1], color1: [0, 0, 0, 0], frame: FRAME.glow });
+    g.fx?.zfx?.status?.(z, 'burning', 1.2);
+    return;
+  }
   _keAt.push(now);
-  sunMark(g, z, info.point || z.center?.(new THREE.Vector3()) || z.pos, info.sbArrow === 3 || info.skill === 'sunbow_ult');
+  sunMark(g, z, p, info.sbArrow === 3 || info.skill === 'sunbow_ult');
+}
+/**
+ * 貫日 kill: the corpse is hurled along the arrow (9 m/s, a little lift); a wall within 3 m behind it pins it there
+ * with a burning arrow through the chest a moment before it slumps (§2.30 擊殺把屍體沿箭路擊飛).
+ */
+const PINNED = [];
+function hurl(g, z, info) {
+  if (!z.kvel || z.def?.boss || z.brain) return;
+  const d = _a.set(info.dir?.x ?? 0, 0, info.dir?.z ?? 0);
+  if (d.lengthSq() < 1e-6) return;
+  d.normalize();
+  z.kvel.x = d.x * 9; z.kvel.z = d.z * 9; z.kvel.y = 3.4;
+  const col = g.world?.collision, c = z.center ? z.center(new THREE.Vector3()) : z.pos.clone().add(_b.set(0, 1.2, 0));
+  const wh = col?.raycast(c, d, 3.2);
+  if (!wh || Math.abs(wh.normal?.y ?? 0) > 0.5 || wh.dist < 0.25) return;
+  PINNED.push({ z, d: d.clone(), wall: wh.point.clone(), n: wh.normal.clone(), y: c.y, t: 0, hit: false, hold: 0, arrow: null });
+}
+function pinnedTick(g, dt) {
+  for (let i = PINNED.length - 1; i >= 0; i--) {
+    const p = PINNED[i], z = p.z;
+    p.t += dt;
+    if (!z.root?.parent || p.t > 8) { p.arrow?.removeFromParent(); if (p.hold > 0 && z.action) z.action.paused = false; PINNED.splice(i, 1); continue; }
+    if (!p.hit) {
+      // flying back: stop where the back meets the wall (feet ~0.3 m off it)
+      const gap = (p.wall.x - z.pos.x) * p.d.x + (p.wall.z - z.pos.z) * p.d.z;
+      if (gap < 0.32 || p.t > 0.6) {
+        p.hit = true; p.hold = 1.9;
+        z.kvel.set(0, 0, 0);
+        z.pos.x = p.wall.x - p.d.x * 0.3; z.pos.z = p.wall.z - p.d.z * 0.3;
+        if (z.action) z.action.paused = true;                        // nailed upright in its first recoil
+        // the burning arrow through the chest into the wall
+        const m = arrowMesh(3), at = _c.set(p.wall.x, Math.max(p.y, (z.pos.y ?? 0) + 1.15), p.wall.z);
+        m.position.copy(at).addScaledVector(p.d, -0.5);
+        m.lookAt(_e.copy(m.position).sub(p.d));
+        g.scene.add(m); p.arrow = m;
+        g.fx?.decals?.add(at, p.n, { frame: DECAL.scorch, size: 0.55, tint: DECAL_TINT.scorch, life: 7 });
+        impact(g, at, p.n, p.d, 3, false);
+        g.fx?.sparkBurst?.(at.clone(), { color: k3(COL.gold, 0.8), color1: k3(COL.verm, 0.3), count: 16, speed: 5, glow: 0.8, normal: p.n });
+        play(g, 'pin', { pos: at, volume: 0.9 });
+        play(g, 'hitWorld', { pos: at, volume: 0.8 });
+      }
+    } else if (p.hold > 0) {
+      p.hold -= dt;
+      z.kvel.set(0, 0, 0);
+      if (p.arrow && R() < dt * 12) { p.arrow.getWorldPosition(_a); p.arrow.getWorldDirection(_b); lick(g, _a.addScaledVector(_b, -0.45), 0.7); }
+      if (p.hold <= 0 && z.action) { z.action.paused = false; z.action.timeScale = 0.7; }   // ... then slumps down the wall
+    } else if (p.arrow && R() < dt * 5) { p.arrow.getWorldPosition(_a); p.arrow.getWorldDirection(_b); lick(g, _a.addScaledVector(_b, -0.45), 0.5); }
+  }
 }
 
 // ------------------------------------------------------------------------------------- viewmodel driver
@@ -515,7 +617,13 @@ function view(ws, g, dt) {
   vm._glowMat.crystal = (s.drawing ? 1 + s.stage * 0.22 : 1) * (0.9 + 0.1 * Math.sin(v.t * 3.8));
   // ---- first-person particles: the forming arrow, the burning head, idle embers off the 日珠
   if (s.arrowOn && s.formU < 1) formSparks(g, s.formU);
-  if (s.drawing) headFire(g, s.stage, v.t);
+  // the draw build-up reads on the arrow itself: the shaft lights up nock -> head, heat gathers off the lit sun cores
+  // into the head, the head grows into a sun (all of it left-below the crosshair)
+  if (s.drawing && s.arrowOn) {
+    drawRibbon(g, s, s.nockV, s.stage);
+    gatherMotes(g, s.stage, ws.ammo, dt);
+    headFire(g, s.stage, v.t, s.nockV);
+  } else dropRibbon(s);
   if (!s.drawing && ar.sinceShot > 0.8 && (s.emberT -= dt) <= 0) { s.emberT = 0.45 + R() * 0.3; sunEmber(g); }
   // rare idle every 12 s of quiet: a thumb pluck on the string
   if (ar.state === 'idle' && !vm.clip.active && ar.sinceShot > 2 && !s.drawing) { if ((s.idleT += dt) >= 12) { s.idleT = 0; gunClip(g, ws, 'sunbow_idle_rare'); } } else s.idleT = 0;
@@ -559,16 +667,32 @@ function stringHook(ws, vm) {
   for (let i = 1; i <= 9; i++) { const r = P['fx_ray' + i]; if (r) r.node.visible = i > 9 - shown; }
 }
 
-/** First equip (once a game): the sigil design, sun sprite textures and the arrow geometry under the draw animation. */
+/**
+ * First equip (once a game), under the draw animation: the sigil design, the sun sprite textures, the arrow geometry,
+ * and one tiny draw of everything the first 貫日 / 懸日 / 落九陽 would otherwise compile on the spot (sigil + pillar,
+ * world and viewmodel ribbons, the explosion, ground rings / cracks, the radial / border / tint overlays).
+ */
 function prewarm(g) {
   if (g._sbWarm) return;
   g._sbWarm = true;
+  const fx = g.fx;
   try {
-    g.fx?.sigils?.preload?.(['flame']);
-    const far = g.camera.position.clone().add(_a.set(0, -80, 0));
+    fx?.sigils?.preload?.(['flame']);
+    const far = g.camera.position.clone().add(_a.set(0, -80, 0)), far2 = far.clone().add(_b.set(0, -1, 0));
     const o = new SunOrb(g.scene, far, 0.01);
     later2(g, 0.3, () => o.remove());
     const m = arrowMesh(3); m.position.copy(far); g.scene.add(m); later2(g, 0.3, () => m.removeFromParent());
+    fx?.sigils?.sigil?.(far, { design: 'flame', radius: 0.05, intensity: 0, life: 0.2, color: k3(COL.gold, 0.1), color1: k3(COL.verm, 0.1) });
+    fx?.sigils?.pillar?.(far, { radius: 0.01, height: 0.01, life: 0.2, motes: 0, ring: false, light: 0 });
+    fx?.beam?.(far, far2, { core: [0.01, 0.01, 0.01], glow: [0, 0, 0], wCore: 0.001, wGlow: 0.001, life: 0.1 });
+    fx?.beam?.(_c.set(0, -0.3, -0.5), _e.set(0, -0.3, -0.6), { vm: true, core: [0, 0, 0], glow: [0, 0, 0], wCore: 0.0001, wGlow: 0.0001, life: 0.1 });
+    fx?.trail?.({ width: 0.001, life: 0.05, color: [0, 0, 0, 0] })?.push(far).push(far2).stop();
+    fx?.explosion?.(far, { radius: 0.01, scale: 0.01 });
+    fx?.zfx?.ground?.add?.('crack', far, { r: 0.01, life: 0.05, alpha: 0 });
+    fx?.overlay?.radial?.(0.0005, 0.05, { r0: 0.9 });
+    fx?.overlay?.tint?.([1, 1, 1], 0.0001, 0.05);
+    fx?.overlay?.border?.([0, 0, 0], 0.0001, 0.05);
+    warmTags();
   } catch (e) { console.warn('[sunbow] prewarm', e); }
 }
 function later(ws, sec, fn) { later2(ws.game, sec, fn); }
@@ -624,8 +748,8 @@ registerSkill('sunbow_split', {
     }
     const eye = k.caster(_a, _b), m = k.muzzle(_c), up = _e.set(0, 1, 0);
     for (let i = 0; i < 5; i++) {
-      const d = _b.clone().applyAxisAngle(up, (i - 2) / 2 * 14 * D2R);
-      g.fx?.glowTracer?.(m.clone(), eye.clone().addScaledVector(d, 30), { color: k3(COL.gold, 0.8), glow: k3(COL.verm, 0.3), width: 0.02, length: 3, speed: 110 });
+      const d = _b.clone().applyAxisAngle(up, (i - 2) / 2 * (k.def.bow?.fan?.deg ?? 18) * D2R);
+      g.fx?.glowTracer?.(m.clone(), eye.clone().addScaledVector(d, 30), { color: k3(COL.gold, 0.8), glow: k3(COL.verm, 0.3), width: 0.035, length: 3.5, speed: 110 });
     }
     play(g, 'split', { pos: eye, volume: 0.8 });
   },
@@ -678,9 +802,13 @@ registerSkill('sunbow_hang', {
     const h = d.h;
     h.t += dt;
     if (h.z) { if (h.z.alive && h.z.center) h.z.center(h.pos); else h.z = null; }
+    // a sun riding a zombie that reaches the caster stays where it was (it must not burst in the caster's face)
+    if (h.z && h.pos.distanceTo(k.caster(_a, _b)) < 4) h.z = null;
     const grow = smooth(h.t / 0.3), end = p.hang;
     h.orb.group.position.copy(h.pos);
-    h.orb.set(1.05 * grow * (1 + 0.08 * Math.sin(h.t * 6)) + (h.t > end - 0.35 ? (h.t - end + 0.35) * 0.9 : 0), 1 + (h.flashT > 0 ? h.flashT * 4 : 0));
+    // dimmed up close to this client's eye (to ~40 % under 3 m): the crosshair must not drown in it
+    const dc = h.pos.distanceTo(g.camera.position), dim = dc < 6 ? 0.4 + 0.6 * smooth((dc - 1.5) / 4.5) : 1;
+    h.orb.set(1.05 * grow * (1 + 0.08 * Math.sin(h.t * 6)) + (h.t > end - 0.35 ? (h.t - end + 0.35) * 0.9 : 0), dim * (1 + (h.flashT > 0 ? h.flashT * 4 : 0)));
     h.flashT = Math.max(0, (h.flashT || 0) - dt);
     h.orb.update(dt);
     h.entry.pos.copy(h.pos);
@@ -732,8 +860,8 @@ function land(k, at, dir, z, wh = null) {
 function burst(k) {
   const g = k.game, h = k.data.h, p = k.p;
   h.entry.live = false;
-  const c = h.pos.clone(), fy = k.floorY(c);
-  g.fx?.explosion?.(c, { radius: p.burstR * 0.7, scale: 0.75 });
+  const c = h.pos.clone(), fy = k.floorY(c), dc = c.distanceTo(g.camera.position);
+  g.fx?.explosion?.(c, { radius: p.burstR * 0.7, scale: dc < 5 ? 0.45 : 0.75 });
   g.fx?.zfx?.quake?.(_a.set(c.x, fy, c.z), p.burstR, { col: k3(COL.flame, 0.6), scale: 0.8 });
   g.fx?.sparkBurst?.(c.clone(), { color: k3(COL.white, 0.7), color1: k3(COL.flame, 0.5), count: 40, speed: 12, glow: 1.4 });
   g.fx?.motes?.burst?.('ember', c, 18, { seed: k.ev.seed, speed: 4 });
@@ -756,12 +884,13 @@ registerSkill('sunbow_ult', {
       g.hud?.card?.(k.cardText(), { color: k.hex.rim, sub: k.def.en });
       if (k.ws) { const ws = k.ws; if (ws.sp.drawing) cancelDraw(ws, g); ws.sp.busy = 1.1; if (mine(g, ws)) g.arsenal?.playClip?.('sunbow_cast_ult'); }
       g.arsenal?.fovKick?.(3, 0.5);
-      if (L4 && clipComfort.overlay !== false) { d.border = g.fx?.overlay?.border?.([1.6, 0.8, 0.25], 0.22, 4.2); g.fx?.overlay?.tint?.([1.4, 0.8, 0.35], 0.07, 1.0); }
+      // L4 warm tint + border, kept light: the street has to stay readable under nine suns
+      if (L4 && clipComfort.overlay !== false) { d.border = g.fx?.overlay?.border?.([1.6, 0.8, 0.25], 0.08, 4.2); g.fx?.overlay?.tint?.([1.4, 0.8, 0.35], 0.035, 1.0); }
     }
     play(g, 'ultRaise', k.local ? { volume: 1 } : { pos: c, volume: 1 });
     // the arrow shot at the sky
     const m = k.muzzle(_a);
-    g.fx?.beam?.(m.clone(), m.clone().add(_b.set(0, 40, 0)), { core: k3(COL.white, 0.8), glow: k3(COL.flame, 0.4), wCore: 0.03, wGlow: 0.22, life: 0.5, shrink: 0.6 });
+    g.fx?.beam?.(m.clone(), m.clone().add(_b.set(0, 40, 0)), { core: k3(COL.gold, 0.8), glow: k3(COL.flame, 0.35), wCore: 0.025, wGlow: 0.14, life: 0.5, shrink: 0.6, wStart: 0.3, ramp: 3 });
   },
   update(k, dt) {
     const g = k.game, d = k.data, p = k.p, t = k.t, c = d.c, fx = g.fx;
@@ -771,15 +900,27 @@ registerSkill('sunbow_ult', {
     }
     if (d.beat < 2 && t >= 0.35) {
       d.beat = 2;
-      const a0 = k.rng() * TAU;
+      // the nine suns stand as a wheel in the sky beyond the target, facing the caster, sized and lifted by the range so
+      // the wheel fills the top third of the caster's view (eight round the rim, the ninth and biggest in the hub)
+      const eye = k.caster(_a, _b).clone(), fl = _c.set(c.x - eye.x, 0, c.z - eye.z);
+      const D = Math.max(4, fl.length());
+      fl.multiplyScalar(1 / Math.max(1e-3, fl.length()));
+      const fov = ((k.local ? g.camera.fov : 0) || 72) * D2R, Dw = D + 6;
+      const e0 = Math.atan2(c.y - eye.y, D), eC = e0 + 0.32 * fov, Rw = Dw * Math.tan(0.14 * fov);
+      const W = new THREE.Vector3(eye.x + fl.x * Dw, eye.y + Dw * Math.tan(eC), eye.z + fl.z * Dw);
+      W.y = Math.max(c.y + Rw + 2.5, Math.min(c.y + 34, W.y));
+      const side = new THREE.Vector3(fl.z, 0, -fl.x);
+      const a0 = Math.PI / 2;
       for (let i = 0; i < 9; i++) {
         const last = i === 8, a = a0 + i / 8 * TAU;
-        // low enough to hang in the view over the target (a 16 m target puts 11 m at the top of the screen)
-        const sky = last ? new THREE.Vector3(c.x, c.y + 11.5, c.z) : new THREE.Vector3(c.x + Math.cos(a) * 7, c.y + 7.5 + k.rng() * 2.5, c.z + Math.sin(a) * 7);
-        const hit = last ? c.clone() : new THREE.Vector3(c.x + Math.cos(a) * p.ring, c.y, c.z + Math.sin(a) * p.ring);
+        const sky = last ? W.clone() : W.clone().addScaledVector(side, Math.cos(a) * Rw).add(_e.set(0, Math.sin(a) * Rw, 0));
+        // each falls onto the ring round the target on its own side (the wheel's top -> the far side)
+        const hx = side.x * Math.cos(a) + fl.x * Math.sin(a), hz = side.z * Math.cos(a) + fl.z * Math.sin(a);
+        const hit = last ? c.clone() : new THREE.Vector3(c.x + hx * p.ring, c.y, c.z + hz * p.ring);
         hit.y = k.floorY(hit);
-        d.suns.push({ sky, hit, orb: new SunOrb(g.scene, sky, 0.01, { glow: 1.4 }), born: 0.35 + i * 0.05, size: last ? 2.6 : 1.5, fall: -1, done: false, last, trail: null });
+        d.suns.push({ sky, hit, orb: new SunOrb(g.scene, sky, 0.01, { glow: 1.2 }), born: 0.35 + i * 0.05, size: (last ? 0.62 : 0.34) * Rw, fall: -1, done: false, last, trail: null });
       }
+      d.Rw = Rw;
       play(g, 'ultShot', { pos: c, volume: 0.7 });
     }
     for (let i = 0; i < d.suns.length; i++) {
@@ -797,8 +938,8 @@ registerSkill('sunbow_ult', {
           fx?.sparkBurst?.(s.sky.clone(), { color: k3(COL.white, 0.8), color1: k3(COL.flame, 0.5), count: 18, speed: 10, glow: 1.2 });
           play(g, 'ultShot', { pos: s.sky, volume: 0.6 });
           play(g, 'ultFall', { pos: s.hit, volume: 0.6, delay: 0.05 });
-          s.trail = fx?.trail?.({ width: s.last ? 2.6 : 1.6, life: 0.45, color: [...k3(COL.flame, 0.7), 1], color1: [...k3(COL.verm, 0.12), 0], taper: 0.25, segs: 24 });
-          s.trail2 = fx?.trail?.({ width: s.last ? 0.9 : 0.55, life: 0.3, color: [...k3(COL.white, 0.8), 1], color1: [...k3(COL.gold, 0.2), 0], taper: 0.2, segs: 18, profile: 'beam' });
+          s.trail = fx?.trail?.({ width: s.size * 1.1, life: 0.45, color: [...k3(COL.flame, 0.7), 1], color1: [...k3(COL.verm, 0.12), 0], taper: 0.25, segs: 24 });
+          s.trail2 = fx?.trail?.({ width: s.size * 0.38, life: 0.3, color: [...k3(COL.white, 0.8), 1], color1: [...k3(COL.gold, 0.2), 0], taper: 0.2, segs: 18, profile: 'beam' });
         }
       } else {
         s.fall += dt / fallDur;
@@ -808,6 +949,7 @@ registerSkill('sunbow_ult', {
         s.orb.group.position.copy(pos); s.orb.set(s.size * (1 - 0.25 * u), 1.2);
         s.trail?.push(pos); s.trail2?.push(pos);
         if (R() < 0.8) fx?.particles?.spawn?.({ additive: true, x: pos.x, y: pos.y, z: pos.z, vx: (R() - 0.5) * 3, vy: (R() - 0.5) * 3, vz: (R() - 0.5) * 3, life: 0.5, size: 0.4, size1: 0.1, color: [...k3(COL.flame, 0.5), 1], color1: [...k3(COL.verm, 0.1), 0], frame: FRAME.glow });
+        if (R() < 0.7) fx?.particles?.spawn?.({ additive: true, x: pos.x, y: pos.y, z: pos.z, vx: (R() - 0.5) * 2, vy: 1 + R() * 2, vz: (R() - 0.5) * 2, life: 0.6 + R() * 0.4, size: 0.05, size1: 0.01, color: [...k3(COL.gold, 0.8), 1], color1: [...k3(COL.verm, 0.2), 0], frame: FRAME.spark, stretch: 0.05, gravity: 6 });
         if (u >= 1) { s.done = true; strike(k, s); }
       }
       s.orb.update(dt);
@@ -825,22 +967,24 @@ function strike(k, s) {
   const g = k.game, fx = g.fx, p = k.p, h = s.hit;
   s.orb.remove(); s.trail?.stop(); s.trail2?.stop();
   const r = s.last ? p.finalR : p.r, dmg = s.last ? p.final : p.dmg;
-  fx?.explosion?.(_a.copy(h).add(_b.set(0, 0.3, 0)), { radius: r * 0.75, scale: s.last ? 1.2 : 0.7 });
-  fx?.zfx?.quake?.(h, r * 1.2, { col: k3(COL.flame, 0.7), scale: s.last ? 1.4 : 0.8 });
-  rubble(g, h, s.last ? 18 : 9, s.last ? 9 : 6);
-  fx?.decals?.add?.(_a.copy(h).add(_b.set(0, 0.03, 0)), UPV, { frame: DECAL.scorch, size: r * 0.9, tint: DECAL_TINT.scorch, life: 8 });
-  fx?.particles?.spawn?.({ additive: true, x: h.x, y: h.y + 1, z: h.z, life: 0.18, size: r * 1.4, size1: r * 1.8, color: [...k3(COL.white, 0.5), 1], color1: [...k3(COL.flame, 0.05), 0], frame: FRAME.glow });
+  // a sun hitting the street, not a grenade: white-gold flash, corona ring, flame petals, ember fountain, cracks
+  // (glare eased off when it lands right in front of this client's eye)
+  const near = h.distanceTo(g.camera.position);
+  sunImpact(g, h, r, s.last, near < 6 ? 0.45 + 0.55 * near / 6 : 1);
   if (s.last) {
-    fx?.sigils?.pillar?.(h, { radius: 2.2, height: 18, color: k3(COL.gold, 1.2), color1: k3(COL.verm, 0.8), life: 0.9 });
+    fx?.zfx?.quake?.(h, r * 1.1, { col: k3(COL.flame, 0.6), scale: 1.2, crack: false });
+    fireWave(g, h, p.finalR);
+    fx?.sigils?.pillar?.(h, { radius: 1.8, height: 16, color: k3(COL.gold, 0.8), color1: k3(COL.verm, 0.6), life: 0.5 });
     fx?.motes?.burst?.('ember', _a.copy(h).add(_b.set(0, 1, 0)), 40, { seed: k.ev.seed + 9, speed: 7, radius: 2 });
   }
+  rubble(g, h, s.last ? 18 : 9, s.last ? 9 : 6);
   play(k.game, s.last ? 'ultFinal' : 'ultImpact', { pos: h, volume: 1 });
   if (k.local) {
     k.hurt(h, r, dmg, { knock: s.last ? p.finalKnock : p.knock, stagger: 1, falloffMin: s.last ? 0.4 : 0.5 });
     const d = h.distanceTo(g.camera.position), near = Math.max(0, 1 - d / 40);
     g.addShake?.((s.last ? 0.55 : 0.12) * (0.4 + 0.6 * near));
     stop(g, s.last ? 110 : 40);
-    if (s.last && clipComfort.overlay !== false) g.fx?.overlay?.radial?.(0.9, 0.3, { color: [1.6, 1.0, 0.45] });
+    if (s.last && clipComfort.overlay !== false) g.fx?.overlay?.radial?.(0.8, 0.3, { color: [1.6, 1.0, 0.45], r0: 0.34 });
     haptic(s.last ? 60 : 25);
   }
 }
@@ -906,8 +1050,10 @@ registerClip('sunbow_cast_ult', { duration: 1.2, tracks: {
 // the nine cores (they relight one by one: the cores are what a reload shows, §1.7.1), back to the string
 function rekindle(rare) {
   const tracks = {
-    gunPos: [[0, Z3], [0.16, [0.03, 0.03, 0.06]], [0.8, [0.03, 0.035, 0.06]], [1, Z3]],
-    gunRot: [[0, Z3], [0.16, [4, 22, 14]], [0.8, [5, 24, 15]], [1, Z3]],
+    // the riser comes down and in towards the middle-bottom, upright: the stroking hand works low, its forearm under the
+    // centre of the screen
+    gunPos: [[0, Z3], [0.16, [0.15, -0.11, 0.07]], [0.8, [0.15, -0.105, 0.07]], [1, Z3]],
+    gunRot: [[0, Z3], [0.16, [-6, 16, -6]], [0.8, [-5, 18, -5]], [1, Z3]],
   };
   const events = [[0, 'glow', { u: 'pCharge', to: 0.2, sec: 0.15 }], [0.04, 'anchorR', [{ pos: [-0.05, -0.12, -0.38], F: [-0.2, 0.6, -0.7], N: [-0.8, 0.1, 0.4], pose: 'palm' }, 0.14]]];
   if (rare) {
@@ -930,9 +1076,11 @@ registerClip('sunbow_rekindle_rare', () => rekindle(true));
 // the 日珠 flashes, freeze
 function inspect(rare) {
   const tracks = {
-    gunPos: [[0, Z3], [0.04, [0.04, 0.05, 0.08]], [0.1, [0.045, 0.055, 0.085]], [0.16, [0.04, 0.05, 0.08]], [0.22, [0.05, 0.06, 0.1], 'inOut'], [0.48, [0.05, 0.06, 0.1]],
+    // first beat further right (the 日珠 whole in frame); the stroke beat low and upright (the forearm stays under the
+    // centre of the screen)
+    gunPos: [[0, Z3], [0.04, [0.12, 0.05, 0.08]], [0.1, [0.125, 0.055, 0.085]], [0.16, [0.12, 0.05, 0.08]], [0.22, [0.15, -0.11, 0.08], 'inOut'], [0.48, [0.15, -0.105, 0.08]],
       [0.58, [0.02, 0.06, 0.06], 'inOut'], [0.72, [0.02, 0.06, 0.06]], [0.82, [0.01, 0.02, 0.02], 'inOut'], [0.96, [0.01, 0.02, 0.02]], [1, Z3]],
-    gunRot: [[0, Z3], [0.04, [8, 26, 40]], [0.1, [10, 32, 46]], [0.16, [8, 26, 40]], [0.22, [6, 30, 22], 'inOut'], [0.48, [6, 30, 20]],
+    gunRot: [[0, Z3], [0.04, [8, 26, 40]], [0.1, [10, 32, 46]], [0.16, [8, 26, 40]], [0.22, [-5, 20, -5], 'inOut'], [0.48, [-4, 22, -6]],
       [0.58, [4, -140, 12], 'inOut'], [0.72, [6, -150, 14]], [0.82, [2, 8, -4], 'inOut'], [0.96, [1, 6, -3]], [1, Z3]],
     env: [[0, 0], [0.05, 1], [0.95, 1], [1, 0]],
   };
@@ -978,56 +1126,101 @@ injectCSS('cf-xh-sunbow', `.xh2.act path.a { filter: drop-shadow(0 0 2px current
 SKINS.sunbow = ['#ffe08a', '#ff8a3a', '#c8202a', '#e8b54a'];
 
 // ------------------------------------------------------------------------------------- kill mark (§1.9 #8)
-// km_sunbow: a drawn great bow (red lacquer, gold edges) on the left, its string pulled into a V, an arrow nocked; nine
-// sun rings in an arc above. Beats: (1) gold strokes draw the bow, string and sun rings (0-0.45 s); (2) the bow fills
-// with lacquer, the suns with gold (0.45-0.8); (3) glow (0.8-1.0); (4) 點睛: the arrow flies to the highest sun, which
-// flares and drops (1.0-1.15). Headshot: a cross flare and a vermilion ring off the struck sun.
+// km_sunbow: a drawn great bow canted up-right in the lower left of a dark roundel -- a thick red lacquer body with a
+// gold edge, gold grip band and the 日珠, recurved ears, the string drawn back into a V -- its arrow aimed at the
+// highest of nine gold suns rising in an arc across the upper right. Beats: (1) gold strokes draw the roundel, the bow,
+// the string and the sun rings (0-0.45 s); (2) the bow fills with lacquer, the suns with gold, their rays come out
+// (0.45-0.8); (3) glow (0.8-1.0); (4) 點睛: the arrow flies up the line with a gold glint trail, the highest sun bursts
+// into a star and drops (1.0-1.15). Headshot: a cross flare and a vermilion burst ring off the struck sun.
 const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 const seg = (t, a, b) => ease((t - a) / (b - a));
+// nine suns on a rising arc (units of S/100), the last = the highest, the target
+const KM_SUNS = Array.from({ length: 9 }, (_, i) => { const u = i / 8; return [22 * (1 - u) ** 2 + 2 * 36 * u * (1 - u) + 66 * u * u, 48 * (1 - u) ** 2 + 2 * 26 * u * (1 - u) + 27 * u * u, i === 8 ? 5.5 : 3.0 + u * 0.8]; });
 registerKillMark('km_sunbow', {
   scale: 1.6,
   draw(ctx, Sz, t, o) {
-    const c = Sz / 2, U = Sz / 100, p1 = seg(t, 0, 0.45), p2 = seg(t, 0.45, 0.8), p3 = seg(t, 0.8, 1.0), p4 = seg(t, 1.0, 1.15);
+    const U = Sz / 100, p1 = seg(t, 0, 0.45), p2 = seg(t, 0.45, 0.8), p3 = seg(t, 0.8, 1.0), p4 = seg(t, 1.0, 1.15);
+    const X = (x) => x * U, cx = 50, cy = 55, RR = 38;
     ctx.clearRect(0, 0, Sz, Sz);
     ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    // dark roundel
-    ctx.globalAlpha = 0.85 * Math.max(p1, 0.0001); ctx.fillStyle = '#1a0c0a'; ctx.beginPath(); ctx.arc(c, c + 6 * U, 34 * U, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1; ctx.strokeStyle = '#e8b54a'; ctx.lineWidth = 1.6 * U; ctx.setLineDash([220 * U]); ctx.lineDashOffset = 220 * U * (1 - p1);
-    ctx.beginPath(); ctx.arc(c, c + 6 * U, 34 * U, 0, TAU); ctx.stroke();
-    // the bow: an outer and inner curve (limb thickness), ears flicked forward
-    const outer = new Path2D(); outer.moveTo(c - 4 * U, c - 28 * U); outer.quadraticCurveTo(c - 34 * U, c + 6 * U, c - 4 * U, c + 40 * U);
-    outer.lineTo(c - 8 * U, c + 37 * U); outer.quadraticCurveTo(c - 26 * U, c + 6 * U, c - 8 * U, c - 25 * U); outer.closePath();
-    if (p2 > 0) { ctx.globalAlpha = p2; const gr = ctx.createLinearGradient(c - 30 * U, 0, c, 0); gr.addColorStop(0, '#6a0c12'); gr.addColorStop(1, '#c8202a'); ctx.fillStyle = gr; ctx.fill(outer); }
-    ctx.globalAlpha = 1; ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 1.4 * U; ctx.setLineDash([160 * U]); ctx.lineDashOffset = 160 * U * (1 - p1); ctx.stroke(outer);
-    // ears and the string drawn back into a V, an arrow on it
-    ctx.setLineDash([]); ctx.lineWidth = 1.0 * U; ctx.strokeStyle = `rgba(255,240,200,${p1})`;
-    const nockX = c + 14 * U, nockY = c + 6 * U;
-    ctx.beginPath(); ctx.moveTo(c - 4 * U, c - 28 * U); ctx.lineTo(nockX, nockY); ctx.lineTo(c - 4 * U, c + 40 * U); ctx.stroke();
-    // arrow (flies off to the sun on beat 4)
-    const fly = p4, ax0 = nockX, ay0 = nockY, tx = c + 4 * U, ty = c - 30 * U;
-    const hx = lerp(c - 22 * U, tx, fly), hy = lerp(nockY, ty, fly), tailx = lerp(ax0, tx - 10 * U, fly), taily = lerp(ay0, ty + 10 * U, fly);
-    if (p1 > 0.3) { ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 1.6 * U; ctx.globalAlpha = Math.min(1, (p1 - 0.3) / 0.4); ctx.beginPath(); ctx.moveTo(tailx, taily); ctx.lineTo(hx, hy); ctx.stroke();
-      ctx.fillStyle = '#fff1b8'; ctx.beginPath(); const ang = Math.atan2(hy - taily, hx - tailx); ctx.moveTo(hx + Math.cos(ang) * 5 * U, hy + Math.sin(ang) * 5 * U);
-      ctx.lineTo(hx + Math.cos(ang + 2.5) * 4 * U, hy + Math.sin(ang + 2.5) * 4 * U); ctx.lineTo(hx + Math.cos(ang - 2.5) * 4 * U, hy + Math.sin(ang - 2.5) * 4 * U); ctx.closePath(); ctx.fill(); }
-    // nine suns in an arc above; the highest is struck on beat 4
+    // dark roundel + gold rim
+    ctx.globalAlpha = 0.88 * Math.max(p1, 0.0001); ctx.fillStyle = '#170a08'; ctx.beginPath(); ctx.arc(X(cx), X(cy), X(RR), 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#e8b54a'; ctx.lineWidth = 1.8 * U; ctx.setLineDash([240 * U]); ctx.lineDashOffset = 240 * U * (1 - p1);
+    ctx.beginPath(); ctx.arc(X(cx), X(cy), X(RR), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    // the bow aims at the struck (highest) sun
+    const [tx, ty] = KM_SUNS[8];
+    const gx = 40, gy = 66, ang = Math.atan2(ty - gy, tx - gx), ca = Math.cos(ang), sa = Math.sin(ang);
+    // bow frame: +x along the arrow, +y = the lower limb; scaled 0.6
+    const B = (x, y) => [X(gx + (x * ca - y * sa) * 0.6), X(gy + (x * sa + y * ca) * 0.6)];
+    const quad = (P, c2, b) => { const [qx, qy] = B(...c2), [bx, by] = B(...b); P.quadraticCurveTo(qx, qy, bx, by); };
+    // limbs: back (target side) and belly curves, recurved ears flicking forward
+    const body = new Path2D();
+    body.moveTo(...B(-2, -40)); quad(body, [-10, -37], [-10, -29]); quad(body, [17, 0], [-10, 29]); quad(body, [-10, 37], [-2, 40]);
+    body.lineTo(...B(-6, 42)); quad(body, [-16, 38], [-16, 28]); quad(body, [7, 0], [-16, -28]); quad(body, [-16, -38], [-6, -42]); body.closePath();
+    if (p2 > 0) {
+      ctx.globalAlpha = p2; const gr = ctx.createLinearGradient(...B(-16, 0), ...B(8, 0)); gr.addColorStop(0, '#5a0a10'); gr.addColorStop(0.55, '#b0141e'); gr.addColorStop(1, '#e0362e');
+      ctx.fillStyle = gr; ctx.fill(body);
+    }
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 1.5 * U; ctx.setLineDash([200 * U]); ctx.lineDashOffset = 200 * U * (1 - p1); ctx.stroke(body); ctx.setLineDash([]);
+    // grip band + the 日珠 on the riser
+    if (p1 > 0.5) {
+      ctx.globalAlpha = Math.min(1, (p1 - 0.5) * 2);
+      const band = new Path2D(); [[-12, -6], [8, -6], [8, 6], [-12, 6]].forEach(([x, y], i) => band[i ? 'lineTo' : 'moveTo'](...B(x, y))); band.closePath();
+      ctx.fillStyle = '#e8b54a'; ctx.fill(band);
+      const [sx, sy] = B(4, -14);
+      ctx.fillStyle = p2 > 0 ? '#fff1b8' : 'rgba(0,0,0,0)'; ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 1 * U;
+      ctx.beginPath(); ctx.arc(sx, sy, 2.4 * U, 0, TAU); ctx.fill(); ctx.stroke();
+    }
+    // string drawn back into a V to the nock
+    ctx.globalAlpha = p1; ctx.strokeStyle = '#fff0c8'; ctx.lineWidth = 1.0 * U;
+    ctx.beginPath(); ctx.moveTo(...B(-3, -40)); ctx.lineTo(...B(-24, 0)); ctx.lineTo(...B(-3, 40)); ctx.stroke();
+    // the arrow: nocked (head at x = 22) -> 點睛 flight to the highest sun; a gold glint trail behind it
+    const fly = p4, h0 = B(24, 0), hx = h0[0] + (X(tx) - h0[0]) * fly, hy = h0[1] + (X(ty) - h0[1]) * fly;
+    const tlx = hx - ca * 48 * 0.6 * U, tly = hy - sa * 48 * 0.6 * U;
+    if (fly > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const tg = ctx.createLinearGradient(h0[0], h0[1], hx + 0.01, hy); tg.addColorStop(0, 'rgba(255,180,60,0)'); tg.addColorStop(1, `rgba(255,236,170,${0.9 * (1 - fly * 0.4)})`);
+      ctx.strokeStyle = tg; ctx.lineWidth = 3.2 * U; ctx.beginPath(); ctx.moveTo(...h0); ctx.lineTo(hx, hy); ctx.stroke(); ctx.restore();
+    }
+    if (p1 > 0.3 && fly < 1) {
+      ctx.globalAlpha = Math.min(1, (p1 - 0.3) / 0.4);
+      ctx.strokeStyle = '#e8cf98'; ctx.lineWidth = 2.0 * U; ctx.beginPath(); ctx.moveTo(tlx, tly); ctx.lineTo(hx, hy); ctx.stroke();
+      // red fletching at the tail, the head a gold leaf
+      const fx2 = tlx + ca * 5 * U, fy2 = tly + sa * 5 * U, nx = -sa, ny = ca;
+      ctx.strokeStyle = '#c8202a'; ctx.lineWidth = 1.6 * U; ctx.beginPath();
+      ctx.moveTo(tlx + nx * 2.4 * U, tly + ny * 2.4 * U); ctx.lineTo(fx2, fy2); ctx.lineTo(tlx - nx * 2.4 * U, tly - ny * 2.4 * U); ctx.stroke();
+      ctx.fillStyle = p2 > 0 ? '#fff1b8' : '#ffd36b'; ctx.beginPath();
+      ctx.moveTo(hx + ca * 5.5 * U, hy + sa * 5.5 * U); ctx.lineTo(hx + nx * 2.4 * U, hy + ny * 2.4 * U); ctx.lineTo(hx - nx * 2.4 * U, hy - ny * 2.4 * U); ctx.closePath(); ctx.fill();
+    }
+    // nine suns: gold rings drawn in (beat 1), gold discs with short rays (beat 2); the highest struck on beat 4
     ctx.globalAlpha = 1;
-    for (let i = 0; i < 9; i++) {
-      const a = (-70 + i * 17.5) * D2R, x = c + 12 * U + Math.sin(a) * 30 * U, y = c - 4 * U - Math.cos(a) * 30 * U, top = i === 4, r = (top ? 4 : 3) * U;
-      const struck = top && p4 > 0, fall = struck ? p4 * 12 * U : 0;
-      ctx.lineWidth = 1 * U; ctx.strokeStyle = '#ffd36b'; ctx.setLineDash([30 * U]); ctx.lineDashOffset = 30 * U * (1 - seg(t, i * 0.03, 0.3 + i * 0.03));
-      ctx.beginPath(); ctx.arc(x, y + fall, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      if (p2 > 0) { ctx.globalAlpha = p2 * (struck ? 1 - p4 * 0.6 : 1); ctx.fillStyle = top ? '#fff1b8' : '#ffb43a'; ctx.beginPath(); ctx.arc(x, y + fall, r * 0.82, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+    KM_SUNS.forEach(([x, y, r0], i) => {
+      const struck = i === 8 && p4 > 0, fall = struck ? p4 * p4 * 14 : 0, px = X(x), py = X(y + fall), r = r0 * U;
+      ctx.lineWidth = 1.1 * U; ctx.strokeStyle = '#ffd36b'; ctx.setLineDash([32 * U]); ctx.lineDashOffset = 32 * U * (1 - seg(t, i * 0.03, 0.3 + i * 0.03));
+      ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      if (p2 > 0) {
+        ctx.globalAlpha = p2 * (struck ? 1 - p4 * 0.7 : 1);
+        const sg = ctx.createRadialGradient(px, py, 0, px, py, r); sg.addColorStop(0, '#fff6d0'); sg.addColorStop(0.55, i === 8 ? '#ffd36b' : '#ffb43a'); sg.addColorStop(1, '#e0661a');
+        ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(px, py, r * 0.86, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#ffc84a'; ctx.lineWidth = 0.8 * U;
+        for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + i * 0.3, L0 = r * 1.25, L1 = r * (1.25 + 0.55 * p2); ctx.beginPath(); ctx.moveTo(px + Math.cos(a) * L0, py + Math.sin(a) * L0); ctx.lineTo(px + Math.cos(a) * L1, py + Math.sin(a) * L1); ctx.stroke(); }
+        ctx.globalAlpha = 1;
+      }
       if (struck) {
-        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, y);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(X(x), X(y));
         const fl = Math.sin(p4 * Math.PI);
-        ctx.fillStyle = `rgba(255,236,170,${fl})`; ctx.beginPath(); ctx.arc(0, 0, r * (1 + 2.4 * fl), 0, TAU); ctx.fill();
-        if (o.head) { ctx.strokeStyle = `rgba(255,250,220,${fl})`; ctx.lineWidth = 1.4 * U; ctx.beginPath(); ctx.moveTo(-16 * U * fl, 0); ctx.lineTo(16 * U * fl, 0); ctx.moveTo(0, -16 * U * fl); ctx.lineTo(0, 16 * U * fl); ctx.stroke();
-          ctx.strokeStyle = `rgba(255,122,47,${fl})`; ctx.beginPath(); ctx.arc(0, 0, r * (1.5 + 3 * p4), 0, TAU); ctx.stroke(); }
+        ctx.fillStyle = `rgba(255,236,170,${fl})`; ctx.beginPath(); ctx.arc(0, 0, r * (1 + 2.6 * fl), 0, TAU); ctx.fill();
+        ctx.strokeStyle = `rgba(255,246,210,${fl})`; ctx.lineWidth = 1.2 * U;
+        for (let k = 0; k < 4; k++) { const a = k * Math.PI / 4 + 0.39, L = (k % 2 ? 9 : 15) * U * fl; ctx.beginPath(); ctx.moveTo(-Math.cos(a) * L, -Math.sin(a) * L); ctx.lineTo(Math.cos(a) * L, Math.sin(a) * L); ctx.stroke(); }
+        if (o.head) {
+          ctx.strokeStyle = `rgba(255,250,220,${fl})`; ctx.lineWidth = 1.5 * U; ctx.beginPath(); ctx.moveTo(-19 * U * fl, 0); ctx.lineTo(19 * U * fl, 0); ctx.moveTo(0, -19 * U * fl); ctx.lineTo(0, 19 * U * fl); ctx.stroke();
+          ctx.strokeStyle = `rgba(255,96,40,${Math.max(0, 1 - p4 * 0.5)})`; ctx.lineWidth = 2 * U; ctx.beginPath(); ctx.arc(0, 0, r * (1.6 + 3.4 * p4), 0, TAU); ctx.stroke();
+        }
         ctx.restore();
       }
-    }
+    });
     // beat 3: glow on the whole emblem
-    if (p3 > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35 * p3 * (1 - p4 * 0.5); const gg = ctx.createRadialGradient(c, c, 4 * U, c, c, 40 * U); gg.addColorStop(0, 'rgba(255,200,110,0.6)'); gg.addColorStop(1, 'rgba(255,90,30,0)'); ctx.fillStyle = gg; ctx.fillRect(0, 0, Sz, Sz); }
+    if (p3 > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.32 * p3 * (1 - p4 * 0.5); const gg = ctx.createRadialGradient(X(cx), X(cy), 4 * U, X(cx), X(cy), X(RR + 4)); gg.addColorStop(0, 'rgba(255,200,110,0.6)'); gg.addColorStop(1, 'rgba(255,90,30,0)'); ctx.fillStyle = gg; ctx.fillRect(0, 0, Sz, Sz); }
     ctx.restore();
   },
 });

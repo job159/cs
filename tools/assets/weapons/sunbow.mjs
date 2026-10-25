@@ -715,7 +715,7 @@ export default function build() {
   // ---- grip: pebbled leather over the core, 12 silk cords woven over-under, gold ferrules, a tie-off knot
   {
     const t0 = -126, t1 = -12;
-    g.add(riserLoft(t0 + 4, t1 - 4, 1.5, { nt: 20, na: 28 }), 'leather_pebble');
+    g.add(riserLoft(t0 + 4, t1 - 4, 1.5, { nt: 20, na: 28 }), 'leather_grain');
     // + cords and - cords cross every Δu = (2π/6) / (2K): a plain weave is then just ±A·cos(πu/Δu) on the two hands
     const K = TAU * 0.92, Du = (TAU / 6) / (2 * K), cords = [];
     for (let k = 0; k < 6; k++) for (const dir of [1, -1]) {
@@ -780,7 +780,9 @@ export default function build() {
     {
       const Pp = [], I = [], nr = 6, rIn = 26;
       const rOut = (a) => { const k = a / (TAU / 16), j = Math.round(k), d = Math.abs(k - j) * 2; return 37.5 + (j % 2 ? 6.5 : 12.5) * Math.pow(Math.max(0, 1 - d), 1.6); };
-      const half = (a, u) => { const k = a / (TAU / 16), j = Math.round(k), d = Math.abs(k - j) * 2; return lerp(8.6, 0.8, Math.pow(u, 0.7)) + 1.3 * Math.max(0, 1 - d * 2.2) * (1 - u * 0.8); };
+      // thickness: a cast plate thinning outwards, each ray raised into a diamond-section mid-rib (a sharp spine that
+      // catches the light, not a flat stamped spike)
+      const half = (a, u) => { const k = a / (TAU / 16), j = Math.round(k), d = Math.abs(k - j) * 2; return lerp(8.6, 0.8, Math.pow(u, 0.7)) + 3.0 * Math.max(0, 1 - d * 1.8) * (1 - u * 0.5); };
       for (const [a0, a1] of [[56, 124], [236, 304]]) {
         const na = Math.round((a1 - a0) / 1.6), base = Pp.length / 3, idx = (j, i, side) => base + (j * (nr + 1) + i) * 2 + side;
         for (let j = 0; j <= na; j++) {
@@ -1187,7 +1189,7 @@ const TESS = 22, TESS_K = 2.2;
 /** per-material wear [curvature (1/m) mapped to full wear, cap] */
 const WEAR = {
   '*:lacquer_red': [1 / 700, 0.4], '*:horn': [1 / 800, 0.35], '*:gold': [1 / 450, 0.7], '*:gold_leaf': [1 / 450, 0.6], '*:bronze_aged': [1 / 380, 0.85],
-  'relief:patina_bronze': [0, 0], '*:leather_pebble': [1 / 600, 0.5], '*:steel_dark': [1 / 1000, 0.6], '*:bone': [1 / 700, 0.4], '*:wood_light': [1 / 700, 0.5],
+  'relief:patina_bronze': [0, 0], '*:leather_pebble': [1 / 600, 0.5], '*:leather_grain': [1 / 600, 0.5], '*:steel_dark': [1 / 1000, 0.6], '*:bone': [1 / 700, 0.4], '*:wood_light': [1 / 700, 0.5],
   '*:glaze_jade': [0, 0], '*:pearl': [1 / 900, 0.2], '*:silk_red': [0, 0],
 };
 
