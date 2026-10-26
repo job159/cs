@@ -31,6 +31,13 @@ const NAV_STEP = 0.55;     // = world/nav.js STEP (max height step between cells
 
 let nextId = 1;
 
+/** Rest height of a skeleton's pelvis bone above its scene root (the clip library's stride scale). */
+function pelvisHeight(root) {
+  root.updateMatrixWorld(true);
+  const b = root.getObjectByName('pelvis');
+  return (b ? b.getWorldPosition(_v).y : 0) || 1;
+}
+
 class Zombie {
   constructor(mgr, type, def, model, clips, pos) {
     this.mgr = mgr;
@@ -70,6 +77,8 @@ class Zombie {
     this.target = null;
     this.deathT = 0;
     this.stride = 1;                        // root scale the locomotion clips stretch over (spawn sets it)
+    this.speedScale = null;                 // model pelvis height / the clip library's (spawn sets it; null: no library clips)
+    this.stillT = 0;
     // bones
     this.bones = {};
     this.root.traverse((o) => { if (o.isBone) this.bones[o.name] = o; if (o.isSkinnedMesh) { o.frustumCulled = false; o.castShadow = true; o.receiveShadow = true; } });
@@ -95,6 +104,42 @@ class Zombie {
     this.loco = this.actions[this.running ? this.runClip : this.locoClip];
     if (this.loco) { this.loco.time = rand(0, this.loco.getClip().duration); this.loco.play(); }
     this.action = this.loco;
+    const idle = A.idle && pick(A.idle);
+    this.idleClip = this.actions[idle] && idle !== this.locoClip && idle !== this.runClip ? idle : null;
+  }
+
+  /**
+   * Playback rate of the locomotion clip for a ground speed. The library's treadmill speed (anims.glb
+   * userData.clips[name].speed, m/s on the library body) scaled by this model's leg length (speedScale) and root scale
+   * (stride) plays the clip with planted feet; the type's hand-picked `nominal` speeds remain the fallback for clips
+   * without one (the mannequin's).
+   */
+  _locoRate(speed) {
+    const v = this.speedScale && this.mgr.clipMeta?.[this.loco.getClip().name]?.speed;
+    return speed / ((v > 0.05 ? v * this.speedScale : this.running ? this.def.nominal.run : this.def.nominal.walk) * this.stride);
+  }
+
+  /**
+   * Standing still (a keep-away type holding its band, a zombie boxed in by the crowd): crossfades to the type's idle
+   * clip after 0.35 s instead of marching on the spot, and back to its locomotion clip as soon as it moves again.
+   */
+  _idleSwitch(speed, dt) {
+    const idle = this.idleClip && this.actions[this.idleClip];
+    if (!idle || !this.loco) return;
+    const L = this.def.anim.loco, still = L?.still ?? 0.12;
+    this.stillT = speed < still ? this.stillT + dt : 0;
+    if (this.action === this.loco && this.stillT > (L?.stillT ?? 0.35)) {
+      idle.reset(); idle.setLoop(THREE.LoopRepeat, Infinity); idle.enabled = true; idle.setEffectiveWeight(1); idle.timeScale = 1;
+      idle.crossFadeFrom(this.loco, 0.4, false);
+      idle.play();
+      this.action = idle;
+    } else if (this.action === idle && speed >= still) {
+      const a = this.actions[this.running ? this.runClip : this.locoClip] || this.loco;
+      a.reset(); a.setLoop(THREE.LoopRepeat, Infinity); a.enabled = true; a.setEffectiveWeight(1);
+      a.crossFadeFrom(idle, 0.3, false);
+      a.play();
+      this.action = this.loco = a;
+    }
   }
 
   _clip(name) {
@@ -224,7 +269,8 @@ class Zombie {
     }
     // blood
     const amt = info.part === 'head' ? 1.6 : info.explosive ? 2.2 : 1;
-    if (!info.armored && !info.burn) g.fx?.blood(info.point || this.center(_v2), info.normal || _hitN.copy(dir).negate(), dir, amt * (info.pellets > 1 ? 0.5 : 1), { acid: this.type === 'spitter' });
+    // info.blood: a weapon's own blood scale (0 = none; X05 thins the mist past the third body of one blow)
+    if (!info.armored && !info.burn && info.blood !== 0) g.fx?.blood(info.point || this.center(_v2), info.normal || _hitN.copy(dir).negate(), dir, amt * (info.pellets > 1 ? 0.5 : 1) * (info.blood ?? 1), { acid: this.type === 'spitter' });
     // gore: limb damage accumulates; big hits sever
     if (info.box && SEVER[info.box] && !this.severed.has(SEVER[info.box].bone)) {
       this.limbDamage[info.box] = (this.limbDamage[info.box] || 0) + amount;
@@ -312,10 +358,8 @@ class Zombie {
       // interpolated stream) set it too, and an older row must not flip it back
       const run = b[b.length - 1].run;
       if (run !== undefined && !!run !== this.netRun) { this.netRun = !!run; this.running = this.netRun; if (this.alive && this.action === this.loco) this.setLoco(this.running); }
-      if (this.alive && this.loco && this.action === this.loco) {
-        const nominal = (this.running ? this.def.nominal.run : this.def.nominal.walk) * this.stride;
-        this.loco.timeScale = speed > 0.1 ? clamp(speed / nominal, 0.5, 1.8) : 0.35;
-      }
+      if (this.alive && this.loco && this.action === this.loco) this.loco.timeScale = speed > 0.1 ? clamp(this._locoRate(speed), this.def.anim.loco?.min ?? 0.45, 1.8) : 0.35;
+      if (this.alive) this._idleSwitch(speed, dt);
       // predicted death the host never confirmed: bring it back
       if (!this.alive && this.predictedDeath && s1.st !== 4 && mgr.time - this.predictedDeath > 1.4 && s1.t > rt - 0.2) {
         this.alive = true; this.predictedDeath = 0; this.state = 'chase'; this.hp = Math.max(1, s1.hp * this.maxHp); mgr.alive++;
@@ -389,7 +433,8 @@ class Zombie {
     // ---- boss brains replace the default behaviour entirely
     if (this.brain) {
       const sp = this.brain.update(dt, best, tdist);
-      if (this.loco && this.action === this.loco) this.loco.timeScale = sp > 0.05 ? clamp(sp / (this.running ? d.nominal.run : d.nominal.walk) / (this.root.scale.x || 1), 0.4, 1.6) : 0.4;
+      // (the colossus' legs are 5x the library body's: its walk plays at ~0.35x)
+      if (this.loco && this.action === this.loco) this.loco.timeScale = sp > 0.05 ? clamp(this._locoRate(sp), 0.3, 1.6) : 0.4;
       if (!this.brain.flying && this.state !== 'dead') this.groundY = mgr.nav ? mgr.nav.heightAt(this.pos.x, this.pos.z, this.pos.y) : this.pos.y;
       if (!this.brain.flying && this.pos.y > this.groundY + 0.05 && !this.kvel.y) this.pos.y = damp(this.pos.y, this.groundY, 6, dt);
       this.root.rotation.y = this.yaw;
@@ -442,10 +487,8 @@ class Zombie {
     mgr.separate(this, dt);
     // ---- animation (rate-limited by distance)
     const loco = this.loco;
-    if (loco && this.action === loco) {
-      const nominal = (this.running ? d.nominal.run : d.nominal.walk) * this.stride;
-      loco.timeScale = speed > 0.05 ? clamp(speed / nominal, 0.5, 1.8) : 0.35;
-    }
+    if (loco && this.action === loco) loco.timeScale = speed > 0.05 ? clamp(this._locoRate(speed), d.anim.loco?.min ?? 0.45, 1.8) : 0.35;
+    if (this.state === 'chase') this._idleSwitch(speed, dt);
     this.root.rotation.y = this.yaw;
     return true;
   }
@@ -505,11 +548,12 @@ class Zombie {
       return;
     }
     if (d.leap && tdist > d.leap.range[0] && tdist < d.leap.range[1] && mgr.losCheck(this, target)) {
-      this.state = 'special'; this.stateT = 0; this.special = 'leap'; this.specialCd = d.leap.cd;
+      // the clip's crouch-load plays first (leap.windup s, the telegraph: screech, eye cue, coil), the jump launches
+      // at its takeoff (_specialUpdate)
+      this.state = 'special'; this.stateT = 0; this.special = 'leap'; this.specialCd = d.leap.cd; this.leapT = d.leap.windup || 0;
       this.leapDir = new THREE.Vector3(target.pos.x - this.pos.x, 0, target.pos.z - this.pos.z).normalize();
       this.playOnce(d.anim.leap || 'leap', { fade: 0.08 });
-      this.kvel.set(0, 4.2, 0);
-      this.pos.y += 0.05;
+      if (!this.leapT) this._launch();
       g.audio?.play('crawler_screech', { pos: this.pos });
       return;
     }
@@ -526,6 +570,12 @@ class Zombie {
       return;
     }
     this.specialCd = 1 + Math.random() * 2;
+  }
+
+  /** Crawler pounce takeoff: the hop of the jump arc (the brain carries it along leapDir for 0.65 s). */
+  _launch() {
+    this.kvel.set(0, 4.2, 0);
+    this.pos.y += 0.05;
   }
 
   _specialUpdate(dt, mgr, target, tdist) {
@@ -551,6 +601,17 @@ class Zombie {
       return sp;
     }
     if (this.special === 'leap') {
+      if (this.leapT > 0) {
+        // wind-up: coiled in place, tracking the target; the direction locks at the launch
+        if (target) {
+          this._face(target.pos, dt, 8);
+          this.leapDir.set(target.pos.x - this.pos.x, 0, target.pos.z - this.pos.z).normalize();
+        }
+        if (this.stateT < this.leapT) return 0;
+        this._launch();
+        this.stateT = 0;
+        this.leapT = 0;
+      }
       if (this.stateT < 0.65) {
         this._move(this.leapDir.x * d.leap.speed * dt, this.leapDir.z * d.leap.speed * dt, mgr);
         if (target && tdist < 1.4 && !this.leapHit) { this.leapHit = true; g.damagePlayer?.(d.leap.dmg * (mgr.dmgMul || 1), { from: this.pos, zombie: this, player: target }); }
@@ -708,6 +769,7 @@ export class ZombieManager {
       const a = await loadGLB('zombies/anims.glb');
       this.animSrc = a;
       this.clips = a.animations;
+      this.clipMeta = a.scene.userData?.clips || {};   // per clip: duration, loop, speed (treadmill m/s), events...
     } catch { this.clips = []; }
     const need = new Set();
     for (const t of types) for (const m of ZOMBIES[t]?.models || []) need.add(m);
@@ -778,6 +840,7 @@ export class ZombieManager {
     this.warm = new THREE.Group();
     this.warm.name = 'zombie-warmup';
     this.warm.visible = false;
+    this.warm.userData.firstUse = true;   // renderer.warmup also draws it with its real materials (programs' first use)
     const bossModels = new Set(Object.values(ZOMBIES).filter((d) => d.boss).map((d) => d.models[0]));
     for (const [id, e] of this.models) {
       if (e.missing || e.fallback) continue;
@@ -876,12 +939,15 @@ export class ZombieManager {
       try { src.retargeted = retargetClips(this.animSrc.animations, this.animSrc.scene, src.scene); } catch (e) { console.warn('retarget failed', e); src.retargeted = this.clips; }
     }
     const clips = !src.fallback && src.retargeted ? src.retargeted : entry.clips;
+    // the library clips' stride scales with the model's leg length (retargetClips scales the pelvis by this ratio)
+    if (clips === src.retargeted && this.animSrc) src.heightRatio ??= pelvisHeight(src.scene) / pelvisHeight(this.animSrc.scene);
     // root scale: a stand-in's own; a boss on a borrowed model / stand-in / the mannequin is scaled up to its real size
     let rs = entry.scale || 1;
     if (def.boss && (entry.standin || entry.fallback || mid !== def.models[0])) rs = def.fallbackScale || rs;
     const z = new Zombie(this, type, def, { scene, hitboxes: entry.hitboxes, boneCaps: entry.boneCaps, height: entry.height, scale: rs }, clips, pos);
     if (rs !== 1) z.root.scale.setScalar(rs);
     z.stride = rs;   // longer legs, longer steps: locomotion clips play slower for the same ground speed
+    z.speedScale = clips === src.retargeted ? src.heightRatio || 1 : null;
     if (entry.severed) for (const b of entry.severed) z.severed.add(b);   // limbs the model never had (legless crawler)
     if (opts.hpMul) { z.maxHp *= opts.hpMul; z.hp = z.maxHp; }
     if (opts.elite) this._makeElite(z, opts.elite);

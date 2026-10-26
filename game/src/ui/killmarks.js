@@ -162,7 +162,10 @@ export class KillLayer {
     this._streak(o);
     if (o.head || o.knife || o.explosive) this._badge(o.head ? 'head' : o.knife ? 'knife' : 'explosive', o.tint);
     const spec = o.mark && (KILLMARKS[o.mark] || KILLMARKS.km_generic);
-    if (spec) this._play(spec, o);
+    // a multi-kill frame (one area hit, nine kills) restarts the emblem once; the others only upgrade it to the headshot
+    const now = this.game.time;
+    if (spec && this.cur?.spec === spec && this._playAt === now) { if (o.head) this.cur.o = { ...this.cur.o, head: true }; return; }
+    if (spec) { this._playAt = now; this._play(spec, o); }
   }
 
   _play(spec, o) {

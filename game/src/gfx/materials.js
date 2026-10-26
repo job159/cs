@@ -70,6 +70,13 @@ export const MATS = {
   glaze_black:  { color: '#141214', metal: 0, rough: 0.16, detail: 'flat', env: 1.3, wear: { color: '#6a5a48', metal: 0, rough: 0.6, amount: 0.25 } },
   gold_leaf:    { color: '#e8b54a', metal: 1, rough: 0.18, detail: 'brushed', dScale: 50, dStr: 0.08, wear: { color: '#7a5a2e', metal: 1, rough: 0.4, amount: 0.4 } },
   bronze_aged:  { color: '#7a5a2e', metal: 1, rough: 0.42, detail: 'cast', dScale: 40, dStr: 0.25, cavity: 1.0, cavCol: '#3f6a58', wear: { color: '#c8995a', metal: 1, rough: 0.25, amount: 0.6 } },
+  // M08 蒲牢 (pulao.mjs): sand-cast bronze a value under the gilt (fine cast skin that keeps edges crisp at 20 cm, a mineral
+  // verdigris crust in the recesses), oil-darkened bronze for the plinths, 紫檀 rosewood, carved cinnabar lacquer (satin)
+  bronze_cast:  { color: '#6a4a24', metal: 1, rough: 0.5, detail: 'cast', dScale: 140, dStr: 0.07, cavity: 1.2, cavCol: '#3f6a58', cavMetal: 0, wear: { color: '#c8995a', metal: 1, rough: 0.28, amount: 0.6 } },
+  bronze_dark:  { color: '#3d2c18', metal: 1, rough: 0.44, detail: 'cast', dScale: 160, dStr: 0.05, cavity: 1.1, cavCol: '#17100a', wear: { color: '#b08a50', metal: 1, rough: 0.3, amount: 0.6 } },
+  wood_rose:    { color: '#41190d', metal: 0, rough: 0.42, detail: 'flat', wood: { dark: '#1f0905', light: '#5a2410', scale: 14 }, wear: { color: '#6a3a24', metal: 0, rough: 0.5, amount: 0.45 } },
+  lacquer_carved: { color: '#8a1a16', metal: 0, rough: 0.32, detail: 'flat', env: 1.1, wear: { color: '#3a1a12', metal: 0, rough: 0.55, amount: 0.35 } },
+  steel_stipple: { color: '#16191f', metal: 0.85, rough: 0.56, detail: 'stipple', dScale: 280, dStr: 0.5, wear: { color: '#8a8d92', metal: 1, rough: 0.3, amount: 0.4 } },   // matted engraving ground
   obsidian:     { color: '#0f0d12', metal: 0.2, rough: 0.12, detail: 'flat', wear: { color: '#2a2630', metal: 0.2, rough: 0.2, amount: 0.2 } },
   // polished water-buffalo horn (composite bow bellies, X03 彤弓): near-black with translucent amber streaks
   horn:         { color: '#1a110b', metal: 0, rough: 0.22, detail: 'flat', env: 1.2, wood: { dark: '#0b0705', light: '#6b4220', scale: 3, marble: 1 }, wear: { color: '#7a5434', metal: 0, rough: 0.3, amount: 0.35 } },
@@ -149,7 +156,7 @@ uniform sampler2D tWood;
 uniform float dScale, dStr;
 uniform vec3 wearColor;
 uniform float wearMetal, wearRough, wearAmount;
-uniform float cavityAmt, aoAmt, selfLit;
+uniform float cavityAmt, aoAmt, selfLit, cavMetal;
 uniform vec3 cavCol;
 uniform vec3 woodDark, woodLight;
 uniform float woodScale, woodOn, woodMarble;
@@ -230,6 +237,7 @@ function patch(shader, def, opts) {
     // finishes run their own multi-layer wear from the float; the generic edge wear is off for them
     wearAmount: { value: fin ? 0 : (wear.amount ?? 0.6) * (opts.wear ?? 1) },
     cavityAmt: { value: fin ? fin.grime : def.cavity ?? 0.6 },
+    cavMetal: { value: fin ? -1 : def.cavMetal ?? -1 },   // >= 0: the cavity crust is a mineral (verdigris), not metal
     cavCol: { value: def.cavCol ? C(def.cavCol) : new THREE.Color(0.09, 0.08, 0.065) },
     aoAmt: { value: def.noBake ? 0 : (def.ao ?? 1) },
     selfLit: { value: def.selfLit ?? 0 },
@@ -291,7 +299,8 @@ function patch(shader, def, opts) {
       roughnessFactor = clamp(roughnessFactor + (grunge.r - 0.5) * 0.18 + cav * 0.25, 0.04, 1.0);`)
     .replace('#include <metalnessmap_fragment>', /* glsl */`#include <metalnessmap_fragment>
       if (finM >= 0.0) metalnessFactor = finM;
-      metalnessFactor = mix(metalnessFactor, wearMetal, wearMask);`)
+      metalnessFactor = mix(metalnessFactor, wearMetal, wearMask);
+      if (cavMetal >= 0.0) metalnessFactor = mix(metalnessFactor, cavMetal, clamp(cav * (0.5 + grunge.b), 0.0, 0.85) * (1.0 - wearMask));`)
     .replace('#include <normal_fragment_maps>', /* glsl */`#include <normal_fragment_maps>
       if (dStr > 0.0) {
         vec3 dObj = triNormal(tDetail, tp, vObjNor, tw) * dStr * (1.0 - wearMask * 0.6);

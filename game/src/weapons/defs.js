@@ -203,6 +203,74 @@ def({ id: 'chiwen', zh: '螭吻．吞潮', en: 'Chiwen Tidewarden', cat: 'rifle'
     passive: { mark: { chance: 0.25, dur: 10, burst: 80, r: 2 }, barrier: { r: 3, knock: 4, dmg: 40 }, orb: { chance: 0.3, dmg: 60 } },
   } });
 
+// ---------------------------------------------------------------- 神兵 九子 M08 (docs/PREMIUM_WEAPONS.md M08, Appendix A)
+// 蒲牢．鐘吼: an 870-class pump gun dressed as 蒲牢, the bell-knob dragon that loves to roar (presentation + mechanics:
+// weapons/premium/pulao.js, the summoned bells pulao_fx.js). 9 pellets x 26 at 75 rpm (DPS ~292, §2.27), 8-round tube
+// loaded a shell at a time (0.5 s), unlimited reserve. A trigger pull that hits anything counts once: every 8 load a
+// 鐘彈 bell shell (up to 3: the three little bells on the rack light up in turn; while one is loaded the pump ends in a
+// wrist flick that rings them). ◎ / RMB 鐘彈: a bronze bell spirit drops 6 m onto the impact and tolls three times
+// (4.5 m, 140 + knockback each), then two sound pillars toss what stands there 4 m up. ★ / Q 警世: one 8 m toll round
+// the caster (every zombie staggers 0.8 s, elites / bosses outlined 5 s for the whole team; 20 s). Hold Q 百八鐘 (鐘吼,
+// ~45 s of damage): a 6 m bell with 蒲牢 on its crown slams over the aim point (3 m trapped 2.4 s), tolls nine times
+// faster and faster (7 m, 200 each), then bursts into 32 bronze shards (50 each). Crisis 金鐘罩: a bell drops over the
+// player. Aura 鐘聲護體: every toll gives teammates in its reach 5 armour. Hidden until the refine stage releases it.
+def({ id: 'pulao', zh: '蒲牢．鐘吼', en: 'Pulao Bellroar', cat: 'shotgun', tier: 'mythic', line: 'jiuzi', element: ['lunar', 'storm'], model: 'pulao',
+  hidden: true,
+  price: 7200, wear: 0.2, dmg: 26, head: 2, pellets: 9, rpm: 75, mode: 'pump',
+  mag: 8, reserve: Infinity, reload: 0.5, reloadStart: 0.36, reloadEnd: 0.42, draw: 0.75, pen: 0.35, range: [10, 28, 0.35], speed: 4.9, knock: 3.4, stagger: 0.9,
+  spread: [4.4, 3.8, 1.0, 2, 0, 4.4, 10], recoil: { up: 6, side: 1.3, upMax: 14, recover: 12, first: 1 }, kick: { back: 0.085, up: 13, side: 2.4, roll: 5 },
+  // first person: the 蒲牢 on the receiver and the bell rack read best a little lower / further out than a rifle
+  vm: { hip: [0.165, -0.232, -0.4, 1.5, 4.5, -6] },
+  // sound: its own 12-gauge set with the §1.12 bronze bell overtone (until it exists, pulao.js plays the stock shotgun)
+  sound: 'pulao', shell: '12g', flash: 'shotgun', tracer: 0,
+  // the fireball stays small: the bronze / cyan sound-wave crown out of the bell mouth (premium/pulao.js crown()) is
+  // the muzzle look; three pellets of a volley trace thin gold
+  fx: { flashScale: 0.5, ramp: 7, tracer: { color: [5.2, 3.6, 1.4], glow: [0.9, 0.55, 0.16], width: 0.008, length: 1.6 }, tracerEvery: 1 },
+  premium: {
+    element: ['lunar', 'storm'],
+    palette: { base: '#7a5a2e', trim: '#e3b04b', core: '#7fd8ff', rim: '#ffc74a', mote: '#c99a4b', accent: ['#9a1420', '#3f6a58', '#2c2d30'], twin: '#c8302a' },
+    presets: { bronze_aged: 'pv_metal', bronze_cast: 'pv_metal', bronze_dark: 'pv_metal', gold: 'pv_metal', lacquer_red: 'pv_glaze', lacquer_carved: 'pv_glaze',
+      glow_ice: 'pv_energy', glow_gold: 'pv_energy', crystal: 'pv_crystal' },
+    pv: { pv_metal: { shine: 1.5, sweepT: 5 }, pv_glaze: { shine: 0.9, sweepT: 4.5, shardScale: 0, irid: 0 }, pv_energy: { veinFreq: 10, veinSpeed: 0.45 } },
+    // the bell-mouth liner: VEIN round the bore axis (§1.5.3 pVeinAxis 1: 鐘口 / 環圈); the cast bronze glints a value
+    // under the gilt so dragon, plinth and gold trim read apart
+    pvKey: { glow_ice: { veinAxis: 1, veinFreq: 7, veinSpeed: 0.35 }, bronze_cast: { shine: 0.7 }, bronze_dark: { shine: 0.5 }, bronze_aged: { shine: 0.8 } },
+    hero: 'fx_mouth', crosshair: 'xh_bell', meters: ['segments', 'ring'],
+    ready: { sfx: 'ready_pulao', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.5, glowMul: 1.5, idleExtra: 'pulao_ready' } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'pulao_sway', every: 6 }],   // §1.17 idle tiers
+    firstDraw: 'pulao_first', drawClip: 'pulao_draw', inspect: ['pulao_inspect'], rareInspect: 'pulao_inspect_rare',
+    // pump gun hooks (arsenal.js): the pump clip (ready version when a bell shell is loaded) and the shell clips; the
+    // rare reload (1 in 8) thumbs the last shell in and rings all three bells, at the same 0.5 s a shell
+    pump: 'pulao_pump', shellClips: { start: 'pulao_shell_start', insert: 'pulao_shell_insert', end: 'pulao_shell_end', rare: 'pulao_shell_rare' }, rareReloadEvery: 8,
+    killFx: 'KE_BELL', killMark: 'km_pulao', dmgSkin: 'pulao',
+    crisis: { name: '金鐘罩', kind: 'knock', r: 4, fx: 'pulao_crisis', sfx: 'pulao_crisis' },
+    aura: { type: 'armor', amount: 5, when: 'skill', source: ['bellShell', 'knell', 'bell108'] },
+    twin: 'pulao_dusk', phases: ['guqing', 'chijin'], kiln: { chance: 0.01, special: 'qinghua_mouth' },
+    showcase: ['pulao_first', 'fire:3', 'alt', 'tap', 'ult', 'pulao_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '鐘霰', desc: '泵動・9 顆彈丸・有命中的一槍算 1 次，8 次裝 1 枚鐘彈' }, { key: 'RMB', zh: '鐘彈', desc: '耗 1 枚鐘彈・銅鐘落下連響 3 次，最後音柱拋飛' },
+      { key: 'Q', zh: '警世', desc: '8 m 鐘響：全體硬直・精英描邊（20 秒）' }, { key: 'hold Q', zh: '百八鐘', desc: '鐘吼 100%（或 Q 再按 F）' },
+      { key: 'R', zh: '逐發裝填' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'pulao',
+    meters: {
+      bell: { max: 3, start: 1, hud: 'segments', segments: 3, label: '鐘彈', color: '#ffc74a', src: '有命中的一槍算 1 次・每 8 次裝 1 枚' },
+      ult: { max: 100, source: 'damage', per: 4500, skillFill: false, hud: 'ring', label: '鐘吼', src: '傷害累積（約 45 秒）' },
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q; the HUD dock / hint card read the live bindings)
+      alt: { id: 'pulao_bellShell', key: 'RMB', zh: '鐘彈', desc: '銅鐘從 6 m 落下・連響 3 次各 140＋擊退・音柱拋飛 4 m', meter: 'bell', cost: 1, range: 40,
+        drop: 6, rings: 3, every: 0.4, r: 4.5, dmg: 140, knock: 6, toss: 4, pillar: 1.3, pillarDmg: 40, level: 'L2' },
+      tap: { id: 'pulao_knell', key: 'Q', zh: '警世', desc: '8 m 鐘響：殭屍硬直 0.8 秒・精英描邊 5 秒（全隊）', cd: 20, r: 8, stun: 0.8, mark: 5, level: 'L2' },
+      ult: { id: 'pulao_108', key: 'hold Q', zh: '百八鐘', desc: '巨鐘罩下連響 9 聲各 200・3 m 困住 2.4 秒・碎成 32 片銅片各 50', meter: 'ult', range: 30,
+        r: 7, dmg: 200, tolls: 9, trapR: 3, trap: 2.4, shards: 32, shardDmg: 50, sigil: 7, level: 'L3' },
+    },
+    passive: { per: 8, armor: 5 },
+  } });
+
 // ---------------------------------------------------------------- 神兵 光暗雙生 M03 (docs/PREMIUM_WEAPONS.md M03, §2.26, Appendix A)
 // 畢方．焚翼 / 鬼車．晦翼 (presentation + mechanics: weapons/premium/bifang.js): an AA-12-pattern scatter cannon built
 // as the one-legged crane. 8 feather light-pellets x 20 at 180 rpm (every hit stacks 灼羽: ≤ 5 x 8/s for 3 s), 50-cell
@@ -480,8 +548,8 @@ def({ id: 'sunbow', zh: '彤弓．落陽', en: 'Tonggong Sunfall', cat: 'heavy',
 // 雷矢 homing darts (400 rpm, 36, 4 mana) that leave 雷印 marks; RMB held channels 連霆, a chain of lightning from the
 // 雷珠 jumping through five zombies (marked ones take more; three marks = 雷爆); Q 雷池 (35 霆勢) plants a thunder field that
 // strikes, slows and throws back whatever tries to cross its edge; hold Q 應龍．震霄 (5,000 damage) calls the winged dragon
-// out of a storm cloud. Hidden until the refine stage releases it (?w=staff for development).
-def({ id: 'staff', zh: '應龍．御霆', en: 'Yinglong Stormherald', cat: 'staff', tier: 'mythic', line: 'leize', element: ['storm', 'jade'], model: 'staff', hidden: true,
+// out of a storm cloud, dives three times, drags the field's zombies into the middle and falls on them as a column.
+def({ id: 'staff', zh: '應龍．御霆', en: 'Yinglong Stormherald', cat: 'staff', tier: 'mythic', line: 'leize', element: ['storm', 'jade'], model: 'staff',
   price: 9800, wear: 0.15, dmg: 36, head: 2, rpm: 400, mode: 'staff', mag: 100, reserve: Infinity, reload: 1.2, reloadEmpty: 1.2, draw: 0.65,
   resource: { kind: 'mana', max: 100, regen: 20, label: '法力', color: '#8fe6ff' },
   pen: 0, range: [42, 42, 1], speed: 5.1, knock: 0.6, stagger: 0.25,
@@ -489,8 +557,9 @@ def({ id: 'staff', zh: '應龍．御霆', en: 'Yinglong Stormherald', cat: 'staf
   sound: 'staff', shell: null, flash: null, tracer: 0,
   shopStats: [['傷害', 0.55], ['射速', 0.7], ['追蹤', 1], ['範圍', 0.85], ['控場', 0.95]],
   icon: { roll: 90, zoom: 1.08 },   // HUD / shop silhouette (ui/icons.js): the upright staff laid along the strip
-  // first person: the staff held high in the right hand, the head up right of the crosshair, the dragon looking forward
-  vm: { hip: [0.25, -0.33, -0.52, 4, -58, 14] },
+  // first person: the staff held high in the right hand, the head up right and clear of the crosshair lane (snout past
+  // 62 % of the width, above the horizon band where zombies stand), turned so the dragon shows its face to the eye
+  vm: { hip: [0.29, -0.17, -0.41, -61.6, 74.2, 13.4] },
   staff: {
     bolt: { cost: 4, dmg: 36, headMul: 2, speed: 40, speed1: 62, accel: 0.3, range: 42, cone: 12, turn: 600, delay: 0.08, knock: 0.6, stagger: 0.25 },
     regen: { delay: 0.5, rate: 20 },
@@ -498,21 +567,26 @@ def({ id: 'staff', zh: '應龍．御霆', en: 'Yinglong Stormherald', cat: 'staf
   },
   premium: {
     element: ['storm', 'jade'], look: 'staff',
-    palette: { base: '#7a5a2e', trim: '#e3b04b', core: '#9fe8ff', rim: '#e8f6ff', mote: '#d8f6ff', accent: ['#2f8f6e', '#ffe27a'], twin: '#ffd36b' },
-    presets: { bronze_aged: 'pv_metal', gold: 'pv_metal', lacquer_black: 'pv_glaze', glaze_jade: 'pv_glaze', glaze_teal: 'pv_glaze', glaze_vermilion: 'pv_glaze',
+    palette: { base: '#7a5a2e', trim: '#e3b04b', core: '#9fe8ff', rim: '#5fc8ff', mote: '#d8f6ff', accent: ['#2f8f6e', '#ffe27a'], twin: '#ffd36b' },
+    presets: { bronze_aged: 'pv_metal', gold: 'pv_metal', gold_leaf: 'pv_metal', lacquer_black: 'pv_glaze', glaze_jade: 'pv_glaze', glaze_teal: 'pv_glaze', glaze_vermilion: 'pv_glaze',
+      glaze_cobalt: 'pv_glaze', glaze_inkteal: 'pv_glaze', glaze_turquoise: 'pv_glaze', porcelain: 'pv_glaze', lacquer_red: 'pv_glaze', bone: 'pv_glaze', leather_black: 'pv_metal',
       glow_cyan: 'pv_energy', crystal: 'pv_crystal', glass: 'pv_crystal' },
-    // black lacquer: a slow sweep and a fine one-colour crackle; bronze a warm cast skin under a quiet sweep; the jade
-    // wings a faint irid; the 雷珠 holds a cold white-blue light, the dragon's eyes a dimmer one (≤ 0.4 x the focus)
-    pv: { pv_metal: { shine: 1.2, sweepT: 5.5 }, pv_glaze: { shine: 1.3, sweepT: 5, shardScale: 0, irid: 0, rimPower: 6 }, pv_energy: { veinFreq: 14, veinSpeed: 0.7 } },
-    pvKey: { lacquer_black: { shardScale: 120, shardPal: ['#121012', '#121012', '#121012', '#121012'], grout: '#2a2420', groutW: 0.04 },
-      glaze_jade: { irid: 0.1, rimPower: 8 }, glaze_teal: { irid: 0.12, rimPower: 8 }, bronze_aged: { rimPower: 10 }, gold: { rimPower: 10 },
+    // black lacquer: a slow sweep and a quiet snake-belly 斷紋 (long cells along the shaft that only break up the
+    // highlight); bronze a warm cast skin with verdigris in the recesses and polished high points; the cloisonné a faint
+    // irid; ivory teeth; the 雷珠 holds a cold white-blue light, the dragon's eyes a dimmer one (≤ 0.4 x the focus)
+    pv: { pv_metal: { shine: 0.55, sweepT: 6 }, pv_glaze: { shine: 0.45, sweepT: 5.5, shardScale: 0, irid: 0, rimPower: 6 }, pv_energy: { veinFreq: 14, veinSpeed: 0.7 } },
+    pvKey: { lacquer_black: { shardScale: 95, shardStretch: [1, 0.38, 1], shardRough: 0.34, shardPal: ['#141114', '#1b161c', '#0c0a0c', '#171318'], grout: '#050405', groutW: 0.075 },
+      glaze_jade: { irid: 0.1, rimPower: 8 }, glaze_teal: { irid: 0.12, rimPower: 8 }, bronze_aged: { rimPower: 14 }, gold: { rimPower: 12 }, gold_leaf: { rimPower: 12, leafScale: 600, leaf: 0.3 },
+      bone: { shine: 0.25, rimPower: 12 }, lacquer_red: { shine: 0, rimPower: 40, flashMask: 0 }, glaze_vermilion: { rimPower: 16 }, porcelain: { rimPower: 10 }, leather_black: { shine: 0, rimPower: 40, flashMask: 0 },
       crystal: { coreTint: '#7fd8ff', irid: 0.15 }, glass: { coreTint: '#5fd0ff', gem: 1.2 } },
     mat: {
       crystal: { color: '#cdeeff', emissive: '#7fd8ff', glow: 0.55, env: 1.4, rough: 0.05 },
       glass: { color: '#1b3a52', emissive: '#4fc8ff', glow: 0.5, rough: 0.05, metal: 0.2, env: 1.0 },
       glow_cyan: { emissive: '#9fe8ff', glow: 2.2 },
-      bronze_aged: { color: '#86663a', dScale: 120, dStr: 0.08 },
+      bronze_aged: { color: '#76552d', rough: 0.5, env: 0.8, dScale: 190, dStr: 0.22, cavity: 1.8, cavCol: '#2f8a62', cavMetal: 0.08, wear: { color: '#a97b44', metal: 1, rough: 0.26, amount: 0.55 } },
+      lacquer_black: { env: 0.9 }, leather_black: { color: '#1a1518', rough: 0.52, metal: 0, detail: 'stipple', dScale: 230, dStr: 0.9 }, bone: { color: '#e6dabd', rough: 0.3, dStr: 0.04, env: 1.1 }, lacquer_red: { color: '#5e0d15', rough: 0.82, env: 0.25 },
       glaze_jade: { color: '#2f8f6e' }, glaze_teal: { color: '#1f7f86' }, glaze_vermilion: { color: '#b3202a' },
+      glaze_cobalt: { color: '#1f4a8c' }, glaze_inkteal: { color: '#174a52' }, glaze_turquoise: { color: '#3fb0a0' },
     },
     hero: 'fx_pearl', crosshair: 'xh_staff', meters: ['arc', 'ring'],
     ready: { sfx: 'ready_staff', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.4, glowMul: 1.5, idleExtra: 'staff_ready' } },
@@ -543,47 +617,55 @@ def({ id: 'staff', zh: '應龍．御霆', en: 'Yinglong Stormherald', cat: 'staf
         range: 22, cone: 8, jumps: 4, jumpR: 6, dps: 150, falloff: 0.8, slow: 0.45, mana: 22, tick: 0.1, level: 'L2' },
       tap: { id: 'staff_pool', key: 'Q', zh: '雷池', desc: '6.5 m 雷池 5 秒：開池 220、每秒 40、落雷 110、池邊彈開', meter: 'thunder', cost: 35,
         range: 30, r: 6.5, dur: 5, open: 220, openR: 3.5, dps: 40, slow: 0.5, strike: 110, strikeR: 1.5, every: 0.5, repel: 2.5, repelCd: 1.5, level: 'L2' },
-      ult: { id: 'staff_ult', key: 'hold Q', zh: '震霄', desc: '應龍俯衝 3 次 260＋連鎖，再化雷柱 650；之後甘霖回血', meter: 'ult', range: 35,
-        r: 9, dive: 260, diveR: 5, chain: 100, chainN: 3, final: 650, finalR: 7, rain: 6, rainR: 9, rainDur: 5, level: 'L4' },
+      ult: { id: 'staff_ult', key: 'hold Q', zh: '震霄', desc: '應龍俯衝 3 次 160＋連鎖，把屍群拖進正中，再化雷柱 1000；之後甘霖回血', meter: 'ult', range: 35,
+        r: 9, dive: 160, diveR: 3, chain: 60, chainN: 3, pullR: 10, pull: 5, final: 1000, finalR: 7, rain: 6, rainR: 9, rainDur: 5, level: 'L4' },
     },
   } });
 
 // ---------------------------------------------------------------- 神兵 山海 X05 (docs/PREMIUM_WEAPONS.md §2.32, Appendix A)
 // 刑天．舞戚: a mythic two-handed bronze great axe whose blade is Xingtian's face (presentation + mechanics:
 // weapons/premium/greataxe.js). The special drives its own attacks (mode 'melee' -> special.melee): LMB taps chain 開山三劈
-// (140 / 140 / 240, everything in the arc; the third cleaves the street and runs a fissure), LMB held 天墜 (2 stages: a
+// (150 / 150 / 225, everything in the arc; the third cleaves the street and runs a fissure), LMB held 天墜 (2 stages: a
 // leap to the marked ground and a smash, 220 -> 450, then three shockwave rings), RMB held 狂旋 (whirlwind: 60 every
 // 0.28 s all round, pulls zombies in, drains 戰意), Q 迴戚 (35 戰意: the axe thrown spinning through the horde and back),
-// hold Q 猛志 (a 14 m headless war spirit sweeps the street and cleaves the mark). Hidden until the refine stage
-// releases it (?w=greataxe).
-def({ id: 'greataxe', zh: '刑天．舞戚', en: 'Xingtian Wardancer', cat: 'melee', tier: 'mythic', line: 'shanhai', element: ['demonic'], model: 'greataxe', hidden: true,
-  price: 7800, wear: 0.2, dmg: 140, head: 1.5, rpm: 90, mode: 'melee', mag: 0, reserve: 0, draw: 0.65,
+// hold Q 猛志 (a 14 m headless war spirit sweeps the street and cleaves the mark). Released (shop + armory; ?w=greataxe).
+def({ id: 'greataxe', zh: '刑天．舞戚', en: 'Xingtian Wardancer', cat: 'melee', tier: 'mythic', line: 'shanhai', element: ['demonic'], model: 'greataxe',
+  price: 7800, wear: 0.2, dmg: 150, head: 1.5, rpm: 90, mode: 'melee', mag: 0, reserve: 0, draw: 0.65,
   // shop card bars: the leap smash + rings and the whirlwind are what the derived melee bars miss
   shopStats: [['傷害', 0.72], ['攻速', 0.4], ['重擊', 1.0], ['範圍', 0.85], ['機動', 0.8]],
   icon: { roll: -90 },   // shop / HUD silhouette (ui/icons.js): the haft along the strip, the head to the right
   range: [3.0, 3.0, 1], speed: 5.0, knock: 3.5, stagger: 0.7, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
   kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'greataxe', shell: null, flash: null, tracer: 0,
-  // first person: the haft rises from the lower right, the head over the right of the frame with the mask turned to
-  // the eye, the edge pointing right
-  vm: { hip: [0.27, -0.36, -0.5, -6, -68, 20] },
+  // first person: the haft rises from the lower right hand, the head over the right of the frame with the mask at three
+  // quarters to the eye, the edge forward-right, the turquoise tang and the tassel left of the haft
+  vm: { hip: [0.29, -0.28, -0.6, -10, -60, 8] },
   premium: {
     element: ['demonic'], look: 'greataxe',
     palette: { base: '#8a6a3a', trim: '#e3b04b', core: '#ff3a2a', rim: '#ff8a3a', mote: '#ffb070', accent: ['#3aa99b'], twin: '#cfe8ff', ember: '#ffd27a' },
     // bronze (cast detail, cavity patina from the bake), gold, a forged iron edge; black lacquer with a fine 斷紋 crackle,
     // cinnabar bands; turquoise chips; crimson crystal eyes; molten glows
-    presets: { bronze_aged: 'pv_metal', gold: 'pv_metal', gold_leaf: 'pv_metal', steel: 'pv_metal', steel_bright: 'pv_metal', chrome: 'pv_metal',
-      lacquer_black: 'pv_glaze', lacquer_red: 'pv_glaze', glaze_turquoise: 'pv_glaze', crystal: 'pv_crystal',
+    presets: { bronze_aged: 'pv_metal', gold: 'pv_metal', gold_leaf: 'pv_metal', steel: 'pv_metal', steel_bright: 'pv_metal', chrome: 'pv_metal', steel_blued: 'pv_metal',
+      lacquer_black: 'pv_glaze', lacquer_red: 'pv_glaze', glaze_turquoise: 'pv_glaze', glaze_teal: 'pv_glaze', glaze_jade: 'pv_glaze', crystal: 'pv_crystal', glass: 'pv_crystal',
       glow_red: 'pv_energy', glow_orange: 'pv_energy', glow_white: 'pv_energy' },
     pv: { pv_metal: { shine: 1.1, sweepT: 5.5 }, pv_glaze: { shine: 1.3, sweepT: 5, shardScale: 0, irid: 0, rimPower: 6 }, pv_energy: { veinFreq: 14, veinSpeed: 0.45, veinAxis: 0 } },
     pvKey: { lacquer_black: { shardScale: 140, shardPal: ['#121012', '#121012', '#121012', '#121012'], grout: '#2a1a12', groutW: 0.04, rimPower: 8 },
       lacquer_red: { shardScale: 120, shardPal: ['#9a1420', '#9a1420', '#9a1420', '#9a1420'], grout: '#3a0c0e', groutW: 0.04 },
-      glaze_turquoise: { irid: 0.05, rimPower: 10 }, bronze_aged: { rimPower: 10 }, gold: { rimPower: 10 }, gold_leaf: { rimPower: 10 },
-      steel: { rimPower: 12 }, steel_bright: { rimPower: 12, shine: 1.6 }, chrome: { rimPower: 14 }, crystal: { coreTint: '#ff2a1a' } },
-    // bronze a shade warmer and lighter than stock (the relief must read under neutral light); the iron a cold forged grey;
-    // the eyes a deep red stone with a low glow (the gem shader's inner fire does the rest); the glows are molten crimson
+      glaze_turquoise: { irid: 0.05, rimPower: 10 }, glaze_teal: { irid: 0.05, rimPower: 10 }, glaze_jade: { irid: 0.05, rimPower: 10 },
+      bronze_aged: { rimPower: 10, shine: 0.55 }, gold: { rimPower: 10 }, gold_leaf: { rimPower: 10, leaf: 0.55, leafScale: 330 },   // fine, low-contrast leaf
+      steel: { rimPower: 12 }, steel_bright: { rimPower: 12, shine: 1.6 }, chrome: { rimPower: 14 }, crystal: { coreTint: '#ff2a1a' }, glass: { coreTint: '#4a0408' } },
+    // bronze a shade warmer and lighter than stock (the relief must read under neutral light), verdigris in the hollows
+    // (the model bakes its recesses into the cavity channel) and gold-brown where hands polished the high points; the
+    // iron in three grinds: a forged grey flat, a bright ground bevel, a mirror micro-bevel; the eyes a crimson stone
+    // with a dark iris dish (glass) round an obsidian slit; three turquoise shades for the mosaic chips; molten glows
     mat: {
-      bronze_aged: { color: '#8f6b38', dScale: 110, dStr: 0.1 }, steel: { color: '#41454c', rough: 0.42, metal: 0.85, detail: 'brushed', dScale: 40, dStr: 0.25 },
-      steel_bright: { color: '#a8aeb6', rough: 0.2, metal: 1 }, crystal: { color: '#b0141e', emissive: '#ff1e10', glow: 0.6, env: 0.9, rough: 0.04 },
+      // (rough 0.5, env 0.6 and a half-strength, darker polish: at 0.44 / 0.85 / 1 the face washed out cream under an
+      // open sky or the studio ceiling whenever it turned up)
+      bronze_aged: { color: '#80623a', rough: 0.5, env: 0.6, dScale: 110, dStr: 0.1, cavity: 2.0, cavCol: '#3a6a50', cavMetal: 0.2, wear: { color: '#b08a50', metal: 1, rough: 0.3, amount: 0.5 } },
+      steel: { color: '#5d6168', rough: 0.6, metal: 0.8, detail: 'cast', dScale: 90, dStr: 0.16 },
+      steel_bright: { color: '#c0c6cc', rough: 0.25, metal: 1, detail: 'brushed', dScale: 120, dStr: 0.05 }, chrome: { rough: 0.08 },
+      steel_blued: { color: '#3a4a6a', rough: 0.3, dScale: 120, dStr: 0.05 },   // the temper line along the grind
+      crystal: { color: '#b0141e', emissive: '#ff1e10', glow: 0.6, env: 0.9, rough: 0.04 }, glass: { color: '#3a0306', emissive: '#6a0806', glow: 0.25, env: 1.2, rough: 0.05 },
+      glaze_turquoise: { color: '#3aa99b' }, glaze_teal: { color: '#2c8a86' }, glaze_jade: { color: '#5cc3b6', fres: 0 },
       glow_red: { emissive: '#ff3a1c', glow: 2.2 }, glow_orange: { emissive: '#ff4a14', glow: 2.6 }, glow_white: { emissive: '#ff6a48', glow: 3.2 },
     },
     hero: 'fx_eyes', crosshair: 'xh_axe', meters: ['arc', 'segments', 'ring'],
@@ -591,7 +673,7 @@ def({ id: 'greataxe', zh: '刑天．舞戚', en: 'Xingtian Wardancer', cat: 'mel
     idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'greataxe_glint', every: 7 }],   // §1.17 idle tiers
     firstDraw: 'greataxe_first', drawClip: 'greataxe_draw', inspect: ['greataxe_inspect'], rareInspect: 'greataxe_inspect_rare',
     killFx: 'KE_CLEAVE', killMark: 'km_greataxe', dmgSkin: 'mythic', skillSkin: 'axe',
-    crisis: { name: '干盾', kind: 'counter', fx: 'greataxe_crisis' },
+    crisis: { name: '干盾', kind: 'counter', fx: 'greataxe_crisis', sfx: 'greataxe_crisis', flash: [1.25, 0.42, 0.2] },   // a crimson-bronze flash, half strength
     aura: { type: 'dmg', mul: 1.12, radius: 8, when: 'skill', source: ['greataxe_ult'] },
     twin: 'greataxe_night', phases: ['wuqi', 'yewu'],
     showcase: ['greataxe_first', 'fire:3', 'charge', 'alt', 'tap', 'ult', 'greataxe_inspect'],
@@ -620,13 +702,108 @@ def({ id: 'greataxe', zh: '刑天．舞戚', en: 'Xingtian Wardancer', cat: 'mel
         sweep: 450, sweepR: 11, sweepArc: 200, chop: 900, chopR: 7, ring: 80, ringR: 10, level: 'L4' },
     },
     combo: [
-      { id: 'cleave', dur: 0.62, hit: 0.26, dmg: 140, r: 3.0, arc: 110, knock: 3.5, stagger: 0.7 },
-      { id: 'backhand', dur: 0.62, hit: 0.24, dmg: 140, r: 3.0, arc: 120, knock: 3.5, stagger: 0.7 },
-      { id: 'mountain', dur: 0.95, hit: 0.42, dmg: 240, r: 2.3, reach: 3.2, knock: 2, stagger: 1, heavy: true, fissure: { len: 4, width: 1.6, dmg: 60 } },
+      { id: 'cleave', dur: 0.62, hit: 0.26, dmg: 150, r: 3.0, arc: 110, knock: 3.5, stagger: 0.7 },   // 150: a body blow drops a walker
+      { id: 'backhand', dur: 0.62, hit: 0.24, dmg: 150, r: 3.0, arc: 120, knock: 3.5, stagger: 0.7 },
+      { id: 'mountain', dur: 0.95, hit: 0.42, dmg: 225, r: 2.3, reach: 3.2, knock: 2, stagger: 1, heavy: true, fissure: { len: 4, width: 1.6, dmg: 50 } },   // single target ≈ 240 / s
     ],
     chain: 0.45, recover: 1.1,
     leap: { hold: 0.2, stages: [0.55, 1.1], max: 3, range: [5, 8, 11], dmg: [220, 320, 450], r: [3.0, 3.5, 4.0], rings: 3, ringEvery: 0.12,
       ringR: [5, 6.5, 8], ringDmg: [60, 80, 100], invuln: 0.25, cd: 2.5, flight: [0.45, 0.58, 0.7], apex: [1.6, 2.2, 2.8] },
+  } });
+
+// ---------------------------------------------------------------- 神兵 山海 X06 (docs/PREMIUM_WEAPONS.md §2.33, Appendix A)
+// 虹霓．雙絕: mythic dual sabres, each one half of the two-headed rainbow dragon (presentation + mechanics:
+// weapons/premium/twinblades.js). Dual grip: the weapon poses each sabre itself (camera-space blade + edge keys). The
+// special drives its own attacks (mode 'melee' -> special.melee): LMB taps alternate 疾虹五連 right / left (60 / 60 / 70 / 70)
+// into 交虹 (both blades crossed, 160) that throws the 虹橋 X wave (90 each, 9 m); keep LMB held after a cut = 虹貫 iai
+// stance, release dashes 8 m through the horde (70 each) and 0.3 s later everything passed bursts (後斬 180); RMB held
+// 交虹 cross guard (-70 % frontal; a hit within 0.3 s of raising it = parry -> 霓返 8-cut flurry); Q 虹輪 (40 刃氣: six
+// spirit blades orbit 5 s, +10 % team damage within 4 m); hold Q 千刃蓮華 (twelve giant blades bloom out of a lotus,
+// close through the centre, spin and burst 600). Hidden until the refine stage releases it (?w=twinblades).
+def({ id: 'twinblades', zh: '虹霓．雙絕', en: 'Hongni Prismedge', cat: 'melee', tier: 'mythic', line: 'shanhai', element: ['radiant'], model: 'twinblades',
+  price: 7900, hidden: true, wear: 0.15, dmg: 60, head: 1.5, rpm: 240, mode: 'melee', mag: 0, reserve: 0, draw: 0.45,
+  // shop card bars: the fastest premium melee (two blades), the dash and the parry are what the derived melee bars miss
+  shopStats: [['傷害', 0.6], ['攻速', 1.0], ['機動', 1.0], ['範圍', 0.62], ['控場', 0.72]],
+  icon: { roll: -90 },   // shop / HUD silhouette (ui/icons.js): the pair laid along the strip
+  range: [2.6, 2.6, 1], speed: 5.4, knock: 1.6, stagger: 0.45, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
+  kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'twinblades', shell: null, flash: null, tracer: 0,
+  // first person: the pivot (midway between the grips) low in the middle; the sabres are posed by the weapon (twinblades.js)
+  vm: { hip: [0, -0.24, -0.4, 0, 0, 0] },
+  premium: {
+    element: ['radiant'], look: 'twinblades',
+    // 虹 warm (gold -> vermilion) on the right, 霓 cool (cyan -> violet) on the left; the skill colours read both
+    palette: { base: '#1a1a1e', trim: '#e3b04b', core: '#ffc46a', rim: '#a86bff', mote: '#fff4e0', accent: ['#ff4a2a', '#7aa8ff'], twin: '#cfe8ff', hong: '#ff6a2a', ni: '#8a6bff' },
+    presets: { bronze_aged: 'pv_metal', silver_aged: 'pv_metal', gold: 'pv_metal', gold_leaf: 'pv_metal', chrome: 'pv_metal', black_chrome: 'pv_metal', steel_bright: 'pv_metal',
+      brass: 'pv_metal', steel_blued: 'pv_metal', pearl: 'pv_glaze', lacquer_red: 'pv_glaze', glaze_vermilion: 'pv_glaze', glaze_ochre: 'pv_glaze', glaze_jade: 'pv_glaze',
+      glaze_aubergine: 'pv_glaze', glaze_cobalt: 'pv_glaze', glaze_teal: 'pv_glaze', crystal: 'pv_crystal', glass: 'pv_crystal', leather_pebble: 'pv_metal',
+      glow_vermilion: 'pv_energy', glow_purple: 'pv_energy', glow_gold: 'pv_energy', glow_ice: 'pv_energy', glow_orange: 'pv_energy', glow_blue: 'pv_energy' },
+    pv: { pv_metal: { shine: 1.2, sweepT: 4.5 }, pv_glaze: { shine: 1.1, sweepT: 5, shardScale: 0, irid: 0.06, rimPower: 6 }, pv_energy: { veinFreq: 16, veinSpeed: 0.6, veinAxis: 0 } },
+    pvKey: { bronze_aged: { rimPower: 10, shine: 0.6 }, silver_aged: { rimPower: 10 }, gold: { rimPower: 10 }, gold_leaf: { rimPower: 10, leaf: 0.22, leafScale: 420 }, chrome: { rimPower: 14 },
+      leather_pebble: { shine: 0, rimPower: 40, flashMask: 0 },
+      black_chrome: { rimPower: 12, shine: 1.6 }, steel_bright: { rimPower: 12, shine: 1.4 }, brass: { rimPower: 12 }, steel_blued: { rimPower: 12 },
+      pearl: { irid: 0.35, iridScale: 40, rimPower: 6 }, crystal: { coreTint: '#ff6a2a', irid: 0.35 }, glass: { coreTint: '#8a6bff', irid: 0.35 } },
+    // blades: a dark mirror flat, a bright bevel, a mirror edge; the warm temper band straw-gold (brass), the cool one
+    // blued violet; bronze warm with verdigris in the recesses, silver cool; ivory ray skin under the silk; the pearls a
+    // cut crystal with a warm / cool core; glows: the fuller veins (vermilion / violet), the edges (white-gold / white-
+    // violet), the projected blades (gold / violet)
+    mat: {
+      // the flats: dark mirror with a faint folded-steel (damascus) figure so the largest surface is never an empty slab
+      black_chrome: { color: '#26282e', rough: 0.12, env: 1.1, wood: { dark: '#17181c', light: '#464a54', scale: 42, marble: 1 } }, steel_bright: { color: '#b8bcc2', rough: 0.22, dStr: 0.12 },
+      // temper bands: a frosted fringe along the temper line (baked into the cavity channel, light cavCol = nioi)
+      brass: { color: '#c79a4a', metal: 1, rough: 0.2, detail: 'brushed', dStr: 0.08, cavity: 1.2, cavCol: '#f2e2b8' }, steel_blued: { color: '#5a4a9a', rough: 0.22, dStr: 0.08, cavity: 1.2, cavCol: '#d6d0f0' },
+      // cast metals: verdigris / tarnish pooled in the recesses (cavity from the bake), satin there, polished high points
+      bronze_aged: { color: '#86663a', rough: 0.44, env: 0.75, dScale: 120, dStr: 0.12, cavity: 1.8, cavCol: '#3a6a50', cavMetal: 0.2, wear: { color: '#c79a58', metal: 1, rough: 0.22, amount: 0.9 } },
+      silver_aged: { color: '#aab2ba', rough: 0.32, cavity: 1.5, cavCol: '#1a1c2a', cavMetal: 0.4, wear: { color: '#eef2f6', metal: 1, rough: 0.1, amount: 0.9 } },
+      leather_pebble: { color: '#d9d0bc', rough: 0.55, metal: 0, detail: 'stipple', dScale: 170, dStr: 1.25 },   // ray skin: a coarse granule field
+      lacquer_red: { color: '#7c0f1a', rough: 0.24, env: 1.1 }, pearl: { color: '#eae6ee', rough: 0.18 },
+      crystal: { color: '#ffb08a', emissive: '#ff5a1a', glow: 0.7, env: 1.4, rough: 0.04 }, glass: { color: '#a890ff', emissive: '#7a4aff', glow: 0.7, env: 1.4, rough: 0.04, metal: 0.2 },
+      obsidian: { color: '#0a0a0e', rough: 0.08 },
+      glow_vermilion: { emissive: '#ff5a1e', glow: 2.4 }, glow_purple: { emissive: '#9a5aff', glow: 2.6 },
+      glow_gold: { emissive: '#ffd9a0', glow: 1.8 }, glow_ice: { emissive: '#d4c8ff', glow: 1.8 },
+      glow_orange: { emissive: '#ffb04a', glow: 3.0 }, glow_blue: { emissive: '#8a7aff', glow: 3.0 },
+    },
+    hero: 'R_fx_pearl', crosshair: 'xh_twin', meters: ['arc', 'segments', 'ring'],
+    ready: { sfx: 'ready_twinblades', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.4, glowMul: 1.5, idleExtra: 'twinblades_ready' } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.15, glowMul: 1.15, idleExtra: 'twinblades_glint', every: 7 }],   // §1.17 idle tiers
+    firstDraw: 'twinblades_first', drawClip: 'twinblades_draw', inspect: ['twinblades_inspect'], rareInspect: 'twinblades_inspect_rare',
+    killFx: 'KE_PRISM', killMark: 'km_twinblades', dmgSkin: 'mythic', skillSkin: 'prism',
+    crisis: { name: '虹障', kind: 'knock', fx: 'twinblades_crisis', sfx: 'twinblades_crisis', flash: [1.1, 0.95, 1.35] },   // a pale prism flash, not white
+    aura: { type: 'dmg', mul: 1.1, radius: 4, when: 'skill', source: ['twinblades_storm'] },
+    twin: 'twinblades_night', phases: ['shuangjue', 'yeyao'],
+    showcase: ['twinblades_first', 'fire:5', 'charge', 'alt', 'tap', 'ult', 'twinblades_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '疾虹五連', desc: '連點：左右交替四刀 → 交虹 X 斬（放出虹橋斬波）' }, { key: 'hold LMB', zh: '虹貫', desc: '出刀後繼續按住＝收刀蓄勢，放開衝刺 8 m，0.3 秒後整排後斬' },
+      { key: 'RMB', zh: '交虹', desc: '按住雙刀交叉格擋；舉起 0.3 秒內被打＝完美格擋 → 霓返八連' },
+      { key: 'Q', zh: '虹輪', desc: '刃氣 40：六柄幻刃環繞 5 秒（隊友傷害 +10%）' }, { key: 'hold Q', zh: '千刃蓮華', desc: '蓮華 100%（或 Q 再按 F）' },
+      { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'twinblades',
+    meters: {
+      qi: { max: 100, start: 40, onHit: 2, onKill: 4, onParry: 15, skillFill: false, hud: 'arc', label: '刃氣', src: '疾虹每刀每個命中 +2、擊殺 +4、完美格擋 +15（技能命中不回補）' },
+      combo: { max: 5, hud: 'segments', segments: 5, label: '連斬', color: '#ffd9a0', src: '疾虹五連的段數' },   // live step (display only)
+      ult: { max: 100, source: 'damage', per: 5500, skillFill: false, hud: 'ring', label: '蓮華', src: '傷害累積（約 40 秒）' },
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q)
+      alt: { id: 'twinblades_guard', key: 'RMB', zh: '交虹', desc: '按住交叉格擋・正面 −70%・舉起 0.3 秒內被打＝完美格擋→霓返 8×40', hold: true, cost: 0, level: 'L1' },
+      tap: { id: 'twinblades_storm', key: 'Q', zh: '虹輪', desc: '六柄幻刃環繞 5 秒・每次掠斬 22・4 m 內隊友傷害 +10%', meter: 'qi', cost: 40,
+        n: 6, r: 2.4, band: [1.0, 3.5], rate: 300, dur: 5, dmg: 22, push: 2.2, level: 'L2' },
+      ult: { id: 'twinblades_ult', key: 'hold Q', zh: '千刃蓮華', desc: '十二柄巨刃成蓮：12 道斬道各 90・急旋 4×30・花心綻放 600', meter: 'ult', range: 25,
+        r: 8, petals: 12, petal: 90, lane: 1.8, spin: 30, spinR: 6, pull: 2, bloom: 600, bloomR: 8, level: 'L4' },
+    },
+    combo: [
+      { id: 'r1', hand: 'R', dur: 0.25, hit: 0.08, dmg: 60, r: 2.6, arc: 110, knock: 1.6, stagger: 0.45 },
+      { id: 'l1', hand: 'L', dur: 0.25, hit: 0.08, dmg: 60, r: 2.6, arc: 110, knock: 1.6, stagger: 0.45 },
+      { id: 'r2', hand: 'R', dur: 0.27, hit: 0.09, dmg: 70, r: 2.6, arc: 110, knock: 1.8, stagger: 0.5 },
+      { id: 'l2', hand: 'L', dur: 0.27, hit: 0.09, dmg: 70, r: 2.6, arc: 110, knock: 1.8, stagger: 0.5 },
+      { id: 'x', hand: 'X', dur: 0.6, hit: 0.22, dmg: 160, r: 3.0, arc: 150, knock: 4, stagger: 1, wave: { range: 9, width: 2.6, speed: 18, dmg: 90 } },   // single target ≈ 256 / s
+    ],
+    chain: 0.4, recover: 0.9,
+    dash: { hold: 0.18, max: 1.5, range: 8, time: 0.2, width: 1.4, pass: 70, after: 180, delay: 0.3, cd: 1.6, invuln: 0.1 },
+    guard: { cone: 150, mul: 0.3, speedMul: 0.6, raise: 0.12, perfect: 0.18, rearm: 0.4, flurry: { n: 8, dur: 0.5, r: 3.2, dmg: 40 } },
   } });
 
 // ---------------------------------------------------------------- melee

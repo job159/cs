@@ -59,10 +59,10 @@ export function slotScrew(at, n, r, d = 1.3) {
 /** domed rivet / pin head on a surface normal n */
 export const domeAt = (at, n, r, d = r * 0.7, seg = 10) => along([[-0.3, 0], [-0.3, r], [d * 0.5, r * 0.82], [d, 0]], at, n, seg, 70);
 const _domes = new Map();
-/** granulation bead: a smooth low dome (radius r, height h) standing on a surface at c along the normal n */
-export function dome(c, n, r, h = r * 0.78) {
-  const k = r.toFixed(3) + ':' + h.toFixed(3);
-  if (!_domes.has(k)) _domes.set(k, lathe([[-0.3 * r, r], [0.5 * h, r * 0.8], [h, 0]], { seg: 6, crease: 85 }));
+/** granulation bead: a smooth low dome (radius r, height h, seg sides) standing on a surface at c along the normal n */
+export function dome(c, n, r, h = r * 0.78, seg = 6) {
+  const k = r.toFixed(3) + ':' + h.toFixed(3) + ':' + seg;
+  if (!_domes.has(k)) _domes.set(k, lathe([[-0.3 * r, r], [0.5 * h, r * 0.8], [h, 0]], { seg, crease: 85 }));
   return aimDir(_domes.get(k).clone(), c, n);
 }
 
@@ -290,14 +290,19 @@ export function brilliant(C, R0, { n = 16, tableR = 0.56, crownH = 0.42, girdle 
   }
   return mesh(P, I, { crease: 1 });
 }
-/** flame petal: base b, rising along axis D, bulging along radial Rd, side Sd; length L, half width W, thickness th */
-export function petal(b, D, Rd, Sd, L, W, th, { bulge = 11, flick = 7, nu = 12, na = 8, crease = 55 } = {}) {
-  const rings = [];
+/** flame petal: base b, rising along axis D, bulging along radial Rd (or `bend`), side Sd; length L, half width W (along
+ *  Sd), thickness th (along Rd); groove > 0 sinks every other point of the +Rd face (na 12: two flutes either side of a
+ *  centre rib) */
+export function petal(b, D, Rd, Sd, L, W, th, { bulge = 11, flick = 7, nu = 12, na = 8, crease = 55, bend = null, groove = 0 } = {}) {
+  const rings = [], Bd = bend || Rd;
   for (let i = 0; i <= nu; i++) {
     const x = i / nu, out = bulge * Math.sin(Math.PI * x * 0.8) + flick * x * x * x;
-    const c = [b[0] + D[0] * x * L + Rd[0] * out, b[1] + D[1] * x * L + Rd[1] * out, b[2] + D[2] * x * L + Rd[2] * out];
+    const c = [b[0] + D[0] * x * L + Bd[0] * out, b[1] + D[1] * x * L + Bd[1] * out, b[2] + D[2] * x * L + Bd[2] * out];
     const wv = Math.max(0.15, W * Math.sin(Math.PI * Math.pow(Math.max(0.02, x), 0.75)) * (1 - 0.2 * x)), tv = Math.max(0.12, th * (1 - 0.75 * x)), r = [];
-    for (let j = 0; j < na; j++) { const a = j / na * TAU, cs = Math.cos(a) * wv, sn = Math.sin(a) * tv; r.push([c[0] + Sd[0] * cs + Rd[0] * sn, c[1] + Sd[1] * cs + Rd[1] * sn, c[2] + Sd[2] * cs + Rd[2] * sn]); }
+    for (let j = 0; j < na; j++) {
+      const a = j / na * TAU, cs = Math.cos(a) * wv, sn = Math.sin(a) * tv * (groove && j % 2 === 0 && Math.sin(a) > 0.2 ? 1 - groove * (1 - 0.6 * x) : 1);
+      r.push([c[0] + Sd[0] * cs + Rd[0] * sn, c[1] + Sd[1] * cs + Rd[1] * sn, c[2] + Sd[2] * cs + Rd[2] * sn]);
+    }
     rings.push(r);
   }
   return loft(rings, { crease });
@@ -307,6 +312,96 @@ export function helixCord(R, t0, turns, pitch, r, { a0 = 0, radial = 6, perTurn 
   const P = [], n = Math.max(4, Math.round(turns * perTurn));
   for (let i = 0; i <= n; i++) { const u = i / n, a = a0 + u * turns * TAU; P.push([cs + R * Math.cos(a), t0 + u * turns * pitch, cw + R * Math.sin(a)]); }
   return sweep(P, r, { seg: n, radial });
+}
+
+// ------------------------------------------------------------------------------------------ cast scales, wires, organic bits
+/** thin cast / cloisonné wire along a design-space path: 5-point section with a rounded crown (half a ribbonT) */
+export function wireT(path, w, z0, z1, { step = 6, closed = false } = {}) {
+  const P = resample(path, step, closed), n = P.length, W = typeof w === 'function' ? w : () => w, acc = [0];
+  for (let i = 1; i < n; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+  const tot = acc[n - 1] || 1, nrm = (a, c) => { const dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; };
+  const rings = [];
+  for (let i = 0; i < n; i++) {
+    const n1 = closed || i > 0 ? nrm(P[(i + n - 1) % n], P[i]) : null, n2 = closed || i < n - 1 ? nrm(P[i], P[(i + 1) % n]) : null;
+    let m;
+    if (!n1) m = n2; else if (!n2) m = n1; else { const k = 1 / Math.max(0.35, 1 + n1[0] * n2[0] + n1[1] * n2[1]); m = [(n1[0] + n2[0]) * k, (n1[1] + n2[1]) * k]; }
+    const h = Math.max(0.05, W(acc[i] / tot) / 2), zt = z1 - (z1 - z0) * 0.35;
+    rings.push([[-h, z0], [-h * 0.92, zt], [0, z1], [h * 0.92, zt], [h, z0]].map(([x, z]) => [P[i][0] + m[0] * x, P[i][1] + m[1] * x, z]));
+  }
+  return loftT(rings, { wrap: closed });
+}
+/** a polygon clipped to the half-plane nx u + ny v <= c */
+export function clipHalf(P, nx, ny, c) {
+  const out = [];
+  for (let i = 0; i < P.length; i++) {
+    const a = P[i], b = P[(i + 1) % P.length], fa = nx * a[0] + ny * a[1] - c, fb = nx * b[0] + ny * b[1] - c;
+    if (fa <= 0) out.push(a);
+    if ((fa <= 0) !== (fb <= 0)) { const k = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]); }
+  }
+  return out;
+}
+const SC_O = [[0, -0.9], [0.5, -1], [0.86, -0.7], [1, 0], [0.86, 0.7], [0.5, 1], [0, 0.9]];
+/**
+ * One cast shield scale (33 triangles) in design space. Authored in a local mm frame (a: root -> free tip, b across)
+ * and placed by toUV(a, b) -> [u, v]: flush (sunk by `sink`) at the root, standing `lift` proud at the free edge, a
+ * bevelled rim and a raised keel; th = the step of the free edge.
+ */
+export function scaleT(L, W, toUV, { lift = 0.8, th = 0.6, rim = 0.4, keel = 0.3, sink = 0.3 } = {}) {
+  const O = SC_O.map(([p, q]) => [p * L, q * W / 2]), I = insetPoly(O, Math.min(rim, W * 0.14, L * 0.1)), n = O.length;
+  const zt = (a) => -sink + lift * Math.pow(clamp01(a / L), 1.2);
+  const K0 = [0.2 * L, 0, zt(0.2 * L) + 0.15 + keel * 0.5], K1 = [0.8 * L, 0, zt(0.8 * L) + 0.15 + keel];
+  const o = O.map(([a, b]) => [a, b, zt(a)]), bt = O.map(([a, b]) => [a, b, zt(a) - th]), ii = I.map(([a, b]) => [a, b, zt(a) + 0.15]);
+  const T = [], tri = (a, b, c) => T.push(a, b, c), kOf = (k) => ((I[k][0] + I[(k + 1) % n][0]) / 2 < 0.45 * L ? K0 : K1);
+  for (let k = 0; k < n; k++) {
+    const k1 = (k + 1) % n;
+    if (k < n - 1) { tri(bt[k], bt[k1], o[k1]); tri(bt[k], o[k1], o[k]); tri(o[k], o[k1], ii[k1]); tri(o[k], ii[k1], ii[k]); }   // root edge: buried
+    const K = kOf(k), Kp = kOf((k + n - 1) % n);
+    tri(K, ii[k], ii[k1]);
+    if (K !== Kp) tri(Kp, ii[k], K);
+  }
+  const c0 = toUV(L / 2, 0), ca = toUV(L / 2 + 0.01, 0), cb = toUV(L / 2, 0.01);
+  const flip = (ca[0] - c0[0]) * (cb[1] - c0[1]) - (ca[1] - c0[1]) * (cb[0] - c0[0]) < 0, out = [];
+  for (let i = 0; i < T.length; i += 3) for (const [a, b, z] of flip ? [T[i], T[i + 2], T[i + 1]] : [T[i], T[i + 1], T[i + 2]]) { const [u, v] = toUV(a, b); out.push(u, v, z); }
+  return out;
+}
+/** ellipsoid at c, semi-axes ra / rb / rn along the [s,t,w] unit vectors A, B, N (A x B = N) */
+export function ellip(c, A, B, N, ra, rb, rn, seg = 20) {
+  const g = new THREE.SphereGeometry(1, seg, Math.max(8, seg >> 1));
+  g.deleteAttribute('uv'); g.deleteAttribute('normal');
+  g.scale(ra, rb, rn);
+  g.applyMatrix4(new THREE.Matrix4().makeBasis(V(...A), V(...B), V(...N)));
+  const C = V(...c); g.translate(C.x, C.y, C.z);
+  return toCreasedNormals(g.toNonIndexed(), 80 * D2R);
+}
+/** curved tooth / fang from root p (sunk in the gum) along d, hooking towards h; length L, root radius r; groove: a
+ *  blood groove down the face away from the hook; the tip is worn blunt */
+export function tooth(p, d, h, L, r, { groove = 0, radial = 10, seg = 6 } = {}) {
+  const rings = [];
+  for (let i = 0; i <= seg; i++) {
+    const u = i / seg, c = vadd(p, vadd(vmul(d, L * u), vmul(h, L * 0.2 * u * u)));
+    const T = vnorm(vadd(vmul(d, L), vmul(h, L * 0.4 * u))), N1 = vnorm(vsub(h, vmul(T, vdot(h, T)))), N2 = vcross(T, N1);
+    const rr = Math.max(0.16 * r, r * Math.pow(1 - u, 0.8) * (1 + 0.12 * (1 - u))), ring = [];
+    for (let j = 0; j < radial; j++) {
+      const a = j / radial * TAU, gq = u < 0.85 ? groove * Math.exp(-(((a - Math.PI) / 0.4) ** 2)) : 0;
+      ring.push(vadd(c, vadd(vmul(N1, rr * Math.cos(a) * (1 - gq)), vmul(N2, rr * Math.sin(a) * 0.88))));
+    }
+    rings.push(ring);
+  }
+  return loft(rings, { crease: 75 });
+}
+/** tapered tube (radius rf(u)) with an oval section (N : B = oval) and `flutes` shallow grooves along it */
+export function ftube(pts, rf, { radial = 12, seg = 24, flutes = 0, depth = 0.12, oval = 1, crease = 60 } = {}) {
+  const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)));
+  const fr = curve.computeFrenetFrames(seg, false), rings = [];
+  for (let i = 0; i <= seg; i++) {
+    const u = i / seg, c = curve.getPointAt(u), r = rf(u) * (i === 0 || i === seg ? 0.55 : 1), N = fr.normals[i], B = fr.binormals[i], ring = [];
+    for (let j = 0; j < radial; j++) {
+      const a = j / radial * TAU, k = r * (1 - (flutes ? depth * Math.pow(Math.max(0, Math.cos(a * flutes)), 4) : 0)), cn = Math.cos(a) * k * oval, sn = Math.sin(a) * k;
+      ring.push([c.x + N.x * cn + B.x * sn, c.y + N.y * cn + B.y * sn, c.z + N.z * cn + B.z * sn]);
+    }
+    rings.push(ring);
+  }
+  return loft(rings, { crease });
 }
 
 // ------------------------------------------------------------------------------------------ bake

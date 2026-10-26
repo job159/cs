@@ -20,7 +20,8 @@
 //   ?host=1 / ?join=<code> [&name=X&relay=1] (direct multiplayer, used by tools/mp-test.mjs)
 // Always available: ?q=<low|medium|high|ultra> (locks quality) ?touch=0|1 ?view=... (asset viewers)
 //   ?menu=1 forces the menus even with the params above; ?map=<id> then picks the menu map.
-import { Vector3 } from 'three';
+import { Vector3, Mesh, BoxGeometry, Group } from 'three';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { Renderer } from './engine/renderer.js';
 import { Input, KEYMAP } from './engine/input.js';
 import { AudioEngine } from './engine/audio.js';
@@ -46,6 +47,7 @@ import { PauseMenu } from './ui/pause.js';
 import { ResultsScreen } from './ui/results.js';
 import { NetSync } from './net/sync.js';
 import * as fxAtlas from './fx/atlas.js';
+import { hardSurface } from './gfx/materials.js';
 import { Coop } from './net/coop.js';
 
 window.__shotReady = false;
@@ -333,6 +335,8 @@ class App {
       orbitBackdrop(g, info, this.time);
       this.renderer.render(g.scene, g.camera, this.time);
       document.body.classList.remove('bd-loading');
+      // 'auto' quality is measured per map: a map shown for the first time gets its own measurement (no-op otherwise)
+      if (this.state !== 'loading') this.calibrateQuality();
     }, (e) => { console.warn('backdrop failed', e); document.body.classList.remove('bd-loading'); });
     return p;
   }
@@ -402,7 +406,7 @@ class App {
       mark('player');
       if (!alive()) return;
       this.loading.progress(0.92, '編譯著色器…');
-      await this.precompile(g);
+      await this.precompile(g, { mates: !!room || bots > 0 });
       mark('shaders');
       if (!alive()) return;
       this.matchInfo = { map: info.id, difficulty, seed, n, bots, t0: performance.now() };
@@ -553,14 +557,30 @@ class App {
   }
 
   /**
-   * Desktop 'auto' quality: benchmark on the menu backdrop once per GPU / window size (settings.js calibrateQuality),
-   * then apply. force: re-measure (settings 重新測試). Runs only while the backdrop is up.
+   * Desktop 'auto' quality: benchmark of the menu backdrop's map once per GPU / window size / map (settings.js
+   * calibrateQuality), then apply. force: re-measure (settings 重新測試). Runs only while the backdrop is up.
    */
-  async calibrateQuality(force = false) {
+  calibrateQuality(force = false) {
+    // one at a time (boot and a backdrop that just finished loading can both ask)
+    if (!this._calP) this._calP = this._calibrate(force).finally(() => { this._calP = null; });
+    return this._calP;
+  }
+
+  async _calibrate(force) {
     const g = this.game;
     if (COARSE || this.qualityLock || !g?.bdReady || g.player) return;
     if (!force && this.settings.v.quality !== 'auto') return;
-    await calibrateQuality(this.renderer, g.scene, g.camera, { force });
+    // measured where the game is played (the backdrop's overview of the town costs more than any view in a match):
+    // the first player spawn at eye height, four directions, 4 frames each (the sun shadow follows the camera)
+    const sp = g.world.playerSpawns?.[0], yaw0 = g.world.def?.playerSpawnYaws?.[0] ?? 0, cam = g.camera;
+    const view = sp ? (i) => {
+      const k = Math.floor(i / 4) % 4;
+      cam.position.set(sp.x, sp.y + 1.6, sp.z);
+      cam.rotation.set(-0.04, yaw0 + k * Math.PI / 2, 0);
+      cam.updateMatrixWorld();
+      if (i % 4 === 0) g.world.update(0, this.time);
+    } : null;
+    await calibrateQuality(this.renderer, g.scene, cam, { force, view, map: g.mapId });
     applySettings(this);
     this.renderer.pinScale(this._bd.scale);
   }
@@ -809,7 +829,8 @@ class App {
     } else {
       this._lockHint('');
       if (this.state === 'results') this.coop?.update(dt);
-      if (g && g.bdReady && !g.player && MENU_STATES.has(this.state)) {
+      // (while 'auto' quality measures the map, the canvas holds the last backdrop frame: calibrateQuality draws offscreen)
+      if (g && g.bdReady && !g.player && MENU_STATES.has(this.state) && !this._calP) {
         this.bdT = (this.bdT || 0) + dt;
         const bd = this._bd;
         if (this.bdT >= bd.dt) {
@@ -891,11 +912,47 @@ class App {
     console.info(`[app] fx shaders compiled in ${((performance.now() - t) / 1000).toFixed(1)} s`);
   }
 
-  /** Compiles the match scene's shaders before the first frame (parallel compile when available). */
-  async precompile(g) {
+  /**
+   * Compiles the match scene's shaders before the first frame (parallel compile when available), plus the world
+   * hard-surface material of a dropped magazine (nothing uses it before the first reload, which hitched on its
+   * compile) and, with teammates or bots (mates), their soldier model (co-op teammates only appear after this, a
+   * bot's may still be loading: its first frame compiled ~0.5 s per material), then the shadow pass's depth variants,
+   * the programs' first use and the texture / buffer uploads (renderer.warmup).
+   */
+  async precompile(g, { mates = false } = {}) {
+    const extra = new Mesh(new BoxGeometry(0.001, 0.001, 0.001), hardSurface('steel'));
+    extra.name = 'mag-warmup';   // hidden; renderer.warmup shows it for its shadow-pass variant and first use too
+    extra.visible = false;
+    extra.userData.firstUse = true;
+    extra.frustumCulled = false;
+    g.scene.add(extra);
+    let mate = null;
+    if (mates) {
+      mate = new Group();
+      mate.name = 'mate-warmup';
+      mate.visible = false;
+      mate.userData.firstUse = true;   // (renderer.warmup draws it with its real materials too)
+      for (const src of await Promise.all(['characters/soldier.glb', 'characters/soldier_lod1.glb'].map((f) => loadGLB(f).catch(() => null)))) {
+        if (!src) continue;
+        const m = cloneSkinned(src.scene);
+        m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+        mate.add(m);
+      }
+      g.scene.add(mate);
+    }
     try {
       await Promise.race([this.renderer.gl.compileAsync(g.scene, g.camera), new Promise((r) => setTimeout(r, 20000))]);
     } catch (e) { console.warn('precompile', e); }
+    // the shadow pass's depth variants (zombies, bosses: casters that only appear later), the programs' first use and
+    // the GPU uploads
+    try { await this.renderer.warmup(g.scene, g.camera); } catch (e) { console.warn('warm-up', e); }
+    g.scene.remove(extra);
+    extra.geometry.dispose();
+    if (mate) {
+      // (its geometry and textures are the loaded model's, kept for the teammates; only the clones' bone textures go)
+      g.scene.remove(mate);
+      mate.traverse((o) => o.skeleton?.dispose());
+    }
   }
 
   async boot() {

@@ -91,6 +91,9 @@ export async function runViewer(renderer, params) {
     : [[+(params.get('yaw') || 90), +(params.get('pitch') || 8)]];
   const dist = +(params.get('dist') || 0) || (params.get('fp') ? radius * 1.5 : (radius / Math.tan((15 * Math.PI) / 180)) * 1.02);
   const look = params.get('fp') ? new THREE.Vector3(0, 0, -radius * 0.5) : new THREE.Vector3();
+  // close-ups: look=x,y,z (m, from the model centre) and fov=deg
+  if (params.get('look')) look.fromArray(params.get('look').split(',').map(Number));
+  if (params.get('fov')) cam.fov = +params.get('fov');
   const out = document.createElement('canvas');
   out.width = W; out.height = H;
   out.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:5';
@@ -121,6 +124,7 @@ export async function runViewer(renderer, params) {
       } else {
         const y = ((yaw + spin) * Math.PI) / 180, p = (pitch * Math.PI) / 180;
         cam.position.set(Math.sin(y) * Math.cos(p) * dist, Math.sin(p) * dist, Math.cos(y) * Math.cos(p) * dist);
+        if (params.get('look')) cam.position.add(look);
         cam.lookAt(look);
       }
       renderer.render(scene, cam, 0);

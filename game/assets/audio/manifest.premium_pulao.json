@@ -1,0 +1,855 @@
+{
+  "sounds": {
+    "pulao_armor": {
+      "files": [
+        "premium_pulao/pulao_armor_1.ogg",
+        "premium_pulao/pulao_armor_2.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_bell_land": {
+      "files": [
+        "premium_pulao/pulao_bell_land_1.ogg",
+        "premium_pulao/pulao_bell_land_2.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        90
+      ],
+      "loop": false
+    },
+    "pulao_bell_load": {
+      "files": [
+        "premium_pulao/pulao_bell_load_1.ogg",
+        "premium_pulao/pulao_bell_load_2.ogg",
+        "premium_pulao/pulao_bell_load_3.ogg"
+      ],
+      "vol": 0.94,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_bell_whoosh": {
+      "files": [
+        "premium_pulao/pulao_bell_whoosh_1.ogg",
+        "premium_pulao/pulao_bell_whoosh_2.ogg"
+      ],
+      "vol": 1.26,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        70
+      ],
+      "loop": false
+    },
+    "pulao_bells": {
+      "files": [
+        "premium_pulao/pulao_bells_1.ogg",
+        "premium_pulao/pulao_bells_2.ogg"
+      ],
+      "vol": 0.95,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_bellshot": {
+      "files": [
+        "premium_pulao/pulao_bellshot_1.ogg",
+        "premium_pulao/pulao_bellshot_2.ogg",
+        "premium_pulao/pulao_bellshot_3.ogg"
+      ],
+      "vol": 1.02,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        80
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_bite": {
+      "files": [
+        "premium_pulao/pulao_bite_1.ogg",
+        "premium_pulao/pulao_bite_2.ogg"
+      ],
+      "vol": 1.35,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_clink": {
+      "files": [
+        "premium_pulao/pulao_clink_1.ogg",
+        "premium_pulao/pulao_clink_2.ogg",
+        "premium_pulao/pulao_clink_3.ogg",
+        "premium_pulao/pulao_clink_4.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_close": {
+      "files": [
+        "premium_pulao/pulao_close_1.ogg",
+        "premium_pulao/pulao_close_2.ogg",
+        "premium_pulao/pulao_close_3.ogg",
+        "premium_pulao/pulao_close_4.ogg",
+        "premium_pulao/pulao_close_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_crisis": {
+      "files": [
+        "premium_pulao/pulao_crisis_1.ogg",
+        "premium_pulao/pulao_crisis_2.ogg"
+      ],
+      "vol": 1.01,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        90
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_draw_first": {
+      "files": [
+        "premium_pulao/pulao_draw_first.ogg"
+      ],
+      "vol": 1.11,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_far": {
+      "files": [
+        "premium_pulao/pulao_far_1.ogg",
+        "premium_pulao/pulao_far_2.ogg",
+        "premium_pulao/pulao_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        420
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pulao_final": {
+      "files": [
+        "premium_pulao/pulao_final_1.ogg",
+        "premium_pulao/pulao_final_2.ogg"
+      ],
+      "vol": 0.83,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        120
+      ],
+      "loop": false
+    },
+    "pulao_fire": {
+      "files": [
+        "premium_pulao/pulao_fire_1.ogg",
+        "premium_pulao/pulao_fire_2.ogg",
+        "premium_pulao/pulao_fire_3.ogg",
+        "premium_pulao/pulao_fire_4.ogg",
+        "premium_pulao/pulao_fire_5.ogg"
+      ],
+      "vol": 0.92,
+      "pitch": [
+        0.997,
+        1.003
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_flick": {
+      "files": [
+        "premium_pulao/pulao_flick_1.ogg",
+        "premium_pulao/pulao_flick_2.ogg",
+        "premium_pulao/pulao_flick_3.ogg"
+      ],
+      "vol": 1.02,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_head": {
+      "files": [
+        "premium_pulao/pulao_head_1.ogg",
+        "premium_pulao/pulao_head_2.ogg",
+        "premium_pulao/pulao_head_3.ogg"
+      ],
+      "vol": 1.13,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_hit": {
+      "files": [
+        "premium_pulao/pulao_hit_1.ogg",
+        "premium_pulao/pulao_hit_2.ogg",
+        "premium_pulao/pulao_hit_3.ogg",
+        "premium_pulao/pulao_hit_4.ogg"
+      ],
+      "vol": 1.26,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_idle": {
+      "files": [
+        "premium_pulao/pulao_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "pulao_inspect": {
+      "files": [
+        "premium_pulao/pulao_inspect.ogg"
+      ],
+      "vol": 0.99,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_kill": {
+      "files": [
+        "premium_pulao/pulao_kill_1.ogg",
+        "premium_pulao/pulao_kill_2.ogg",
+        "premium_pulao/pulao_kill_3.ogg",
+        "premium_pulao/pulao_kill_4.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pulao_knell": {
+      "files": [
+        "premium_pulao/pulao_knell_1.ogg",
+        "premium_pulao/pulao_knell_2.ogg"
+      ],
+      "vol": 0.82,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_mark": {
+      "files": [
+        "premium_pulao/pulao_mark_1.ogg",
+        "premium_pulao/pulao_mark_2.ogg"
+      ],
+      "vol": 1.18,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_pillar": {
+      "files": [
+        "premium_pulao/pulao_pillar_1.ogg",
+        "premium_pulao/pulao_pillar_2.ogg"
+      ],
+      "vol": 1.11,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        90
+      ],
+      "loop": false
+    },
+    "pulao_pump_flick": {
+      "files": [
+        "premium_pulao/pulao_pump_flick_1.ogg",
+        "premium_pulao/pulao_pump_flick_2.ogg",
+        "premium_pulao/pulao_pump_flick_3.ogg"
+      ],
+      "vol": 1.5,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_ready_bell": {
+      "files": [
+        "premium_pulao/pulao_ready_bell_1.ogg",
+        "premium_pulao/pulao_ready_bell_2.ogg"
+      ],
+      "vol": 0.96,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_roar": {
+      "files": [
+        "premium_pulao/pulao_roar_1.ogg",
+        "premium_pulao/pulao_roar_2.ogg",
+        "premium_pulao/pulao_roar_3.ogg"
+      ],
+      "vol": 1.18,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pulao_roar_low": {
+      "files": [
+        "premium_pulao/pulao_roar_low_1.ogg",
+        "premium_pulao/pulao_roar_low_2.ogg"
+      ],
+      "vol": 1.16,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false
+    },
+    "pulao_tail": {
+      "files": [
+        "premium_pulao/pulao_tail_1.ogg",
+        "premium_pulao/pulao_tail_2.ogg",
+        "premium_pulao/pulao_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "pulao_toll": {
+      "files": [
+        "premium_pulao/pulao_toll_1.ogg",
+        "premium_pulao/pulao_toll_2.ogg",
+        "premium_pulao/pulao_toll_3.ogg"
+      ],
+      "vol": 0.74,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_toll_dusk": {
+      "files": [
+        "premium_pulao/pulao_toll_dusk_1.ogg",
+        "premium_pulao/pulao_toll_dusk_2.ogg"
+      ],
+      "vol": 0.78,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_ult_bed": {
+      "files": [
+        "premium_pulao/pulao_ult_bed.ogg"
+      ],
+      "vol": 0.87,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pulao_ult_bed_dusk": {
+      "files": [
+        "premium_pulao/pulao_ult_bed_dusk.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "pulao_ult_creak": {
+      "files": [
+        "premium_pulao/pulao_ult_creak_1.ogg",
+        "premium_pulao/pulao_ult_creak_2.ogg"
+      ],
+      "vol": 0.89,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        100
+      ],
+      "loop": false
+    },
+    "pulao_ult_inhale": {
+      "files": [
+        "premium_pulao/pulao_ult_inhale_1.ogg",
+        "premium_pulao/pulao_ult_inhale_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        100
+      ],
+      "loop": false
+    },
+    "pulao_ult_shatter": {
+      "files": [
+        "premium_pulao/pulao_ult_shatter_1.ogg",
+        "premium_pulao/pulao_ult_shatter_2.ogg"
+      ],
+      "vol": 0.95,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_ult_shatter_dusk": {
+      "files": [
+        "premium_pulao/pulao_ult_shatter_dusk.ogg"
+      ],
+      "vol": 0.93,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_ult_slam": {
+      "files": [
+        "premium_pulao/pulao_ult_slam_1.ogg",
+        "premium_pulao/pulao_ult_slam_2.ogg"
+      ],
+      "vol": 1.13,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_ult_slam_dusk": {
+      "files": [
+        "premium_pulao/pulao_ult_slam_dusk.ogg"
+      ],
+      "vol": 1.03,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_ult_tail": {
+      "files": [
+        "premium_pulao/pulao_ult_tail_1.ogg",
+        "premium_pulao/pulao_ult_tail_2.ogg"
+      ],
+      "vol": 0.73,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false
+    },
+    "pulao_ult_toll": {
+      "files": [
+        "premium_pulao/pulao_ult_toll_1.ogg",
+        "premium_pulao/pulao_ult_toll_2.ogg",
+        "premium_pulao/pulao_ult_toll_3.ogg"
+      ],
+      "vol": 0.45,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 9,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "pulao_ult_toll_dusk": {
+      "files": [
+        "premium_pulao/pulao_ult_toll_dusk_1.ogg",
+        "premium_pulao/pulao_ult_toll_dusk_2.ogg"
+      ],
+      "vol": 0.47,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 9,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        180
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "ready_pulao": {
+      "files": [
+        "premium_pulao/ready_pulao_1.ogg",
+        "premium_pulao/ready_pulao_2.ogg"
+      ],
+      "vol": 1.28,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "ready_pulao_dusk": {
+      "files": [
+        "premium_pulao/ready_pulao_dusk_1.ogg",
+        "premium_pulao/ready_pulao_dusk_2.ogg"
+      ],
+      "vol": 1.33,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    }
+  }
+}

@@ -4,8 +4,9 @@
 // screen (tabs 操作 / 按鍵 / 畫面 / 準星 / 音效), usable from the main menu and from the pause menu. Rows that do not
 // apply to the device are hidden (mouse rows and key bindings on phones; touch sensitivity, gyro, haptics,
 // left-handed layout and HUD button size / opacity on desktop).
-// Quality 'auto': phones by GPU name; desktops by GPU name plus a short warm-up benchmark of the menu backdrop
-// (calibrateQuality, cached per GPU and window size) -- never below medium on a desktop.
+// Quality 'auto': phones by GPU name; desktops by GPU name plus a short benchmark of the loaded map (calibrateQuality:
+// GPU time per tier, cached per GPU, window size and map) -- the highest tier that holds 60 fps, never below medium on
+// a desktop (dynamic resolution is the safety net) unless even medium at its lowest resolution cannot hold 30 fps.
 import { Screen, header, esc, ICON } from './kit.js';
 import { haptic } from '../weapons/arsenal.js';
 import { injectCSS } from './crosshairs.js';
@@ -83,26 +84,44 @@ export function desktopGpuCap(name) {
 }
 
 const CAL_KEY = 'cf.autoq';
-const CAL_V = 1;
-// median frame time (ms) of the menu backdrop at full resolution a tier must stay under. Measured on Lost Town: a
-// match frame (12 zombies, viewmodel, HUD) renders ~1.25x the backdrop, so high stays near 60 fps before dynamic
-// resolution steps in, and ultra keeps headroom for the premium effects.
-const CAL_LIMIT = { ultra: 7, high: 14 };
+const CAL_V = 4;
+// GPU time (ms) of one frame of the map seen from the player spawn (no viewmodel, no zombies) that a tier may take.
+// Measured on Lost Town (iGPU, 1600x900): a match frame adds the viewmodel (+12-15 %) and a fight's zombies / effects
+// (+0-10 %), and the browser composites the canvas on top. ultra / high are measured at full resolution: the 60 fps
+// tiers keep the view near 10.5 ms (a match frame then lands near 13 ms of GPU time); ultra keeps headroom for premium
+// effects. medium is the desktop floor (shadows, MSAA, 4 lights: low looks clearly worse) and is measured at its
+// lowest dynamic-resolution scale: it only has to hold ~30 fps there (a match frame ~1.3x the view: 25 ms), dynamic
+// resolution then trades pixels for frame rate (this iGPU: 18 ms at full resolution, 46-48 fps in a match); low only
+// when even that fails. Without timer queries the wall time of a back-to-back batch is measured instead (it includes
+// the CPU): x1.25.
+const CAL_LIMIT = { ultra: 6.5, high: 10.5, medium: 25 };
+const CAL_WALL = 1.25;
 // a new build re-measures (renderer / shader changes move the numbers)
 const CAL_BUILD = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'dev';
 
-function calibration() {
+// Results are kept per map ({ v, gpu, build, maps: { [map]: { size, q, ms } } }): the training ground costs a fraction
+// of a chapter, so a tier measured on one must not carry over to the other. A map without its own result takes the
+// most conservative one measured so far; it is measured itself the first time it is the menu backdrop.
+const TIER_RANK = { low: 0, medium: 1, high: 2, ultra: 3 };
+let calMap = null;   // the map 'auto' is for: the current game's (applySettings)
+function calStore() {
   try {
     const c = JSON.parse(localStorage.getItem(CAL_KEY) || 'null');
-    return c?.v === CAL_V && c.gpu === GPU && c.build === CAL_BUILD ? c : null;
+    return c?.v === CAL_V && c.gpu === GPU && c.build === CAL_BUILD && c.maps ? c : null;
   } catch { return null; }
+}
+function calibration(map = calMap) {
+  const maps = calStore()?.maps;
+  if (!maps) return null;
+  if (map && maps[map]) return maps[map];
+  return Object.values(maps).reduce((a, b) => (!a || TIER_RANK[b.q] < TIER_RANK[a.q] ? b : a), null);
 }
 
 /** Picks a quality tier for 'auto'. Phones: by GPU class (medium when unknown), low on <= 3 GB devices. Desktops: the
- *  calibrated tier, else high (medium for software rendering); never low. */
-export function autoQuality() {
+ *  calibrated tier for the map, else high (medium for software rendering). */
+export function autoQuality(map = calMap) {
   if (!COARSE) {
-    const cal = calibration();
+    const cal = calibration(map);
     if (cal?.q) return cal.q;
     return desktopGpuCap(GPU) === 'medium' ? 'medium' : 'high';
   }
@@ -131,49 +150,86 @@ export function syncShadowMaps(scene, size) {
 }
 
 /**
- * Desktop warm-up benchmark: renders the loaded scene (the menu backdrop) through the full post chain at full
- * resolution, from the GPU's cap down: the first tier whose median frame (each one waited for with a 1-pixel read)
- * stays under CAL_LIMIT wins, else medium. Cached per GPU name and drawing-buffer size; force re-measures.
- * Leaves the renderer on the tier it measured last: the caller re-applies the settings. Returns the picked tier.
+ * GPU time per frame of render(i) for i = 0..n-1 (EXT_disjoint_timer_query_webgl2; the first quarter wakes the GPU
+ * clocks up and is dropped), else the wall time per frame of the back-to-back batch. -> { ms, gpu }
  */
-export async function calibrateQuality(renderer, scene, camera, { force = false } = {}) {
+async function frameCost(renderer, render, n) {
+  const ctx = renderer.gl.getContext();
+  const px = new Uint8Array(4);
+  const sync = () => ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
+  const ext = ctx.getExtension('EXT_disjoint_timer_query_webgl2');
+  if (ext) {
+    const qs = [];
+    for (let i = 0; i < n; i++) {
+      const q = ctx.createQuery();
+      ctx.beginQuery(ext.TIME_ELAPSED_EXT, q);
+      render(i);
+      ctx.endQuery(ext.TIME_ELAPSED_EXT);
+      qs.push(q);
+    }
+    sync();
+    // query results only arrive once the browser has had control back
+    for (let k = 0; k < 100 && !ctx.getQueryParameter(qs[n - 1], ctx.QUERY_RESULT_AVAILABLE); k++) await new Promise((r) => setTimeout(r, 10));
+    const ok = !ctx.getParameter(ext.GPU_DISJOINT_EXT);
+    const ms = qs.map((q) => (ok && ctx.getQueryParameter(q, ctx.QUERY_RESULT_AVAILABLE) ? ctx.getQueryParameter(q, ctx.QUERY_RESULT) / 1e6 : 0));
+    for (const q of qs) ctx.deleteQuery(q);
+    const good = ms.slice(n >> 2).filter((v) => v > 0).sort((x, y) => x - y);
+    if (good.length >= n / 2) return { ms: good[good.length >> 1], gpu: true };
+  }
+  const t = performance.now();
+  for (let i = 0; i < n; i++) render(i);
+  sync();
+  return { ms: (performance.now() - t) / n, gpu: false };
+}
+
+/**
+ * Desktop benchmark: the frame cost (frameCost: GPU time, else wall time) of the loaded map through the full post
+ * chain, from the GPU's cap down (ultra / high at full resolution, medium at its lowest dynamic-resolution scale); the
+ * first tier under CAL_LIMIT wins, else low. view(i), when given, places the camera for frame i (the menu's overview of
+ * the town costs more than play: main.js shows the player spawn at eye height, four directions). The frames go to an
+ * offscreen target: the canvas keeps the menu's last frame. Cached per GPU, build, map and drawing-buffer size; force
+ * re-measures. Leaves the renderer on the tier it measured last: the caller re-applies the settings. Returns the
+ * picked tier.
+ */
+export async function calibrateQuality(renderer, scene, camera, { force = false, view = null, map = 'map' } = {}) {
   if (COARSE) return null;
   const size = `${Math.round(renderer.width * (window.devicePixelRatio || 1) / 64)}x${Math.round(renderer.height * (window.devicePixelRatio || 1) / 64)}`;
-  const old = calibration();
+  const store = calStore() || { v: CAL_V, gpu: GPU, build: CAL_BUILD, maps: {} };
+  const old = store.maps[map];
   if (!force && old?.size === size) return old.q;
   const cap = desktopGpuCap(GPU);
-  const res = { v: CAL_V, gpu: GPU, build: CAL_BUILD, size, q: 'medium', ms: {} };
+  const res = { size, q: cap === 'medium' ? 'medium' : 'low', ms: {} };
   if (cap !== 'medium') {
     const ctx = renderer.gl.getContext();
     const px = new Uint8Array(4);
     const sync = () => ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
-    for (const tier of ['ultra', 'high']) {
+    let scale = 1, out = null;
+    // (the scale is pinned every batch in case anything touched it while the query results came back)
+    const frame = (i) => { if (i === 0) renderer.pinScale(scale); view?.(i); renderer.render(scene, camera, 0.05 + i * 0.016, out); };
+    for (const tier of ['ultra', 'high', 'medium']) {
       if (tier === 'ultra' && cap !== 'ultra') continue;
       renderer.setQuality(tier);
-      renderer.pinScale(1);
+      scale = tier === 'medium' ? renderer.q.minScale : 1;
+      renderer.pinScale(scale);
       syncShadowMaps(scene, renderer.q.shadows);
-      for (let i = 0; i < 3; i++) { renderer.render(scene, camera, i * 0.016); sync(); } // targets, shadow map, programs
-      const median = () => {
-        const ts = [];
-        for (let i = 0; i < 9; i++) {
-          const t = performance.now();
-          renderer.render(scene, camera, 0.05 + i * 0.016);
-          sync();
-          ts.push(performance.now() - t);
-        }
-        ts.sort((x, y) => x - y);
-        return { med: ts[4], spread: ts[6] / Math.max(0.01, ts[2]) };
-      };
-      let m = median();
-      // a noisy run (another app or tab busy on the GPU): give it one more chance, keep the better median
-      if (m.spread > 1.5 && m.med > CAL_LIMIT[tier]) { await new Promise((r) => setTimeout(r, 120)); m = { med: Math.min(m.med, median().med) }; }
-      res.ms[tier] = +m.med.toFixed(2);
+      out?.dispose();
+      out = renderer.offscreenTarget?.() || null;
+      for (let i = 0; i < 4; i++) { frame(i); sync(); }   // targets, shadow map + its static cache, programs
+      let m = await frameCost(renderer, frame, 16);
+      const lim = CAL_LIMIT[tier] * (m.gpu ? 1 : CAL_WALL);
+      // a noisy run (another app or tab busy on the GPU) near the limit gets one more chance; the better one counts
+      if (m.ms > lim && m.ms < lim * 1.6) { await new Promise((r) => setTimeout(r, 150)); const m2 = await frameCost(renderer, frame, 16); if (m2.ms < m.ms) m = m2; }
+      res.ms[tier] = +m.ms.toFixed(2);
+      res.gpuTimer = m.gpu;
       await new Promise((r) => setTimeout(r, 0)); // let the loading screen breathe
-      if (m.med <= CAL_LIMIT[tier]) { res.q = tier; break; }
+      if (m.ms <= lim) { res.q = tier; break; }
     }
+    out?.dispose();
+    renderer.gl.setRenderTarget(null);
   }
-  try { localStorage.setItem(CAL_KEY, JSON.stringify(res)); } catch { /* private mode */ }
-  console.info(`[settings] auto quality: ${res.q} (${GPU || 'unknown GPU'}; ${Object.entries(res.ms).map(([k, v]) => `${k} ${v} ms`).join(', ') || 'no benchmark'})`);
+  store.maps[map] = res;
+  try { localStorage.setItem(CAL_KEY, JSON.stringify(store)); } catch { /* private mode */ }
+  console.info(`[settings] auto quality on ${map}: ${res.q} (${GPU || 'unknown GPU'}; ${Object.entries(res.ms).map(([k, v]) => `${k}${k === 'medium' ? ' (lowest scale)' : ''} ${v} ms`).join(', ') || 'no benchmark'}${res.gpuTimer ? ' GPU' : ''})`);
   return res.q;
 }
 
@@ -219,6 +275,7 @@ export function applySettings(app) {
   const { renderer, input, audio } = app;
   input.mouseSens = s.mouseSens;
   input.touchSens = s.touchSens;
+  calMap = app.game?.mapId || calMap;
   if (!app.qualityLock) {
     const q = s.quality === 'auto' ? autoQuality() : s.quality;
     if (renderer.qualityName !== q) renderer.setQuality(q);

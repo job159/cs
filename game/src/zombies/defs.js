@@ -1,8 +1,12 @@
 // Zombie archetypes. HP values are wave-1 Normal difficulty for ONE player; the match scales them by
 // round, difficulty and player count. Speeds in m/s. knockRes: 0 = full knockback, 1 = immune.
-// anim: clip names from game/assets/zombies/anims.glb (see docs/ZOMBIE_ANIMS.md); `nominal` = the
-// ground speed (m/s) at which the locomotion clip plays at timeScale 1. anim.over: per-type overrides of one-shot clips
-// (Zombie.playOnce): 'other' plays another clip, null none, { from (s), speed, fade } tweaks it.
+// anim: clip names from game/assets/zombies/anims.glb (see docs/ZOMBIE_ANIMS.md); locomotion plays at the clip's own
+// treadmill speed (anims.glb userData.clips[name].speed x the model's leg length, Zombie._locoRate), `nominal` = the
+// fallback ground speed (m/s) at timeScale 1 for clips without one; idle: played while the zombie stands still.
+// anim.loco (optional): { min: lowest playback rate of the locomotion clip (default 0.45), still: below this ground
+// speed (m/s, default 0.12) for stillT s (default 0.35) the idle clip takes over }.
+// anim.over: per-type overrides of one-shot clips (Zombie.playOnce): 'other' plays another clip, null none,
+// { from (s), speed, fade } tweaks it.
 export const ZOMBIES = {
   walker: {
     zh: '行屍', models: ['walker_a', 'walker_b', 'walker_c'], hp: 150, walk: [0.9, 1.4], run: 3.4, runChance: 0.15,
@@ -25,7 +29,8 @@ export const ZOMBIES = {
   spitter: {
     zh: '酸液噴吐者', models: ['spitter'], hp: 160, walk: [1.5, 1.9], run: 3.2, runChance: 0, keepAway: [9, 16], spit: { cd: 3.2, dmg: 14, speed: 16, pool: 3 },
     dmg: 10, atkRange: 1.4, atkTime: 1.1, atkHit: 0.45, knockRes: 0, staggerRes: 0, radius: 0.3, height: 1.7,
-    anim: { walk: ['walk_b'], run: 'run', attack: ['attack_a'], idle: ['idle'], spit: 'spit' }, nominal: { walk: 1.0, run: 3.6 },
+    // walk_hurry: walk_a's lurch quickened for 1.5-1.9 m/s (walk_b quickened that far read as a deep-kneed speed-walk)
+    anim: { walk: ['walk_hurry'], run: 'run', attack: ['attack_a'], idle: ['idle'], spit: 'spit' }, nominal: { walk: 1.0, run: 3.6 },
     money: 250, xp: 20, voice: 'spitter',
   },
   bloater: {
@@ -35,32 +40,38 @@ export const ZOMBIES = {
     money: 250, xp: 20, voice: 'bloater',
   },
   crawler: {
-    zh: '爬牆者', models: ['crawler'], hp: 140, walk: [3.8, 4.4], run: 4.6, runChance: 1, leap: { range: [3, 8], speed: 9, cd: 4, dmg: 14 },
+    // leap.windup: the crouch-load before the jump (s; the pounce clip's 0-0.2 s at x0.88) -- CSO-style telegraph
+    zh: '爬牆者', models: ['crawler'], hp: 140, walk: [3.8, 4.4], run: 4.6, runChance: 1, leap: { range: [3, 8], speed: 9, cd: 4, dmg: 14, windup: 0.23 },
     dmg: 10, atkRange: 1.3, atkTime: 0.9, atkHit: 0.4, knockRes: 0.1, staggerRes: 0, radius: 0.32, height: 0.8, crawl: true,
     anim: {
-      walk: ['crawl'], run: 'crawl', attack: ['crawl_attack'], idle: ['crawl'], leap: 'leap',
-      // prone body: the library's hit / stagger / knockdown clips are upright (the flinch spring still plays on top),
-      // every death is the face-down end of death_front (from the ground contact, a slow fade = the collapse), and
-      // the pounce starts in leap's crouch, timed so takeoff -> land fits the 0.65 s jump the brain moves it along
+      // its own quadruped set (docs/ZOMBIE_ANIMS.md): gallop on hands and feet, lunging swipe, pounce, face-down death
+      walk: ['crawl_quad'], run: 'crawl_quad', attack: ['crawl_quad_attack'], idle: ['idle_quad'], leap: 'pounce',
+      // one gait (a 4.6 m/s gallop): it never drops below x0.6 (slower read as a slow-motion gallop) and settles into
+      // the crouched idle soon after it slows under 0.6 m/s
+      loco: { min: 0.6, still: 0.6, stillT: 0.12 },
+      // on all fours: the library's hit / stagger / knockdown clips are upright (the flinch spring still plays on top),
+      // every death is the collapse from all fours, and the pounce plays whole at x0.88: its crouch-load is the
+      // leap's wind-up (leap.windup), the brain launches at its takeoff and the claws strike the floor (events.land)
+      // as the 0.56 s jump arc lands
       over: {
         stagger: null, hit_front: null, hit_back: null, hit_left: null, hit_right: null, knockdown: null, get_up: null,
-        death_back: 'death_front', death_front: { from: 0.95, fade: 0.4 }, leap: { from: 0.3, speed: 1.4, fade: 0.15 },
+        death_back: 'death_quad', death_front: 'death_quad', leap: 'pounce', pounce: { speed: 0.88, fade: 0.1 },
       },
     },
-    nominal: { walk: 1.2, run: 1.2 },
+    nominal: { walk: 4.6, run: 4.6 },
     money: 200, xp: 16, voice: 'crawler',
   },
   screamer: {
     zh: '尖嘯者', models: ['screamer'], hp: 300, walk: [1.2, 1.4], run: 2.6, runChance: 0, keepAway: [10, 18],
     scream: { cd: 11, radius: 16, slow: 0.45, slowTime: 2.2 }, heal: { radius: 8, perSec: 18, haste: 1.3 },
     dmg: 10, atkRange: 1.4, atkTime: 1.2, atkHit: 0.45, knockRes: 0.2, staggerRes: 0, radius: 0.3, height: 1.8,
-    anim: { walk: ['walk_c'], run: 'run', attack: ['attack_a'], idle: ['idle_b'], scream: 'scream' }, nominal: { walk: 1.0, run: 3.6 },
+    anim: { walk: ['walk_stalk'], run: 'run', attack: ['attack_a'], idle: ['idle_b'], scream: 'scream' }, nominal: { walk: 1.1, run: 3.6 },
     money: 400, xp: 30, voice: 'screamer',
   },
   riot: {
     zh: '防暴屍', models: ['riot'], hp: 450, walk: [1.3, 1.6], run: 3.0, runChance: 0.2, frontArmor: { reduce: 0.8, cone: 0.55, headReduce: 0.5 },
     dmg: 20, atkRange: 1.5, atkTime: 1.25, atkHit: 0.5, knockRes: 0.5, staggerRes: 0.4, radius: 0.36, height: 1.82,
-    anim: { walk: ['walk_a', 'walk_b'], run: 'run', attack: ['attack_a', 'attack_b'], idle: ['idle'] }, nominal: { walk: 1.0, run: 3.6 },
+    anim: { walk: ['walk_a', 'walk_hurry'], run: 'run', attack: ['attack_a', 'attack_b'], idle: ['idle'] }, nominal: { walk: 1.0, run: 3.6 },
     money: 350, xp: 26, voice: 'zombie', armor: 1.5,
   },
 };

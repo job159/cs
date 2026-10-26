@@ -85,6 +85,17 @@ export class DamageNumbers {
     while (this.list.length > 24) this._kill(this.list[0]);
   }
 
+  /**
+   * Adds `amount` to the newest live number on `target` (a channelled skill's rolling total: one number that keeps
+   * counting with a small pop as it rises, not a column of ticks); false when that target has none younger than maxAge s.
+   */
+  bump(target, amount, maxAge = 0.5) {
+    const st = target && this.byTarget.get(target), top = st?.[st.length - 1];
+    if (!top || top.dead || this.game.time - top.born > maxAge || !(amount > 0)) return false;
+    this._set(top, top.n + amount); top.punch = 1;
+    return true;
+  }
+
   _set(n, v) { n.n = v; const s = String(Math.round(v)); for (const e of n.txt) e.textContent = s; n.el.style.setProperty('--w', s.length); }
   _kill(n) {
     n.dead = true; n.el.remove();

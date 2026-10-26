@@ -1,0 +1,169 @@
+{
+  "category": "premium_staff",
+  "producer": "premium_staff",
+  "sounds": {
+    "ready_staff": [],
+    "ready_staff_hui": [],
+    "staff_bolt": [],
+    "staff_bolt_hit": [
+      "fs:626405"
+    ],
+    "staff_burst": [
+      "fs:609587",
+      "fs:264031",
+      "fs:569510",
+      "fs:516914",
+      "fs:758580",
+      "fs:258195"
+    ],
+    "staff_chain_end": [],
+    "staff_chain_loop": [
+      "fs:382313",
+      "fs:363092"
+    ],
+    "staff_chain_start": [
+      "fs:382313"
+    ],
+    "staff_close": [],
+    "staff_crisis": [
+      "fs:565642",
+      "fs:244238",
+      "fs:389432"
+    ],
+    "staff_draw": [
+      "fs:268227",
+      "fs:494797"
+    ],
+    "staff_dry": [
+      "fs:677159"
+    ],
+    "staff_far": [],
+    "staff_first": [
+      "fs:125401",
+      "fs:373928",
+      "fs:264031"
+    ],
+    "staff_idle": [],
+    "staff_inspect": [],
+    "staff_kill": [
+      "fs:183453",
+      "fs:183451"
+    ],
+    "staff_mark": [],
+    "staff_mark_full": [],
+    "staff_pool_cast": [
+      "fs:163383",
+      "fs:390462"
+    ],
+    "staff_pool_end": [],
+    "staff_pool_loop": [
+      "fs:382313"
+    ],
+    "staff_pool_repel": [],
+    "staff_pool_strike": [
+      "fs:398283",
+      "fs:264031",
+      "fs:569510",
+      "fs:258195",
+      "fs:758580",
+      "fs:516914",
+      "fs:609587"
+    ],
+    "staff_reload": [
+      "fs:125401",
+      "fs:201094",
+      "fs:263115"
+    ],
+    "staff_reload_rare": [],
+    "staff_ring": [
+      "fs:677159"
+    ],
+    "staff_tail": [],
+    "staff_ult_cloud": [
+      "fs:405601",
+      "fs:264031",
+      "fs:275196"
+    ],
+    "staff_ult_dive": [
+      "fs:703247",
+      "fs:516914",
+      "fs:264031",
+      "fs:569510",
+      "fs:258195",
+      "fs:758580",
+      "fs:609587"
+    ],
+    "staff_ult_final": [
+      "fs:366086",
+      "fs:258195",
+      "fs:764339",
+      "fs:264031",
+      "fs:275196"
+    ],
+    "staff_ult_rain": [
+      "fs:200273",
+      "fs:265627"
+    ],
+    "staff_ult_raise": [
+      "fs:375519",
+      "fs:375550",
+      "fs:163383",
+      "fs:373928",
+      "fs:375260",
+      "fs:375531",
+      "fs:373257",
+      "fs:373253",
+      "fs:764329",
+      "fs:372845",
+      "fs:275196"
+    ],
+    "staff_ult_roar": [
+      "fs:263115",
+      "fs:204912",
+      "fs:373257"
+    ]
+  },
+  "loaded": [
+    "fs:125401",
+    "fs:163383",
+    "fs:183451",
+    "fs:183453",
+    "fs:200273",
+    "fs:201094",
+    "fs:204912",
+    "fs:244238",
+    "fs:258195",
+    "fs:263115",
+    "fs:264031",
+    "fs:265627",
+    "fs:268227",
+    "fs:275196",
+    "fs:363092",
+    "fs:366086",
+    "fs:372845",
+    "fs:373253",
+    "fs:373257",
+    "fs:373928",
+    "fs:375260",
+    "fs:375519",
+    "fs:375531",
+    "fs:375550",
+    "fs:382313",
+    "fs:389432",
+    "fs:390462",
+    "fs:398283",
+    "fs:405601",
+    "fs:494797",
+    "fs:516914",
+    "fs:565642",
+    "fs:569510",
+    "fs:609587",
+    "fs:626405",
+    "fs:677159",
+    "fs:703247",
+    "fs:758580",
+    "fs:764329",
+    "fs:764339"
+  ],
+  "original": false
+}

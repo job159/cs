@@ -1,5 +1,6 @@
 // Crisis armour (危機護甲, docs/PREMIUM_WEAPONS.md §1.11): mythic weapons and Legacy VI. A def opts in with
-// `special.crisis` or `premium.crisis`: { name, kind: 'knock' (default) | 'counter' | 'blink' | 'heal', fx, r (reach, 4 m) }.
+// `special.crisis` or `premium.crisis`: { name, kind: 'knock' (default) | 'counter' | 'blink' | 'heal', fx, r (reach, 4 m),
+// sfx (the break cue, default crisis_break), flash (the 60 ms screen flash colour, default white) }.
 //   ready:   that weapon held 60 s in total and 20 hits landed with it; once per round (a wipe retry is a new round)
 //   trigger: a hit that would down the player while it is in hand -> the hit is blocked, 1 s invulnerable, 60 ms
 //            white flash, haptic thud x2, then the crisis skill event (every client sees it): 12 element-coloured
@@ -68,7 +69,7 @@ class Crisis {
     const g = this.g, st = g.status;
     this.used = this._round();
     st.invuln = Math.max(st.invuln, 1.0);
-    g.fx?.screen?.kick([2.4, 2.4, 2.4], 0.06);            // 60 ms white flash
+    g.fx?.screen?.kick(this.cfg(ws).flash || [2.4, 2.4, 2.4], 0.06);   // 60 ms white flash (cfg.flash: the weapon's own tint)
     haptic(40); setTimeout(() => haptic(40), 110);         // thud x2 (§1.13)
     g.hud?.onCrisis?.(ws, this.cfg(ws));
     castSkill(ws, 'crisis', { free: true });
@@ -103,7 +104,7 @@ export const CRISIS_SKILL = {
     // the burst of light at the chest is for onlookers (the caster gets the 60 ms white flash instead)
     if (!k.local) fx?.particles?.spawn({ additive: true, x: chest.x, y: chest.y, z: chest.z, life: 0.18, size: 1.2, size1: 2.4, color: [...k.col.rim, 1], color1: [0, 0, 0, 0], frame: FRAME.glow });
     fx?.shockwave(_b.set(c.x, c.y + 0.06, c.z), { normal: new THREE.Vector3(0, 1, 0), r0: 0.3, r1: range, life: 0.4, color: k.col.rim });
-    g.audio?.play('crisis_break', k.local ? { volume: 1 } : { pos: c });
+    g.audio?.play(k.p.sfx || 'crisis_break', k.local ? { volume: 1 } : { pos: c });   // sfx: the weapon's own break cue
     if (k.p.fx && SKILLS[k.p.fx]?.start) SKILLS[k.p.fx].start(k);
     // teammates' heal is applied by each teammate's own client (their PlayerStatus lives there)
     if (kind === 'heal' && !k.local && g.player && g.player.pos.distanceTo(c) <= 8) g.status?.heal(20);

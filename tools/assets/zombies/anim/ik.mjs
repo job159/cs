@@ -245,3 +245,93 @@ export function strideWarp(skel, clip, k) {
   clip.meta.speed = (clip.meta.speed || 0) * k;
   return clip;
 }
+
+/**
+ * Two-bone IK with anatomical hinges: like twoBoneIK (law of cosines, pole, soft reach), but both bones are oriented
+ * so their local +X stays on the hinge axis (the normal of the limb plane, upper x lower; the game_engine elbows and
+ * knees bend about local X), so the upper bone's twist follows the bend plane instead of the minimal-arc rotation from
+ * whatever pose the solve starts from (which flips the twist when a limb swings far). The end bone keeps the world
+ * rotation endWorldQ; `twistShare` of its twist about the lower bone's axis moves into the lower bone (forearm
+ * pronation instead of all of it at the wrist).
+ */
+export function hingeIK(skel, pose, chain, target, pole, endWorldQ, fkres = null, soft = 0, twistShare = 0) {
+  const [u, l, e] = chain;
+  const fk = fkres || skel.fk(pose);
+  const a = fk.wp[u];
+  const l1 = fk.wp[l].distanceTo(a), l2 = fk.wp[e].distanceTo(fk.wp[l]);
+  const toT = target.clone().sub(a);
+  let d = toT.length();
+  if (soft > 0) { const L = l1 + l2, ds = L * (1 - soft); if (d > ds) d = ds + (L - ds) * (1 - Math.exp(-(d - ds) / (L - ds))); }
+  d = Math.min(Math.max(d, Math.abs(l1 - l2) + 1e-4), l1 + l2 - 1e-4);
+  const dir = toT.normalize();
+  const cosA = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d);
+  const sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+  const perp = pole.clone().addScaledVector(dir, -pole.dot(dir));
+  if (perp.lengthSq() < 1e-10) perp.set(0, 0, 1).addScaledVector(dir, -dir.z);
+  perp.normalize();
+  const b = a.clone().addScaledVector(dir, l1 * cosA).addScaledVector(perp, l1 * sinA);
+  const c = a.clone().addScaledVector(dir, d);
+  const ud = b.clone().sub(a).normalize(), ld = c.clone().sub(b).normalize();
+  const n = ud.clone().cross(ld);
+  if (n.lengthSq() < 1e-8) n.copy(perp).cross(dir); // straight limb: the hinge the pole would bend it about
+  n.normalize();
+  const frame = (x, y) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, x.clone().cross(y)));
+  const Gu = frame(n.clone().addScaledVector(ud, -n.dot(ud)).normalize(), ud);
+  let Gl = frame(n.clone().addScaledVector(ld, -n.dot(ld)).normalize(), ld);
+  const Ge = endWorldQ || fk.wq[e].clone();
+  if (twistShare) {
+    // twist of the end bone about the lower bone's axis, relative to its rest attachment
+    const rel = Gl.clone().invert().multiply(Ge).multiply(skel.restLocalQ[e].clone().invert());
+    const tw = new THREE.Quaternion(0, rel.y, 0, rel.w).normalize();
+    Gl = Gl.multiply(new THREE.Quaternion().slerp(tw, twistShare));
+  }
+  pose.q[u] = fk.wq[skel.parent[u]].clone().invert().multiply(Gu);
+  pose.q[l] = Gu.clone().invert().multiply(Gl);
+  pose.q[e] = Gl.clone().invert().multiply(Ge);
+  return pose;
+}
+
+/**
+ * Longer strides for a locomotion clip: every foot's fore/aft offset from the pelvis is scaled by k (like strideWarp)
+ * and the pelvis is lowered wherever a leg would pass `maxExt` of its length (dilated + smoothed over +-win frames,
+ * cyclic for loops), so the longer steps bend the knees instead of leaving the feet short of the floor. Foot heights
+ * and orientations are kept; the treadmill speed scales by k (re-lock the feet afterwards).
+ */
+export function lengthenStride(skel, clip, k, { maxExt = 0.96, win = 3 } = {}) {
+  const n = clip.poses.length, N = clip.loop ? n - 1 : n;
+  const pel = skel.i('pelvis');
+  const legLen = (s) => skel.restWorldP[skel.i(`calf_${s}`)].distanceTo(skel.restWorldP[skel.i(`thigh_${s}`)]) + skel.restWorldP[skel.i(`foot_${s}`)].distanceTo(skel.restWorldP[skel.i(`calf_${s}`)]);
+  const L = { l: legLen('l') * maxExt, r: legLen('r') * maxExt };
+  const tgt = [], need = [];
+  for (let f = 0; f < n; f++) {
+    const fk = skel.fk(clip.poses[f]);
+    const P = fk.wp[pel];
+    let drop = 0;
+    const t = {};
+    for (const s of ['l', 'r']) {
+      const fi = skel.i(`foot_${s}`), H = fk.wp[skel.i(`thigh_${s}`)];
+      const A = fk.wp[fi].clone();
+      A.z = P.z + (A.z - P.z) * k;
+      t[s] = { p: A, q: fk.wq[fi].clone() };
+      const h2 = (A.x - H.x) ** 2 + (A.z - H.z) ** 2, dy = H.y - A.y;
+      if (h2 + dy * dy > L[s] * L[s] && h2 < L[s] * L[s]) drop = Math.max(drop, dy - Math.sqrt(L[s] * L[s] - h2));
+    }
+    tgt.push(t); need.push(drop);
+  }
+  const at = (f) => need[clip.loop ? ((f % N) + N) % N : Math.max(0, Math.min(n - 1, f))];
+  const dil = need.map((_, f) => { let m = 0; for (let d = -win; d <= win; d++) m = Math.max(m, at(f + d)); return m; });
+  const atD = (f) => dil[clip.loop ? ((f % N) + N) % N : Math.max(0, Math.min(n - 1, f))];
+  for (let f = 0; f < n; f++) {
+    let s = 0, w = 0;
+    for (let d = -win; d <= win; d++) { const wt = win + 1 - Math.abs(d); s += atD(f + d) * wt; w += wt; }
+    const p = clip.poses[f];
+    p.root.y -= s / w;
+    for (const side of ['l', 'r']) {
+      const fk = skel.fk(p);
+      twoBoneIK(skel, p, LEG(skel, side), tgt[f][side].p, kneePole(fk, skel, side), tgt[f][side].q, fk, 0.02);
+    }
+  }
+  clip.meta.speed = (clip.meta.speed || 0) * k;
+  clip.meta.strideDrop = +Math.max(...dil).toFixed(3);
+  return clip;
+}

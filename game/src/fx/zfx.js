@@ -57,8 +57,11 @@ export const SHELL = {
   emberkill: { col: [2.8, 1.1, 0.25], amt: 0.6, fres: 0.95, exp: 1.8, prio: 9, decay: true },
   // X02 kill: a star-blue rim flash (a pack cut down at once must not turn into a crowd of white glass bodies)
   starkill: { col: [0.9, 1.5, 3.4], amt: 0.45, fres: 0.97, exp: 2.6, prio: 9, decay: true },
-  // X05 kill (KE_CLEAVE): a molten crimson rim on the cut body (smouldering, not a white flash)
-  cleavekill: { col: [2.8, 0.42, 0.16], amt: 0.55, fres: 0.95, exp: 2.0, prio: 9, decay: true },
+  // X05 kill (KE_CLEAVE): the cut body chars dark under a thin molten crimson rim (smouldering; a wide bright rim lit
+  // whole bodies pale pink). char: albedo darkening (0..1), follows the amount
+  cleavekill: { col: [2.0, 0.24, 0.07], amt: 0.5, fres: 1, exp: 4.2, char: 0.55, prio: 9, decay: true },
+  // X06 kill (KE_PRISM): a thin pale violet-white rim (the warm / cool cuts carry the colour; a wide rim read as glass)
+  prismkill: { col: [1.5, 1.25, 2.4], amt: 0.42, fres: 0.98, exp: 3.0, prio: 9, decay: true },
   // X04 連霆 / KE_THUNDER: a flickering cold-white rim (electrocuted), never a solid blue body
   shocked: { col: [1.4, 2.6, 3.6], amt: 0.42, hz: 22, depth: 0.5, flicker: true, fres: 0.95, exp: 2.2, prio: 6 },
   frozen: { col: [0.8, 1.8, 2.6], amt: 0.5, fres: 1, prio: 5 },
@@ -74,7 +77,7 @@ const SHELL_FRAG = /* glsl */`
   // zombie status shell (06b §9.1 #2): flat CSO glow (fres 0) .. rim light (fres 1)
   float zfr = pow(1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0), uShellExp);
   totalEmissiveRadiance += uShellCol * uShellAmt * mix(1.0, zfr, uShellFres);
-  diffuseColor.rgb *= 1.0 - min(uShellAmt, 1.0) * (1.0 - uShellFres) * 0.5;   // a flat shell reads as one colour
+  diffuseColor.rgb *= (1.0 - min(uShellAmt, 1.0) * (1.0 - uShellFres) * 0.5) * (1.0 - uShellChar);   // a flat shell reads as one colour; char darkens
 }`;
 
 /**
@@ -83,7 +86,7 @@ const SHELL_FRAG = /* glsl */`
  * once the first zombie compiled. Returns the uniforms { col, amt, fres, exp } that ZFX drives.
  */
 export function patchShell(root) {
-  const U = { col: { value: new THREE.Color(0, 0, 0) }, amt: { value: 0 }, fres: { value: 0 }, exp: { value: 2 } };
+  const U = { col: { value: new THREE.Color(0, 0, 0) }, amt: { value: 0 }, fres: { value: 0 }, exp: { value: 2 }, char: { value: 0 } };
   const done = new Map();
   const patch = (m) => {
     if (!m || !m.emissive || m.userData.zshell) return m;     // unlit / already patched
@@ -93,9 +96,9 @@ export function patchShell(root) {
     const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey();   // keep a patch the template may carry
     c.onBeforeCompile = (sh, r) => {
       prev.call(c, sh, r);
-      sh.uniforms.uShellCol = U.col; sh.uniforms.uShellAmt = U.amt; sh.uniforms.uShellFres = U.fres; sh.uniforms.uShellExp = U.exp;
+      sh.uniforms.uShellCol = U.col; sh.uniforms.uShellAmt = U.amt; sh.uniforms.uShellFres = U.fres; sh.uniforms.uShellExp = U.exp; sh.uniforms.uShellChar = U.char;
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform vec3 uShellCol;\nuniform float uShellAmt;\nuniform float uShellFres;\nuniform float uShellExp;')
+        .replace('#include <common>', '#include <common>\nuniform vec3 uShellCol;\nuniform float uShellAmt;\nuniform float uShellFres;\nuniform float uShellExp;\nuniform float uShellChar;')
         .replace('#include <emissivemap_fragment>', SHELL_FRAG);
     };
     c.customProgramCacheKey = () => 'zshell|' + prevKey;
@@ -243,6 +246,7 @@ export class ZFX {
     s.amt += (target - s.amt) * Math.min(1, dt * (best?.decay ? 60 : target > s.amt ? 7 : 10));
     if (!best && s.amt < 0.004) { s.amt = 0; s.cur = null; }
     U.amt.value = s.amt * (z.def.boss && s.amt > 0 ? this._rimFar(z) : 1);
+    if (U.char) U.char.value = s.cur?.char ? s.cur.char * Math.min(1, s.amt / s.cur.amt) : 0;
   }
 
   /**
@@ -439,14 +443,16 @@ export class ZFX {
         m.x = _h.x + fx * 0.09 + fz * side; m.y = _h.y + 0.03; m.z = _h.z + fz * 0.09 - fx * side;
       }
     }
-    if (s.leapT > 0.12 && s.leapT < 0.75) {
+    // (the cue comes with the crouch-load: the jump itself starts leap.windup s later)
+    const w = z.def?.leap?.windup || 0;
+    if (s.leapT > 0.12 + w && s.leapT < 0.75 + w) {
       s.trailT = (s.trailT ?? 0) - dt;
       if (s.trailT <= 0) {
         s.trailT = 0.05;
         this.P.spawn({ x: z.pos.x, y: z.pos.y + z.height * 0.5, z: z.pos.z, vx: rr(-0.2, 0.2), vy: 0.1, vz: rr(-0.2, 0.2), life: 0.35, size: 0.25, size1: 0.5, color: [0.35, 0.33, 0.3, 0.3], color1: [0.35, 0.33, 0.3, 0], frame: FRAME.dusty, lit: true, drag: 3 });
       }
     }
-    if (s.leapT >= 0.75) {
+    if (s.leapT >= 0.75 + w) {
       s.leapT = -1;
       this._dust(z.pos.x, z.pos.y, z.pos.z, 3, { r: 0.3, size: 0.25, size1: 0.9, speed: 1.6, life: 0.8, a: 0.4 });
       if (s.eyes) this._eyesOff(s);

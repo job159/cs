@@ -46,6 +46,29 @@ dimensions (reference: overall length, barrel length, height, magazine size of t
 Parts: `g.add(geo, mat)` adds to `body`. Moving parts are separate nodes: `const mag = g.part('mag', { pivot: [s,t,w], extras: {...} })`;
 geometry is still authored in gun coordinates, the pivot becomes the node origin. Parts can be nested with `{ parent: 'body' }`.
 
+Sculpted premium pieces (beasts, relief, wraps): `tools/assets/lib/sculpt.mjs` on top of gunkit — `loft` through rings of
+`[s,t,w]` points, tapered tubes `ttube`, `petal` flame / leaf plates (`bend` separates the curl from the thickness axis),
+design-space relief (`ribbonT` strokes, `fanT` plates, `thunderT` 雲雷紋 bands, `curlT` cloud curls) mapped onto a surface
+with `mapTris` (`cylMap(R)` wraps them round a shaft), `helixCord` bindings, `brilliant` cut stones, `tessellateFat` for the
+bake. Also: `scaleT` (one cast shield scale, 33 tris: rim, keel, free edge standing proud — lay rows of them through any
+surface map for beast hides), `wireT` (cheap cloisonné / cast wire), `clipHalf` (split a plate into enamel fields),
+`tooth` (curved tooth / grooved fang), `ftube` (fluted oval horn), `ellip`, `petal({ groove })` fluted flames,
+`dome(c, n, r, h, seg)`. Keep one mesh (part × material) under 65 536 vertices so its index buffer stays 16-bit, and
+raise the `mapTris` crease (50-55) on dense relief so chamfers shade with their tops (fewer split vertices).
+First users: `staff.mjs` (X04); the X03 bow keeps its own copies.
+Shader knobs added for the staff (any premium def can use them): `pvKey[key].shardStretch` ([x, y, z] cell density in rest
+space, < 1 elongates the cells: snake-belly 斷紋 along a shaft), `pvKey[key].shardRough` (glaze roughness, default 0.17),
+and `mat[key].cavMetal` (metalness of the cavity crust, e.g. 0.1 for verdigris in bronze recesses; default off).
+
+Cast relief as a heightfield (masks, plaques, cartouches): `tools/assets/lib/hfield.mjs`. Write the face as a height
+function `h(s, t)` (base taper + domes + `bump`s + ridges from `SegIndex` distances: `halfRound`, smoothstep bevels;
+keep every profile C1 -- a crease in h jags the analytic normals), then `hfFace(loops, h, opts)` meshes the region
+(outline + holes) with a 2:1-balanced adaptive quadtree + conforming Delaunay, lifts it, takes normals from h's gradient
+(flat stays exactly flat: no smoothing wedges) and QEM-decimates it with meshoptimizer (`decimate: { error, normals, ao,
+lattice }`: `ao` keeps vertices where the horizon occlusion changes, `lattice` locks a vertex grid so no triangle fans
+across a flat). `sheet()` lays a thin plate on h (gold leaf, enamel floors), `mirror()` is the normal-correct mirror
+(gunkit `mirrorW` flips normal.x twice), `horizonAO(h, s, t)` feeds a post-bake patina pass. First user: `greataxe.mjs`.
+
 ## Required parts (node names) — only those the mechanism has
 
 | part | meaning / animation contract |

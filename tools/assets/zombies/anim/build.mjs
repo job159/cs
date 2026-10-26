@@ -10,14 +10,16 @@ import { GLBBuilder, addSkeleton, addClips } from './glb-write.mjs';
 import { fixSigns, duration } from './clip.mjs';
 import { buildLoco } from './clips-loco.mjs';
 import { buildActions } from './clips-action.mjs';
+import { buildQuad } from './clips-quad.mjs';
 import { footMetrics, popMetrics } from './metrics.mjs';
 import { plotFeet } from './plot.mjs';
 import { writeCredits } from './credits.mjs';
 import { writeDocTable } from './doctable.mjs';
 
-export const CLIP_NAMES = ['idle', 'idle_b', 'walk_a', 'walk_b', 'walk_c', 'walk_limp', 'run', 'sprint',
+export const CLIP_NAMES = ['idle', 'idle_b', 'walk_a', 'walk_b', 'walk_c', 'walk_limp', 'walk_stalk', 'walk_hurry', 'run', 'sprint',
   'attack_a', 'attack_b', 'attack_lunge', 'bite', 'hit_front', 'hit_back', 'hit_left', 'hit_right', 'stagger',
-  'knockdown', 'get_up', 'death_front', 'death_back', 'crawl', 'crawl_attack', 'scream', 'spit', 'leap', 'climb', 'eat'];
+  'knockdown', 'get_up', 'death_front', 'death_back', 'crawl', 'crawl_attack', 'scream', 'spit', 'leap', 'climb', 'eat',
+  'crawl_quad', 'crawl_quad_attack', 'pounce', 'death_quad', 'idle_quad'];
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
@@ -27,7 +29,7 @@ const out = path.resolve(REPO, opt('out', 'game/assets/zombies/anims.glb'));
 const skel = new Skeleton();
 const t0 = Date.now();
 const loco = buildLoco(skel, only);
-const all = { ...loco, ...buildActions(skel, only, loco) };
+const all = { ...loco, ...buildActions(skel, only, loco), ...buildQuad(skel, only) };
 const clips = [];
 for (const name of CLIP_NAMES) {
   if (only && !only.includes(name)) continue;
@@ -74,7 +76,8 @@ const bytes = g.write(out);
 console.log(`anims: ${clips.length} clips, ${keys} rotation keys, ${(bytes / 1024).toFixed(0)} KB -> ${path.relative(REPO, out)} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
 for (const c of clips) {
   const fm = footMetrics(skel, c), pm = popMetrics(skel, c);
-  console.log(`  ${c.name.padEnd(13)} ${duration(c).toFixed(2).padStart(5)}s ${c.loop ? 'loop' : '    '} v=${(c.meta.speed || 0).toFixed(2)}  slide ${fm.slideMean.toFixed(3)}  minFootY ${fm.minFootY.toFixed(3)}  maxStep ${pm.maxStepDeg.toFixed(1)}deg (${pm.maxStepAt})${c.loop ? `  seam ${pm.seamVelDiffDeg.toFixed(1)}` : ''}`);
+  console.log(`  ${c.name.padEnd(13)} ${duration(c).toFixed(2).padStart(5)}s ${c.loop ? 'loop' : '    '} v=${(c.meta.speed || 0).toFixed(2)}  slide ${fm.slideMean.toFixed(3)}  minFootY ${fm.minFootY.toFixed(3)}  maxStep ${pm.maxStepDeg.toFixed(1)}deg (${pm.maxStepAt})${c.loop ? `  seam ${pm.seamVelDiffDeg.toFixed(1)}` : ''}${c.meta.qa ? `
+                ${c.meta.qa}` : ''}`);
 }
 if (args.includes('--plot')) {
   const loco = clips.filter((c) => c.loop && c.meta.speed > 0.05);

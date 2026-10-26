@@ -120,7 +120,7 @@ export function runeTexture() {
 /** Material-level defaults (spec defaults in parentheses of §1.5.3), overridable per weapon / per part. */
 const PARAM_DEFAULTS = {
   rimPower: 3.5, veinFreq: 12, veinSpeed: 0.5, veinAxis: 0, shine: 2, sweepT: 4, leaf: 0, leafScale: 180,
-  shardScale: 0, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, iridCool: 0, gem: 1, coreSkin: 0, runeSpeed: 0.15,
+  shardScale: 0, shardStretch: [1, 1, 1], shardRough: 0.17, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, iridCool: 0, gem: 1, coreSkin: 0, runeSpeed: 0.15,
   runeAxis: 0, runeOrigin: [0, 0, 0], runeWidth: 0.006, flashMask: 1, coreMode: -1, coreScale: 1,
   gemSun: 0,   // > 0: the stone's radius (m) about its part pivot -- a sun burns inside it (X03 日珠)
 };
@@ -154,7 +154,7 @@ export function premiumUniforms(state, prm) {
     pBox: f(new THREE.Vector4(-0.5, 0.2, -0.15, 0.1)),
     pRimPower: f(prm.rimPower), pVeinFreq: f(prm.veinFreq), pVeinSpeed: f(prm.veinSpeed), pVeinAxis: f(prm.veinAxis),
     pShine: f(prm.shine), pSweepT: f(prm.sweepT), pLeaf: f(prm.leaf), pLeafScale: f(prm.leafScale),
-    pShardScale: f(prm.shardScale), pGroutW: f(prm.groutW), pGroutMetal: f(prm.groutMetal), pIrid: f(prm.irid),
+    pShardScale: f(prm.shardScale), pShardStretch: f(new THREE.Vector3(...prm.shardStretch)), pShardRough: f(prm.shardRough), pGroutW: f(prm.groutW), pGroutMetal: f(prm.groutMetal), pIrid: f(prm.irid),
     pIridScale: f(prm.iridScale), pGem: f(prm.gem), pGemSun: f(prm.gemSun), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pRuneSpeed: f(prm.runeSpeed),
     pRuneAxis: f(prm.runeAxis), pRuneOrigin: f(new THREE.Vector3(...prm.runeOrigin)), pRuneWidth: f(prm.runeWidth),
     pFlashMask: f(prm.flashMask), pDpr: f(Math.min(3, globalThis.devicePixelRatio || 1)), tRunes: f(runeTexture()),
@@ -348,7 +348,8 @@ uniform float pShine, pSweepT;
 uniform float pLeaf, pLeafScale;
 #endif
 #ifdef PREMIUM_SHARD
-uniform float pShardScale, pGroutW, pGroutMetal;
+uniform float pShardScale, pGroutW, pGroutMetal, pShardRough;
+uniform vec3 pShardStretch;   // per-axis cell density (rest space): < 1 stretches the cells along that axis
 uniform vec3 pPal[4];
 uniform vec3 pGrout;
 #endif
@@ -433,7 +434,7 @@ export const PREMIUM_ALBEDO = /* glsl */`
     // A one-colour palette = crackle glaze (開片, M07): warped (irregular) cells that do not vary, hairline cracks
     // of uneven width and darkness UNDER a continuous glossy glaze (no matte grout, no per-shard facets)
     float mono = step(length(pPal[0] - pPal[1]) + length(pPal[0] - pPal[2]) + length(pPal[0] - pPal[3]), 1e-3);
-    vec3 sp = vRest * pShardScale + pSeed * 7.13;
+    vec3 sp = vRest * pShardScale * pShardStretch + pSeed * 7.13;
     sp += mono * 0.42 * sin(sp.yzx * 0.53 + sp.zxy * 0.31);
     vec3 sv = pBiVor(sp, vObjNor);
     pCell = sv.z;
@@ -458,7 +459,7 @@ export const PREMIUM_ALBEDO = /* glsl */`
     diffuseColor.rgb = mix(sc, pGrout, grout);
     // glazed shards are glossy dielectrics whatever the part's base material; grout is matte (or gold wire);
     // crackle lines lie under the glaze, so the surface stays glossy
-    pRoughMix = 1.0; pRoughTo = mix(0.17, pGroutMetal > 0.5 ? 0.28 : 0.85, grout * (1.0 - mono));
+    pRoughMix = 1.0; pRoughTo = mix(pShardRough, pGroutMetal > 0.5 ? 0.28 : 0.85, grout * (1.0 - mono));
     pMetalMix = 1.0; pMetalTo = grout * pGroutMetal;
     pShardMono = mono;
   }

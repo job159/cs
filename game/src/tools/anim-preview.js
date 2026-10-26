@@ -3,10 +3,12 @@
 // Params: clips (comma list, one row each), n (frames per row), view (side|front|quarter|back),
 // mode (strip = copies side by side | onion = overlaid with root motion re-added along +Z),
 // t0/t1 (time range in seconds, default whole clip), anims (GLB url), model (skinned GLB url),
-// spacing (m between copies), h (row height in m).
+// spacing (m between copies), h (row height in m), game=1 (with a model: clips retargeted onto it and its
+// extras.poseOffsets applied after the clip, exactly as the game plays them), hands=1 (trail: + knuckle paths).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
+import { retargetClips } from '../zombies/retarget.js';
 
 window.__shotReady = false;
 const qs = new URLSearchParams(location.search);
@@ -51,7 +53,7 @@ function viewBasis() {
 
 // Foot / hand point trails over the whole clip with the treadmill speed added back (+Z): a planted
 // foot shows as a tight cluster of dots, sliding shows as a smear along the ground.
-function addTrails(model, clip, info, origin, scene, box) {
+function addTrails(model, clip, info, origin, scene, box, speed = info.speed || 0, applyOffs = () => {}) {
   const obj = skClone(model.scene);
   const mixer = new THREE.AnimationMixer(obj);
   mixer.clipAction(clip).play();
@@ -70,11 +72,15 @@ function addTrails(model, clip, info, origin, scene, box) {
   for (let k = 0; k <= steps; k++) {
     const t = (k / steps) * clip.duration;
     mixer.setTime(Math.min(t, clip.duration - 1e-4));
+    applyOffs(obj);
     obj.updateMatrixWorld(true);
     for (const s of ['l', 'r']) {
       const heel = bones[`foot_${s}`].localToWorld(heelOff[s].clone());
       const toe = new THREE.Vector3().setFromMatrixPosition(bones[`ball_${s}`].matrixWorld);
-      for (const p of [heel, toe]) { p.z += (info.speed || 0) * t; p.add(origin); dots[s].push(p); }
+      // (hands=1: + the middle knuckle, for the quadruped clips that plant the hands too)
+      const pts = [heel, toe];
+      if (qs.has('hands')) pts.push(new THREE.Vector3().setFromMatrixPosition(bones[`middle_01_${s}`].matrixWorld));
+      for (const p of pts) { p.z += speed * t; p.add(origin); dots[s].push(p); }
     }
   }
   for (const s of ['l', 'r']) {
@@ -89,6 +95,13 @@ async function main() {
   const bust = (u) => u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now(); // never show a cached GLB
   const [model, anims] = await Promise.all([load(bust(qs.get('model') || 'dev/mannequin.glb')), load(bust(qs.get('anims') || 'assets/zombies/anims.glb'))]);
   const meta = anims.scene.userData?.clips || anims.parser?.json?.extras?.clips || {};
+  // game=1: the game's per-model retarget + the character's pose offsets (local euler degrees after the mixer)
+  const game = qs.has('game') && qs.has('model');
+  if (game) anims.animations = retargetClips(anims.animations, anims.scene, model.scene);
+  const offs = game ? Object.entries(model.scene.userData?.poseOffsets || {}).map(([b, e]) => [b, new THREE.Quaternion().setFromEuler(new THREE.Euler(...e.map((v) => (v || 0) * Math.PI / 180)))]) : [];
+  const pelvisY = (root) => { root.updateMatrixWorld(true); const b = root.getObjectByName('pelvis'); return b ? b.getWorldPosition(new THREE.Vector3()).y : 1; };
+  const ratio = game ? pelvisY(model.scene) / pelvisY(anims.scene) : 1;   // the game's stride scale for this model
+  const applyOffs = (obj) => { for (const [b, q] of offs) { const o = obj.getObjectByName(b); if (o) o.quaternion.multiply(q); } };
   const names = (qs.get('clips') || anims.animations.map((a) => a.name).join(',')).split(',');
   const { dir, right } = viewBasis();
   const spacing = num('spacing', mode === 'onion' ? 0 : view === 'front' || view === 'back' ? 0.95 : 1.25);
@@ -111,15 +124,16 @@ async function main() {
       const mixer = new THREE.AnimationMixer(obj);
       mixer.clipAction(clip).play();
       mixer.setTime(Math.min(t, clip.duration - 1e-4));
+      applyOffs(obj);
       const off = right.clone().multiplyScalar(i * spacing).add(origin);
-      if (mode === 'onion') off.z += (info.speed || 0) * t;
+      if (mode === 'onion') off.z += (info.speed || 0) * ratio * t;
       obj.position.copy(off);
       scene.add(obj);
       obj.updateMatrixWorld(true);
       box.expandByObject(obj);
       if (N > 1) labels.push({ text: `${t.toFixed(2)}`, p: off.clone().add(new THREE.Vector3(0, -0.12, 0)) });
     }
-    if (mode === 'trail') addTrails(model, clip, info, origin, scene, box);
+    if (mode === 'trail') addTrails(model, clip, info, origin, scene, box, (info.speed || 0) * (game ? ratio : 1), applyOffs);
     // ground strip + 0.25 m grid to judge sliding / penetration
     const len = Math.max(2, (N - 1) * spacing + 2);
     const center = right.clone().multiplyScalar(((N - 1) * spacing) / 2).add(origin);
@@ -134,7 +148,7 @@ async function main() {
     const grid = new THREE.GridHelper(Math.max(len, 8), Math.max(len, 8) * 4, 0x59616b, 0x4a5058);
     grid.position.copy(g.position).add(new THREE.Vector3(0, 0.001, 0));
     scene.add(grid);
-    const title = `${name}  ${clip.duration.toFixed(2)}s${loop ? ' loop' : ''}${info.speed ? `  v=${info.speed.toFixed(2)}m/s` : ''}`;
+    const title = `${name}  ${clip.duration.toFixed(2)}s${loop ? ' loop' : ''}${info.speed ? `  v=${(info.speed * ratio).toFixed(2)}m/s` : ''}`;
     labels.push({ text: title, big: true, left: true, start: right.clone().multiplyScalar(-0.5).add(origin).add(new THREE.Vector3(0, 2.05, 0)) });
   });
   // fit an orthographic camera to the content

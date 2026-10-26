@@ -11,6 +11,9 @@ import './weapons/premium/chiwen.js';   // M07 螭吻．吞潮 (registers its sp
 import './weapons/premium/starsword.js';   // X02 星河．斬嶽 (premium melee: special, skills, clips, crosshair, kill mark)
 import './weapons/premium/sunbow.js';      // X03 彤弓．落陽 (great bow: own trigger, arrows, skills, clips, crosshair, kill mark)
 import './weapons/premium/staff.js';       // X04 應龍．御霆 (magic staff: own trigger, mana, homing darts, skills, clips, crosshair, kill mark)
+import './weapons/premium/greataxe.js';    // X05 刑天．舞戚 (great axe: own melee, leap smash, whirlwind, thrown axe, war spirit, clips, crosshair, kill mark)
+import './weapons/premium/twinblades.js';  // X06 虹霓．雙絕 (dual sabres: own blade pose layer, combo, dash, parry, blade storm, lotus ult, clips, crosshair, kill mark)
+import './weapons/premium/pulao.js';       // M08 蒲牢．鐘吼 (pump gun: bell shells, knell, 108-bell ultimate, clips, crosshair, kill mark)
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';

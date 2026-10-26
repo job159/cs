@@ -1,0 +1,1003 @@
+{
+  "sounds": {
+    "greataxe_catch": {
+      "files": [
+        "premium_greataxe/greataxe_catch_1.ogg",
+        "premium_greataxe/greataxe_catch_2.ogg",
+        "premium_greataxe/greataxe_catch_3.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_charge": {
+      "files": [
+        "premium_greataxe/greataxe_charge.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "greataxe_charge_full": {
+      "files": [
+        "premium_greataxe/greataxe_charge_full.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_charge_stage": {
+      "files": [
+        "premium_greataxe/greataxe_charge_stage_1.ogg",
+        "premium_greataxe/greataxe_charge_stage_2.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_chop_ground": {
+      "files": [
+        "premium_greataxe/greataxe_chop_ground_1.ogg",
+        "premium_greataxe/greataxe_chop_ground_2.ogg",
+        "premium_greataxe/greataxe_chop_ground_3.ogg",
+        "premium_greataxe/greataxe_chop_ground_4.ogg"
+      ],
+      "vol": 1.25,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "greataxe_close": {
+      "files": [
+        "premium_greataxe/greataxe_close_1.ogg",
+        "premium_greataxe/greataxe_close_2.ogg",
+        "premium_greataxe/greataxe_close_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        40
+      ],
+      "loop": false
+    },
+    "greataxe_crisis": {
+      "files": [
+        "premium_greataxe/greataxe_crisis_1.ogg",
+        "premium_greataxe/greataxe_crisis_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_draw": {
+      "files": [
+        "premium_greataxe/greataxe_draw_1.ogg",
+        "premium_greataxe/greataxe_draw_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_draw_first": {
+      "files": [
+        "premium_greataxe/greataxe_draw_first.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_far": {
+      "files": [
+        "premium_greataxe/greataxe_far_1.ogg",
+        "premium_greataxe/greataxe_far_2.ogg"
+      ],
+      "vol": 0.4,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        40
+      ],
+      "loop": false
+    },
+    "greataxe_final": {
+      "files": [
+        "premium_greataxe/greataxe_final_1.ogg",
+        "premium_greataxe/greataxe_final_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false
+    },
+    "greataxe_first_sting": {
+      "files": [
+        "premium_greataxe/greataxe_first_sting.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_fly": {
+      "files": [
+        "premium_greataxe/greataxe_fly.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        60
+      ],
+      "loop": true
+    },
+    "greataxe_hit": {
+      "files": [
+        "premium_greataxe/greataxe_hit_1.ogg",
+        "premium_greataxe/greataxe_hit_2.ogg",
+        "premium_greataxe/greataxe_hit_3.ogg",
+        "premium_greataxe/greataxe_hit_4.ogg",
+        "premium_greataxe/greataxe_hit_5.ogg",
+        "premium_greataxe/greataxe_hit_6.ogg"
+      ],
+      "vol": 1.12,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        60
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "greataxe_hit_flesh": {
+      "files": [
+        "premium_greataxe/greataxe_hit_flesh_1.ogg",
+        "premium_greataxe/greataxe_hit_flesh_2.ogg",
+        "premium_greataxe/greataxe_hit_flesh_3.ogg",
+        "premium_greataxe/greataxe_hit_flesh_4.ogg",
+        "premium_greataxe/greataxe_hit_flesh_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        45
+      ],
+      "loop": false
+    },
+    "greataxe_hit_wall": {
+      "files": [
+        "premium_greataxe/greataxe_hit_wall_1.ogg",
+        "premium_greataxe/greataxe_hit_wall_2.ogg",
+        "premium_greataxe/greataxe_hit_wall_3.ogg",
+        "premium_greataxe/greataxe_hit_wall_4.ogg",
+        "premium_greataxe/greataxe_hit_wall_5.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        3,
+        50
+      ],
+      "loop": false
+    },
+    "greataxe_idle": {
+      "files": [
+        "premium_greataxe/greataxe_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "greataxe_inspect": {
+      "files": [
+        "premium_greataxe/greataxe_inspect.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_jaw": {
+      "files": [
+        "premium_greataxe/greataxe_jaw_1.ogg",
+        "premium_greataxe/greataxe_jaw_2.ogg",
+        "premium_greataxe/greataxe_jaw_3.ogg",
+        "premium_greataxe/greataxe_jaw_4.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_kill": {
+      "files": [
+        "premium_greataxe/greataxe_kill_1.ogg",
+        "premium_greataxe/greataxe_kill_2.ogg",
+        "premium_greataxe/greataxe_kill_3.ogg",
+        "premium_greataxe/greataxe_kill_4.ogg"
+      ],
+      "vol": 1.4,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        5,
+        50
+      ],
+      "loop": false
+    },
+    "greataxe_land": {
+      "files": [
+        "premium_greataxe/greataxe_land_1.ogg",
+        "premium_greataxe/greataxe_land_2.ogg",
+        "premium_greataxe/greataxe_land_3.ogg"
+      ],
+      "vol": 1.15,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        110
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "greataxe_leap": {
+      "files": [
+        "premium_greataxe/greataxe_leap_1.ogg",
+        "premium_greataxe/greataxe_leap_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_quake": {
+      "files": [
+        "premium_greataxe/greataxe_quake_1.ogg",
+        "premium_greataxe/greataxe_quake_2.ogg",
+        "premium_greataxe/greataxe_quake_3.ogg",
+        "premium_greataxe/greataxe_quake_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "greataxe_recover": {
+      "files": [
+        "premium_greataxe/greataxe_recover_1.ogg",
+        "premium_greataxe/greataxe_recover_2.ogg",
+        "premium_greataxe/greataxe_recover_3.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_return": {
+      "files": [
+        "premium_greataxe/greataxe_return_1.ogg",
+        "premium_greataxe/greataxe_return_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        16,
+        90
+      ],
+      "loop": false
+    },
+    "greataxe_roar": {
+      "files": [
+        "premium_greataxe/greataxe_roar.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_sever": {
+      "files": [
+        "premium_greataxe/greataxe_sever_1.ogg",
+        "premium_greataxe/greataxe_sever_2.ogg",
+        "premium_greataxe/greataxe_sever_3.ogg",
+        "premium_greataxe/greataxe_sever_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false
+    },
+    "greataxe_spin": {
+      "files": [
+        "premium_greataxe/greataxe_spin.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "greataxe_spin_end": {
+      "files": [
+        "premium_greataxe/greataxe_spin_end_1.ogg",
+        "premium_greataxe/greataxe_spin_end_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_spin_hit": {
+      "files": [
+        "premium_greataxe/greataxe_spin_hit_1.ogg",
+        "premium_greataxe/greataxe_spin_hit_2.ogg",
+        "premium_greataxe/greataxe_spin_hit_3.ogg",
+        "premium_greataxe/greataxe_spin_hit_4.ogg",
+        "premium_greataxe/greataxe_spin_hit_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_spin_start": {
+      "files": [
+        "premium_greataxe/greataxe_spin_start_1.ogg",
+        "premium_greataxe/greataxe_spin_start_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false
+    },
+    "greataxe_swing": {
+      "files": [
+        "premium_greataxe/greataxe_swing_1.ogg",
+        "premium_greataxe/greataxe_swing_2.ogg",
+        "premium_greataxe/greataxe_swing_3.ogg",
+        "premium_greataxe/greataxe_swing_4.ogg",
+        "premium_greataxe/greataxe_swing_5.ogg",
+        "premium_greataxe/greataxe_swing_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_swing_heavy": {
+      "files": [
+        "premium_greataxe/greataxe_swing_heavy_1.ogg",
+        "premium_greataxe/greataxe_swing_heavy_2.ogg",
+        "premium_greataxe/greataxe_swing_heavy_3.ogg",
+        "premium_greataxe/greataxe_swing_heavy_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_swing_night": {
+      "files": [
+        "premium_greataxe/greataxe_swing_night_1.ogg",
+        "premium_greataxe/greataxe_swing_night_2.ogg",
+        "premium_greataxe/greataxe_swing_night_3.ogg",
+        "premium_greataxe/greataxe_swing_night_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_tail": {
+      "files": [
+        "premium_greataxe/greataxe_tail_1.ogg",
+        "premium_greataxe/greataxe_tail_2.ogg"
+      ],
+      "vol": 0.25,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_throw": {
+      "files": [
+        "premium_greataxe/greataxe_throw_1.ogg",
+        "premium_greataxe/greataxe_throw_2.ogg",
+        "premium_greataxe/greataxe_throw_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_ult_bed": {
+      "files": [
+        "premium_greataxe/greataxe_ult_bed.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_ult_bed_night": {
+      "files": [
+        "premium_greataxe/greataxe_ult_bed_night.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "greataxe_ult_chop": {
+      "files": [
+        "premium_greataxe/greataxe_ult_chop_1.ogg",
+        "premium_greataxe/greataxe_ult_chop_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "greataxe_ult_impact": {
+      "files": [
+        "premium_greataxe/greataxe_ult_impact_1.ogg",
+        "premium_greataxe/greataxe_ult_impact_2.ogg"
+      ],
+      "vol": 1.25,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "greataxe_ult_impact_night": {
+      "files": [
+        "premium_greataxe/greataxe_ult_impact_night.ogg"
+      ],
+      "vol": 1.25,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        15,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "greataxe_ult_rise": {
+      "files": [
+        "premium_greataxe/greataxe_ult_rise_1.ogg",
+        "premium_greataxe/greataxe_ult_rise_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "greataxe_ult_rise_night": {
+      "files": [
+        "premium_greataxe/greataxe_ult_rise_night.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "greataxe_ult_roar": {
+      "files": [
+        "premium_greataxe/greataxe_ult_roar_1.ogg",
+        "premium_greataxe/greataxe_ult_roar_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        130
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "greataxe_ult_roar_night": {
+      "files": [
+        "premium_greataxe/greataxe_ult_roar_night.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        130
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "greataxe_ult_shatter": {
+      "files": [
+        "premium_greataxe/greataxe_ult_shatter_1.ogg",
+        "premium_greataxe/greataxe_ult_shatter_2.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "greataxe_ult_shatter_night": {
+      "files": [
+        "premium_greataxe/greataxe_ult_shatter_night.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "greataxe_ult_sigil": {
+      "files": [
+        "premium_greataxe/greataxe_ult_sigil_1.ogg",
+        "premium_greataxe/greataxe_ult_sigil_2.ogg"
+      ],
+      "vol": 1.4,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false
+    },
+    "greataxe_ult_sweep": {
+      "files": [
+        "premium_greataxe/greataxe_ult_sweep_1.ogg",
+        "premium_greataxe/greataxe_ult_sweep_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        140
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "ready_greataxe": {
+      "files": [
+        "premium_greataxe/ready_greataxe.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "ready_greataxe_night": {
+      "files": [
+        "premium_greataxe/ready_greataxe_night.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    }
+  }
+}

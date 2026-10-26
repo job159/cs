@@ -604,7 +604,9 @@ export class Arsenal {
     this.state = 'cycle';
     const t = def.boltTime ?? (60 / def.rpm) * 0.8;
     this.timer = t;
-    const clip = def.mode === 'bolt' ? boltCycle() : pumpCycle();
+    // premium.pump: the weapon's own pump clip (M08: a ready version that rings its bells)
+    const own = def.mode !== 'bolt' && def.premium?.pump && clipFor(def.premium.pump, this.vm, { def, ws });
+    const clip = def.mode === 'bolt' ? boltCycle() : own || pumpCycle();
     this.vm.play(clip, { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
   }
 
@@ -625,7 +627,12 @@ export class Arsenal {
       const t = (def.reloadStart ?? 0.4) * this.reloadMul;
       this.timer = t;
       this.shellPhase = 'start';
-      this.vm.play(shellStart(), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
+      // premium.shellClips { start, insert, end, rare }: the weapon's own tube-loading clips; `rare` (1 in
+      // premium.rareReloadEvery reloads, §2.25) replaces the insert of the shell that fills the tube, same duration
+      const sc = def.premium?.shellClips;
+      ws.reloads = (ws.reloads || 0) + 1;
+      this.shellRare = !!sc?.rare && ws.reloads % (def.premium.rareReloadEvery ?? 8) === 0;
+      this.vm.play((sc?.start && clipFor(sc.start, this.vm, { def, ws })) || shellStart(), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
       return;
     }
     this.shellReload = false;
@@ -657,7 +664,9 @@ export class Arsenal {
     this._reloadApplied = false;   // one shell per insert clip
     const t = def.reload * this.reloadMul;
     this.timer = t;
-    this.vm.play(shellInsert(), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
+    const sc = def.premium?.shellClips, last = ws.ammo + 1 >= def.mag || ws.reserve <= 1;
+    const own = sc && clipFor(this.shellRare && last ? sc.rare : sc.insert, this.vm, { def, ws, last });
+    this.vm.play(own || shellInsert(), { duration: t, onEvent: (n, a) => this._clipEvent(n, a) });
   }
 
   _endShellReload(ws, interrupted = false) {
@@ -669,7 +678,8 @@ export class Arsenal {
     const pump = this.shellNeedsPump;
     const t = (def(ws).reloadEnd ?? 0.45) * (pump ? 1.6 : 1) * this.reloadMul;
     this.timer = interrupted ? t * 0.6 : t;
-    this.vm.play(shellEnd(this.vm, { pump }), { duration: this.timer, onEvent: (n, a) => this._clipEvent(n, a) });
+    const sc = def(ws).premium?.shellClips;
+    this.vm.play((sc?.end && clipFor(sc.end, this.vm, { def: def(ws), ws, pump })) || shellEnd(this.vm, { pump }), { duration: this.timer, onEvent: (n, a) => this._clipEvent(n, a) });
   }
 
   _clipEvent(name, arg) {

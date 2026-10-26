@@ -58,9 +58,11 @@ the first frame of `get_up`. `death_*` end lying still (hold the last frame or h
 | `idle` | 2.00 | loop | - | Quaternius UAL2 Zombie_Idle_Loop | Quaternius UAL2 Zombie_Idle_Loop slowed x1.5, zombified (head tilt, dropped shoulder, claw hands) |
 | `idle_b` | 3.20 | loop | - | Quaternius UAL2 Zombie_Idle_Loop + procedural head search | searching idle: slow look left/right with sudden head jerks and a shoulder twitch (loop) |
 | `walk_a` | 1.33 | loop | 0.94 | Quaternius UAL2 Zombie_Walk_Fwd_Loop | Quaternius UAL2 Zombie_Walk_Fwd_Loop; hunched lurching walk |
-| `walk_b` | 1.67 | loop | 0.46 | CMU 104_41 [3-11s] | CMU 104_41 ZombieWalk, arms-forward shuffle |
-| `walk_c` | 1.33 | loop | 0.68 | CMU 120_22 [5.3-9.2s] | CMU 120_22 Zombie, lolling head and dangling arms |
-| `walk_limp` | 1.97 | loop | 0.43 | CMU 91_24 [6.3-17.2s] | CMU 91_24 HurtLegWalk, right foot dragged (toe scrapes the ground through the swing) |
+| `walk_b` | 1.10 | loop | 1.01 | CMU 104_41 [3-11s] | CMU 104_41 ZombieWalk, arms-forward shuffle; quickened to the game speeds (cadence x1.5, stride x1.45) |
+| `walk_c` | 1.10 | loop | 1.08 | CMU 120_22 [5.3-9.2s] | CMU 120_22 Zombie, lolling head and dangling arms; quickened to the game speeds (cadence x1.2, stride x1.3) |
+| `walk_limp` | 1.47 | loop | 0.96 | CMU 91_24 [6.3-17.2s] | CMU 91_24 HurtLegWalk, right foot dragged (toe scrapes the ground through the swing); quickened to the game speeds (cadence x1.35, stride x1.65) |
+| `walk_stalk` | 1.60 | loop | 1.03 | Quaternius UAL1 Walk_Formal_Loop | Quaternius UAL1 Walk_Formal_Loop legs, slowed to a 1.6 s cycle with x1.2 strides, swing foot carried 30 % lower; upright stalking upper body: arms raised a little in front with open claws, head steady, level and forward |
+| `walk_hurry` | 1.03 | loop | 1.35 | Quaternius UAL2 Zombie_Walk_Fwd_Loop | Quaternius UAL2 Zombie_Walk_Fwd_Loop quickened (cadence x1.3, stride x1.12); hurried hunched shamble for the faster walkers |
 | `run` | 0.93 | loop | 3.80 | Quaternius UAL1 Jog_Fwd_Loop | Quaternius UAL1 Jog_Fwd_Loop legs; procedural reaching/clawing arms, forward lean |
 | `sprint` | 0.67 | loop | 5.48 | Quaternius UAL1 Sprint_Loop | Quaternius UAL1 Sprint_Loop legs; flailing arms, strong forward lean (infected-runner) |
 | `attack_a` | 1.80 | once | - | Quaternius UAL2 Zombie_Scratch | Quaternius UAL2 Zombie_Scratch: right-arm overhead rake with a lurch forward (events: hit 0.567s) |
@@ -83,6 +85,11 @@ the first frame of `get_up`. `death_*` end lying still (hold the last frame or h
 | `leap` | 2.40 | once | - | Quaternius UAL2 NinjaJump_Start + NinjaJump_Idle_Loop + NinjaJump_Land | crouch, spring, tucked flight with clawing arms, heavy landing. In place: the game moves the zombie along its jump arc between takeoff and land (pelvis keeps standing height while airborne) (events: takeoff 0.5s, land 1.28s) |
 | `climb` | 1.40 | loop | - | procedural | in-place wall-climbing loop: hand-over-hand with a diagonal leg gait on a wall ~0.4 m in front (+Z); the game raises the zombie at climbSpeed m/s (planted hands/feet slide down at exactly that speed); feet are off the ground (climbSpeed 0.45 m/s) |
 | `eat` | 2.93 | loop | - | Quaternius UAL1 Crouch_Idle_Loop + procedural arms/head | crouched over a body: one hand pins, the other tears up to the mouth, head dips, bites and rips with shakes (loop) |
+| `crawl_quad` | 0.50 | loop | 4.49 | procedural | keyframed/IK on the crawler skeleton: fast spider-like transverse gallop on hands and feet (elbows up, knees splayed, low slung spine flexing with the stride, head craned up and held steady); planted hands / feet move back at exactly the treadmill speed |
+| `crawl_quad_attack` | 1.20 | once | - | procedural | keyframed/IK on the crawler skeleton: from all fours rocks back, raises the right claw, rears up off the hands and lunges forward raking across in front at thigh-chest height, drops back onto the left claw and re-plants (in place) (events: hit 0.48s) |
+| `pounce` | 1.17 | once | - | procedural | keyframed/IK on the crawler skeleton: crouch-load (chest to the floor, hind feet coiled), explosive spring, long low flight stretched out with the claws forward and legs trailing, lands claws first and absorbs onto all fours. In place: the game carries the zombie between takeoff and land (events: takeoff 0.24s, land 0.7s) |
+| `death_quad` | 1.60 | once | - | procedural | keyframed/IK on the crawler skeleton: jolt, the forelimbs buckle outwards, chest and face hit the floor, the hind legs slide out and the hips drop; ends lying face-down with the limbs splayed (a last twitch of the right claw) (events: ground 0.48s) |
+| `idle_quad` | 2.40 | loop | - | procedural | keyframed/IK on the crawler skeleton: crouched on all fours breathing, the head searching left / right with a sudden jerk, a claw flexing off the floor (loop; the crawler when it stands still) |
 <!-- clips:end -->
 
 ## 3. Pipeline (`tools/assets/zombies/anim/`)
@@ -103,47 +110,81 @@ node tools/build-anim-preview.mjs              # preview bundle -> game/anim-pre
 | `sources.mjs` | Quaternius UAL1 (Rigify `DEF-*` names) / UAL2 (UE names) and CMU loaders + bone maps |
 | `retarget.mjs` | world-space retargeter: `G_t = H * G_s * inv(W_s) * A * W_t` with per-bone rest alignment `A` (target rest direction -> source rest direction, so T-pose CMU drives the A-pose target), heading normalisation, leg-length root scaling |
 | `clip.mjs` | crop / retime / mirror / smoothing, linear root-trend removal (in place, keeps bob & sway), loop search (pose + velocity window) and seam cross-fade into the frames that precede the loop start |
-| `ik.mjs` | two-bone IK, heel/toe contact detection and **foot locking** (planted point pinned to a treadmill-moving anchor, cyclic), ground fitting, treadmill-speed estimation, stride warping |
+| `ik.mjs` | two-bone IK, heel/toe contact detection and **foot locking** (planted point pinned to a treadmill-moving anchor, cyclic), ground fitting, treadmill-speed estimation, stride warping, `lengthenStride` (longer steps with the pelvis dipping where a leg would over-reach), `hingeIK` (two-bone IK that keeps both bones' local +X on the elbow / knee hinge: no twist flips when a limb swings far) |
 | `pose.mjs` | keyframe DSL: per-bone degree offsets in character axes relative to the parent (`_r` keys mirrored, symmetric keys), Catmull-Rom curves, planted-feet / hand IK channels, loop-safe noise |
 | `zombify.mjs` | zombie post-process: slumped spine, tilted/lolling head, dropped shoulder + asymmetric arm hang, clawed fingers, loop-safe twitches |
-| `clips-loco.mjs`, `clips-action.mjs`, `clips-late.mjs` | the 28 clip recipes |
+| `clips-loco.mjs`, `clips-action.mjs`, `clips-late.mjs` | the 29 human clip recipes (`quicken` in clips-loco: retime + `lengthenStride` + re-lock, for the mocap walks) |
+| `clips-quad.mjs` | the crawler's quadruped set (`crawl_quad`, `crawl_quad_attack`, `pounce`, `death_quad`, `idle_quad`): gallop generator (per-limb footfall phase, stance on the treadmill, swing arcs) and keyed world-space targets (root, body pitch / flex / twist, knuckle / ball contacts, poles), hand / foot / head solvers, contact QA |
+| `model-skel.mjs` | clips posed on one character's own skeleton (rest pose read from its GLB) and converted to library rotations that the game's retarget maps back onto exactly that pose (`modelSkeleton`, `toLibrary`, `applyModelOffsets`) |
 | `metrics.mjs`, `plot.mjs` | foot-slide / pop / seam metrics printed by the build; `--plot` writes a foot-contact chart |
 | `check.mjs` | verification (clip list, bone targets, unit quaternions, closed loops, model skeleton) |
 | `credits.mjs` | the zombie-animation section of `docs/CREDITS.md` |
+| `qa/ingame-strip.js`, `qa/hitboxes.js` | `tools/shot.mjs --eval` scripts on the game page: in-game motion strips (free camera at a set distance, front / profile / pounce / attack / death / idle runs) and the hitbox + dismemberment check on posed clips (see their headers) |
 
 Visual QA: `http://127.0.0.1:5190/anim-preview.html?clips=walk_a,run&n=8&view=side` renders film strips of the
 mannequin (left limbs blue, right limbs orange). Parameters: `clips`, `n`, `view=side|front|back|quarter|top`,
 `mode=strip|onion|trail` (`trail` plots heel/toe paths with the treadmill speed added back - planted feet show as
-dots stacked in one place), `t0`/`t1`, `across` (rows side by side), `center=x,y,z&zoom=h`, `anims`, `model`.
+dots stacked in one place; `hands=1` adds the knuckle paths of quadruped clips), `t0`/`t1`, `across` (rows side by
+side), `center=x,y,z&zoom=h`, `anims`, `model`, `keepMat` (the model's own materials), `game=1` (with `model`: clips
+retargeted onto it and its `extras.poseOffsets` applied after them, exactly as the game plays them; speeds and onion /
+trail spacing use its leg length). Crawler set: `?clips=crawl_quad,pounce&model=assets/zombies/crawler.glb&keepMat=1&game=1`.
 Screenshots: `node tools/shot.mjs "<url>" --w 1600 --h 900 --out captures/anim/x.png`.
+
+The build prints, per clip, the library-body metrics (slide, lowest foot point, largest per-frame rotation step, loop
+seam) and for the model-authored crawler clips a contact line measured on the crawler itself: planted-contact slide,
+the largest miss of a planted hand / foot target by the IK, and the lowest point of the body with its claw offsets.
 
 ## 4. Notes for the game code
 
-- **Speed sync.** `game/src/zombies/defs.js` currently uses hand-picked `nominal` speeds (walk 1.0-1.1, run 3.6,
-  runner 5.0). The clips' real treadmill speeds on the default body are walk_a 0.94, walk_b 0.46, walk_c 0.68,
-  walk_limp 0.43, run 3.80, sprint 5.48, crawl 0.32 m/s (x pelvis-height ratio, ~1.12 for `walker_a`). Reading
-  `userData.clips[name].speed` instead avoids foot sliding; zombies that should shuffle faster than a clip's
-  natural speed can still use `timeScale` up to ~1.6 before it looks hurried.
+- **Speed sync.** `Zombie._locoRate` (game/src/zombies/manager.js) plays a locomotion clip at
+  `groundSpeed / (userData.clips[name].speed x pelvisHeight / 0.874 x rootScale)`, clamped to 0.45-1.8 (bosses
+  0.3-1.6; a type's `anim.loco.min` raises the floor), so planted feet stay planted on every model; the hand-picked
+  `defs.js` `nominal` speeds are only the fallback for clips without a speed (the mannequin's). The mocap walks were
+  0.4-0.7 m/s shuffles while their users move at 0.9-1.9 m/s, so `walk_b` / `walk_c` / `walk_limp` are quickened in
+  the build (cadence x1.2-1.5, strides x1.3-1.65 with the pelvis dipping where needed) to 0.96-1.08 m/s for the
+  walkers (0.9-1.4 m/s). The faster walkers have their own `walk_hurry` (walk_a's lurch, cadence x1.3, strides only
+  x1.12, 1.35 m/s): spitters (1.5-1.9 m/s) and riots (1.3-1.6 m/s, with `walk_a`) play it at x1.0-1.4 -- `walk_b`
+  quickened to their speeds read as a deep-kneed speed-walk with ~1 m strides at 2.3-2.9 steps/s. Foot slip over
+  every type's speed range (|ground - feet| / ground) went from 3-87 % (crawler 84-87 %, spitter / riot / walker
+  shuffles 48-56 %, bosses 64-380 %) to 0 % everywhere.
+- **Standing still.** After 0.35 s below 0.12 m/s (a keep-away type holding its band, a zombie boxed in by the
+  crowd) `Zombie._idleSwitch` cross-fades to the type's `anim.idle` clip instead of marching on the spot, and back as
+  soon as it moves (host and puppets alike: it is not replicated). `anim.loco` overrides it per type: the crawler
+  (`{ min: 0.6, still: 0.6, stillT: 0.12 }`) never plays its gallop below x0.6 and crouches into `idle_quad` 0.12 s
+  after it slows under 0.6 m/s.
 - **One-shots** end on (or close to) the `idle` pose; fade back to locomotion over 0.15-0.25 s. `attack_lunge`
   and `leap` are in place: move the zombie forward between their `launch`/`takeoff` and `land` events.
 - **Deaths / knockdown** keep the body where it falls (pelvis drift listed as `rootMotion`); keep the zombie's
   root where it was, hold the last frame (`clampWhenFinished`) or switch to ragdoll after `events.ground`.
 - **`crawl` / `crawl_attack`** are for legless crawlers (legs drag behind the body, prone); `climb` assumes a
-  wall about 0.4 m in front of the root.
+  wall about 0.4 m in front of the root. The crawler (legs, on all fours) has its own set, posed on its own
+  skeleton (`model-skel.mjs`): on other characters the planted hands / feet of `*_quad` / `pounce` land a few cm off.
+- **Quadruped set timing.** `crawl_quad` runs at 4.6 m/s on the crawler (its `run` speed: rate ~1.0); the body is
+  centred on the root (pelvis 0.2 m behind, shoulders ahead), head bone ~0.45 m up. `crawl_quad_attack` hits at
+  0.48 s = 0.36 s at the 0.9 s `atkTime` (rate x1.33). `pounce` plays whole at x0.88: its crouch-load (0-0.2 s =
+  0.23 s, `leap.windup`) is the telegraph -- the brain holds the crawler coiled, turning to its target, with the
+  screech and the eye cue, then launches at the clip's 0.2 s -- so `events.land` (claws on the floor) meets the 0.56 s
+  jump arc's landing; the last 0.1 s of the brain's 9 m/s carry is a claw skid while the body absorbs. The hind knees
+  bend forward-out (pole ~20 deg forward of straight out sideways) and the hind feet stand 0.35-0.37 m out, the
+  pounce's trailing legs knees-down: thighs abducted to the horizontal stretched the shorts into a sheet seen from
+  behind.
 - **Per-type clip overrides** (`defs.js` `anim.over`, applied in `Zombie.playOnce` for every caller, replicated
   clips included): a string plays another clip, `null` plays none (the current clip goes on, the procedural flinch
-  still plays), `{ from, speed, fade }` tweaks one. The prone `crawler` uses it so it never pops upright: no
-  hit / stagger / knockdown clip, every death is the face-down end of `death_front` (from 0.95 s, 0.4 s fade = the
-  collapse), and `leap` starts in its crouch (0.3 s, x1.4) so takeoff -> land fits the 0.65 s the game moves it.
-  The crawler model has legs (on all fours), so the legless `crawl` drag and the upright `leap` flight are a
-  compromise until a quadruped crawl / pounce / death set exists.
+  still plays), `{ from, speed, fade }` tweaks one. The `crawler` uses it so it never pops upright: no hit / stagger /
+  knockdown clip (the procedural flinch only), both deaths are `death_quad`, `leap` maps to `pounce` and `pounce`
+  plays at x0.88 (above).
 - Clip tracks never touch `Root`; if the character's armature has a rotated root (Blender Z-up export) use
   `retargetClips`, which handles it.
 
 ## 5. Known limitations
 
 - `walk_b` (CMU 104_41) is a genuine foot-dragging shuffle: the swing toe scrapes the floor, which the slide metric
-  counts as sliding (planted feet themselves are locked).
+  counts as sliding (planted feet themselves are locked); `walk_limp` likewise (the dragged right foot). Quickened to
+  the game speeds, `walk_b` walks lower on bent knees than the original take and its arms bob 1.5x faster (fine for
+  the walkers' 0.9-1.4 m/s; the faster types use `walk_hurry`).
+- `crawl_quad` is one gait at 4.6 m/s: between 0.6 m/s (the crouched idle below) and ~2.8 m/s (x0.6 rate floor) the
+  planted hands / feet slip; a slow creep cycle blended by speed would cover that band. Hit reactions on all fours
+  are only the procedural flinch.
 - The mocap clips were captured by human actors with full-length strides; `run` / `sprint` legs come from
   Quaternius' athletic jog / sprint with the stride warped to 68 % / 66 %, so the gait is still fairly athletic
   below the zombie upper body.

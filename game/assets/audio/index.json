@@ -7,8 +7,12 @@
     "manifest.music.json",
     "manifest.premium_bifang.json",
     "manifest.premium_chiwen.json",
+    "manifest.premium_greataxe.json",
+    "manifest.premium_pulao.json",
+    "manifest.premium_staff.json",
     "manifest.premium_starsword.json",
     "manifest.premium_sunbow.json",
+    "manifest.premium_twinblades.json",
     "manifest.ui_amb.json",
     "manifest.weapons.json"
   ]

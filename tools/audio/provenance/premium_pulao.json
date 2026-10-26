@@ -1,0 +1,275 @@
+{
+  "category": "premium_pulao",
+  "producer": "premium_pulao",
+  "sounds": {
+    "pulao_armor": [],
+    "pulao_bell_land": [
+      "fs:201094",
+      "fs:522099",
+      "fs:569510"
+    ],
+    "pulao_bell_load": [],
+    "pulao_bell_whoosh": [],
+    "pulao_bells": [],
+    "pulao_bellshot": [
+      "ffsl/CD/H_21P",
+      "fs:201094",
+      "kenney_impact/Audio/impactMetal_heavy_000",
+      "ffsl/Model 12/K_22P",
+      "kenney_impact/Audio/impactMetal_heavy_001",
+      "ffsl/Nova/O_21P",
+      "kenney_impact/Audio/impactMetal_heavy_002"
+    ],
+    "pulao_bite": [
+      "kenney_impact/Audio/impactMetal_light_000",
+      "kenney_impact/Audio/impactMetal_light_002",
+      "fs:342204",
+      "kenney_impact/Audio/impactMetal_light_001",
+      "kenney_impact/Audio/impactMetal_light_003"
+    ],
+    "pulao_clink": [],
+    "pulao_close": [
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_22P",
+      "ffsl/Mossberg/N_30P",
+      "ffsl/Nova/O_17P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/Mossberg/N_26P"
+    ],
+    "pulao_crisis": [
+      "fs:565642",
+      "fs:389432",
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "kenney_impact/Audio/impactWood_heavy_001"
+    ],
+    "pulao_draw_first": [
+      "fs:163164",
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_000"
+    ],
+    "pulao_far": [
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_22P",
+      "ffsl/Mossberg/N_30P",
+      "ffsl/Nova/O_17P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/Mossberg/N_26P"
+    ],
+    "pulao_final": [
+      "kenney_impact/Audio/impactMetal_light_001",
+      "kenney_impact/Audio/impactMetal_light_002"
+    ],
+    "pulao_fire": [],
+    "pulao_flick": [],
+    "pulao_head": [
+      "kenney_impact/Audio/impactPunch_heavy_002",
+      "kenney_impact/Audio/impactPunch_heavy_003",
+      "kenney_impact/Audio/impactPunch_heavy_004"
+    ],
+    "pulao_hit": [
+      "kenney_impact/Audio/impactPunch_heavy_000",
+      "kenney_impact/Audio/impactPunch_heavy_001",
+      "kenney_impact/Audio/impactPunch_heavy_002",
+      "kenney_impact/Audio/impactPunch_heavy_003"
+    ],
+    "pulao_idle": [],
+    "pulao_inspect": [
+      "kenney_impact/Audio/impactWood_light_000",
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "kenney_impact/Audio/impactWood_light_001"
+    ],
+    "pulao_kill": [],
+    "pulao_knell": [
+      "kenney_impact/Audio/impactBell_heavy_002",
+      "fs:127265",
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_002",
+      "kenney_impact/Audio/impactBell_heavy_003",
+      "kenney_impact/Audio/impactWood_heavy_003"
+    ],
+    "pulao_mark": [],
+    "pulao_pillar": [],
+    "pulao_pump_flick": [
+      "fs:60024",
+      "fs:494797",
+      "kenney_impact/Audio/impactMetal_light_003",
+      "kenney_impact/Audio/impactMetal_light_004",
+      "kenney_impact/Audio/impactMetal_light_000"
+    ],
+    "pulao_ready_bell": [
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "kenney_impact/Audio/impactWood_heavy_001"
+    ],
+    "pulao_roar": [
+      "fs:263115",
+      "fs:204912",
+      "fs:170454"
+    ],
+    "pulao_roar_low": [
+      "fs:263115",
+      "fs:204912",
+      "fs:170454"
+    ],
+    "pulao_tail": [
+      "ffsl/Nova/O_21P",
+      "ffsl/Model 12/K_22P",
+      "ffsl/Mossberg/N_30P",
+      "ffsl/Nova/O_17P",
+      "ffsl/Model 12/K_17P",
+      "ffsl/Mossberg/N_26P"
+    ],
+    "pulao_toll": [
+      "kenney_impact/Audio/impactBell_heavy_000",
+      "fs:127265",
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "kenney_impact/Audio/impactBell_heavy_001",
+      "kenney_impact/Audio/impactWood_heavy_001",
+      "kenney_impact/Audio/impactBell_heavy_002",
+      "kenney_impact/Audio/impactWood_heavy_002"
+    ],
+    "pulao_toll_dusk": [
+      "fs:375260",
+      "fs:375261"
+    ],
+    "pulao_ult_bed": [
+      "fs:373943",
+      "fs:375519",
+      "fs:127265",
+      "fs:764329",
+      "fs:764330",
+      "fs:764339",
+      "fs:375260",
+      "fs:375261",
+      "fs:452400",
+      "fs:375531"
+    ],
+    "pulao_ult_bed_dusk": [],
+    "pulao_ult_creak": [
+      "fs:238289",
+      "fs:119468",
+      "fs:361798"
+    ],
+    "pulao_ult_inhale": [
+      "fs:261464"
+    ],
+    "pulao_ult_shatter": [
+      "fs:244394",
+      "fs:244238",
+      "fs:565642",
+      "fs:375497",
+      "fs:333988"
+    ],
+    "pulao_ult_shatter_dusk": [
+      "fs:375261"
+    ],
+    "pulao_ult_slam": [
+      "fs:258195",
+      "fs:244394",
+      "fs:522099",
+      "fs:703247"
+    ],
+    "pulao_ult_slam_dusk": [
+      "fs:375260"
+    ],
+    "pulao_ult_tail": [
+      "fs:261464"
+    ],
+    "pulao_ult_toll": [
+      "kenney_impact/Audio/impactBell_heavy_003",
+      "fs:127265",
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_003",
+      "kenney_impact/Audio/impactBell_heavy_004",
+      "kenney_impact/Audio/impactWood_heavy_004",
+      "kenney_impact/Audio/impactBell_heavy_000",
+      "kenney_impact/Audio/impactWood_heavy_000"
+    ],
+    "pulao_ult_toll_dusk": [
+      "fs:375260",
+      "fs:375261"
+    ],
+    "ready_pulao": [
+      "fs:375260",
+      "kenney_impact/Audio/impactWood_heavy_000",
+      "fs:263115",
+      "fs:204912",
+      "fs:170454",
+      "kenney_impact/Audio/impactWood_heavy_001"
+    ],
+    "ready_pulao_dusk": [
+      "fs:375260",
+      "fs:375261"
+    ]
+  },
+  "loaded": [
+    "ffsl/CD/H_21P",
+    "ffsl/Model 12/K_17P",
+    "ffsl/Model 12/K_22P",
+    "ffsl/Mossberg/N_26P",
+    "ffsl/Mossberg/N_30P",
+    "ffsl/Nova/O_17P",
+    "ffsl/Nova/O_21P",
+    "fs:119468",
+    "fs:127265",
+    "fs:163164",
+    "fs:170454",
+    "fs:201094",
+    "fs:204912",
+    "fs:238289",
+    "fs:244238",
+    "fs:244394",
+    "fs:258195",
+    "fs:261464",
+    "fs:263115",
+    "fs:333988",
+    "fs:342204",
+    "fs:361798",
+    "fs:373943",
+    "fs:375260",
+    "fs:375261",
+    "fs:375497",
+    "fs:375519",
+    "fs:375531",
+    "fs:389432",
+    "fs:452400",
+    "fs:494797",
+    "fs:522099",
+    "fs:565642",
+    "fs:569510",
+    "fs:60024",
+    "fs:703247",
+    "fs:764329",
+    "fs:764330",
+    "fs:764339",
+    "kenney_impact/Audio/impactBell_heavy_000",
+    "kenney_impact/Audio/impactBell_heavy_001",
+    "kenney_impact/Audio/impactBell_heavy_002",
+    "kenney_impact/Audio/impactBell_heavy_003",
+    "kenney_impact/Audio/impactBell_heavy_004",
+    "kenney_impact/Audio/impactMetal_heavy_000",
+    "kenney_impact/Audio/impactMetal_heavy_001",
+    "kenney_impact/Audio/impactMetal_heavy_002",
+    "kenney_impact/Audio/impactMetal_light_000",
+    "kenney_impact/Audio/impactMetal_light_001",
+    "kenney_impact/Audio/impactMetal_light_002",
+    "kenney_impact/Audio/impactMetal_light_003",
+    "kenney_impact/Audio/impactMetal_light_004",
+    "kenney_impact/Audio/impactPunch_heavy_000",
+    "kenney_impact/Audio/impactPunch_heavy_001",
+    "kenney_impact/Audio/impactPunch_heavy_002",
+    "kenney_impact/Audio/impactPunch_heavy_003",
+    "kenney_impact/Audio/impactPunch_heavy_004",
+    "kenney_impact/Audio/impactWood_heavy_000",
+    "kenney_impact/Audio/impactWood_heavy_001",
+    "kenney_impact/Audio/impactWood_heavy_002",
+    "kenney_impact/Audio/impactWood_heavy_003",
+    "kenney_impact/Audio/impactWood_heavy_004",
+    "kenney_impact/Audio/impactWood_light_000",
+    "kenney_impact/Audio/impactWood_light_001"
+  ],
+  "original": false
+}

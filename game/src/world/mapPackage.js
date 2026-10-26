@@ -38,6 +38,10 @@ const MAX_POINT_LIGHTS = { low: 2, medium: 4, high: 6, ultra: 6 };
 // realtime shadow map only needs the big occluders (facades, vehicles, containers, bridge, ramps) to shade players and
 // zombies. Small detail (props, window frames, signs, car trim, brackets, sandbags, wires, 15 cm curbs) stays out of the
 // shadow pass: Lost Town drops from ~720k to ~260k shadow triangles. map.json materials[].rtCast overrides per material.
+// sun shadow camera follow step (m): the cached static shadow depth is re-rendered once per step the player moves,
+// prepared ahead of time for a step predicted within SHADOW_LEAD s
+const SHADOW_STEP = 3;
+const SHADOW_LEAD = 0.5;
 const RT_CAST_SKIP = /^(prop_|frame_|sign_|car_plastic|car_chrome|car_light|steel_dark|sandbag|cone_|rubble|lamp_|wire|tape_|curb$)/;
 
 // ------------------------------------------------------------------------------------------ fetch / images
@@ -138,9 +142,12 @@ function patchLightmapped(material) {
     shader.uniforms.lmSpecRef = material.userData.lmUniforms.lmSpecRef;
     let fs = shader.fragmentShader;
     fs = fs.replace('#include <lightmap_pars_fragment>', '#include <lightmap_pars_fragment>\n' + LM_PARS);
+    // where the baked sun mask is 0 (static shadow) the sun adds nothing: skip its realtime shadow taps and its BRDF
+    // (the shadow lookup is already conditional on directLight.visible) -- same pixels, less work in shaded streets
     const begin = THREE.ShaderChunk.lights_fragment_begin.replace(
       'getDirectionalLightInfo( directionalLight, directLight );',
-      'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= lmSunVis;');
+      'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= lmSunVis;\n\t\tdirectLight.visible = directLight.visible && lmSunVis > 0.0;')
+      .replace(/(directLight\.color \*= lmSunVis;[\s\S]*?)RE_Direct\(/, '$1if ( directLight.visible ) RE_Direct(');
     fs = fs.replace('#include <lights_fragment_begin>', 'float lmSunVis = texture2D( lmSunMask, vLightMapUv ).r;\n' + begin);
     fs = fs.replace('#include <lights_fragment_maps>', LM_MAPS);
     shader.fragmentShader = fs;
@@ -326,6 +333,11 @@ export async function buildPackageMap(id, ctx) {
     }
     return lmMats.get(key);
   };
+  // One mesh per material x chunk group as compiled (Lost Town: 118, most of them map-wide). Measured on an iGPU with
+  // the renderer's front-to-back sort: cutting them into compact pieces for frustum culling (k-d split, shared vertex
+  // buffers) and a meshoptimizer distance LOD both cost more than they saved -- ~70 more draw calls (+1 ms CPU,
+  // +0.8 ms GPU) against little culled from street level, and the props / facades are built from small hard-edged
+  // parts that barely simplify (< 5 % of the triangles at sub-pixel error).
   const staticMeshes = [];
   for (const inst of readScene(doc)) {
     const ex = inst.extras || {};
@@ -348,6 +360,7 @@ export async function buildPackageMap(id, ctx) {
     }
   }
   root.updateMatrixWorld(true);
+  renderer?.setStaticShadow?.({ light: sun, root, casters: staticMeshes.filter((m) => m.castShadow) });
 
   // ---- collision
   const cdoc = await colP;
@@ -377,6 +390,7 @@ export async function buildPackageMap(id, ctx) {
     pool.push(pl);
   }
   const lightState = rtLights.map((l, i) => ({ l, pos: new THREE.Vector3(...l.pos), color: srgb(l.color), seed: i * 17.31, k: 1 }));
+  const byDist = lightState.slice();
 
   // ---- ambient FX (map.json fx: smoke plumes, fire, drifting ash; world/mapAmbient.js)
   const ambient = createMapAmbient(def.fx, { quality: q });
@@ -384,23 +398,45 @@ export async function buildPackageMap(id, ctx) {
 
   // ---- update: shadow follow + light pool + flicker
   const tmp = new THREE.Vector3(), lsx = new THREE.Vector3(), lsy = new THREE.Vector3();
+  const vel = new THREE.Vector3(), dv = new THREE.Vector3(), lastCenter = new THREE.Vector3(Infinity, 0, 0), aheadPos = new THREE.Vector3(), aheadTarget = new THREE.Vector3();
+  const mapMid = new THREE.Vector3((def.bounds[0] + def.bounds[3]) / 2, (def.bounds[1] + def.bounds[4]) / 2, (def.bounds[2] + def.bounds[5]) / 2);
+  // sun + target of the shadow cell at light-space (x, y), depth axis z
+  const place = (pos, target, x, y, z) => {
+    target.copy(lsx).multiplyScalar(x).addScaledVector(lsy, y).addScaledVector(sunDir, z);
+    pos.copy(target).addScaledVector(sunDir, 120);
+  };
   let poolTimer = 0;
   const update = (dt, t) => {
     const cam = game?.camera;
     ambient?.update(dt, t, cam, scene);
     const center = game?.player?.pos || cam?.position || tmp.set(0, 0, 0);
     if (sun.castShadow) {
-      // texel-snapped follow: snap the centre in light space so shadow edges do not swim
+      // follow in coarse steps (a whole number of texels, so shadow edges do not swim): the static casters' depth
+      // is cached by the renderer (Renderer.setStaticShadow) and only re-rendered when the shadow camera moves; the
+      // depth axis stays on the map centre, so a step never shifts the stored depths. It still covers `extent` m around
+      // the player less at most one step's diagonal (2 m of 40 on Lost Town).
       const texel = (2 * extent) / sun.shadow.mapSize.x;
+      const step = Math.max(1, Math.round(SHADOW_STEP / texel)) * texel;
       lsx.set(0, 1, 0).cross(sunDir).normalize();
       if (lsx.lengthSq() < 1e-6) lsx.set(1, 0, 0);
       lsy.copy(sunDir).cross(lsx).normalize();
-      const cx = Math.round(center.dot(lsx) / texel) * texel, cy = Math.round(center.dot(lsy) / texel) * texel, cz = center.dot(sunDir);
-      tmp.copy(lsx).multiplyScalar(cx).addScaledVector(lsy, cy).addScaledVector(sunDir, cz);
-      sun.target.position.copy(tmp);
-      sun.position.copy(tmp).addScaledVector(sunDir, 120);
+      const ux = center.dot(lsx) / step, uy = center.dot(lsy) / step, ix = Math.round(ux), iy = Math.round(uy), cz = mapMid.dot(sunDir);
+      place(sun.position, sun.target.position, ix * step, iy * step, cz);
       sun.target.updateMatrixWorld();
       sun.updateMatrixWorld();
+      // the step the player is about to make (the boundary the velocity crosses first within SHADOW_LEAD s, else the
+      // nearest one once within 0.2 step of it; a request stands until a new one): the renderer prepares that
+      // cell's static depth over the frames before the step lands (Renderer.prefetchStaticShadow, high / ultra)
+      if (renderer?.prefetchStaticShadow && dt > 0) {
+        if (lastCenter.x !== Infinity && center.distanceToSquared(lastCenter) < 4) vel.lerp(dv.copy(center).sub(lastCenter).divideScalar(dt), 1 - Math.exp(-dt * 8));
+        lastCenter.copy(center);
+        const fx = ux - ix, fy = uy - iy, vx = vel.dot(lsx) / step, vy = vel.dot(lsy) / step;
+        const tx = vx ? (Math.sign(vx) * 0.5 - fx) / vx : Infinity, ty = vy ? (Math.sign(vy) * 0.5 - fy) / vy : Infinity;
+        let ax = 0, ay = 0;
+        if (Math.min(tx, ty) < SHADOW_LEAD) { if (tx <= ty) ax = Math.sign(vx); else ay = Math.sign(vy); }
+        else if (Math.max(Math.abs(fx), Math.abs(fy)) > 0.3) { if (Math.abs(fx) >= Math.abs(fy)) ax = Math.sign(fx); else ay = Math.sign(fy); }
+        if (ax || ay) { place(aheadPos, aheadTarget, (ix + ax) * step, (iy + ay) * step, cz); renderer.prefetchStaticShadow(aheadPos, aheadTarget); }
+      }
     } else {
       sun.position.copy(sunDir).multiplyScalar(100);
     }
@@ -409,8 +445,9 @@ export async function buildPackageMap(id, ctx) {
     if (pool.length && poolTimer <= 0) {
       poolTimer = 0.25;
       const p = cam?.position || center;
-      const order = lightState.map((s, i) => [s.pos.distanceToSquared(p) / Math.max(1, (s.l.range || 10) ** 2), i]).sort((a, b) => a[0] - b[0]);
-      pool.forEach((pl, k) => { pl.userData.src = order[k] ? lightState[order[k][1]] : null; });
+      for (const st of lightState) st.d = st.pos.distanceToSquared(p) / Math.max(1, (st.l.range || 10) ** 2);
+      byDist.sort((a, b) => a.d - b.d);   // (reused array: no garbage every 0.25 s)
+      pool.forEach((pl, k) => { pl.userData.src = byDist[k] || null; });
     }
     for (const pl of pool) {
       const s = pl.userData.src;

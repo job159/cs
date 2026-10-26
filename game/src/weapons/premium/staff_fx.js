@@ -4,6 +4,7 @@
 // All glow is additive on top of the realistic base layer (impacts, dust, rubble, scorch: §1.1 rule 5).
 import * as THREE from 'three';
 import { FRAME, DECAL, DECAL_TINT } from '../../fx/fx.js';
+import { noiseTexture, GLSL_NOISE } from '../../fx/kitutil.js';
 
 const R = Math.random;
 const TAU = Math.PI * 2;
@@ -77,10 +78,12 @@ export function dartMesh(scene) {
   return o;
 }
 export function freeDart(o) { o.removeFromParent(); if (o.userData.pool && _spritePool.length < 40) _spritePool.push(o); }
-/** two helical strands chasing the seed (pushed by the caller with the spiral offsets) */
+/** two helical strands chasing the seed (pushed by the caller with the spiral offsets, sampled every ~8 cm) */
 export function dartTrails(g) {
   const fx = g.fx;
-  return [0, 1].map((i) => fx?.trail?.({ width: 0.035, life: 0.18, color: [...k3(i ? COL.rim : COL.core, 0.75), 1], color1: [...k3(COL.deep, 0.25), 0], taper: 0.1, segs: 18, profile: 'beam' }));
+  // two soft cyan strands (no white beam core: they must read cyan, not as a white laser) + a thin white core line
+  return [0, 1, 2].map((i) => fx?.trail?.(i < 2 ? { width: 0.042, life: 0.2, color: [...(i ? [0.85, 2.5, 4.4] : k3(COL.core, 0.5)), 1], color1: [...k3(COL.deep, 0.35), 0], taper: 0.1, segs: 44, profile: 'soft' }
+    : { width: 0.02, life: 0.1, color: [...k3(COL.white, 0.8), 1], color1: [...k3(COL.core, 0.3), 0], taper: 0.2, segs: 12, profile: 'beam' }));
 }
 /** crackle off the flying dart */
 export function dartSpark(g, p, dir, dt) {
@@ -132,20 +135,27 @@ export class MarkLayer {
     this.t += dt;
     const M = new THREE.Matrix4(), S = new THREE.Vector3(), C = new THREE.Color();
     let i = 0, j = 0;
+    const P = new THREE.Vector3();
     for (const e of list) {
-      const d = Math.max(1, e.pos.distanceTo(cam.position)), far = Math.min(2.2, 1 + Math.max(0, d - 10) * 0.05);
+      const d = Math.max(0.5, e.pos.distanceTo(cam.position)), far = Math.min(2.2, 1 + Math.max(0, d - 10) * 0.05);
+      // close up the seals fade out (the crosshair pips carry the count) and they never grow past a small angular size:
+      // a horde at arm's length must not wear 400 px gear rings over the crosshair
+      const near = Math.min(1, Math.max(0, (d - 1.6) / 1.2));
+      if (near <= 0.01) continue;
+      // just in front of the chest (centred inside the body the torso itself would hide the seal), on its surface up close
+      P.copy(cam.position).sub(e.pos).normalize().multiplyScalar(Math.min(0.45, d * 0.1)).add(e.pos);
       for (let k = 0; k < e.n && i < MAXM; k++) {
-        const s = (0.34 + k * 0.12) * far * (1 + 0.6 * (e.fresh || 0)), spin = this.t * (k % 2 ? -1.6 : 1.3) + k;
+        const s = Math.min((0.34 + k * 0.12) * far * (1 + 0.6 * (e.fresh || 0)), d * (0.06 + k * 0.022) * (1 + 0.3 * (e.fresh || 0))), spin = this.t * (k % 2 ? -1.6 : 1.3) + k;
         _q.setFromAxisAngle(_a.set(0, 0, 1), spin); _q.premultiply(cam.quaternion);
-        M.compose(e.pos, _q, S.set(s, s, s)); this.seal.setMatrixAt(i, M);
+        M.compose(P, _q, S.set(s, s, s)); this.seal.setMatrixAt(i, M);
         const full = e.n >= 3 ? 1.6 + 0.5 * Math.sin(this.t * 18) : 1;
-        C.setRGB(...(k === 2 ? k3(COL.gold, 0.35 * full) : k3(COL.core, 0.42 * full))); this.seal.setColorAt(i++, C);
+        C.setRGB(...(k === 2 ? k3(COL.gold, 0.35 * full * near) : k3(COL.core, 0.42 * full * near))); this.seal.setColorAt(i++, C);
       }
       if (e.lock && j < MAXM) {
-        const s = 0.75 * far * (1 + 0.25 * Math.sin(this.t * 9));
+        const s = Math.min(0.75 * far, d * 0.1) * (1 + 0.15 * Math.sin(this.t * 9));
         _q.setFromAxisAngle(_a.set(0, 0, 1), this.t * 2.2); _q.premultiply(cam.quaternion);
-        M.compose(e.pos, _q, S.set(s, s, s)); this.lock.setMatrixAt(j, M);
-        C.setRGB(...k3(COL.rim, 0.32)); this.lock.setColorAt(j++, C);
+        M.compose(P, _q, S.set(s, s, s)); this.lock.setMatrixAt(j, M);
+        C.setRGB(...k3(COL.rim, 0.32 * near)); this.lock.setColorAt(j++, C);
       }
     }
     this.seal.count = i; this.lock.count = j;
@@ -155,44 +165,67 @@ export class MarkLayer {
 }
 
 // ------------------------------------------------------------------------------------------ lightning
-/** A live chain of lightning links (連霆): set([[from, to, weight], ...]) every frame; contact sparks at the ends. */
+/**
+ * A live chain of lightning links (連霆): set([[from, to, weight], ...]) every frame. Each link is two layers: a soft cyan
+ * glow ribbon (its width pulsing with the bolt's re-draws) under a white jagged core; a flare and a radial spark fan
+ * where an arc bites.
+ */
 export class Chain {
-  constructor(g) { this.g = g; this.bolts = []; this.t = 0; }
+  constructor(g) { this.g = g; this.bolts = []; this.glows = []; this.t = 0; }
   set(links, dt) {
     const fx = this.g.fx;
     this.t += dt;
-    while (this.bolts.length > links.length) this.bolts.pop().stop();
+    while (this.bolts.length > links.length) { this.bolts.pop()?.stop(); this.glows.pop()?.stop(); }
     links.forEach(([from, to, w], i) => {
-      let b = this.bolts[i];
+      let b = this.bolts[i], gl = this.glows[i];
       if (!b) {
-        b = fx?.bolt?.(from.clone(), to.clone(), { col: k3(COL.white, 0.7), glow: k3(COL.core, 0.42), width: 0.1, core: 0.22, levels: 5, jitter: 0.09, branches: 2, regen: 0.04, life: Infinity });
+        b = fx?.bolt?.(from.clone(), to.clone(), { col: k3(COL.white, 0.6), glow: k3(COL.core, 0.32), width: 0.1, core: 0.26, levels: 5, jitter: 0.09, branches: 2, regen: 0.04, life: Infinity });
         if (!b) return;
         this.bolts[i] = b;
       }
-      b.width = (i === 0 ? 0.14 : 0.1) * w; b.branches = i === 0 ? 3 : 1;
+      // the glow: thin where it leaves the 雷珠 (never a blob over the staff head), full width 3 m out
+      if (!gl) gl = this.glows[i] = fx?.beam?.(from, to, { core: k3(COL.core, 0.3), glow: [0.42, 1.45, 2.5], wCore: 0.04, wGlow: 0.4, life: Infinity, shrink: 1, scroll: 4, wStart: i ? 0.5 : 0.06, ramp: i ? 0.8 : 3 });
+      const pulse = 0.75 + 0.45 * Math.abs(Math.sin(this.t * 24 + i * 1.9));
+      b.width = (i === 0 ? 0.12 : 0.09) * w; b.branches = i === 0 ? 2 : 1;
       b.set(from, to);
-      // contact: hot sparks and a flicker glow where the arc bites
+      if (gl) { gl.wGlow = (i === 0 ? 0.42 : 0.32) * w * pulse; gl.set(from, to); }
+      // contact: a white flare and a fan of sparks thrown off across the arc
       const P = fx?.particles;
       if (P && R() < dt * 30) {
-        P.spawn({ additive: true, x: to.x, y: to.y, z: to.z, life: 0.07, size: 0.35 * w, size1: 0.2, color: [...k3(COL.white, 0.4), 1], color1: [...k3(COL.core, 0.1), 0], frame: FRAME.glow });
-        for (let k = 0; k < 3; k++) P.spawn({ additive: true, x: to.x, y: to.y, z: to.z, vx: (R() - 0.5) * 6, vy: R() * 4, vz: (R() - 0.5) * 6, life: 0.2 + R() * 0.15, size: 0.014, color: [...k3(COL.rim, 0.7), 1], color1: [...k3(COL.gold, 0.25), 0], frame: FRAME.spark, stretch: 0.03, gravity: 9 });
+        P.spawn({ additive: true, x: to.x, y: to.y, z: to.z, life: 0.08, size: 0.6 * w, size1: 0.95 * w, color: [...k3(COL.white, 0.42), 1], color1: [...k3(COL.core, 0.08), 0], frame: FRAME.glow });
+        _f.subVectors(to, from).normalize(); _u.set(0, 1, 0).cross(_f).normalize(); _r.crossVectors(_f, _u);
+        for (let k = 0; k < 6; k++) {
+          const a = R() * TAU, sp = 4 + R() * 5;
+          _c.copy(_u).multiplyScalar(Math.cos(a) * sp).addScaledVector(_r, Math.sin(a) * sp).addScaledVector(_f, -1.5);
+          P.spawn({ additive: true, x: to.x, y: to.y, z: to.z, vx: _c.x, vy: _c.y + 1, vz: _c.z, life: 0.1 + R() * 0.1, size: 0.014, color: [...k3(COL.rim, 0.75), 1], color1: [...k3(COL.core, 0.2), 0], frame: FRAME.spark, stretch: 0.025, gravity: 5 });
+        }
       }
     });
   }
-  stop() { for (const b of this.bolts) b.stop(); this.bolts.length = 0; }
+  stop() { for (const b of this.bolts) b?.stop(); for (const b of this.glows) b?.stop(); this.bolts.length = 0; this.glows.length = 0; }
 }
 
 /**
- * A strike from the sky onto p: a jagged bolt from a cloud base, a white ground flash, a cold light, a ring of dust,
- * rubble flecks and a glowing radial crack that cools into a dark scorch. size ~1 (pool strike) .. 3 (ultimate).
+ * A strike from the sky onto p: a jagged bolt from a cloud base over a soft glow column, a white ground flash, a cold
+ * light, a ring of dust, rubble flecks and a glowing radial crack that cools into a dark scorch. size ~1 (pool strike)
+ * .. 3.4 (ultimate). Big strikes (size >= 1.5) are the hit-stop moments: a 0.1 s white core card down the whole height,
+ * a 5-6 m white flash disc on the ground and (tint, within 15 m) a cold flick of the screen.
  */
-export function skyStrike(g, p, { size = 1, height = 16, near = 1, crack = true, dust = true, light = true, seed } = {}) {
+export function skyStrike(g, p, { size = 1, height = 16, near = 1, crack = true, dust = true, light = true, seed, tint = false } = {}) {
   const fx = g.fx;
   if (!fx) return;
-  const top = _a.set(p.x + (R() - 0.5) * 3 * size, p.y + height, p.z + (R() - 0.5) * 3 * size).clone();
-  fx.bolt?.(top, p.clone().add(_b.set(0, 0.05, 0)), { col: k3(COL.white, 0.9 * near), glow: k3(COL.core, 0.55 * near), width: 0.22 * size, core: 0.22, levels: 6, jitter: 0.07, branches: 3, regen: 0.06, life: 0.16 + 0.04 * size });
+  const big = size >= 1.5;
+  const top = _a.set(p.x + (R() - 0.5) * 3 * size, p.y + height, p.z + (R() - 0.5) * 3 * size).clone(), foot = p.clone().add(_b.set(0, 0.05, 0));
+  fx.bolt?.(top, foot, { col: k3(COL.white, 0.9 * near), glow: k3(COL.core, 0.55 * near), width: (big ? 0.3 : 0.24) * size, core: 0.24, levels: 6, jitter: 0.07, branches: 3, regen: 0.06, life: 0.16 + 0.04 * size });
   fx.bolt?.(top.clone().add(_b.set((R() - 0.5) * 2, 0, (R() - 0.5) * 2)), p.clone().add(_b.set((R() - 0.5) * 1.2 * size, 0.05, (R() - 0.5) * 1.2 * size)), { col: k3(COL.white, 0.5 * near), glow: k3(COL.deep, 0.5 * near), width: 0.1 * size, core: 0.2, levels: 5, jitter: 0.1, branches: 2, regen: 0.05, life: 0.12 });
+  // the glow column the jagged bolt rides in (straight, soft, cyan)
+  fx.beam?.(_c.set(p.x, p.y + height, p.z), foot, { core: k3(COL.white, 0.25 * near), glow: k3(COL.core, 0.3 * near), wCore: 0.06 * size, wGlow: 0.85 * size, life: 0.14 + 0.04 * size, shrink: 0.3 });
   const P = fx.particles;
+  if (big) {
+    fx.beam?.(_c.set(p.x, p.y + height, p.z), foot, { core: k3(COL.white, 1.1), glow: k3(COL.rim, 0.35), wCore: 0.42 * size / 1.8, wGlow: 1.1 * size / 1.8, life: 0.1, shrink: 0.6 });
+    P?.spawn({ additive: true, x: p.x, y: p.y + 0.08, z: p.z, mode: 'flat', dir: [0, 1, 0], life: 0.18, size: 2.4 * size, size1: 3.3 * size, color: [...k3(COL.white, 0.5), 1], color1: [...k3(COL.core, 0.04), 0], frame: FRAME.glow });
+    if (tint && g.camera && g.camera.position.distanceTo(p) < 15) fx.overlay?.tint?.([0.72, 0.95, 1.4], 0.14, 0.07);
+  }
   P?.spawn({ additive: true, x: p.x, y: p.y + 0.6 * size, z: p.z, life: 0.12, size: 2.2 * size * near, size1: 3.2 * size * near, color: [...k3(COL.white, 0.45 * near), 1], color1: [...k3(COL.core, 0.05), 0], frame: FRAME.glow });
   fx.shockwave?.(_b.set(p.x, p.y + 0.06, p.z), { normal: UP, r0: 0.2, r1: 2.2 * size, life: 0.3, color: k3(COL.rim, 0.7), thin: true });
   fx.sparkBurst?.(p.clone().add(_b.set(0, 0.2, 0)), { color: k3(COL.white, 0.6), color1: k3(COL.core, 0.4), count: Math.round(14 * size), speed: 7 * Math.sqrt(size), glow: 0.8, normal: UP });
@@ -221,48 +254,192 @@ export function vmArc(g, a, b, { w = 0.004, life = 0.08, k = 1, levels = 3 } = {
 }
 
 // ------------------------------------------------------------------------------------------ 雷池 field
-/** The electric fence round the pool: short ground arcs flickering along the rim; flash(at) lights one stretch. */
+let _noise = null;
+const noiseTex = () => (_noise ||= noiseTexture());
+const WALL_VERT = /* glsl */`
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const WALL_FRAG = /* glsl */`
+uniform float uTime, uK, uR;
+uniform vec3 uCol;
+uniform vec4 uHit[4];          // x: u round the wall, y: age (s)
+${GLSL_NOISE}
+varying vec2 vUv;
+void main() {
+  float v = vUv.y, u = vUv.x;
+  // a bright line on the ground (the rim at grazing angles), a faint shimmer wall fading upward, streaks running up it
+  float line = exp(-v * 28.0) * 1.3 + exp(-v * 6.0) * 0.35;
+  float sh = fbm2(vec2(u * uR * 0.55, v * 0.5 - uTime * 0.7));
+  float streak = smoothstep(0.62, 0.9, sh) * (1.0 - v) * 0.9;
+  float flick = 0.7 + 0.3 * sin(uTime * 41.0 + u * 230.0) * sin(uTime * 17.0 + u * 61.0);
+  float wall = (0.06 + 0.1 * sh) * (1.0 - v) * (1.0 - v);
+  // repels: a white vertical sheet where a zombie hit the fence, fading in 0.3 s
+  float hit = 0.0;
+  for (int i = 0; i < 4; i++) {
+    float du = abs(fract(u - uHit[i].x + 0.5) - 0.5) * 6.2832 * uR;
+    hit += exp(-du * du * 2.2) * exp(-uHit[i].y * 9.0) * step(0.0, uHit[i].y) * (1.0 - v * 0.55);
+  }
+  vec3 col = uCol * ((line + streak) * flick + wall) + vec3(1.0, 1.0, 1.05) * hit * 2.4;
+  gl_FragColor = vec4(col * uK, 1.0);
+}`;
+function wallMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: WALL_VERT, fragmentShader: WALL_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    uniforms: { tNoise: { value: noiseTex() }, uTime: { value: 0 }, uK: { value: 0 }, uR: { value: 6.5 }, uCol: { value: new THREE.Vector3(...k3(COL.core, 0.42)) },
+      uHit: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, -1, 0, 0)) } },
+  });
+}
+/**
+ * The electric fence round the pool: a faint 1.3 m shimmer wall standing on a bright rim line, 20 arc posts flickering
+ * in three chasing waves, short ground arcs along the rim; flash(at) = a white sheet on the wall, a spark wall and
+ * bolts up the posts where a zombie hit it. dispose() when the pool ends.
+ */
 export class Fence {
-  constructor(g, c, r) { this.g = g; this.c = c.clone(); this.r = r; this.t = 0; this.next = 0; this.k = 1; }
+  constructor(g, c, r) {
+    this.g = g; this.c = c.clone(); this.r = r; this.t = 0; this.next = 0; this.k = 1; this.cur = 0; this.hitI = 0;
+    const mat = wallMaterial();
+    mat.uniforms.uR.value = r;
+    this.mesh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1.3, 96, 1, true).translate(0, 0.65, 0), mat);
+    this.mesh.position.copy(this.c); this.mesh.renderOrder = 20; this.mesh.frustumCulled = false;
+    g.scene?.add(this.mesh);
+  }
   update(dt, k = 1) {
     this.t += dt; this.k = k;
+    const U = this.mesh.material.uniforms;
+    U.uTime.value = this.t; U.uK.value = k * Math.min(1, this.t / 0.25);
+    for (const h of U.uHit.value) if (h.y >= 0) h.y += dt;
     if ((this.next -= dt) > 0) return;
     this.next = 0.05;
-    const fx = this.g.fx, n = 2;
-    for (let i = 0; i < n; i++) {
-      const a0 = R() * TAU, a1 = a0 + (0.25 + R() * 0.25) * (R() < 0.5 ? -1 : 1);
-      const y = this.c.y + 0.12 + R() * 0.25;
-      fx?.bolt?.(_a.set(this.c.x + Math.cos(a0) * this.r, y, this.c.z + Math.sin(a0) * this.r).clone(), _b.set(this.c.x + Math.cos(a1) * this.r, y + (R() - 0.5) * 0.3, this.c.z + Math.sin(a1) * this.r).clone(),
-        { col: k3(COL.white, 0.45 * k), glow: k3(COL.core, 0.35 * k), width: 0.07, core: 0.2, levels: 4, jitter: 0.18, branches: 1, regen: 0.04, life: 0.12 });
+    const fx = this.g.fx, N = 20;
+    // posts: three waves chasing round the rim
+    this.cur = (this.cur + 1) % N;
+    for (let w = 0; w < 4; w++) {
+      const a = ((this.cur + w * 5) % N) / N * TAU + 0.05, x = this.c.x + Math.cos(a) * this.r, z = this.c.z + Math.sin(a) * this.r, hgt = 0.8 + R() * 0.6;
+      fx?.bolt?.(_a.set(x, this.c.y + 0.03, z).clone(), _b.set(x + (R() - 0.5) * 0.15, this.c.y + hgt, z + (R() - 0.5) * 0.15).clone(),
+        { col: k3(COL.white, 0.55 * k), glow: k3(COL.core, 0.42 * k), width: 0.1, core: 0.22, levels: 3, jitter: 0.14, branches: 1, regen: 0.03, life: 0.11 });
     }
+    const a0 = R() * TAU, a1 = a0 + (0.25 + R() * 0.25) * (R() < 0.5 ? -1 : 1), y = this.c.y + 0.12 + R() * 0.25;
+    fx?.bolt?.(_a.set(this.c.x + Math.cos(a0) * this.r, y, this.c.z + Math.sin(a0) * this.r).clone(), _b.set(this.c.x + Math.cos(a1) * this.r, y + (R() - 0.5) * 0.3, this.c.z + Math.sin(a1) * this.r).clone(),
+      { col: k3(COL.white, 0.45 * k), glow: k3(COL.core, 0.35 * k), width: 0.07, core: 0.2, levels: 4, jitter: 0.18, branches: 1, regen: 0.04, life: 0.12 });
   }
-  /** a zombie hit the fence at p: that stretch flares up into a spark wall */
+  /** a zombie hit the fence at p: that stretch flares into a white sheet and a spark wall */
   flash(p) {
     const fx = this.g.fx, P = fx?.particles, a = Math.atan2(p.z - this.c.z, p.x - this.c.x);
+    // the wall's u runs with atan2(x, z) (CylinderGeometry)
+    const h = this.mesh.material.uniforms.uHit.value[this.hitI++ % 4];
+    h.x = ((Math.atan2(Math.cos(a), Math.sin(a)) / TAU) % 1 + 1) % 1; h.y = 0;
     for (let i = -1; i <= 1; i++) {
       const b0 = a + i * 0.18, x = this.c.x + Math.cos(b0) * this.r, z = this.c.z + Math.sin(b0) * this.r;
-      fx?.bolt?.(_a.set(x, this.c.y + 0.05, z).clone(), _b.set(x, this.c.y + 1.6 + R() * 0.6, z).clone(), { col: k3(COL.white, 0.7), glow: k3(COL.core, 0.5), width: 0.09, core: 0.22, levels: 4, jitter: 0.15, branches: 1, regen: 0.03, life: 0.16 });
+      fx?.bolt?.(_a.set(x, this.c.y + 0.05, z).clone(), _b.set(x, this.c.y + 1.6 + R() * 0.6, z).clone(), { col: k3(COL.white, 0.75), glow: k3(COL.core, 0.5), width: 0.12, core: 0.22, levels: 4, jitter: 0.15, branches: 1, regen: 0.03, life: 0.18 });
     }
-    P?.spawn({ additive: true, x: p.x, y: p.y + 0.9, z: p.z, life: 0.14, size: 1.0, size1: 1.4, color: [...k3(COL.white, 0.3), 1], color1: [...k3(COL.core, 0.05), 0], frame: FRAME.glow });
-    fx?.sparkBurst?.(_a.set(p.x, p.y + 0.9, p.z).clone(), { color: k3(COL.white, 0.6), color1: k3(COL.gold, 0.3), count: 12, speed: 6, glow: 0.5 });
+    const cx = this.c.x + Math.cos(a) * this.r, cz = this.c.z + Math.sin(a) * this.r, tx = -Math.sin(a), tz = Math.cos(a);
+    P?.spawn({ additive: true, x: cx, y: this.c.y + 0.8, z: cz, life: 0.14, size: 1.3, size1: 1.8, color: [...k3(COL.white, 0.32), 1], color1: [...k3(COL.core, 0.05), 0], frame: FRAME.glow });
+    // the spark wall: sparks spat outward from a 1.4 m stretch of the fence, floor to head height
+    for (let i = 0; i < 18 && P; i++) {
+      const o = (R() - 0.5) * 1.4, y = this.c.y + 0.1 + R() * 1.3, sp = 2 + R() * 4;
+      P.spawn({ additive: true, x: cx + tx * o, y, z: cz + tz * o, vx: Math.cos(a) * sp + (R() - 0.5), vy: R() * 2, vz: Math.sin(a) * sp + (R() - 0.5), life: 0.15 + R() * 0.15, size: 0.016, color: [...k3(i % 4 ? COL.white : COL.gold, 0.7), 1], color1: [...k3(COL.core, 0.2), 0], frame: FRAME.spark, stretch: 0.03, gravity: 6 });
+    }
   }
+  dispose() { this.mesh.removeFromParent(); this.mesh.geometry.dispose(); this.mesh.material.dispose(); }
 }
 
 // ------------------------------------------------------------------------------------------ 震霄: cloud, rain, spirit
-/** A dark storm disc gathering over c (height h), lit from inside by flashes; returns { flash(k), stop() } */
-export function stormCloud(g, c, { h = 16, r = 7, life = 4.8 } = {}) {
-  const P = g.fx?.particles, n = 18;
-  if (P) for (let i = 0; i < n; i++) {
-    const a = i / n * TAU + R() * 0.3, rr = r * (0.25 + R() * 0.75), x = c.x + Math.cos(a) * rr, z = c.z + Math.sin(a) * rr, sp = 0.6 + R() * 0.6;
-    P.spawn({ x, y: c.y + h + (R() - 0.5) * 1.5, z, vx: -Math.sin(a) * sp, vz: Math.cos(a) * sp, vy: -0.1, life: life * (0.85 + R() * 0.2), delay: R() * 0.25, fadeIn: 0.15,
-      size: 3.5 + R() * 2.5, size1: 5.5 + R() * 2, color: [0.08, 0.1, 0.14, 0.92], color1: [0.08, 0.1, 0.13, 0], colorPow: 3, frame: FRAME.puff + (i % 4), lit: true, drag: 0.4, rot: R() * 6 });
+const CLOUD_VERT = /* glsl */`
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const CLOUD_FRAG = /* glsl */`
+uniform float uTime, uA, uFlash, uSpin, uDark;
+uniform vec2 uAt;
+uniform vec3 uLit;
+${GLSL_NOISE}
+varying vec2 vUv;
+void main() {
+  vec2 p = vUv * 2.0 - 1.0;
+  float r = length(p);
+  if (r > 1.0) discard;
+  // a vortex: the billows wind round faster toward the eye of the storm
+  float sw = atan(p.y, p.x) + uTime * uSpin * (0.35 + 1.4 * (1.0 - r));
+  vec2 q = vec2(cos(sw), sin(sw)) * r;
+  float n = fbm2(q * 0.75 + 0.31), n2 = fbm2(q * 2.1 + vec2(uTime * 0.03, 0.17));
+  float dens = smoothstep(0.3, 0.68, n * 0.7 + n2 * 0.45 + (1.0 - r) * 0.25);
+  float edge = 1.0 - smoothstep(0.62, 1.0, r + (n2 - 0.5) * 0.4);
+  float a = clamp(dens * 0.95 + 0.15, 0.0, 1.0) * edge * uA;
+  vec3 col = mix(vec3(0.035, 0.042, 0.06), vec3(0.13, 0.15, 0.19), n2 * (1.0 - uDark));
+  // the underside lit cold from inside on every flash, brightest round the flash, a rim of light in the billows
+  float fl = uFlash * exp(-dot(p - uAt, p - uAt) * 2.6);
+  col += uLit * (fl * (0.6 + 1.4 * n2) + uFlash * 0.12 * n) ;
+  gl_FragColor = vec4(col * a, a);
+}`;
+function cloudMaterial(spin, dark) {
+  return new THREE.ShaderMaterial({
+    vertexShader: CLOUD_VERT, fragmentShader: CLOUD_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false,
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+    uniforms: { tNoise: { value: noiseTex() }, uTime: { value: R() * 50 }, uA: { value: 0 }, uFlash: { value: 0 }, uSpin: { value: spin }, uDark: { value: dark }, uAt: { value: new THREE.Vector2() }, uLit: { value: new THREE.Vector3(...k3(COL.core, 0.55)) } },
+  });
+}
+/**
+ * Hidden prototypes of the staff's own materials (the 雷矢 sprites, the fence wall, the storm disc) for a
+ * compileAsync at first equip: their programs build in parallel instead of hitching the first dart (~300 ms, the sprite
+ * program), the first 雷池 or the first 震霄.
+ */
+export function warmMeshes(scene) {
+  const out = [], d = dartMesh(scene);
+  d.removeFromParent(); out.push(d);
+  out.push(new THREE.Mesh(new THREE.PlaneGeometry(0.01, 0.01), wallMaterial()), new THREE.Mesh(new THREE.PlaneGeometry(0.01, 0.01), cloudMaterial(0, 0)));
+  for (const o of out) { o.visible = false; o.frustumCulled = false; }
+  return out;
+}
+/**
+ * The storm over c (height h): a flattened anvil of two counter-rotating noise discs (r ~9.5 m) with lit puffs round its
+ * rim; flash(k) lights the underside cold around a random point and drops a flicker card inside; for `storm` seconds
+ * lightning runs cloud to cloud 2-3 times a second. Lives `life` s (it hangs on over 甘霖), fading in 0.5 s, out 1 s.
+ */
+export function stormCloud(g, c, { h = 16, r = 9.5, life = 9, storm = 4.4 } = {}) {
+  const P = g.fx?.particles, fx = g.fx, discs = [];
+  for (const [dy, rr, spin, dark] of [[0, r, 0.3, 0], [-1.1, r * 0.72, -0.45, 0.4]]) {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(rr, 72).rotateX(Math.PI / 2), cloudMaterial(spin, dark));
+    m.position.set(c.x, c.y + h + dy, c.z); m.renderOrder = 19; m.frustumCulled = false;
+    g.scene?.add(m); discs.push(m);
   }
-  const flash = (k = 1) => {
-    const p = _a.set(c.x + (R() - 0.5) * r, c.y + h - 0.5, c.z + (R() - 0.5) * r);
-    P?.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.16, size: 5 * k, size1: 7 * k, color: [...k3(COL.rim, 0.22 * k), 1], color1: [...k3(COL.deep, 0.05), 0], frame: FRAME.glow });
-    g.fx?.lights?.flash?.(p, 0x9fd8ff, 40 * k, r * 3, 0.14);
+  const n = 14;
+  if (P) for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + R() * 0.3, rr = r * (0.7 + R() * 0.3), x = c.x + Math.cos(a) * rr, z = c.z + Math.sin(a) * rr, sp = 0.6 + R() * 0.6;
+    P.spawn({ x, y: c.y + h - 0.3 + (R() - 0.5) * 0.6, z, vx: -Math.sin(a) * sp, vz: Math.cos(a) * sp, vy: -0.05, life: Math.min(life, 5) * (0.85 + R() * 0.2), delay: R() * 0.25, fadeIn: 0.4,
+      size: 6 + R() * 3, size1: 8 + R() * 3, color: [0.07, 0.085, 0.11, 0.55], color1: [0.08, 0.1, 0.13, 0], colorPow: 3, frame: FRAME.puff + (i % 4), lit: true, drag: 0.4, rot: R() * 6 });
+  }
+  let t = 0, arcT = 0.3, dead = false;
+  const flash = (k = 1, at = null) => {
+    const ux = at ? (at.x - c.x) / r : (R() - 0.5) * 1.3, uz = at ? (at.z - c.z) / r : (R() - 0.5) * 1.3;
+    for (const m of discs) { const U = m.material.uniforms; U.uFlash.value = Math.max(U.uFlash.value, k); U.uAt.value.set(ux, uz); }
+    const p = _a.set(c.x + ux * r, c.y + h - 0.7, c.z + uz * r);
+    P?.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.12, size: 5 * k, size1: 7.5 * k, color: [...k3(COL.rim, 0.3 * k), 1], color1: [...k3(COL.deep, 0.05), 0], frame: FRAME.glow });
+    fx?.lights?.flash?.(p, 0x9fd8ff, 40 * k, r * 3, 0.14);
   };
-  return { flash, stop() {} };
+  const sys = {
+    update(dt) {
+      t += dt;
+      const a = Math.min(1, t / 0.5) * Math.min(1, Math.max(0, (life - t) / 1));
+      for (const m of discs) { const U = m.material.uniforms; U.uTime.value += dt; U.uA.value = a * 0.94; U.uFlash.value = Math.max(0, U.uFlash.value - dt * 7); }
+      // cloud-to-cloud lightning while the storm is on
+      if (t < storm && (arcT -= dt) <= 0) {
+        arcT = 0.3 + R() * 0.2;
+        const a0 = R() * TAU, a1 = a0 + 0.8 + R() * 1.6, r0 = r * (0.3 + R() * 0.55), r1 = r * (0.3 + R() * 0.55), y = c.y + h - 0.9;
+        const p0 = new THREE.Vector3(c.x + Math.cos(a0) * r0, y, c.z + Math.sin(a0) * r0), p1 = new THREE.Vector3(c.x + Math.cos(a1) * r1, y - R() * 0.8, c.z + Math.sin(a1) * r1);
+        fx?.bolt?.(p0, p1, { col: k3(COL.white, 0.7), glow: k3(COL.core, 0.45), width: 0.28, core: 0.22, levels: 5, jitter: 0.12, branches: 2, regen: 0.05, life: 0.16 });
+        flash(0.75, p0.lerp(p1, 0.5));
+      }
+      if (t >= life) { sys.stop(); return; }
+    },
+    stop() {
+      if (dead) return;
+      dead = true;
+      for (const m of discs) { m.removeFromParent(); m.geometry.dispose(); m.material.dispose(); }
+      const i = g.systems?.indexOf(sys);
+      if (i >= 0) g.systems.splice(i, 1);
+    },
+  };
+  g.systems?.push(sys);
+  return { flash, stop: sys.stop, get alive() { return !dead; } };
 }
 /** 甘霖: a soft rain falling over c (radius r) for dur s, with a slow heal ring on the ground */
 export function rain(g, c, r, dur) {
@@ -291,6 +468,8 @@ export function rain(g, c, r, dur) {
  */
 export function dragonGeometry() {
   const parts = [];
+  // HDR gold (the glaze shader adds tint x 0.45 as emission on top of the tinted body): reads gold through the cyan rim
+  const GOLD = [2.7, 1.8, 0.55, 1], CREST = [2.3, 1.5, 0.45, 0.95];
   const push = (g, anim, tint) => {
     g = g.index ? g.toNonIndexed() : g;
     for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
@@ -304,8 +483,8 @@ export function dragonGeometry() {
     parts.push(g);
   };
   const L = 1.0;
-  const path = (t) => new THREE.Vector3(Math.sin(t * 6.2) * 0.07 * t, Math.sin(t * 4.5 + 0.6) * 0.05 * t, -0.45 + t * L);
-  const rad = (t) => 0.048 * (t < 0.06 ? 0.75 + t * 4 : Math.max(0.08, 1 - Math.pow(t, 1.4) * 0.92));
+  const path = (t) => new THREE.Vector3(Math.sin(t * 7.5) * 0.09 * (0.3 + t), Math.sin(t * 5.2 + 0.6) * 0.06 * (0.3 + t), -0.45 + t * L);
+  const rad = (t) => 0.06 * (t < 0.06 ? 0.75 + t * 4 : Math.max(0.08, 1 - Math.pow(t, 1.4) * 0.92));
   // body: rings perpendicular to the path, scale bumps
   {
     const n = 56, m = 10, pos = [], idx = [];
@@ -324,11 +503,11 @@ export function dragonGeometry() {
     for (let i = 0; i < 18; i++) {
       const t = 0.08 + i * 0.05, P = path(t), h = 0.055 * (1 - t * 0.7);
       const cone = new THREE.ConeGeometry(0.014 * (1 - t * 0.5), h, 4).rotateX(0.6).translate(P.x, P.y + rad(t) * 0.9 + h * 0.35, P.z);
-      push(cone, () => [0, Math.min(1, t * 1.5), t], () => [0.95, 0.72, 0.3, 0.8]);
+      push(cone, () => [0, Math.min(1, t * 1.5), t], () => CREST);
     }
     // tail fin
     const tp = path(0.98);
-    push(new THREE.ConeGeometry(0.045, 0.16, 4).scale(1.6, 1, 0.25).rotateX(Math.PI / 2).translate(tp.x, tp.y, tp.z + 0.06), () => [0, 1, 1], () => [0.95, 0.72, 0.3, 0.6]);
+    push(new THREE.ConeGeometry(0.045, 0.16, 4).scale(1.6, 1, 0.25).rotateX(Math.PI / 2).translate(tp.x, tp.y, tp.z + 0.06), () => [0, 1, 1], () => CREST);
   }
   // head: skull + snout + jaw, horns, whiskers, mane
   {
@@ -339,17 +518,17 @@ export function dragonGeometry() {
     for (const g of [skull, snout, jaw]) push(g, () => [0, 0, 0]);
     for (const s of [-1, 1]) {
       const horn = new THREE.ConeGeometry(0.014, 0.17, 5).rotateX(-1.1).rotateZ(-s * 0.3).translate(h0.x + s * 0.04, h0.y + 0.09, h0.z + 0.04);
-      push(horn, () => [0, 0, 0], () => [0.98, 0.76, 0.32, 0.9]);
+      push(horn, () => [0, 0, 0], () => GOLD);
       const tine = new THREE.ConeGeometry(0.008, 0.07, 4).rotateX(-0.4).translate(h0.x + s * 0.05, h0.y + 0.12, h0.z + 0.02);
-      push(tine, () => [0, 0, 0], () => [0.98, 0.76, 0.32, 0.9]);
+      push(tine, () => [0, 0, 0], () => GOLD);
       const eye = new THREE.SphereGeometry(0.014, 6, 4).translate(h0.x + s * 0.045, h0.y + 0.04, h0.z - 0.1);
       push(eye, () => [0, 0, 0], () => [1, 1, 1, 1]);
       // whisker
       const pts = [], m = 10;
       for (let i = 0; i <= m; i++) { const t = i / m; pts.push(new THREE.Vector3(h0.x + s * (0.04 + t * 0.22), h0.y - 0.01 - t * 0.06 + Math.sin(t * 6) * 0.025, h0.z - 0.21 + t * 0.2)); }
-      push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.005, 3), () => [0, 0, 0], () => [0.98, 0.76, 0.32, 0.9]);
+      push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.006, 3), () => [0, 0, 0], () => GOLD);
       // mane flames sweeping back
-      for (let k = 0; k < 3; k++) push(new THREE.ConeGeometry(0.025, 0.14 - k * 0.02, 4).scale(1, 1, 0.3).rotateX(1.25).rotateZ(s * (0.5 + k * 0.25)).translate(h0.x + s * 0.06, h0.y + 0.02 - k * 0.02, h0.z + 0.07), () => [0, 0.05, 0.02], () => [0.95, 0.72, 0.3, 0.5]);
+      for (let k = 0; k < 3; k++) push(new THREE.ConeGeometry(0.025, 0.14 - k * 0.02, 4).scale(1, 1, 0.3).rotateX(1.25).rotateZ(s * (0.5 + k * 0.25)).translate(h0.x + s * 0.06, h0.y + 0.02 - k * 0.02, h0.z + 0.07), () => [0, 0.05, 0.02], () => [1.6, 1.05, 0.35, 0.7]);
     }
   }
   // wings at the shoulders (t 0.16): bone + four feather cards per side, flapping (aAnim.x)
@@ -358,7 +537,7 @@ export function dragonGeometry() {
     for (const s of [-1, 1]) {
       const pos = [], idx = [], cols = 6, rows = 4;
       for (let j = 0; j <= rows; j++) for (let i = 0; i <= cols; i++) {
-        const u = i / cols, v = j / rows, span = 0.62, x = s * (0.04 + u * span), chord = 0.22 * (1 - u * 0.55) * (0.3 + 0.7 * Math.sin(Math.PI * Math.min(1, (u + 0.15)))) ;
+        const u = i / cols, v = j / rows, span = 0.36, x = s * (0.05 + u * span), chord = 0.16 * (1 - u * 0.5) * (0.3 + 0.7 * Math.sin(Math.PI * Math.min(1, (u + 0.15)))) ;
         const sweep = u * u * 0.18, yy = sh.y + 0.03 + u * 0.12 - u * u * 0.08;
         // feather scallops on the trailing edge
         const scal = v === 1 ? 0.03 * Math.abs(Math.sin(u * Math.PI * 4)) : 0;
@@ -366,17 +545,21 @@ export function dragonGeometry() {
       }
       for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const a = j * (cols + 1) + i, b = a + 1, c = a + cols + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-      push(g, (x) => [s * Math.min(1, Math.abs(x - sh.x) / 0.62), 0.1, 0.16], (x, y, z) => [0.98, 0.78, 0.35, z - sh.z < 0.012 ? 0.9 : 0]);
+      push(g, (x) => [s * Math.min(1, Math.abs(x - sh.x) / 0.36), 0.1, 0.16], (x, y, z) => { const u = Math.max(0, (Math.abs(x - sh.x) - 0.05) / 0.36); return z - sh.z < -0.02 + u * u * 0.18 + 0.01 ? GOLD : null; });
+      // gold piping along the scalloped trailing edge
+      const te = [];
+      for (let i = 0; i <= 12; i++) { const k = (rows + 1) * (cols + 1) - (cols + 1) + Math.round(i / 12 * cols); te.push(new THREE.Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2])); }
+      push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(te), 16, 0.006, 3), (x) => [s * Math.min(1, Math.abs(x - sh.x) / 0.36), 0.1, 0.16], () => GOLD);
       // the wing bone along the leading edge
       const bp = [];
-      for (let i = 0; i <= 8; i++) { const u = i / 8; bp.push(new THREE.Vector3(sh.x + s * (0.04 + u * 0.62), sh.y + 0.03 + u * 0.12 - u * u * 0.08, sh.z - 0.025 + u * u * 0.18)); }
-      push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bp), 10, 0.011, 4), (x) => [s * Math.min(1, Math.abs(x - sh.x) / 0.62), 0.1, 0.16], () => [0.98, 0.76, 0.32, 0.85]);
+      for (let i = 0; i <= 8; i++) { const u = i / 8; bp.push(new THREE.Vector3(sh.x + s * (0.05 + u * 0.36), sh.y + 0.03 + u * 0.12 - u * u * 0.08, sh.z - 0.025 + u * u * 0.18)); }
+      push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bp), 10, 0.011, 4), (x) => [s * Math.min(1, Math.abs(x - sh.x) / 0.36), 0.1, 0.16], () => GOLD);
     }
   }
   // two clawed legs (short)
   for (const [t, s] of [[0.24, 1], [0.24, -1], [0.62, 1], [0.62, -1]]) {
     const P = path(t);
-    push(new THREE.ConeGeometry(0.016, 0.1, 4).rotateZ(s * 2.5).translate(P.x + s * 0.05, P.y - 0.05, P.z), () => [0, Math.min(1, t * 1.5), t], () => [0.98, 0.76, 0.32, 0.6]);
+    push(new THREE.ConeGeometry(0.016, 0.1, 4).rotateZ(s * 2.5).translate(P.x + s * 0.05, P.y - 0.05, P.z), () => [0, Math.min(1, t * 1.5), t], () => CREST);
   }
   const all = mergeAll(parts);
   all.computeBoundingBox();
@@ -400,7 +583,8 @@ export function thunderKill(g, z, p, { big = false } = {}) {
   const fx = g.fx;
   if (!fx) return;
   const top = _a.set(p.x + (R() - 0.5), p.y + 9, p.z + (R() - 0.5)).clone();
-  fx.bolt?.(top, p.clone(), { col: k3(COL.white, 0.8), glow: k3(COL.core, 0.45), width: big ? 0.12 : 0.08, core: 0.22, levels: 5, jitter: 0.08, branches: 2, regen: 0.05, life: 0.12 });
+  fx.bolt?.(top, p.clone(), { col: k3(COL.white, 0.85), glow: k3(COL.core, 0.5), width: big ? 0.2 : 0.15, core: 0.24, levels: 5, jitter: 0.08, branches: 2, regen: 0.05, life: 0.13 });
+  fx.beam?.(_c.set(p.x, p.y + 9, p.z), p.clone(), { core: k3(COL.white, 0.22), glow: k3(COL.core, 0.25), wCore: 0.04, wGlow: big ? 0.6 : 0.42, life: 0.14, shrink: 0.3 });
   fx.particles?.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.12, size: 0.7, size1: 1.1, color: [...k3(COL.white, 0.35), 1], color1: [...k3(COL.core, 0.05), 0], frame: FRAME.glow });
   fx.zfx?.status?.(z, 'shocked', 0.8);
   const fy = z.pos?.y ?? p.y - 1;

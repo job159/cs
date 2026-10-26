@@ -47,6 +47,7 @@ export class World {
   }
 
   async load(map, ctx) {
+    ctx?.game?.renderer?.setStaticShadow?.(null);   // a package map registers its own sun shadow cache while it builds
     const res = await map.build({ ...ctx, world: this, scene: this.scene, root: this.root });
     this.def = res;
     // per-map colour grade + exposure (map.json `grade` / `exposure`); maps without one get the neutral grade back

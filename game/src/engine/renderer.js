@@ -3,6 +3,10 @@
 //   -> dual-filter bloom (13-tap down / tent up)  -> composite (exposure, ACES, grading,
 //   vignette, damage / flash / chromatic aberration, grain)  -> canvas.
 // Dynamic resolution scales the HDR target between quality.minScale and 1 to hold the frame rate.
+// Cost control (profiled on an Intel iGPU with timer queries): opaque draws front to back in distance octaves, point
+// lights skip their BRDF out of range, the sun shadow keeps the map's static casters in a cache (setStaticShadow) and
+// renders the next follow step's ahead of time in slices (prefetchStaticShadow), shadow passes write depth only, only
+// the MSAA colour is resolved, and warmup() compiles the shadow pass's programs and uploads everything at load.
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
@@ -171,6 +175,38 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+// Point lights: the BRDF of a light only runs where the light reaches. getPointLightInfo already zeroes the colour
+// beyond the light's range and for lights at intensity 0 (the idle slots of the map and FX light pools, which always
+// exist so the light count -- and with it every program -- never changes), so skipping RE_Direct there changes no
+// pixel. The branch is coherent (a light is in or out of range for whole screen regions). With the baked-sun skip of
+// the lightmapped materials (world/mapPackage.js) the map's main pass went from 17.4 to 13.7 ms at high on an iGPU.
+THREE.ShaderChunk.lights_fragment_begin = THREE.ShaderChunk.lights_fragment_begin.replace(
+  /(getPointLightInfo\( pointLight, geometryPosition, directLight \);[\s\S]*?)RE_Direct\(/,
+  '$1if ( directLight.visible ) RE_Direct(');
+
+// Opaque draw order: front to back in distance octaves (three's default sorts by material id first), so the nearest
+// surfaces fill the depth buffer before what they hide is shaded -- the viewmodel (always nearest) hides the street
+// behind the gun, zombies and props the walls behind them (-1.4 ms GPU at high on an iGPU). Inside an octave program,
+// then material: consecutive draws of one program skip the light uniforms, of one material all uniform uploads, which
+// a strict depth order would repeat on nearly every draw (render() took ~2x the CPU time that way).
+// z is NDC depth; 1 / (1 - z) grows linearly with the distance for any near plane.
+const zOctave = (z) => Math.floor(Math.log2(1 / Math.max(1e-7, 1 - z)));
+const _m4 = new THREE.Matrix4();
+
+/** GPU bytes of a texture (estimate for the upload budget log): 4 bytes per texel, + 1/3 with mipmaps. */
+function texBytes(t) {
+  const im = t.image;
+  const w = im?.width || 0, h = im?.height || 0;
+  if (t.isCompressedTexture) return (t.mipmaps || []).reduce((a, m) => a + (m.data?.byteLength || 0), 0);
+  const bpp = t.type === THREE.FloatType ? 16 : t.type === THREE.HalfFloatType ? 8 : 4;
+  return w * h * bpp * (t.isCubeTexture ? 6 : 1) * (t.generateMipmaps && t.minFilter !== THREE.LinearFilter && t.minFilter !== THREE.NearestFilter ? 4 / 3 : 1);
+}
+function makeOpaqueSort(props) {
+  const prog = (m) => props.get(m).currentProgram?.id ?? 0;
+  return (a, b) => a.groupOrder - b.groupOrder || a.renderOrder - b.renderOrder || zOctave(a.z) - zOctave(b.z)
+    || prog(a.material) - prog(b.material) || a.material.id - b.material.id || a.z - b.z || a.id - b.id;
+}
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -183,6 +219,8 @@ export class Renderer {
     this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.gl.shadowMap.autoUpdate = true;
     this.gl.setClearColor(0x000000, 1);
+    this.opaqueSort = makeOpaqueSort(this.gl.properties);
+    this.gl.setOpaqueSort(this.opaqueSort);
     this.gl.info.autoReset = false;
     const ext = this.gl.extensions;
     this.hdr = !!(ext.get('EXT_color_buffer_float') || ext.get('EXT_color_buffer_half_float'));
@@ -226,7 +264,302 @@ export class Renderer {
     u.uvScale = this.uvScale;
     this.compMat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: COMPOSITE_FRAG, uniforms: u, depthTest: false, depthWrite: false });
     this.quad = new FullScreenQuad(this.downMat);
+    this.shadowCache = null;
+    this._wrapShadowMap();
     this.setQuality('high');
+  }
+
+  /**
+   * Cached static sun shadow. The map's static casters only change when the sun's shadow camera moves (the map snaps
+   * it to a coarse grid around the player, world/mapPackage.js), so their depth is rendered once into a cache and
+   * copied into the shadow map each frame (one depth blit); only dynamic casters (zombies, players, props) are drawn
+   * on top every frame. Same shadow map, same filtering: the ~4.5 ms sun pass at high on an iGPU becomes a depth blit
+   * plus the zombies / players (0 when nothing dynamic is in range).
+   * { light, root: Object3D holding the static casters, casters: Mesh[] } or null.
+   */
+  setStaticShadow(cfg) {
+    this.shadowCache?.rt?.dispose();
+    this.shadowCache?.next?.rt?.dispose();
+    this.shadowCache = cfg ? { ...cfg, rt: null, key: new Float64Array(13).fill(NaN), now: new Float64Array(13), one: [cfg.light], dyn: true,
+      next: null, ahead: false, aheadPos: new THREE.Vector3(), aheadTarget: new THREE.Vector3() } : null;
+  }
+
+  /**
+   * The sun shadow's next follow step (the map's prediction of the cell the player is about to enter: light and
+   * target positions exactly as the map will set them), or null. At high / ultra the static casters' depth for that
+   * cell is rendered into a spare cache in slices over the next frames, and the step itself only swaps the caches:
+   * re-rendering a 4096 map in one frame doubled that frame's GPU time (frame pacing judder while running).
+   */
+  prefetchStaticShadow(pos, target) {
+    const c = this.shadowCache;
+    if (!c) return;
+    c.ahead = !!pos;
+    if (pos) { c.aheadPos.copy(pos); c.aheadTarget.copy(target); }
+  }
+
+  /**
+   * Load-time warm-up of what compileAsync leaves to the first frame that needs it (each a hitch mid-match):
+   *  - the shadow pass's depth materials of skinned, alpha-tested or dithered casters (the zombies only exist once a
+   *    wave spawns): the hidden '*-warmup' groups (zombie manager, premium presets) cast shadows for this frame;
+   *  - the GPU upload of every mesh's buffers and of the textures in view (three uploads them the first time a mesh
+   *    comes into view: turning around for the first time uploaded a few textures and dozens of buffers per frame).
+   *    Textures only used out of view are uploaded in idle time between the next frames (_idleUploads: the match's
+   *    warm-up / buy time), those of the hidden warm-up groups not at all (compile only: a premium preset of a
+   *    weapon nobody owns never uploads; the zombie manager uploads its models' own). After a menu backdrop of the
+   *    same map almost everything is resident already.
+   *  - each program's first use (uniform setup, the GPU process' per-mesh shader variants).
+   * Throwaway frames into a small target with nothing culled: one with one trivial material and no shadow pass (the
+   * light state), one with the trivial material (only depth variants and the sky's material compile there; the real
+   * programs are compileAsync's job), then the real materials (a few warm-up models per frame). Async: it yields
+   * between those frames.
+   */
+  async warmup(scene, camera) {
+    const gl = this.gl, shown = new Set(), cast = [], culled = new Set(), seen = new Set(), later = [], parts = [];
+    const t = performance.now(), n = gl.info.programs?.length ?? 0;
+    let now = 0, mb = 0;
+    const frustum = new THREE.Frustum().setFromProjectionMatrix(_m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    const tex = (v, inView) => {
+      if (!v?.isTexture || v.isRenderTargetTexture || seen.has(v)) return;
+      seen.add(v);
+      if (gl.properties.get(v).__webglTexture) return;   // already resident (the menu backdrop drew it)
+      if (!inView) { later.push(v); return; }
+      try { gl.initTexture(v); now++; mb += texBytes(v) / 1048576; } catch { /* uploaded on first use instead */ }
+    };
+    scene.updateMatrixWorld();
+    scene.traverse((o) => {
+      if (/warmup/.test(o.name) && !o.visible) { o.visible = true; shown.add(o); }
+      if ((o.isMesh || o.isPoints || o.isLine) && o.frustumCulled) { o.frustumCulled = false; culled.add(o); }
+    });
+    const inGroup = (o) => { for (let p = o; p; p = p.parent) if (shown.has(p)) return true; return false; };
+    scene.traverse((o) => {
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      if (!mats.length || inGroup(o)) return;
+      let inView = true;
+      // (skinned meshes count as in view: their bounds would be skinned on the CPU, and they are the players / bots)
+      try { inView = !culled.has(o) || !o.geometry || o.isSkinnedMesh || frustum.intersectsObject(o); } catch { /* no bounds: upload now */ }
+      for (const m of mats) {
+        for (const v of Object.values(m)) tex(v, inView);
+        if (m.uniforms) for (const u of Object.values(m.uniforms)) tex(u?.value, inView);
+        if (m.userData?.lmUniforms) for (const u of Object.values(m.userData.lmUniforms)) tex(u?.value, inView);
+      }
+    });
+    if (gl.shadowMap.enabled) for (const w of shown) w.traverse((o) => { if (o.isMesh && !o.castShadow) { o.castShadow = true; cast.push(o); } });
+    const rt = new THREE.WebGLRenderTarget(16, 16, { type: this.rt.texture.type });
+    const prev = gl.getRenderTarget(), over = scene.overrideMaterial;
+    this._warmMat ||= new THREE.MeshBasicMaterial();
+    const shadowPass = gl.shadowMap.render;
+    try {
+      scene.overrideMaterial = this._warmMat;
+      gl.setRenderTarget(rt);
+      // three runs a frame's shadow pass before it sets up that frame's lights, and every program's key holds the
+      // light counts: a first frame without the shadow pass brings the light state up to date (the match's FX light
+      // pool came after the menu backdrop's last frame; a fresh scene has none), so the depth variants below are the
+      // ones the match uses (stale ones were compiled again on the first match frame: a 0.5-1 s stall)
+      gl.shadowMap.render = () => {};
+      try { gl.render(scene, camera); } finally { gl.shadowMap.render = shadowPass; }
+      // the static casters' depth variants too (re-rendered whatever the cache holds). three shares a depth material
+      // between casters and re-picks its program only when the material's version changes (not on new light counts,
+      // its caster's map or skinning): bumped before every depth draw here, each caster's own variant with the match's
+      // lights is compiled and first used now, not on whichever later frame bumps it
+      this.shadowCache?.key.fill(NaN);
+      const draw = gl.renderBufferDirect;
+      gl.renderBufferDirect = function (cam, sc, geo, mat, obj, grp) {
+        if (mat?.isMeshDepthMaterial || mat?.isMeshDistanceMaterial) mat.needsUpdate = true;
+        return draw.call(this, cam, sc, geo, mat, obj, grp);
+      };
+      try { gl.render(scene, camera); } finally { gl.renderBufferDirect = draw; }
+      // and once with the real materials: each program's first use (three reads its uniforms and info log, a sync
+      // round trip to the GPU process; ANGLE / D3D11 builds the vertex shader for the mesh's attribute formats, ~65 ms
+      // per program on an iGPU) happens here, not when round 1 first shows a zombie type (0.25-0.4 s frames). Only the
+      // warm-up groups that opt in (userData.firstUse: the zombies, teammates) besides the scene itself: a premium
+      // preset of a weapon nobody owns yet stays compile-only
+      // preset of a weapon nobody owns yet stays compile-only. A few models per frame, yielding between them: one
+      // block of seconds froze the loading bar and starved the co-op heartbeats
+      for (const o of shown) if (!o.userData.firstUse) o.visible = false;
+      scene.overrideMaterial = over;
+      for (const o of shown) if (o.userData.firstUse) for (const c of o.children) if (c.visible) { c.visible = false; parts.push(c); }
+      for (let i = 0; i === 0 || i < parts.length; i += 3) {
+        const chunk = parts.slice(i, i + 3);
+        for (const c of chunk) c.visible = true;
+        gl.setRenderTarget(rt);
+        gl.render(scene, camera);
+        for (const c of chunk) c.visible = false;
+        if (i + 3 < parts.length) await new Promise((r) => setTimeout(r, 0));
+      }
+    } finally {
+      scene.overrideMaterial = over;
+      gl.setRenderTarget(prev);
+      rt.dispose();
+      for (const c of parts) c.visible = true;
+      for (const o of culled) o.frustumCulled = true;
+      for (const o of cast) o.castShadow = false;
+      for (const o of shown) o.visible = false;
+    }
+    this._idleUploads(later);
+    console.info(`[renderer] warm-up: ${(gl.info.programs?.length ?? 0) - n} programs, ${now} textures uploaded (~${Math.round(mb)} MB), ${later.length} left for idle time, in ${((performance.now() - t) / 1000).toFixed(2)} s`);
+  }
+
+  /**
+   * Uploads textures one at a time in the browser's idle time between frames (requestIdleCallback; none while the
+   * frame budget is used up: three then uploads a texture the first time it is drawn, as without a warm-up). A
+   * texture disposed meanwhile (the game ended) is dropped.
+   */
+  _idleUploads(list) {
+    const q = this._upQueue ||= new Set();
+    for (const v of list) {
+      if (q.has(v)) continue;
+      q.add(v);
+      v.addEventListener('dispose', function drop() { q.delete(v); v.removeEventListener('dispose', drop); });
+    }
+    const ric = window.requestIdleCallback;
+    if (!q.size || this._upBusy || !ric) return;
+    this._upBusy = true;
+    let k = 0, mb = 0;
+    const t0 = performance.now();
+    const step = (dl) => {
+      // one per callback (a 1k texture is a few ms to a few tens of ms): the deadline is re-checked between frames
+      if (dl.timeRemaining() > 6) {
+        for (const v of q) {
+          q.delete(v);
+          if (this.gl.properties.get(v).__webglTexture) continue;
+          try { this.gl.initTexture(v); k++; mb += texBytes(v) / 1048576; } catch { /* first use then */ }
+          break;
+        }
+      }
+      if (q.size) ric(step);
+      else {
+        this._upBusy = false;
+        if (k) console.info(`[renderer] idle uploads: ${k} textures (~${Math.round(mb)} MB) in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+      }
+    };
+    ric(step);
+  }
+
+  _wrapShadowMap() {
+    const gl = this.gl, sm = gl.shadowMap, render = sm.render;
+    const noClear = () => {};
+    // The depth-texture shadow maps (PCF) are sampled through their depth texture only: colour writes are masked in
+    // the shadow pass (three still clears and writes an RGBA8 colour attachment per texel: at 4096 that was 11 of the
+    // 16 ms of a full static render on an iGPU), and the targets get a one-channel colour attachment.
+    const depthOnly = (fn) => {
+      if (sm.type === THREE.VSMShadowMap) return fn();
+      const cb = gl.state.buffers.color;
+      cb.setMask(false);
+      cb.setLocked(true);
+      try { return fn(); } finally { cb.setLocked(false); cb.setMask(true); }
+    };
+    // three's own PCF shadow target (WebGLShadowMap), but RedFormat colour: 12 MB less at 2048, 48 MB at 4096
+    const ensureMap = (light) => {
+      const s = light.shadow;
+      if (!s || s.map || !light.castShadow || sm.type !== THREE.PCFShadowMap || light.isPointLight) return;
+      const w = s.mapSize.x, h = s.mapSize.y;
+      s.map = new THREE.WebGLRenderTarget(w, h, { format: THREE.RedFormat });
+      const d = s.map.depthTexture = new THREE.DepthTexture(w, h, THREE.UnsignedIntType);
+      d.name = light.name + '.shadowMap';
+      d.format = THREE.DepthFormat;
+      d.compareFunction = gl.state.buffers.depth.getReversed() ? THREE.GreaterEqualCompare : THREE.LessEqualCompare;
+      d.minFilter = d.magFilter = THREE.LinearFilter;
+      s.camera.updateProjectionMatrix();
+    };
+    const cacheTarget = (size) => {
+      // (only its depth is used; three always attaches a colour texture: one channel keeps it small)
+      const rt = new THREE.WebGLRenderTarget(size, size, { format: THREE.RedFormat, depthBuffer: true, depthTexture: new THREE.DepthTexture(size, size, THREE.UnsignedIntType) });
+      rt.depthTexture.format = THREE.DepthFormat;
+      const prev = gl.getRenderTarget();
+      gl.setRenderTarget(rt);   // creates its framebuffer
+      gl.setRenderTarget(prev);
+      return rt;
+    };
+    // what the static depth depends on: light + target position, map size, shadow camera box
+    const keyOf = (light, v) => {
+      const e = light.matrixWorld.elements, t = light.target.matrixWorld.elements, sc = light.shadow.camera;
+      v[0] = e[12]; v[1] = e[13]; v[2] = e[14]; v[3] = t[12]; v[4] = t[13]; v[5] = t[14];
+      v[6] = light.shadow.mapSize.x; v[7] = sc.left; v[8] = sc.right; v[9] = sc.top; v[10] = sc.bottom; v[11] = sc.near; v[12] = sc.far;
+    };
+    const same = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
+    const savePos = new THREE.Vector3(), saveTarget = new THREE.Vector3();
+    // Prefetch: one slice of the static casters (balanced by triangles) per frame into the spare cache, rendered with
+    // the light moved to the predicted cell (prefetchStaticShadow); next.done once every slice is in.
+    const prefetch = (c, light, camera, size) => {
+      const n = c.next ||= { rt: null, key: new Float64Array(13).fill(NaN), at: new Float64Array(6).fill(NaN), part: 0, done: false };
+      const P = c.aheadPos, T = c.aheadTarget, at = n.at;
+      if (at[0] !== P.x || at[1] !== P.y || at[2] !== P.z || at[3] !== T.x || at[4] !== T.y || at[5] !== T.z) {
+        at[0] = P.x; at[1] = P.y; at[2] = P.z; at[3] = T.x; at[4] = T.y; at[5] = T.z;
+        n.part = 0; n.done = false;
+      }
+      if (n.done) return;
+      if (!n.rt || n.rt.width !== size) { n.rt?.dispose(); n.rt = cacheTarget(size); }
+      const k = size >= 4096 ? 4 : 2;
+      if (c.slices?.length !== k) {
+        // greedy: biggest caster first into the lightest slice
+        const tri = (m) => (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position?.count || 0) / 3;
+        const load = new Array(k).fill(0);
+        c.slices = Array.from({ length: k }, () => new Set());
+        for (const m of c.casters.slice().sort((a, b) => tri(b) - tri(a))) { const i = load.indexOf(Math.min(...load)); c.slices[i].add(m); load[i] += tri(m); }
+      }
+      const shadow = light.shadow, live = shadow.map, slice = c.slices[n.part];
+      savePos.copy(light.position); saveTarget.copy(light.target.position);
+      light.position.copy(P); light.target.position.copy(T);
+      light.updateMatrixWorld(); light.target.updateMatrixWorld();
+      if (n.part === 0) keyOf(light, n.key);
+      for (const m of c.casters) m.castShadow = slice.has(m);
+      const clear = gl.clear;
+      if (n.part > 0) gl.clear = noClear;
+      shadow.map = n.rt;
+      try { depthOnly(() => render.call(sm, c.one, c.root, camera)); } finally {
+        shadow.map = live;
+        gl.clear = clear;
+        for (const m of c.casters) m.castShadow = true;
+        light.position.copy(savePos); light.target.position.copy(saveTarget);
+        light.updateMatrixWorld(); light.target.updateMatrixWorld();
+      }
+      if (++n.part >= k) n.done = true;
+    };
+    sm.render = (lights, scene, camera) => {
+      for (const l of lights) ensureMap(l);
+      const c = this.shadowCache, light = c?.light;
+      if (!c || !sm.enabled || !light.castShadow || !lights.includes(light) || !light.parent) return depthOnly(() => render.call(sm, lights, scene, camera));
+      const shadow = light.shadow;
+      light.updateMatrixWorld();
+      const k = c.key, v = c.now, size = shadow.mapSize.x;
+      keyOf(light, v);
+      const stale = !same(k, v);
+      k.set(v);
+      const n = c.next;
+      if (stale && n?.done && same(n.key, v) && n.rt.width === size && c.rt?.width === size && shadow.map?.width === size) {
+        // the step was prefetched: the spare becomes the cache (and the old cache the next spare)
+        const rt = c.rt;
+        c.rt = n.rt; n.rt = rt; n.done = false; n.key.fill(NaN); n.at.fill(NaN);
+        gl.state.setScissorTest(false);
+        gl.copyTextureToTexture(c.rt.depthTexture, shadow.map.depthTexture);
+        c.swaps = (c.swaps || 0) + 1;
+      } else if (stale || !shadow.map || !c.rt || c.rt.width !== size) {
+        // static casters only, into the shadow map (three clears it and sets it up), then kept in the cache
+        depthOnly(() => render.call(sm, c.one, c.root, camera));
+        if (!c.rt || c.rt.width !== size) { c.rt?.dispose(); c.rt = cacheTarget(size); }
+        gl.state.setScissorTest(false);
+        gl.copyTextureToTexture(shadow.map.depthTexture, c.rt.depthTexture);
+        c.renders = (c.renders || 0) + 1;
+      } else if (c.dyn) {
+        // last frame's dynamic casters are in the map: back to the static depth
+        gl.state.setScissorTest(false);
+        gl.copyTextureToTexture(c.rt.depthTexture, shadow.map.depthTexture);
+      }
+      // the next step's static depth, a slice per frame (high / ultra; not in a frame that just rendered or swapped)
+      if (c.ahead && size >= 2048 && !stale) prefetch(c, light, camera, size);
+      // dynamic casters on top (static ones off, no clear); this also leaves the shadow matrices on the live light
+      for (const m of c.casters) m.castShadow = false;
+      const clear = gl.clear;
+      gl.clear = noClear;
+      const calls = gl.info.render.calls;
+      try { depthOnly(() => render.call(sm, c.one, scene, camera)); } finally {
+        gl.clear = clear;
+        for (const m of c.casters) m.castShadow = true;
+      }
+      c.dyn = gl.info.render.calls > calls;   // drawn into the map: the next frame starts from the cache again
+      // any other shadow-casting light renders as usual
+      if (lights.length > 1) depthOnly(() => render.call(sm, lights.filter((l) => l !== light), scene, camera));
+    };
   }
 
   /**
@@ -275,7 +608,9 @@ export class Renderer {
     const w = Math.max(1, Math.round(this.width * this.dpr)), h = Math.max(1, Math.round(this.height * this.dpr));
     this.fullW = w; this.fullH = h;
     const type = this.hdr ? THREE.HalfFloatType : THREE.UnsignedByteType;
-    this.rt = new THREE.WebGLRenderTarget(w, h, { type, samples: this.q.msaa, depthBuffer: true, stencilBuffer: false });
+    // only the colour is resolved out of the MSAA buffers: nothing reads the scene depth afterwards, and resolving a
+    // multisampled depth buffer is a shader pass on D3D11 (ANGLE), ~3-4 ms per frame at 1600x900 on an iGPU
+    this.rt = new THREE.WebGLRenderTarget(w, h, { type, samples: this.q.msaa, depthBuffer: true, stencilBuffer: false, resolveDepthBuffer: false, resolveStencilBuffer: false });
     this.rt.texture.minFilter = this.rt.texture.magFilter = THREE.LinearFilter;
     this.mips = []; this.ups = [];
     let mw = w, mh = h;
@@ -352,7 +687,10 @@ export class Renderer {
     this.dynCooldown -= dt;
     this.dynClock = (this.dynClock || 0) + dt;
     if (this.dynCooldown > 0 || ft.length < 30 || this.fixedScale) return;
-    const sorted = [...ft].sort((a, b) => a - b);
+    const sorted = this._ftSorted || (this._ftSorted = []);   // (no per-frame allocation)
+    sorted.length = 0;
+    for (const v of ft) sorted.push(v);
+    sorted.sort((a, b) => a - b);
     const p75 = sorted[Math.floor(sorted.length * 0.75)];
     const p90 = sorted[Math.floor(sorted.length * 0.9)];
     const mean = ft.reduce((a, b) => a + b, 0) / ft.length;
@@ -396,13 +734,22 @@ export class Renderer {
     if (s !== this.scale) { this.scale = s; this._applyScale(); ft.length = 0; this.dynCooldown = 0.2; this.dynChanged = now; }
   }
 
-  /** Renders world (which may contain the depth-hacked viewmodel) and post-processes to the canvas. */
-  render(scene, camera, time) {
-    const gl = this.gl;
+  /** A target of the canvas' size for frames that must not reach the screen (the quality benchmark); dispose it after. */
+  offscreenTarget() {
+    const v = this.gl.getDrawingBufferSize(new THREE.Vector2());
+    return new THREE.WebGLRenderTarget(v.x, v.y, { depthBuffer: false });
+  }
+
+  /** Renders world (which may contain the depth-hacked viewmodel) and post-processes to the canvas (or to `out`). */
+  render(scene, camera, time, out = null) {
+    const gl = this.gl, rt = this.rt;
     gl.info.reset();
-    gl.setRenderTarget(this.rt);
+    gl.setRenderTarget(rt);
     gl.clear(true, true, false);
-    gl.render(scene, camera);
+    // (cleared just above: no second clear of the MSAA buffers inside render)
+    const ac = gl.autoClear;
+    gl.autoClear = false;
+    try { gl.render(scene, camera); } finally { gl.autoClear = ac; }
 
     // bloom down chain; every pass samples only the used (lower-left) part of its source
     this.uvScale.value.set(this.vw / this.fullW, this.vh / this.fullH);
@@ -432,7 +779,7 @@ export class Renderer {
 
     // composite. The scaled viewport lives in the lower-left corner of every target.
     const c = this.compMat.uniforms;
-    for (const k of Object.keys(this.post)) if (c[k]) c[k].value = this.post[k];
+    for (const k of this._postKeys || (this._postKeys = Object.keys(this.post).filter((n) => c[n]))) c[k].value = this.post[k];
     c.uEdge.value = this.edgeEnabled ? this.post.edge : 0;
     c.uEdgeColor.value.copy(this.post.edgeColor);
     c.tScene.value = this.rt.texture;
@@ -441,7 +788,7 @@ export class Renderer {
     c.sceneTexel.value.set(1 / this.fullW, 1 / this.fullH);
     c.sharpen.value = this.post.sharpen + (1 - this.scale) * 0.6;
     this.quad.material = this.compMat;
-    gl.setRenderTarget(null);
+    gl.setRenderTarget(out);
     this.quad.render(gl);
   }
 }

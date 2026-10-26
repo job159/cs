@@ -32,6 +32,7 @@ export const SIGIL = {
   square:      { g: 2, ch: 3, spin: [0, 0, 0] },
   starmap:     { g: 3, ch: 0, spin: [14, -9, 5] },                // 星圖: 28 mansion ring + constellation glyphs + 北斗 (X02 天劍)
   leiwen:      { g: 3, ch: 1, spin: [0, 12, -16] },               // 雲雷紋戰陣: thunder spirals, eyes + axe blades, 亞-framed dancer (X05 猛志)
+  lotus:       { g: 3, ch: 2, spin: [-22, 10, -14] },             // 千刃蓮華: twelve sabre petals, a seven-band rainbow ring, the seed pod (X06)
 };
 
 // ------------------------------------------------------------------ procedural drawing (Canvas 2D, white on black)
@@ -384,6 +385,30 @@ const DESIGNS = {
     ctx.fillRect(-0.011, -0.03, 0.022, 0.007);
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
+  },
+  lotus(ctx, p, r) {
+    // 千刃蓮華 (X06): a double rim with a running band of small crossed blades; twelve lotus petals, each holding a sabre
+    // (willow-leaf blade, a dragon-head guard, a ring pommel) point outwards; seven thin rings (the rainbow) round the
+    // seed pod, its seeds in two rings and a centre
+    p.circle(0.99, 0.012); p.circle(0.962, 0.004); p.circle(0.68, 0.006);
+    for (let i = 0; i < 36; i++) p.at(0.875, (i / 36) * TAU, () => {
+      ctx.lineWidth = 0.008; ctx.beginPath(); ctx.moveTo(-0.03, -0.035); ctx.lineTo(0.03, 0.035); ctx.moveTo(0.03, -0.035); ctx.lineTo(-0.03, 0.035); ctx.stroke();
+    });
+    for (let i = 0; i < 12; i++) p.at(0.37, (i / 12) * TAU, () => {
+      // the petal outline: a pointed leaf from the inner ring out to the band
+      ctx.lineWidth = 0.011; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(0.14, 0.12, 0.12, 0.32, 0, 0.45); ctx.bezierCurveTo(-0.12, 0.32, -0.14, 0.12, 0, 0); ctx.stroke();
+      // the sabre in the petal: blade (a curved stroke), guard, grip, ring
+      ctx.lineWidth = 0.014; ctx.beginPath(); ctx.moveTo(0, 0.12); ctx.quadraticCurveTo(0.025, 0.27, 0.0, 0.41); ctx.stroke();
+      ctx.lineWidth = 0.006; ctx.beginPath(); ctx.moveTo(-0.012, 0.15); ctx.quadraticCurveTo(0.012, 0.27, -0.006, 0.37); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0.105, 0.024, 0.014, 0, 0, TAU); ctx.fill();
+      ctx.lineWidth = 0.01; ctx.beginPath(); ctx.moveTo(0, 0.09); ctx.lineTo(0, 0.045); ctx.stroke();
+      ctx.lineWidth = 0.006; ctx.beginPath(); ctx.arc(0, 0.032, 0.013, 0, TAU); ctx.stroke();
+    });
+    for (let k = 0; k < 7; k++) p.circle(0.3 - k * 0.018, k === 0 || k === 6 ? 0.007 : 0.004);
+    p.circle(0.16, 0.01);
+    for (let i = 0; i < 12; i++) { const [x, y] = p.P(0.115, (i / 12) * TAU); ctx.beginPath(); ctx.arc(x, y, 0.016 * p.R, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < 6; i++) { const [x, y] = p.P(0.06, (i / 6) * TAU + 0.5); ctx.beginPath(); ctx.arc(x, y, 0.013 * p.R, 0, TAU); ctx.fill(); }
+    p.disc(0.02);
   },
   square(ctx, p, r) {
     // square court: nested squares, corner seals, centre glyph (bands do not spin)

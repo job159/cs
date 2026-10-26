@@ -1,0 +1,352 @@
+{
+  "category": "premium_greataxe",
+  "producer": "premium_greataxe",
+  "sounds": {
+    "greataxe_catch": [
+      "fs:399183",
+      "kenney_impact/Audio/impactMetal_light_002",
+      "fs:183453",
+      "fs:494797"
+    ],
+    "greataxe_charge": [],
+    "greataxe_charge_full": [
+      "fs:375260",
+      "fs:244926",
+      "fs:204912",
+      "fs:375531",
+      "kenney_impact/Audio/impactMetal_heavy_002"
+    ],
+    "greataxe_charge_stage": [
+      "fs:375260",
+      "kenney_impact/Audio/impactMetal_light_002"
+    ],
+    "greataxe_chop_ground": [
+      "fs:522099",
+      "fs:513694",
+      "fs:258195",
+      "fs:201094",
+      "fs:758580",
+      "fs:412558",
+      "fs:569510",
+      "fs:703248",
+      "kenney_impact/Audio/impactMetal_heavy_001"
+    ],
+    "greataxe_close": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "greataxe_crisis": [
+      "kenney_impact/Audio/impactMetal_heavy_001",
+      "fs:640204",
+      "fs:565642",
+      "fs:221528",
+      "fs:203381",
+      "fs:412558",
+      "fs:342204"
+    ],
+    "greataxe_draw": [
+      "fs:163164",
+      "kenney_impact/Audio/impactMetal_light_001"
+    ],
+    "greataxe_draw_first": [
+      "fs:758580",
+      "fs:375550",
+      "fs:163164",
+      "kenney_impact/Audio/impactMetal_light_003",
+      "fs:375260"
+    ],
+    "greataxe_far": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "greataxe_final": [
+      "fs:522099",
+      "fs:201094"
+    ],
+    "greataxe_first_sting": [
+      "fs:375260",
+      "fs:127265",
+      "fs:373256",
+      "fs:373253",
+      "fs:764343"
+    ],
+    "greataxe_fly": [],
+    "greataxe_hit": [
+      "fs:269483",
+      "fs:420674",
+      "fs:504615",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:355052",
+      "fs:488659",
+      "fs:578874"
+    ],
+    "greataxe_hit_flesh": [
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:355052",
+      "fs:488659",
+      "fs:578874"
+    ],
+    "greataxe_hit_wall": [
+      "kenney_impact/Audio/impactMetal_heavy_000",
+      "kenney_impact/Audio/impactMetal_light_001",
+      "fs:201094",
+      "fs:321477",
+      "fs:569510"
+    ],
+    "greataxe_idle": [],
+    "greataxe_inspect": [
+      "fs:375260",
+      "fs:375265",
+      "fs:373257",
+      "fs:764343",
+      "kenney_impact/Audio/impactMetal_light_002",
+      "fs:494797"
+    ],
+    "greataxe_jaw": [
+      "kenney_impact/Audio/impactMetal_light_000",
+      "fs:342204"
+    ],
+    "greataxe_kill": [
+      "fs:375265"
+    ],
+    "greataxe_land": [
+      "fs:522099",
+      "fs:523089",
+      "fs:258195",
+      "fs:201094",
+      "fs:244926",
+      "fs:129281",
+      "fs:569510",
+      "fs:703247",
+      "kenney_impact/Audio/impactMetal_heavy_002"
+    ],
+    "greataxe_leap": [
+      "fs:386799",
+      "fs:770124",
+      "fs:163164",
+      "fs:146932"
+    ],
+    "greataxe_quake": [
+      "fs:703248"
+    ],
+    "greataxe_recover": [
+      "fs:569510",
+      "fs:163164"
+    ],
+    "greataxe_return": [],
+    "greataxe_roar": [
+      "fs:263115",
+      "fs:204912",
+      "fs:132874",
+      "fs:375532",
+      "fs:260555",
+      "kenney_impact/Audio/impactMetal_light_004"
+    ],
+    "greataxe_sever": [
+      "fs:420674",
+      "fs:504615",
+      "fs:355052",
+      "fs:488659",
+      "fs:578874",
+      "fs:134025",
+      "fs:414296",
+      "fs:641046"
+    ],
+    "greataxe_spin": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "greataxe_spin_end": [
+      "fs:60024",
+      "fs:263595",
+      "fs:412558",
+      "fs:703248"
+    ],
+    "greataxe_spin_hit": [
+      "fs:420674",
+      "fs:504615",
+      "fs:779805",
+      "fs:626405"
+    ],
+    "greataxe_spin_start": [
+      "fs:60024",
+      "fs:263595",
+      "fs:260554"
+    ],
+    "greataxe_swing": [
+      "fs:60024",
+      "fs:263595",
+      "fs:507466"
+    ],
+    "greataxe_swing_heavy": [
+      "fs:60024",
+      "fs:263595",
+      "fs:507466",
+      "fs:204912"
+    ],
+    "greataxe_swing_night": [],
+    "greataxe_tail": [
+      "fs:60024",
+      "fs:263595"
+    ],
+    "greataxe_throw": [
+      "fs:60024",
+      "fs:770124"
+    ],
+    "greataxe_ult_bed": [
+      "fs:375260",
+      "fs:375265",
+      "fs:375282",
+      "fs:375519",
+      "fs:452400",
+      "fs:127265",
+      "fs:375497",
+      "fs:373256",
+      "fs:373253",
+      "fs:373257",
+      "fs:764343",
+      "fs:764329",
+      "fs:375550"
+    ],
+    "greataxe_ult_bed_night": [],
+    "greataxe_ult_chop": [
+      "fs:204912"
+    ],
+    "greataxe_ult_impact": [
+      "fs:258195",
+      "fs:523089",
+      "fs:522099",
+      "fs:201094",
+      "fs:127265",
+      "fs:244926",
+      "fs:703247",
+      "fs:366086",
+      "kenney_impact/Audio/impactMetal_heavy_002"
+    ],
+    "greataxe_ult_impact_night": [],
+    "greataxe_ult_rise": [
+      "fs:481642",
+      "fs:204912",
+      "fs:342546",
+      "fs:758580",
+      "fs:703247"
+    ],
+    "greataxe_ult_rise_night": [],
+    "greataxe_ult_roar": [
+      "fs:263115",
+      "fs:132874",
+      "fs:204912",
+      "fs:770124",
+      "fs:375497",
+      "fs:375260",
+      "kenney_impact/Audio/impactMetal_heavy_003"
+    ],
+    "greataxe_ult_roar_night": [],
+    "greataxe_ult_shatter": [
+      "fs:530209",
+      "fs:565642",
+      "fs:361798",
+      "fs:481642",
+      "kenney_impact/Audio/impactMetal_heavy_003",
+      "fs:375260"
+    ],
+    "greataxe_ult_shatter_night": [],
+    "greataxe_ult_sigil": [
+      "fs:375531"
+    ],
+    "greataxe_ult_sweep": [
+      "fs:60024",
+      "fs:263595",
+      "fs:758580"
+    ],
+    "ready_greataxe": [
+      "fs:375260",
+      "fs:375265",
+      "fs:132874"
+    ],
+    "ready_greataxe_night": []
+  },
+  "loaded": [
+    "fs:127265",
+    "fs:129281",
+    "fs:132874",
+    "fs:134025",
+    "fs:146932",
+    "fs:163164",
+    "fs:183453",
+    "fs:201094",
+    "fs:203381",
+    "fs:204912",
+    "fs:221528",
+    "fs:244926",
+    "fs:258195",
+    "fs:260554",
+    "fs:260555",
+    "fs:263115",
+    "fs:263595",
+    "fs:269483",
+    "fs:321477",
+    "fs:342204",
+    "fs:342546",
+    "fs:355052",
+    "fs:361798",
+    "fs:366086",
+    "fs:373253",
+    "fs:373256",
+    "fs:373257",
+    "fs:375260",
+    "fs:375265",
+    "fs:375282",
+    "fs:375497",
+    "fs:375519",
+    "fs:375531",
+    "fs:375532",
+    "fs:375550",
+    "fs:386799",
+    "fs:399183",
+    "fs:412558",
+    "fs:414296",
+    "fs:420674",
+    "fs:452400",
+    "fs:481642",
+    "fs:488659",
+    "fs:494797",
+    "fs:504615",
+    "fs:507466",
+    "fs:513694",
+    "fs:522099",
+    "fs:523089",
+    "fs:530209",
+    "fs:565642",
+    "fs:569510",
+    "fs:578874",
+    "fs:60024",
+    "fs:626405",
+    "fs:640204",
+    "fs:641040",
+    "fs:641046",
+    "fs:703247",
+    "fs:703248",
+    "fs:758580",
+    "fs:764329",
+    "fs:764343",
+    "fs:770124",
+    "fs:779805",
+    "kenney_impact/Audio/impactMetal_heavy_000",
+    "kenney_impact/Audio/impactMetal_heavy_001",
+    "kenney_impact/Audio/impactMetal_heavy_002",
+    "kenney_impact/Audio/impactMetal_heavy_003",
+    "kenney_impact/Audio/impactMetal_heavy_004",
+    "kenney_impact/Audio/impactMetal_light_000",
+    "kenney_impact/Audio/impactMetal_light_001",
+    "kenney_impact/Audio/impactMetal_light_002",
+    "kenney_impact/Audio/impactMetal_light_003",
+    "kenney_impact/Audio/impactMetal_light_004"
+  ],
+  "original": false
+}

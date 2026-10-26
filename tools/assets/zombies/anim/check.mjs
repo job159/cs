@@ -8,9 +8,10 @@ import fs from 'node:fs';
 import { readGLB } from './gltf-read.mjs';
 import { BONES, REPO } from './skeleton.mjs';
 
-const CONTRACT = ['idle', 'idle_b', 'walk_a', 'walk_b', 'walk_c', 'walk_limp', 'run', 'sprint',
+const CONTRACT = ['idle', 'idle_b', 'walk_a', 'walk_b', 'walk_c', 'walk_limp', 'walk_stalk', 'walk_hurry', 'run', 'sprint',
   'attack_a', 'attack_b', 'attack_lunge', 'bite', 'hit_front', 'hit_back', 'hit_left', 'hit_right', 'stagger',
-  'knockdown', 'get_up', 'death_front', 'death_back', 'crawl', 'crawl_attack', 'scream', 'spit', 'leap', 'climb', 'eat'];
+  'knockdown', 'get_up', 'death_front', 'death_back', 'crawl', 'crawl_attack', 'scream', 'spit', 'leap', 'climb', 'eat',
+  'crawl_quad', 'crawl_quad_attack', 'pounce', 'death_quad', 'idle_quad'];
 
 const args = process.argv.slice(2);
 const file = path.resolve(REPO, args.find((a) => !a.startsWith('--') && !args[args.indexOf(a) - 1]?.startsWith('--')) || 'game/assets/zombies/anims.glb');
