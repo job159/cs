@@ -1024,22 +1024,28 @@ def({ id: 'taifeng', zh: '颱風眼．斬浪', en: 'Typhoon-Eye Tidecleaver', ca
     palette: { base: '#4a5058', trim: '#c99a4b', core: '#bff4ff', rim: '#5fd8ff', mote: '#e8fbff', accent: ['#ff4a3a', '#c99a4b'], twin: '#ffcf6a' },
     // (premium.mat retunes only preset materials: the leathers take a pv_metal with no sweep and an invisible rim so their
     // values can be zoned here)
-    presets: { glow_cyan: 'pv_energy', glow_red: 'pv_energy', brass: 'pv_metal', steel: 'pv_metal', steel_dark: 'pv_metal', steel_bright: 'pv_metal', steel_blued: 'pv_metal',
+    presets: { glow_cyan: 'pv_energy', glow_red: 'pv_energy', brass: 'pv_metal', steel: 'pv_metal', steel_dark: 'pv_metal', steel_bright: 'pv_metal', steel_blued: 'pv_metal', alu: 'pv_metal', chrome: 'pv_metal', steel_stipple: 'pv_metal',
       porcelain: 'pv_glaze', glaze_cobalt: 'pv_glaze', glaze_vermilion: 'pv_glaze', crystal: 'pv_crystal', obsidian: 'pv_core', leather_black: 'pv_metal', leather_grain: 'pv_metal', glass_clear: 'pv_metal' },
     pv: { pv_metal: { shine: 1.0, sweepT: 5 }, pv_glaze: { shine: 1.2, sweepT: 4.5, shardScale: 0, irid: 0, rimPower: 9 },
       pv_energy: { veinFreq: 9, veinSpeed: 0.7, veinAxis: 2 }, pv_core: { coreMode: 5, coreAxis: 1, coreScale: 1 } },
-    pvKey: { steel_dark: { rimPower: 16, shine: 0.7, shineTint: [0.86, 0.94, 1] }, steel: { rimPower: 16, shine: 0.45 }, steel_bright: { rimPower: 12, shine: 1.2, shineTint: [0.9, 0.97, 1] },
+    pvKey: { steel_dark: { rimPower: 16, shine: 0.6, shineTint: [0.86, 0.94, 1] }, steel: { rimPower: 16, shine: 0.45 }, steel_bright: { rimPower: 12, shine: 1.2, shineTint: [0.9, 0.97, 1] },
+      alu: { rimPower: 14, shine: 0.8, shineTint: [0.88, 0.95, 1] }, chrome: { rimPower: 12, shine: 1.0, shineTint: [0.9, 0.97, 1] }, steel_stipple: { rimPower: 30, shine: 0.15 },
       steel_blued: { rimPower: 14, shine: 0.6 }, brass: { rimPower: 12, shine: 1.0 }, porcelain: { rimPower: 10 },
       leather_black: { rimPower: 40, shine: 0, flashMask: 0 }, leather_grain: { rimPower: 40, shine: 0, flashMask: 0 },
       obsidian: { coreTint: '#9fe8ff' }, glow_red: { veinAxis: 0, veinFreq: 0.01 }, glass_clear: { shine: 0.8, rimPower: 6, flashMask: 0 } },
-    // value zoning: a light satin gunmetal blade (brushed along it) so the brass isobars and the slot frame read on it, a
-    // mirror edge bevel, a darker cast gunmetal guard / mast, warm satin brass, white enamel dial, oxblood leather cord
+    // value zoning: the blade steps in value edge -> spine (mirror edge bevel > polished hard steel under the lamination
+    // line (chrome) > satin cladding up to the ridge (alu) > satin gunmetal flats > stippled fuller), so the face never reads
+    // as one plane; a cast gunmetal guard / mast / vanes, warm satin brass (dark in its recesses), white enamel dial, oxblood
+    // leather lace
     mat: {
-      steel_dark: { color: '#6b727b', rough: 0.3, metal: 0.92, detail: 'brushed', dScale: 22, dStr: 0.1, env: 1.05, wear: { color: '#b9bec5', metal: 1, rough: 0.2, amount: 0.7 } },
+      steel_dark: { color: '#545b64', rough: 0.32, metal: 0.92, detail: 'brushed', dScale: 22, dStr: 0.1, env: 1.0, wear: { color: '#b9bec5', metal: 1, rough: 0.2, amount: 0.7 } },
+      alu: { color: '#717983', rough: 0.25, metal: 0.95, detail: 'brushed', dScale: 34, dStr: 0.06, env: 1.05, wear: { color: '#c3c8ce', metal: 1, rough: 0.18, amount: 0.5 } },
+      chrome: { color: '#98a0a9', rough: 0.17, metal: 1, detail: 'brushed', dScale: 40, dStr: 0.05, env: 1.0, wear: { color: '#dde1e6', metal: 1, rough: 0.1, amount: 0.3 } },
+      steel_stipple: { color: '#3b4048', rough: 0.5, metal: 0.88, detail: 'stipple', dScale: 260, dStr: 0.4, wear: { color: '#8a8d92', metal: 1, rough: 0.3, amount: 0.4 } },
       steel_bright: { color: '#d7dbe0', rough: 0.12, metal: 1, detail: 'brushed', dScale: 40, dStr: 0.04 },
-      steel: { color: '#4b5059', rough: 0.4, metal: 0.82, detail: 'cast', dScale: 90, dStr: 0.1, env: 1.05, wear: { color: '#a9adb4', metal: 1, rough: 0.28, amount: 1 } },
+      steel: { color: '#555d68', rough: 0.38, metal: 0.84, detail: 'cast', dScale: 90, dStr: 0.1, env: 1.05, wear: { color: '#b3b8c0', metal: 1, rough: 0.26, amount: 1 } },
       steel_blued: { color: '#1c2436', rough: 0.25, metal: 0.9, detail: 'flat' },
-      brass: { color: '#c9a35a', rough: 0.24, metal: 1, detail: 'brushed', dScale: 50, dStr: 0.06, cavity: 0.8, cavCol: '#4a3a1c', wear: { color: '#f0d49a', metal: 1, rough: 0.15, amount: 0.6 } },
+      brass: { color: '#c9a35a', rough: 0.24, metal: 1, detail: 'brushed', dScale: 50, dStr: 0.06, cavity: 1.25, cavCol: '#3a2a10', wear: { color: '#f0d49a', metal: 1, rough: 0.15, amount: 0.6 } },
       porcelain: { color: '#efece4', rough: 0.18, env: 1.2 }, glaze_cobalt: { color: '#2a56b8' }, glaze_vermilion: { color: '#c8302a' },
       leather_black: { color: '#17130f', rough: 0.6, metal: 0, env: 0.7 }, leather_grain: { color: '#3a2216', rough: 0.66, metal: 0, env: 0.75, dScale: 210, dStr: 0.8 },
       crystal: { color: '#3a0d0b', rough: 0.05, env: 1.4 },
@@ -1132,8 +1138,10 @@ def({ id: 'yanshu', zh: '焰樞．破限', en: 'Pyrecore Unbound', cat: 'heavy',
       rubber: { rimPower: 40, shine: 0, flashMask: 0 }, obsidian: { coreTint: '#ff7a1a', coreScale: 1.6, flashMask: 0 },
       glow_orange: { flashMask: 0 }, glow_vermilion: { veinFreq: 0.01, flashMask: 0 } },
     mat: {
-      ceramic_armor: { color: '#e2dfd7', rough: 0.4, env: 1.0, wear: { color: '#a9a499', metal: 0, rough: 0.6, amount: 0.5 } },
+      // glazed ceramic: a satin clear-coat sheen, not matte plastic
+      ceramic_armor: { color: '#e2dfd7', rough: 0.3, env: 1.15, wear: { color: '#a9a499', metal: 0, rough: 0.6, amount: 0.5 } },
       steel: { color: '#4a4e55', rough: 0.44, metal: 0.7, detail: 'cast', dScale: 70, dStr: 0.14, env: 1.05, wear: { color: '#a9adb4', metal: 1, rough: 0.28, amount: 1 } },
+      rubber: { color: '#45474c', rough: 0.82, detail: 'stipple', dScale: 120, dStr: 0.3 },   // grey: pads and ribs read against the black grips
       steel_dark: { color: '#2b2e34', rough: 0.5, metal: 0.66, detail: 'cast', dScale: 110, dStr: 0.1, wear: { color: '#8c9198', metal: 1, rough: 0.3, amount: 0.8 } },
       black_chrome: { color: '#141518', rough: 0.22, metal: 0.9, detail: 'brushed', dScale: 40, dStr: 0.08, wear: { color: '#9a9ca0', metal: 1, rough: 0.2, amount: 0.6 } },
       paint_safety: { color: '#e2571a', rough: 0.42, wear: { color: '#8f9296', metal: 1, rough: 0.3, amount: 1 } },

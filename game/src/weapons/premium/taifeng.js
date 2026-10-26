@@ -288,7 +288,7 @@ function view(ws, g, dt) {
   if (!w?.parts?.fx_core || w.def !== ws.def) return;
   const v = ss.view;
   if (v.w !== w) {
-    Object.assign(v, { w, t: 0, omega: 3, omegaT: 3, drift: 0, hpa: 1000, hpaV: 0, hpaT: 1000, jitter: 0, slide: 0, flap: 0, slideT: 0, flapT: 0,
+    Object.assign(v, { w, t: 0, omega: 3, omegaT: 3, drift: 0, hpa: 1010, hpaV: 0, hpaT: 1010, jitter: 0, slide: 0, flap: 0, slideT: 0, flapT: 0,
       lamp: 0, lampBlink: 0, glintT: 1.5, dripT: 2, coreU: null, kick: 0 });
     w.onParts = (vm2) => vanes(ws, vm2);
     psOf(vm, 'fx_lamp').hidden = true;
@@ -305,11 +305,11 @@ function view(ws, g, dt) {
   vm.setSpin('fx_rotor', v.omega / ROTOR_BASE);
   // ---- barometer: a damped spring to the target pressure, a shiver when the stage is capped
   const capped = charging && ss.cap < 3 && ss.ct > ws.def.special.gale.stages[2] - 0.05;
-  v.hpaT = charging ? [1000, 980, 960, 940][st] + (capped ? 2 * Math.sin(v.t * 37) : 0) : ready ? 988 + 1.5 * Math.sin(v.t * 1.3) : 1000 + 1.2 * Math.sin(v.t * 0.7) + 0.6 * Math.sin(v.t * 2.3);
+  v.hpaT = charging ? [1000, 980, 960, 940][st] + (capped ? 2 * Math.sin(v.t * 37) : 0) : ready ? 988 + 1.5 * Math.sin(v.t * 1.3) : 1010 + 1.2 * Math.sin(v.t * 0.7) + 0.6 * Math.sin(v.t * 2.3);   // fair weather at rest: the needle clear of the 1000 numeral
   if (v.hpaHold > 0) { v.hpaHold -= dt; v.hpaT = v.hpaHold > 0 ? v.hpaPin : v.hpaT; }
   v.hpaV += ((v.hpaT - v.hpa) * 140 - v.hpaV * 14) * dt;
   v.hpa += v.hpaV * dt;
-  psOf(vm, 'fx_needle').v = (1000 - v.hpa) / 20;
+  psOf(vm, 'fx_needle').v = (1010 - v.hpa) / 20;   // the model's needle rests at 1010
   XH.stage = st; XH.capped = capped; XH.thrown = thrown; XH.ready = ready && !charging;
   // ---- vanes: out in the charge (flared at stage 3), the cleave wind-up, the throw, the cast; a clip can drive them too
   const vt = charging ? [1, st >= 3 ? 1 : 0.35] : thrown || ss.mode === 'cast' ? [1, 0.6] : (ss.mode === 'swing' && ss.step === 2 && !ss.hit) ? [1, 0.8] : [v.slideT, v.flapT];

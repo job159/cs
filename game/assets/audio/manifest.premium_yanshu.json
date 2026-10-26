@@ -1,0 +1,1150 @@
+{
+  "sounds": {
+    "ready_yanshu": {
+      "files": [
+        "premium_yanshu/ready_yanshu_1.ogg",
+        "premium_yanshu/ready_yanshu_2.ogg"
+      ],
+      "vol": 1.09,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "ready_yanshu_zero": {
+      "files": [
+        "premium_yanshu/ready_yanshu_zero_1.ogg",
+        "premium_yanshu/ready_yanshu_zero_2.ogg"
+      ],
+      "vol": 1.07,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_beam_end": {
+      "files": [
+        "premium_yanshu/yanshu_beam_end_1.ogg",
+        "premium_yanshu/yanshu_beam_end_2.ogg"
+      ],
+      "vol": 0.81,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_beam_loop": {
+      "files": [
+        "premium_yanshu/yanshu_beam_loop.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        70
+      ],
+      "loop": true
+    },
+    "yanshu_beam_start": {
+      "files": [
+        "premium_yanshu/yanshu_beam_start_1.ogg",
+        "premium_yanshu/yanshu_beam_start_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        70
+      ],
+      "loop": false
+    },
+    "yanshu_beat_clang": {
+      "files": [
+        "premium_yanshu/yanshu_beat_clang.ogg"
+      ],
+      "vol": 1.06,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_beat_click": {
+      "files": [
+        "premium_yanshu/yanshu_beat_click.ogg"
+      ],
+      "vol": 1.41,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_beat_hiss": {
+      "files": [
+        "premium_yanshu/yanshu_beat_hiss.ogg"
+      ],
+      "vol": 0.97,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_beat_hum": {
+      "files": [
+        "premium_yanshu/yanshu_beat_hum.ogg"
+      ],
+      "vol": 0.95,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_beep": {
+      "files": [
+        "premium_yanshu/yanshu_beep_1.ogg",
+        "premium_yanshu/yanshu_beep_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_burst": {
+      "files": [
+        "premium_yanshu/yanshu_burst_1.ogg",
+        "premium_yanshu/yanshu_burst_2.ogg",
+        "premium_yanshu/yanshu_burst_3.ogg",
+        "premium_yanshu/yanshu_burst_4.ogg",
+        "premium_yanshu/yanshu_burst_5.ogg"
+      ],
+      "vol": 0.95,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_cell": {
+      "files": [
+        "premium_yanshu/yanshu_cell_1.ogg",
+        "premium_yanshu/yanshu_cell_2.ogg",
+        "premium_yanshu/yanshu_cell_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_close": {
+      "files": [
+        "premium_yanshu/yanshu_close_1.ogg",
+        "premium_yanshu/yanshu_close_2.ogg",
+        "premium_yanshu/yanshu_close_3.ogg",
+        "premium_yanshu/yanshu_close_4.ogg",
+        "premium_yanshu/yanshu_close_5.ogg",
+        "premium_yanshu/yanshu_close_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_cool": {
+      "files": [
+        "premium_yanshu/yanshu_cool.ogg"
+      ],
+      "vol": 0.96,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_crisis": {
+      "files": [
+        "premium_yanshu/yanshu_crisis.ogg"
+      ],
+      "vol": 0.81,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_door": {
+      "files": [
+        "premium_yanshu/yanshu_door_1.ogg",
+        "premium_yanshu/yanshu_door_2.ogg",
+        "premium_yanshu/yanshu_door_3.ogg"
+      ],
+      "vol": 0.96,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_draw_first": {
+      "files": [
+        "premium_yanshu/yanshu_draw_first.ogg"
+      ],
+      "vol": 0.99,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_drone_beam": {
+      "files": [
+        "premium_yanshu/yanshu_drone_beam.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "yanshu_drone_idle": {
+      "files": [
+        "premium_yanshu/yanshu_drone_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "yanshu_drone_in": {
+      "files": [
+        "premium_yanshu/yanshu_drone_in_1.ogg",
+        "premium_yanshu/yanshu_drone_in_2.ogg"
+      ],
+      "vol": 1.13,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_drone_shot": {
+      "files": [
+        "premium_yanshu/yanshu_drone_shot_1.ogg",
+        "premium_yanshu/yanshu_drone_shot_2.ogg",
+        "premium_yanshu/yanshu_drone_shot_3.ogg",
+        "premium_yanshu/yanshu_drone_shot_4.ogg",
+        "premium_yanshu/yanshu_drone_shot_5.ogg",
+        "premium_yanshu/yanshu_drone_shot_6.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 6,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_far": {
+      "files": [
+        "premium_yanshu/yanshu_far_1.ogg",
+        "premium_yanshu/yanshu_far_2.ogg",
+        "premium_yanshu/yanshu_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        500
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "yanshu_fin_click": {
+      "files": [
+        "premium_yanshu/yanshu_fin_click_1.ogg",
+        "premium_yanshu/yanshu_fin_click_2.ogg",
+        "premium_yanshu/yanshu_fin_click_3.ogg",
+        "premium_yanshu/yanshu_fin_click_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_final": {
+      "files": [
+        "premium_yanshu/yanshu_final_1.ogg",
+        "premium_yanshu/yanshu_final_2.ogg"
+      ],
+      "vol": 1.02,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        100
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "yanshu_fire": {
+      "files": [
+        "premium_yanshu/yanshu_fire_1.ogg",
+        "premium_yanshu/yanshu_fire_2.ogg",
+        "premium_yanshu/yanshu_fire_3.ogg",
+        "premium_yanshu/yanshu_fire_4.ogg",
+        "premium_yanshu/yanshu_fire_5.ogg"
+      ],
+      "vol": 0.88,
+      "pitch": [
+        0.997,
+        1.003
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_fire_zero": {
+      "files": [
+        "premium_yanshu/yanshu_fire_zero_1.ogg",
+        "premium_yanshu/yanshu_fire_zero_2.ogg",
+        "premium_yanshu/yanshu_fire_zero_3.ogg",
+        "premium_yanshu/yanshu_fire_zero_4.ogg",
+        "premium_yanshu/yanshu_fire_zero_5.ogg"
+      ],
+      "vol": 0.56,
+      "pitch": [
+        0.997,
+        1.003
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_forge": {
+      "files": [
+        "premium_yanshu/yanshu_forge_1.ogg",
+        "premium_yanshu/yanshu_forge_2.ogg"
+      ],
+      "vol": 0.92,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_head": {
+      "files": [
+        "premium_yanshu/yanshu_head_1.ogg",
+        "premium_yanshu/yanshu_head_2.ogg",
+        "premium_yanshu/yanshu_head_3.ogg"
+      ],
+      "vol": 1.33,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_highfive": {
+      "files": [
+        "premium_yanshu/yanshu_highfive_1.ogg",
+        "premium_yanshu/yanshu_highfive_2.ogg"
+      ],
+      "vol": 1.12,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_hit": {
+      "files": [
+        "premium_yanshu/yanshu_hit_1.ogg",
+        "premium_yanshu/yanshu_hit_2.ogg",
+        "premium_yanshu/yanshu_hit_3.ogg",
+        "premium_yanshu/yanshu_hit_4.ogg"
+      ],
+      "vol": 1.19,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_hydraulic": {
+      "files": [
+        "premium_yanshu/yanshu_hydraulic_1.ogg",
+        "premium_yanshu/yanshu_hydraulic_2.ogg"
+      ],
+      "vol": 1.01,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_idle": {
+      "files": [
+        "premium_yanshu/yanshu_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "yanshu_inhale": {
+      "files": [
+        "premium_yanshu/yanshu_inhale_1.ogg",
+        "premium_yanshu/yanshu_inhale_2.ogg"
+      ],
+      "vol": 1.06,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        80
+      ],
+      "loop": false
+    },
+    "yanshu_inspect": {
+      "files": [
+        "premium_yanshu/yanshu_inspect.ogg"
+      ],
+      "vol": 0.69,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_jets": {
+      "files": [
+        "premium_yanshu/yanshu_jets_1.ogg",
+        "premium_yanshu/yanshu_jets_2.ogg"
+      ],
+      "vol": 1.04,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_kill": {
+      "files": [
+        "premium_yanshu/yanshu_kill_1.ogg",
+        "premium_yanshu/yanshu_kill_2.ogg",
+        "premium_yanshu/yanshu_kill_3.ogg",
+        "premium_yanshu/yanshu_kill_4.ogg"
+      ],
+      "vol": 1.18,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        5,
+        60
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "yanshu_mech": {
+      "files": [
+        "premium_yanshu/yanshu_mech_1.ogg",
+        "premium_yanshu/yanshu_mech_2.ogg",
+        "premium_yanshu/yanshu_mech_3.ogg",
+        "premium_yanshu/yanshu_mech_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_mini": {
+      "files": [
+        "premium_yanshu/yanshu_mini_1.ogg",
+        "premium_yanshu/yanshu_mini_2.ogg"
+      ],
+      "vol": 1.13,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        50
+      ],
+      "loop": false
+    },
+    "yanshu_ram_jet": {
+      "files": [
+        "premium_yanshu/yanshu_ram_jet_1.ogg",
+        "premium_yanshu/yanshu_ram_jet_2.ogg"
+      ],
+      "vol": 0.8,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "yanshu_ram_slam": {
+      "files": [
+        "premium_yanshu/yanshu_ram_slam_1.ogg",
+        "premium_yanshu/yanshu_ram_slam_2.ogg"
+      ],
+      "vol": 0.78,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        120
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_ready_beep": {
+      "files": [
+        "premium_yanshu/yanshu_ready_beep.ogg"
+      ],
+      "vol": 1.12,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false
+    },
+    "yanshu_reload_in": {
+      "files": [
+        "premium_yanshu/yanshu_reload_in_1.ogg",
+        "premium_yanshu/yanshu_reload_in_2.ogg"
+      ],
+      "vol": 1.21,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_reload_out": {
+      "files": [
+        "premium_yanshu/yanshu_reload_out_1.ogg",
+        "premium_yanshu/yanshu_reload_out_2.ogg"
+      ],
+      "vol": 1.26,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_reload_vent": {
+      "files": [
+        "premium_yanshu/yanshu_reload_vent_1.ogg",
+        "premium_yanshu/yanshu_reload_vent_2.ogg"
+      ],
+      "vol": 0.87,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_ring": {
+      "files": [
+        "premium_yanshu/yanshu_ring_1.ogg",
+        "premium_yanshu/yanshu_ring_2.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        80
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "yanshu_roar": {
+      "files": [
+        "premium_yanshu/yanshu_roar.ogg"
+      ],
+      "vol": 0.9,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_scan": {
+      "files": [
+        "premium_yanshu/yanshu_scan_1.ogg",
+        "premium_yanshu/yanshu_scan_2.ogg"
+      ],
+      "vol": 1.05,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_seal_snap": {
+      "files": [
+        "premium_yanshu/yanshu_seal_snap.ogg"
+      ],
+      "vol": 0.85,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        80
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_strike": {
+      "files": [
+        "premium_yanshu/yanshu_strike_1.ogg",
+        "premium_yanshu/yanshu_strike_2.ogg"
+      ],
+      "vol": 0.81,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        90
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "yanshu_tail": {
+      "files": [
+        "premium_yanshu/yanshu_tail_1.ogg",
+        "premium_yanshu/yanshu_tail_2.ogg",
+        "premium_yanshu/yanshu_tail_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_ult_chord": {
+      "files": [
+        "premium_yanshu/yanshu_ult_chord.ogg"
+      ],
+      "vol": 0.95,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        140
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_ult_chord_zero": {
+      "files": [
+        "premium_yanshu/yanshu_ult_chord_zero.ogg"
+      ],
+      "vol": 0.78,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        140
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_ult_dock": {
+      "files": [
+        "premium_yanshu/yanshu_ult_dock.ogg"
+      ],
+      "vol": 0.89,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        80
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_ult_end": {
+      "files": [
+        "premium_yanshu/yanshu_ult_end.ogg"
+      ],
+      "vol": 0.66,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_ult_end_zero": {
+      "files": [
+        "premium_yanshu/yanshu_ult_end_zero.ogg"
+      ],
+      "vol": 0.67,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_ult_giant": {
+      "files": [
+        "premium_yanshu/yanshu_ult_giant.ogg"
+      ],
+      "vol": 1.04,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_ult_giant_zero": {
+      "files": [
+        "premium_yanshu/yanshu_ult_giant_zero.ogg"
+      ],
+      "vol": 1.01,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "yanshu_vent": {
+      "files": [
+        "premium_yanshu/yanshu_vent_1.ogg",
+        "premium_yanshu/yanshu_vent_2.ogg",
+        "premium_yanshu/yanshu_vent_3.ogg"
+      ],
+      "vol": 0.89,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "yanshu_warn": {
+      "files": [
+        "premium_yanshu/yanshu_warn.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    }
+  }
+}
