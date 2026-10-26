@@ -1,6 +1,7 @@
 // Headless Edge/Chrome driver for visual QA (real GPU via ANGLE/D3D11).
 //   node tools/shot.mjs <url> [--w 1280 --h 720] [--wait 3000] [--eval file.js] [--out shot.png]
 //                         [--shots N --every ms] [--timeout ms] [--keep --port N] (--keep leaves the browser running)
+//                         [--profile out.cpuprofile] (CPU profile of the --eval script, for DevTools)
 // The page may expose window.__shotReady (bool) to signal when to start capturing.
 // --eval runs a script (await allowed, `return` value printed) after the page is ready.
 import { spawn, execFileSync } from 'node:child_process';
@@ -116,10 +117,16 @@ while (Date.now() - t0 < 60000) {
 }
 await new Promise((r) => setTimeout(r, wait));
 const evalFile = opt('eval');
+const profileOut = opt('profile');   // --profile out.cpuprofile: CPU profile of the --eval script (open in DevTools)
 if (evalFile) {
   const code = fs.readFileSync(evalFile, 'utf8');
+  if (profileOut) { await send('Profiler.enable'); await send('Profiler.setSamplingInterval', { interval: 500 }); await send('Profiler.start'); }
   const v = await evaluate(`(async () => { ${code} })()`);
   console.log('eval ->', typeof v === 'string' ? v : JSON.stringify(v));
+  if (profileOut) {
+    const p = await send('Profiler.stop');
+    if (p.result?.profile) { fs.writeFileSync(profileOut, JSON.stringify(p.result.profile)); console.log('profile', profileOut); }
+  }
 }
 fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
 for (let i = 0; i < shots; i++) {

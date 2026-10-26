@@ -87,3 +87,34 @@ export const ease = {
   outElastic: (t) => (t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (TAU / 3)) + 1),
   outExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
 };
+
+// ---- loading without long main-thread tasks
+// `await` on an already settled promise (a cached model, a finished compile) only queues a microtask: a load made of
+// such awaits runs as ONE task, however long, and nothing else gets the main thread meanwhile (input, rendering, the
+// multiplayer link's keepalives and timers). These yield to the event loop for real.
+let _yq = null;
+/** Resolves in a new task (MessageChannel: not clamped to 4 ms like nested setTimeout, not paused in a hidden tab). */
+export function yieldTask() {
+  if (typeof MessageChannel === 'undefined') return new Promise((r) => setTimeout(r, 0));
+  if (!_yq) {
+    const ch = new MessageChannel(), q = [];
+    ch.port1.onmessage = () => q.shift()?.();
+    _yq = { q, port: ch.port2 };
+  }
+  return new Promise((r) => { _yq.q.push(r); _yq.port.postMessage(0); });
+}
+
+/**
+ * Time slicer for long loops: `const slice = slicer(8); for (...) { work(); await slice(); }` yields once `budget` ms
+ * of work have run since the last yield (cheap otherwise). slice.reset() starts a new slice.
+ */
+export function slicer(budget = 8) {
+  let t0 = performance.now();
+  const slice = async () => {
+    if (performance.now() - t0 < budget) return;
+    await yieldTask();
+    t0 = performance.now();
+  };
+  slice.reset = () => { t0 = performance.now(); };
+  return slice;
+}

@@ -11,8 +11,10 @@
 //   hello {n, v, ts, rtc}  welcome {slot, n, v, max, rn, meta, roster, rtc, ts}  reject {r, v}
 //   bye {r}  d {a, r, u, pi, po, ph}  (a link's data section, see link.js)
 // Everything else (WebRTC offer/answer/ICE as '$sig', roster '$roster', lobby meta '$meta', the
-// ping table '$net') travels as internal messages on each peer link's reliable stream, which starts
-// on the relay and moves to the DataChannels once they open (link.js).
+// ping table '$net', match loading progress '$ld') travels as internal messages on each peer link's
+// reliable stream, which starts on the relay and moves to the DataChannels once they open (link.js).
+// Liveness: LOST_MS of silence drops a peer, LOADING_LOST_MS while it is loading a match (setLoading);
+// a tick that fires late because this page was frozen does not count that time as the peers' silence.
 //
 // broker.emqx.io silently drops publishes above 10/s per connection, so every connection spends at
 // most FRAMES_PER_SEC publishes per sliding second; due data waits and merges into the next frame.
@@ -67,6 +69,10 @@ const P2P_MAX_TRIES = 3;
 const PING_EVERY_MS = 1000;
 const NET_EVERY_MS = 2000; // host -> guests: everyone's rtt / transport
 const LOST_MS = 10000; // no traffic at all from a peer this long: gone
+// ...unless it said it is loading a match (setLoading): a load can hold its main thread for seconds (texture uploads,
+// shader first use waiting on a GPU process that two games on one machine share), and with it every keepalive
+const LOADING_LOST_MS = 60000;
+const STALL_MS = 1000; // our own tick this late: WE were frozen (a long task), the peers' traffic is still queued
 const HINT_P2P_MS = 2500; // after a will / cleared info: silence this long on p2p means gone...
 const HINT_RELAY_MS = 8000; // ...and this long on the relay (its broker link may be reconnecting)
 const PROBE_MS = 3000; // relay peer silent this long: make sure our own broker link still answers
@@ -276,6 +282,9 @@ class Room {
     this._infoDue = false;
     this._netAt = 0;
     this._probeAt = 0;
+    this._tickAt = 0;
+    this._loadingP = -1; // own loading progress last sent (setLoading), -1: not loading
+    this._loadingAt = 0;
     this._kicked = new Set();
     this._throttled = new Map();
     this._lossRate = 0; // test hook: share of outgoing relay frames silently dropped
@@ -350,6 +359,23 @@ class Room {
     this.meta = sanitizeMeta(next);
     for (const l of this._links.values()) l.sendInternal('$meta', this.meta);
     this._infoDue = true; // the tick republishes the list entry
+  }
+
+  /**
+   * This player is loading a match (p = progress 0..1) or is done (false). Tells the host (guest) / every guest
+   * (host): while a peer is loading, its silence is tolerated for LOADING_LOST_MS instead of LOST_MS, and
+   * peers.get(id).loading shows its progress (null when it is not loading; 'peer-update' on changes). The start and
+   * the end go reliably, progress steps as unreliable heartbeats at most every 400 ms.
+   */
+  setLoading(p) {
+    if (this.closed) return;
+    const v = p === false || p === null || p === undefined ? -1 : Math.max(0, Math.min(1, +p || 0));
+    const edge = (this._loadingP ?? -1) < 0 !== v < 0;
+    if (!edge && (v === this._loadingP || now() - this._loadingAt < 400)) return;
+    this._loadingP = v;
+    this._loadingAt = now();
+    const data = Math.round(v * 100) / 100;
+    for (const l of this._links.values()) if (!this.isHost || l.joined) l.sendInternal('$ld', data, edge);
   }
 
   /** Host: removes a guest (its room closes with reason 'kicked'). */
@@ -481,6 +507,16 @@ class Room {
   _linkInternal(link, type, data) {
     if (type === '$sig') {
       if (this.isHost ? link.rtc : this._rtcOk) link.onSignal(data);
+      return;
+    }
+    if (type === '$ld') {
+      if (typeof data !== 'number' || (!this.isHost && link.id !== this.hostId)) return;
+      link.loading = data >= 0 ? Math.min(1, data) : null;
+      const p = this.peers.get(link.id);
+      if (p && p.loading !== link.loading) {
+        p.loading = link.loading;
+        if (this.isHost ? link.joined : this._settled) this._emit('peer-update', p);
+      }
       return;
     }
     if (this.isHost || link.id !== this.hostId) return;
@@ -768,7 +804,7 @@ class Room {
   _announce(link) {
     if (link.joined || link.closed) return;
     link.joined = true;
-    const peer = { id: link.id, name: link.name, slot: link.slot, rtt: link.rtt, transport: link.transport };
+    const peer = { id: link.id, name: link.name, slot: link.slot, rtt: link.rtt, transport: link.transport, loading: link.loading ?? null };
     this.peers.set(link.id, peer);
     this._sendRoster();
     this._infoDue = true;
@@ -820,7 +856,7 @@ class Room {
         continue;
       }
       const host = this._links.get(r.id);
-      const peer = { id: r.id, name: cleanName(r.name), slot: r.slot, rtt: host ? host.rtt : 0, transport: host ? host.transport : 'relay' };
+      const peer = { id: r.id, name: cleanName(r.name), slot: r.slot, rtt: host ? host.rtt : 0, transport: host ? host.transport : 'relay', loading: host?.loading ?? null };
       this.peers.set(r.id, peer);
       if (emit) this._emit('peer-join', peer);
     }
@@ -856,6 +892,17 @@ class Room {
   _tick() {
     if (this.closed) return;
     const t = now();
+    const gap = t - (this._tickAt || t);
+    this._tickAt = t;
+    if (gap > STALL_MS) {
+      // This timer fired late because our own main thread was busy (a long task, a frozen tab): whatever the peers
+      // sent meanwhile is queued behind it, so that silence is ours, not theirs. Judged from here on instead.
+      const lag = gap - TICK_MS;
+      for (const l of this._links.values()) {
+        l.lastHeard += lag;
+        if (l.byeHint) l.byeHint += lag;
+      }
+    }
     const c = this._client;
     const online = !!c && c.connected && !this._reconnecting;
     if (this.isHost && online && (t - this._infoAt >= INFO_EVERY_MS || (this._infoDue && t - this._infoAt >= INFO_MIN_GAP_MS))) this._publishInfo();
@@ -868,10 +915,12 @@ class Room {
     for (const l of [...this._links.values()]) {
       if (l.closed) continue;
       const silent = t - l.lastHeard;
+      const lost = l.loading != null ? LOADING_LOST_MS : LOST_MS;
       const hinted = l.byeHint && t - l.byeHint >= (l.transport === 'p2p' ? HINT_P2P_MS : HINT_RELAY_MS);
-      if (silent >= LOST_MS || hinted || l.maxTries >= MAX_TRIES) {
+      if (silent >= lost || hinted || l.maxTries >= MAX_TRIES) {
         // A will / cleared info is positive evidence that the peer's side died; plain silence is not.
-        const reason = l.byeHint ? (this.isHost ? 'lost' : 'host-left') : silent >= LOST_MS ? 'timeout' : 'network';
+        const reason = l.byeHint ? (this.isHost ? 'lost' : 'host-left') : silent >= lost ? 'timeout' : 'network';
+        console.warn(`net: ${this.isHost ? 'guest ' + l.id : 'host'} ${reason}: silent ${Math.round(silent)} ms (${l.loading != null ? 'loading, ' : ''}tick gap ${Math.round(gap)} ms, ${l.transport})`);
         if (this.isHost) this._dropLink(l, reason);
         else this._shutdown(reason);
         if (this.closed) return;

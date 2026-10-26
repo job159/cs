@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { World } from './world/world.js';
 import { PlayerController } from './player/controller.js';
-import { clamp, Spring3 } from './engine/util.js';
+import { clamp, Spring3, yieldTask } from './engine/util.js';
 import { Viewmodel } from './player/viewmodel.js';
 import { FX } from './fx/fx.js';
 import { Projectiles } from './weapons/ballistics.js';
@@ -14,6 +14,8 @@ import './weapons/premium/staff.js';       // X04 應龍．御霆 (magic staff: 
 import './weapons/premium/greataxe.js';    // X05 刑天．舞戚 (great axe: own melee, leap smash, whirlwind, thrown axe, war spirit, clips, crosshair, kill mark)
 import './weapons/premium/twinblades.js';  // X06 虹霓．雙絕 (dual sabres: own blade pose layer, combo, dash, parry, blade storm, lotus ult, clips, crosshair, kill mark)
 import './weapons/premium/pulao.js';       // M08 蒲牢．鐘吼 (pump gun: bell shells, knell, 108-bell ultimate, clips, crosshair, kill mark)
+import './weapons/premium/yazi.js';        // M02 睚眥．裂魂 (ring-pommel sabre + scabbard: own pose layer, combo, iai / parry, vengeance, puppet ult, clips, crosshair, kill mark)
+import './weapons/premium/chunting.js';    // E01 春霆神戟．驚蟄 (HV halberd: own trigger, 放電 arcs, 雷爆, thrown 驚蟄 bolt, 雷樁, clips, crosshair)
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';
@@ -204,6 +206,10 @@ export class Game {
   }
 
   /** Player, viewmodel, zombies, match and weapons on top of a loaded world. progress(0..1) optional. */
+  /**
+   * The player, zombies, match and arsenal of a match (the loading screen's middle part). progress(0..1). Yields to
+   * the event loop between the steps: awaiting what is already loaded never does, and the whole load ran as one task.
+   */
   async loadPlayer(progress) {
     this.player = new PlayerController(this.world);
     const spawns = this.world.playerSpawns;
@@ -213,13 +219,17 @@ export class Game {
     this.aim = new AimAssist(this);
     this.vm = new Viewmodel(this);
     await this.vm.init();
-    progress?.(0.4);
+    progress?.(0.1);
+    await yieldTask();
     this.zombies = new ZombieManager(this);
-    await this.zombies.init();
+    await this.zombies.init({ onProgress: (p) => progress?.(0.1 + p * 0.7) });
     progress?.(0.8);
+    await yieldTask();
     if (this.matchOptions) { this.match = new Match(this, this.matchOptions); this.match.start(); }
     if (this.matchOptions?.bots > 0) this.bots = new BotSquad(this, Math.min(3, this.matchOptions.bots));
+    await yieldTask();
     this.fx = new FX(this, this.renderer.q);
+    await yieldTask();
     this.projectiles = new Projectiles(this);
     this.throwables = new Throwables(this);
     this.arsenal = new Arsenal(this);

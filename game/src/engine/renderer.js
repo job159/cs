@@ -7,8 +7,12 @@
 // lights skip their BRDF out of range, the sun shadow keeps the map's static casters in a cache (setStaticShadow) and
 // renders the next follow step's ahead of time in slices (prefetchStaticShadow), shadow passes write depth only, only
 // the MSAA colour is resolved, and warmup() compiles the shadow pass's programs and uploads everything at load.
+// Loading never blocks the page for long: compileScene / uploadTextures / warmup work in short slices and wait for the
+// GPU through polled fences (gpuDrain), so a multiplayer link's keepalives and the loading bar keep running.
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { yieldTask, slicer } from './util.js';
+import { setZombieTextureCap } from './assets.js';
 
 // colour-grade uniforms a map may set (Renderer.setGrade)
 const GRADE_KEYS = ['saturation', 'contrast', 'shadowTint', 'highlightTint', 'lift', 'gamma', 'gain'];
@@ -16,8 +20,9 @@ const GRADE_KEYS = ['saturation', 'contrast', 'shadowTint', 'highlightTint', 'li
 // Tiers: low / medium are the phone tiers; high is the desktop default and ultra what the desktop benchmark
 // (ui/settings.js calibrateQuality) picks on strong GPUs, so those two carry the bigger effect / decal budgets.
 // particles also scales how many particles each effect spawns (fx.k = particles / 4000, capped at 1.5).
+// zombieTex: largest zombie model texture side (engine/assets.js setZombieTextureCap; 0 = as authored).
 export const QUALITY = {
-  low:    { label: '低',   dpr: 1.0, shadows: 0,    msaa: 0, bloomMips: 3, minScale: 0.6, maxLights: 2, decals: 60,  particles: 1200, gore: 1 },
+  low:    { label: '低',   dpr: 1.0, shadows: 0,    msaa: 0, bloomMips: 3, minScale: 0.6, maxLights: 2, decals: 60,  particles: 1200, gore: 1, zombieTex: 1024 },
   medium: { label: '中',   dpr: 1.5, shadows: 1024, msaa: 2, bloomMips: 4, minScale: 0.65, maxLights: 4, decals: 120, particles: 2500, gore: 2 },
   high:   { label: '高',   dpr: 2.0, shadows: 2048, msaa: 4, bloomMips: 5, minScale: 0.7, maxLights: 6, decals: 260, particles: 5000, gore: 3 },
   ultra:  { label: '極致', dpr: 2.5, shadows: 4096, msaa: 4, bloomMips: 5, minScale: 0.8, maxLights: 8, decals: 420, particles: 8000, gore: 3 },
@@ -191,7 +196,6 @@ THREE.ShaderChunk.lights_fragment_begin = THREE.ShaderChunk.lights_fragment_begi
 // a strict depth order would repeat on nearly every draw (render() took ~2x the CPU time that way).
 // z is NDC depth; 1 / (1 - z) grows linearly with the distance for any near plane.
 const zOctave = (z) => Math.floor(Math.log2(1 / Math.max(1e-7, 1 - z)));
-const _m4 = new THREE.Matrix4();
 
 /** GPU bytes of a texture (estimate for the upload budget log): 4 bytes per texel, + 1/3 with mipmaps. */
 function texBytes(t) {
@@ -201,6 +205,55 @@ function texBytes(t) {
   const bpp = t.type === THREE.FloatType ? 16 : t.type === THREE.HalfFloatType ? 8 : 4;
   return w * h * bpp * (t.isCubeTexture ? 6 : 1) * (t.generateMipmaps && t.minFilter !== THREE.LinearFilter && t.minFilter !== THREE.NearestFilter ? 4 / 3 : 1);
 }
+/**
+ * Image textures get mutable storage (texImage2D) instead of three's immutable texStorage2D + texSubImage2D. ANGLE's
+ * D3D11 backend (Chrome / Edge on Windows) keeps a staging copy of every texSubImage2D into an immutable texture:
+ * 24 2048^2 maps with mips cost +1.15 GB in the GPU process that way, +0.58 GB through texImage2D (measured
+ * 2026-10-26, Intel iGPU). With the zombies, the map and the arsenal that was ~1.7 GB per game: a two-window
+ * multiplayer test on a 16 GB laptop ran out of memory while both loaded. three issues texStorage2D(TEXTURE_2D) and
+ * at once the texSubImage2D of the whole level 0: that pair becomes one texImage2D, and TEXTURE_MAX_LEVEL keeps the
+ * level count the immutable storage would have had (same mip completeness). Depth / float / compressed storage and
+ * anything else that does not follow that pattern allocates as before.
+ */
+function mutableImageUploads(state, ctx) {
+  const store = state.texStorage2D, sub = state.texSubImage2D;
+  const FORMATS = new Set([ctx.RGBA8, ctx.SRGB8_ALPHA8, ctx.RGB8, ctx.SRGB8, ctx.R8, ctx.RG8]);
+  let held = null;   // [tex, levels, internalFormat, width, height] of an allocation not made yet
+  const flush = () => {
+    if (!held) return;
+    const [tex, levels, fmt, w, h] = held;
+    held = null;
+    const bound = ctx.getParameter(ctx.TEXTURE_BINDING_2D);
+    if (bound !== tex) ctx.bindTexture(ctx.TEXTURE_2D, tex);
+    store.call(state, ctx.TEXTURE_2D, levels, fmt, w, h);
+    if (bound !== tex) ctx.bindTexture(ctx.TEXTURE_2D, bound);
+  };
+  const size = (s) => [s.videoWidth || s.displayWidth || s.naturalWidth || s.width, s.videoHeight || s.displayHeight || s.naturalHeight || s.height];
+  state.texStorage2D = function (target, levels, fmt, w, h) {
+    flush();
+    if (target !== ctx.TEXTURE_2D || !FORMATS.has(fmt)) return store.apply(state, arguments);
+    held = [ctx.getParameter(ctx.TEXTURE_BINDING_2D), levels, fmt, w, h];
+    queueMicrotask(flush);   // (no upload followed: allocate it after all)
+  };
+  state.texSubImage2D = function (target, level, x, y, ...rest) {
+    const h = held;
+    if (h && target === ctx.TEXTURE_2D && level === 0 && x === 0 && y === 0 && ctx.getParameter(ctx.TEXTURE_BINDING_2D) === h[0]) {
+      let ok = false;
+      try {
+        if (rest.length === 3 && rest[2] && typeof rest[2] === 'object' && !ArrayBuffer.isView(rest[2])) {
+          const [w2, h2] = size(rest[2]);
+          if (w2 === h[3] && h2 === h[4]) { held = null; ctx.texImage2D(target, 0, h[2], rest[0], rest[1], rest[2]); ok = true; }
+        } else if (rest.length === 5 && rest[0] === h[3] && rest[1] === h[4] && ArrayBuffer.isView(rest[4])) {
+          held = null; ctx.texImage2D(target, 0, h[2], h[3], h[4], 0, rest[2], rest[3], rest[4]); ok = true;
+        }
+      } catch (e) { console.error('THREE.WebGLState:', e); ok = true; }
+      if (ok) { ctx.texParameteri(target, ctx.TEXTURE_MAX_LEVEL, h[1] - 1); return; }
+    }
+    flush();
+    return sub.apply(state, arguments);
+  };
+}
+
 function makeOpaqueSort(props) {
   const prog = (m) => props.get(m).currentProgram?.id ?? 0;
   return (a, b) => a.groupOrder - b.groupOrder || a.renderOrder - b.renderOrder || zOctave(a.z) - zOctave(b.z)
@@ -222,6 +275,7 @@ export class Renderer {
     this.opaqueSort = makeOpaqueSort(this.gl.properties);
     this.gl.setOpaqueSort(this.opaqueSort);
     this.gl.info.autoReset = false;
+    mutableImageUploads(this.gl.state, this.gl.getContext());
     const ext = this.gl.extensions;
     this.hdr = !!(ext.get('EXT_color_buffer_float') || ext.get('EXT_color_buffer_half_float'));
     this.width = 1;
@@ -298,141 +352,241 @@ export class Renderer {
   }
 
   /**
+   * Resolves once the GPU has finished everything issued so far (a fence polled from timers: the page keeps running
+   * meanwhile), or after maxMs. A sync call made afterwards (a program's first use, a read back) then does not wait
+   * behind a queue of uploads and shader-variant builds in the GPU process -- which two games on one machine share.
+   */
+  async gpuDrain(maxMs = 3000, pollMs = 2) {
+    const ctx = this.gl.getContext();
+    const s = ctx.fenceSync?.(ctx.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!s) { await yieldTask(); return; }
+    ctx.flush();
+    const t0 = performance.now();
+    try {
+      while (ctx.getSyncParameter(s, ctx.SYNC_STATUS) !== ctx.SIGNALED && performance.now() - t0 < maxMs) await new Promise((r) => setTimeout(r, pollMs));
+    } finally { ctx.deleteSync(s); }
+  }
+
+  /**
+   * compileAsync in slices. three's compileAsync builds every program of the scene (shader sources, the GPU compile
+   * requests) in one synchronous call: ~0.3 s normally, 1.3-4.9 s on a loaded machine (2026-10-26, two games on one
+   * laptop: mostly GC). Here subtrees of at most ~12 renderables go through gl.compile one at a time with the whole
+   * scene as the light source (a subtree holding a light is split further: its light would count twice), yielding
+   * between them; then the parallel compile is polled from timers (KHR_parallel_shader_compile) up to maxMs.
+   */
+  async compileScene(scene, camera, { budget = 10, maxMs = 20000 } = {}) {
+    const gl = this.gl, mats = new Set(), parts = [], slice = slicer(budget);
+    const kind = (o) => o.isMesh || o.isPoints || o.isLine || o.isSprite;
+    const stats = (o) => { let n = 0, light = false; o.traverse((c) => { if (kind(c)) n++; if (c.isLight) light = true; }); return [n, light]; };
+    const collect = (o) => {
+      const [n, light] = stats(o);
+      if (!n) return;
+      if (kind(o) || !o.children.length || (n <= 12 && !light)) { parts.push(o); return; }
+      for (const c of o.children) collect(c);
+    };
+    for (const c of scene.children) collect(c);
+    for (const p of parts) {
+      for (const m of gl.compile(p, camera, scene)) mats.add(m);
+      await slice();
+    }
+    const t0 = performance.now();
+    while (mats.size && performance.now() - t0 < maxMs) {
+      for (const m of mats) { const pr = gl.properties.get(m).currentProgram; if (!pr || pr.isReady()) mats.delete(m); }
+      if (mats.size) await new Promise((r) => setTimeout(r, 10));
+    }
+  }
+
+  /**
+   * Uploads textures in slices of at most `budget` ms of main thread (a 2k map with mips is 10-40 ms), yielding between
+   * slices; every ~64 MB the GPU catches up first (gpuDrain: a bounded queue, so a sync call made later does not wait
+   * behind seconds of copies and mip builds). Textures already resident are skipped. onProgress(0..1).
+   */
+  async uploadTextures(list, { budget = 12, onProgress = null } = {}) {
+    const gl = this.gl;
+    let t = performance.now(), k = 0, queued = 0;
+    for (const v of list) {
+      k++;
+      if (!v?.isTexture || v.isRenderTargetTexture || gl.properties.get(v).__webglTexture) continue;
+      try { gl.initTexture(v); } catch { /* uploaded on first use instead */ }
+      queued += texBytes(v) / 1048576;
+      if (performance.now() - t > budget) {
+        onProgress?.(k / list.length);
+        if (queued > 64) { await this.gpuDrain(); queued = 0; } else await yieldTask();
+        t = performance.now();
+      }
+    }
+    if (queued) await this.gpuDrain();
+    onProgress?.(1);
+  }
+
+  /**
    * Load-time warm-up of what compileAsync leaves to the first frame that needs it (each a hitch mid-match):
    *  - the shadow pass's depth materials of skinned, alpha-tested or dithered casters (the zombies only exist once a
-   *    wave spawns): the hidden '*-warmup' groups (zombie manager, premium presets) cast shadows for this frame;
-   *  - the GPU upload of every mesh's buffers and of the textures in view (three uploads them the first time a mesh
-   *    comes into view: turning around for the first time uploaded a few textures and dozens of buffers per frame).
-   *    Textures only used out of view are uploaded in idle time between the next frames (_idleUploads: the match's
-   *    warm-up / buy time), those of the hidden warm-up groups not at all (compile only: a premium preset of a
-   *    weapon nobody owns never uploads; the zombie manager uploads its models' own). After a menu backdrop of the
-   *    same map almost everything is resident already.
+   *    wave spawns): the hidden '*-warmup' groups (zombie manager, premium presets) cast shadows meanwhile;
+   *  - the GPU upload of every mesh's buffers and textures (three uploads them the first time a mesh comes into view:
+   *    turning around for the first time uploaded a few textures and dozens of buffers per frame). The textures go up
+   *    in slices first (uploadTextures; the draws below would upload them inside one chunk), except those of the
+   *    compile-only warm-up groups (a premium preset of a weapon nobody owns never uploads; the zombie manager uploads
+   *    its models' own). After a menu backdrop of the same map almost everything is resident already.
    *  - each program's first use (uniform setup, the GPU process' per-mesh shader variants).
-   * Throwaway frames into a small target with nothing culled: one with one trivial material and no shadow pass (the
-   * light state), one with the trivial material (only depth variants and the sky's material compile there; the real
-   * programs are compileAsync's job), then the real materials (a few warm-up models per frame). Async: it yields
-   * between those frames.
+   * Throwaway frames into a small target with nothing culled: one with every mesh hidden and no shadow pass (the
+   * light state), then (shadows on) the casters with a trivial material for their depth variants, then the real
+   * materials. Never one long task: the meshes are drawn a few new programs at a time (more per chunk while chunks
+   * stay cheap), and after each chunk the GPU drains before the next one (its first sync call would otherwise wait
+   * for this one's shader-variant builds) -- seconds-long blocks froze the loading bar and starved the multiplayer
+   * link (2026-10-26: 19-27 s tasks with two games on one laptop, the guest timed out). onProgress(0..1).
    */
-  async warmup(scene, camera) {
-    const gl = this.gl, shown = new Set(), cast = [], culled = new Set(), seen = new Set(), later = [], parts = [];
+  async warmup(scene, camera, { onProgress = null, budget = 12 } = {}) {
+    const gl = this.gl, shown = new Set(), cast = [], culled = new Set(), seen = new Set(), now = [];
     const t = performance.now(), n = gl.info.programs?.length ?? 0;
-    let now = 0, mb = 0;
-    const frustum = new THREE.Frustum().setFromProjectionMatrix(_m4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-    const tex = (v, inView) => {
+    const tex = (v) => {
       if (!v?.isTexture || v.isRenderTargetTexture || seen.has(v)) return;
       seen.add(v);
-      if (gl.properties.get(v).__webglTexture) return;   // already resident (the menu backdrop drew it)
-      if (!inView) { later.push(v); return; }
-      try { gl.initTexture(v); now++; mb += texBytes(v) / 1048576; } catch { /* uploaded on first use instead */ }
+      if (!gl.properties.get(v).__webglTexture) now.push(v);   // (resident: the menu backdrop drew it)
     };
     scene.updateMatrixWorld();
     scene.traverse((o) => {
       if (/warmup/.test(o.name) && !o.visible) { o.visible = true; shown.add(o); }
       if ((o.isMesh || o.isPoints || o.isLine) && o.frustumCulled) { o.frustumCulled = false; culled.add(o); }
     });
-    const inGroup = (o) => { for (let p = o; p; p = p.parent) if (shown.has(p)) return true; return false; };
+    const groupOf = (o) => { for (let p = o; p; p = p.parent) if (shown.has(p)) return p; return null; };
     scene.traverse((o) => {
       const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-      if (!mats.length || inGroup(o)) return;
-      let inView = true;
-      // (skinned meshes count as in view: their bounds would be skinned on the CPU, and they are the players / bots)
-      try { inView = !culled.has(o) || !o.geometry || o.isSkinnedMesh || frustum.intersectsObject(o); } catch { /* no bounds: upload now */ }
+      const grp = mats.length ? groupOf(o) : null;
+      // a warm-up group drawn below (userData.firstUse: the teammates' soldier, a dropped magazine) has its textures
+      // uploaded here in slices too (drawn first, the soldier's uploaded inside one chunk: 3+ s in a multiplayer
+      // start); the compile-only ones (premium presets of weapons nobody owns) never upload
+      if (!mats.length || (grp && !grp.userData.firstUse)) return;
       for (const m of mats) {
-        for (const v of Object.values(m)) tex(v, inView);
-        if (m.uniforms) for (const u of Object.values(m.uniforms)) tex(u?.value, inView);
-        if (m.userData?.lmUniforms) for (const u of Object.values(m.userData.lmUniforms)) tex(u?.value, inView);
+        for (const v of Object.values(m)) tex(v);
+        if (m.uniforms) for (const u of Object.values(m.uniforms)) tex(u?.value);
+        if (m.userData?.lmUniforms) for (const u of Object.values(m.userData.lmUniforms)) tex(u?.value);
       }
     });
     if (gl.shadowMap.enabled) for (const w of shown) w.traverse((o) => { if (o.isMesh && !o.castShadow) { o.castShadow = true; cast.push(o); } });
+    let mb = 0;
+    for (const v of now) mb += texBytes(v) / 1048576;
+    const shadows = gl.shadowMap.enabled;
+    const P = shadows ? [0.3, 0.55] : [0.3, 0.3];   // progress: uploads | depth variants | first use
+    // the leaves drawn in chunks below (every other one hidden meanwhile): those visible now (warm-up groups shown)
+    const leaves = [], leafSet = new Set();
+    scene.traverse((o) => { if ((o.isMesh || o.isPoints || o.isLine || o.isSprite) && o.visible) { leaves.push(o); leafSet.add(o); } });
+    // drawn when shown: no hidden ancestor (meshes parented to meshes count, they are shown with it)
+    const drawn = (o) => { for (let p = o.parent; p; p = p.parent) if (!p.visible && !leafSet.has(p)) return false; return true; };
     const rt = new THREE.WebGLRenderTarget(16, 16, { type: this.rt.texture.type });
     const prev = gl.getRenderTarget(), over = scene.overrideMaterial;
     this._warmMat ||= new THREE.MeshBasicMaterial();
-    const shadowPass = gl.shadowMap.render;
+    const shadowPass = gl.shadowMap.render, draw = gl.renderBufferDirect;
+    let chunks = 0, tUp = 0, tDraw = 0, tWait = 0;
+    // chunks of the leaves with at most `allow` materials not drawn before in this pass; `allow` doubles while a chunk
+    // stays under half the budget and halves when one takes more than twice it
+    const pass = async (list, keyOf, render, p0, p1) => {
+      const keys = new Set();
+      let allow = 1, i = 0;
+      while (i < list.length) {
+        const chunk = [];
+        let fresh = 0;
+        for (; i < list.length && chunk.length < 64; i++) {
+          const k = keyOf(list[i]);
+          const isNew = !keys.has(k);
+          if (isNew && fresh >= allow) break;
+          if (isNew) { keys.add(k); fresh++; }
+          chunk.push(list[i]);
+        }
+        const on = [];
+        for (const o of chunk) for (let p = o; p && leafSet.has(p) && !p.visible; p = p.parent) { p.visible = true; on.push(p); }
+        const t1 = performance.now();
+        try { render(); } finally { for (const o of on) o.visible = false; }
+        const ms = performance.now() - t1;
+        allow = ms < budget / 2 ? Math.min(32, allow * 2) : ms > budget * 2 ? Math.max(1, allow >> 1) : allow;
+        chunks++;
+        onProgress?.(p0 + (p1 - p0) * i / list.length);
+        tDraw += ms;
+        // (a fence waits for the whole GPU, other contexts' frames included: with another window rendering a match on
+        // the same GPU each wait took ~0.7 s. Capped: what is left of this chunk's work then delays the next chunk's
+        // first sync call a little instead)
+        const t2 = performance.now();
+        await this.gpuDrain(80);
+        tWait += performance.now() - t2;
+      }
+    };
+    const matKey = (o) => (Array.isArray(o.material) ? o.material.map((m) => m.id).join() : o.material?.id) + (o.isSkinnedMesh ? 's' : '');
+    // first use is per program, and many materials share one (compileScene built them all): chunked by program, the
+    // zombies' and the map's ~100 materials are a few dozen chunks instead of ~90 (each chunk waits for the GPU, which
+    // two games on one machine share with the other window's frames: the guest's warm-up took 20 s that way)
+    const progOf = (m) => gl.properties.get(m).currentProgram?.id ?? 'm' + m.id;
+    const progKey = (o) => (Array.isArray(o.material) ? o.material.map(progOf).join() : o.material ? progOf(o.material) : '') + (o.isSkinnedMesh ? 's' : '');
+    // three's shader error check on a program's first use is three sync round trips to the GPU process (info logs);
+    // off for the warm-up's first uses (their chunks went from up to ~0.6 s to ~0.15 s), link errors are reported
+    // afterwards (_reportLinkErrors)
+    const check = gl.debug.checkShaderErrors;
+    gl.debug.checkShaderErrors = false;
     try {
-      scene.overrideMaterial = this._warmMat;
+      await this.uploadTextures(now, { budget, onProgress: (p) => onProgress?.(p * P[0]) });
+      tUp = performance.now() - t;
+      for (const o of leaves) o.visible = false;
       gl.setRenderTarget(rt);
       // three runs a frame's shadow pass before it sets up that frame's lights, and every program's key holds the
-      // light counts: a first frame without the shadow pass brings the light state up to date (the match's FX light
-      // pool came after the menu backdrop's last frame; a fresh scene has none), so the depth variants below are the
-      // ones the match uses (stale ones were compiled again on the first match frame: a 0.5-1 s stall)
+      // light counts: a first frame without the shadow pass (and here without meshes) brings the light state up to
+      // date (the match's FX light pool came after the menu backdrop's last frame; a fresh scene has none), so the
+      // depth variants below are the ones the match uses (stale ones were compiled again on the first match frame)
       gl.shadowMap.render = () => {};
       try { gl.render(scene, camera); } finally { gl.shadowMap.render = shadowPass; }
-      // the static casters' depth variants too (re-rendered whatever the cache holds). three shares a depth material
-      // between casters and re-picks its program only when the material's version changes (not on new light counts,
-      // its caster's map or skinning): bumped before every depth draw here, each caster's own variant with the match's
-      // lights is compiled and first used now, not on whichever later frame bumps it
-      this.shadowCache?.key.fill(NaN);
-      const draw = gl.renderBufferDirect;
-      gl.renderBufferDirect = function (cam, sc, geo, mat, obj, grp) {
-        if (mat?.isMeshDepthMaterial || mat?.isMeshDistanceMaterial) mat.needsUpdate = true;
-        return draw.call(this, cam, sc, geo, mat, obj, grp);
-      };
-      try { gl.render(scene, camera); } finally { gl.renderBufferDirect = draw; }
-      // and once with the real materials: each program's first use (three reads its uniforms and info log, a sync
-      // round trip to the GPU process; ANGLE / D3D11 builds the vertex shader for the mesh's attribute formats, ~65 ms
-      // per program on an iGPU) happens here, not when round 1 first shows a zombie type (0.25-0.4 s frames). Only the
+      if (shadows) {
+        // the casters' depth variants (the static ones re-rendered whatever the cache holds). three shares a depth
+        // material between casters and re-picks its program only when the material's version changes (not on new
+        // light counts, its caster's map or skinning): bumped before every depth draw here, each caster's own variant
+        // with the match's lights is compiled and first used now, not on whichever later frame bumps it
+        scene.overrideMaterial = this._warmMat;
+        gl.renderBufferDirect = function (cam, sc, geo, mat, obj, grp) {
+          if (mat?.isMeshDepthMaterial || mat?.isMeshDistanceMaterial) mat.needsUpdate = true;
+          return draw.call(this, cam, sc, geo, mat, obj, grp);
+        };
+        const casters = leaves.filter((o) => o.castShadow && drawn(o));
+        await pass(casters, matKey, () => { this.shadowCache?.key.fill(NaN); gl.setRenderTarget(rt); gl.render(scene, camera); }, P[0], P[1]);
+        gl.renderBufferDirect = draw;
+        scene.overrideMaterial = over;
+      }
+      // and with the real materials: each program's first use (three reads its uniforms and info log, a sync round
+      // trip to the GPU process; ANGLE / D3D11 builds the vertex shader for the mesh's attribute formats, ~65 ms per
+      // program on an iGPU) happens here, not when round 1 first shows a zombie type (0.25-0.4 s frames). Only the
       // warm-up groups that opt in (userData.firstUse: the zombies, teammates) besides the scene itself: a premium
       // preset of a weapon nobody owns yet stays compile-only
-      // preset of a weapon nobody owns yet stays compile-only. A few models per frame, yielding between them: one
-      // block of seconds froze the loading bar and starved the co-op heartbeats
       for (const o of shown) if (!o.userData.firstUse) o.visible = false;
-      scene.overrideMaterial = over;
-      for (const o of shown) if (o.userData.firstUse) for (const c of o.children) if (c.visible) { c.visible = false; parts.push(c); }
-      for (let i = 0; i === 0 || i < parts.length; i += 3) {
-        const chunk = parts.slice(i, i + 3);
-        for (const c of chunk) c.visible = true;
-        gl.setRenderTarget(rt);
-        gl.render(scene, camera);
-        for (const c of chunk) c.visible = false;
-        if (i + 3 < parts.length) await new Promise((r) => setTimeout(r, 0));
-      }
+      await pass(leaves.filter(drawn), progKey, () => { gl.setRenderTarget(rt); gl.render(scene, camera); }, P[1], 1);
     } finally {
+      gl.debug.checkShaderErrors = check;
+      gl.renderBufferDirect = draw;
+      gl.shadowMap.render = shadowPass;
       scene.overrideMaterial = over;
       gl.setRenderTarget(prev);
       rt.dispose();
-      for (const c of parts) c.visible = true;
+      for (const o of leaves) o.visible = true;
       for (const o of culled) o.frustumCulled = true;
       for (const o of cast) o.castShadow = false;
       for (const o of shown) o.visible = false;
+      this.shadowCache?.key.fill(NaN);   // the next frame renders the whole static shadow again
     }
-    this._idleUploads(later);
-    console.info(`[renderer] warm-up: ${(gl.info.programs?.length ?? 0) - n} programs, ${now} textures uploaded (~${Math.round(mb)} MB), ${later.length} left for idle time, in ${((performance.now() - t) / 1000).toFixed(2)} s`);
+    if (check) await this._reportLinkErrors();
+    console.info(`[renderer] warm-up: ${(gl.info.programs?.length ?? 0) - n} programs, ${now.length} textures uploaded (~${Math.round(mb)} MB), ${chunks} chunks; uploads ${(tUp / 1000).toFixed(2)} s, draws ${(tDraw / 1000).toFixed(2)} s, GPU waits ${(tWait / 1000).toFixed(2)} s; in ${((performance.now() - t) / 1000).toFixed(2)} s`);
   }
 
-  /**
-   * Uploads textures one at a time in the browser's idle time between frames (requestIdleCallback; none while the
-   * frame budget is used up: three then uploads a texture the first time it is drawn, as without a warm-up). A
-   * texture disposed meanwhile (the game ended) is dropped.
-   */
-  _idleUploads(list) {
-    const q = this._upQueue ||= new Set();
-    for (const v of list) {
-      if (q.has(v)) continue;
-      q.add(v);
-      v.addEventListener('dispose', function drop() { q.delete(v); v.removeEventListener('dispose', drop); });
+  /** Shader link errors of every program (what three's checkShaderErrors reports on first use), with the GPU idle. */
+  async _reportLinkErrors() {
+    const ctx = this.gl.getContext(), slice = slicer(8);
+    await this.gpuDrain();
+    for (const p of this.gl.info.programs || []) {
+      if (!p.program || this._linkChecked?.has(p)) continue;
+      (this._linkChecked ||= new WeakSet()).add(p);
+      if (ctx.getProgramParameter(p.program, ctx.LINK_STATUS) === false && !ctx.isContextLost()) {
+        console.error(`THREE.WebGLProgram: shader error ${ctx.getError()} (${p.name})
+${ctx.getProgramInfoLog(p.program)}`
+          + `
+${ctx.getShaderInfoLog(p.vertexShader)}
+${ctx.getShaderInfoLog(p.fragmentShader)}`);
+      }
+      await slice();
     }
-    const ric = window.requestIdleCallback;
-    if (!q.size || this._upBusy || !ric) return;
-    this._upBusy = true;
-    let k = 0, mb = 0;
-    const t0 = performance.now();
-    const step = (dl) => {
-      // one per callback (a 1k texture is a few ms to a few tens of ms): the deadline is re-checked between frames
-      if (dl.timeRemaining() > 6) {
-        for (const v of q) {
-          q.delete(v);
-          if (this.gl.properties.get(v).__webglTexture) continue;
-          try { this.gl.initTexture(v); k++; mb += texBytes(v) / 1048576; } catch { /* first use then */ }
-          break;
-        }
-      }
-      if (q.size) ric(step);
-      else {
-        this._upBusy = false;
-        if (k) console.info(`[renderer] idle uploads: ${k} textures (~${Math.round(mb)} MB) in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
-      }
-    };
-    ric(step);
   }
 
   _wrapShadowMap() {
@@ -593,6 +747,7 @@ export class Renderer {
     if (this.q && this.q !== q) { this.gameScale = undefined; this.dynCeil = this.dynFloor = null; } // what the old tier learned no longer applies
     this.qualityName = name in QUALITY ? name : 'high';
     this.q = q;
+    setZombieTextureCap(q.zombieTex || 0);   // (models loaded from now on)
     this.gl.shadowMap.enabled = q.shadows > 0;
     this.dpr = Math.min(window.devicePixelRatio || 1, q.dpr);
     this.scale = Math.max(this.scale, q.minScale);

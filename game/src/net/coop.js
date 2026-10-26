@@ -8,6 +8,13 @@
 //   host -> all    'lobby'  {}                            the host went back to the lobby
 // While a guest loads, this listener is detached: the room buffers the host's snapshots / events
 // (Room inbox) until NetSync attaches, so no zombie spawn is missed.
+// Loading: every player reports its load progress (room.setLoading -> peers.get(id).loading). The host waits for
+// the guests' ready up to its limit and past it for a guest whose progress still moves (READY_CAP_MS at most); a
+// guest waits for 'go' the same way while the host is still loading.
+const READY_CAP_MS = 120000;   // host: never wait longer than this for the guests' ready
+const GO_CAP_MS = READY_CAP_MS + 15000;   // guest: the host may wait that long for a slower teammate, then says go
+const LOAD_STALL_MS = 20000;   // a teammate whose progress did not move for this long is not "still loading"
+
 export class Coop {
   constructor(app, room) {
     this.app = app;
@@ -22,9 +29,16 @@ export class Coop {
     this.onMsg = (m) => this._msg(m);
     this.onClosed = (reason, detail) => app.onRoomClosed(reason, detail);
     this.onLeave = (p) => { this.ready.delete(p.id); this._wake?.(); };
+    this.loadSeen = new Map();   // peer id -> [progress, performance.now() of its last change]
+    this.onUpdate = (p) => {
+      const was = this.loadSeen.get(p.id);
+      if (p.loading != null && p.loading !== was?.[0]) this.loadSeen.set(p.id, [p.loading, performance.now()]);
+      this._wake?.();
+    };
     room.on('message', this.onMsg);
     room.on('closed', this.onClosed);
     room.on('peer-leave', this.onLeave);
+    room.on('peer-update', this.onUpdate);
     this.attached = true;
   }
 
@@ -32,6 +46,13 @@ export class Coop {
     this.detach();
     this.room.off('closed', this.onClosed);
     this.room.off('peer-leave', this.onLeave);
+    this.room.off('peer-update', this.onUpdate);
+  }
+
+  /** Is this peer still loading (it reports progress, and the progress moved within LOAD_STALL_MS)? */
+  _stillLoading(id, t, t0) {
+    if (this.room.peers.get(id)?.loading == null) return false;
+    return t - Math.max(t0, this.loadSeen.get(id)?.[1] ?? t0) < LOAD_STALL_MS;
   }
   detach() { if (this.attached) { this.room.off('message', this.onMsg); this.attached = false; } }
   attach() { if (!this.attached) { this.room.on('message', this.onMsg); this.attached = true; } }
@@ -49,15 +70,22 @@ export class Coop {
     app.startMatch({ ...start, room });
   }
 
-  /** Host: resolves when every guest reported ready for match n (or after ms). onCount(ready, total). */
+  /**
+   * Host: resolves when every guest reported ready for match n; after ms only while a guest that is not ready yet is
+   * still loading (_stillLoading), never past READY_CAP_MS. A guest that leaves stops counting.
+   * onCount(ready, total, lowest progress of the guests still loading or null).
+   */
   waitReady(n, ms, onCount) {
     return new Promise((resolve) => {
       const t0 = performance.now();
       const check = () => {
+        const t = performance.now();
         const ids = [...this.room.peers.keys()];
-        const ok = ids.filter((id) => this.ready.has(id)).length;
-        onCount?.(ok, ids.length);
-        if (ok >= ids.length || performance.now() - t0 > ms || this.room.closed) { clearInterval(iv); this._wake = null; resolve(); }
+        const wait = ids.filter((id) => !this.ready.has(id));
+        const prog = wait.map((id) => this.room.peers.get(id)?.loading).filter((p) => p != null);
+        onCount?.(ids.length - wait.length, ids.length, prog.length ? Math.min(...prog) : null);
+        const over = t - t0 > READY_CAP_MS || (t - t0 > ms && !wait.some((id) => this._stillLoading(id, t, t0)));
+        if (!wait.length || over || this.room.closed) { clearInterval(iv); this._wake = null; resolve(); }
       };
       const iv = setInterval(check, 250);
       this._wake = check;
@@ -76,12 +104,20 @@ export class Coop {
   // ---------------------------------------------------------------- guest
   sendReady(n) { this.room.send('ready', { n }); }
 
-  /** Guest: resolves once the host said go for match n (or after ms). */
-  waitGo(n, ms) {
+  /**
+   * Guest: resolves once the host said go for match n. The host may be loading still, then waiting for a slower
+   * teammate (GO_CAP_MS covers its limit); past that only while the host is still loading (_stillLoading), at most
+   * twice as long. A host that died closes the room (its link times out), which ends the wait too.
+   * onWait(host progress or null) while it waits.
+   */
+  waitGo(n, onWait) {
     return new Promise((resolve) => {
       const t0 = performance.now();
       const iv = setInterval(() => {
-        if (this.goN >= n || performance.now() - t0 > ms || this.room.closed) { clearInterval(iv); resolve(); }
+        const t = performance.now(), host = this.room.hostId;
+        onWait?.(this.room.peers.get(host)?.loading ?? null);
+        const over = t - t0 > 2 * GO_CAP_MS || (t - t0 > GO_CAP_MS && !this._stillLoading(host, t, t0));
+        if (this.goN >= n || over || this.room.closed) { clearInterval(iv); resolve(); }
       }, 100);
     });
   }

@@ -343,6 +343,11 @@ export class MqttClient {
   _tick() {
     if (this.state !== 'open') return;
     const t = now();
+    // a late tick means this page was frozen (a long task): a PINGRESP that arrived meanwhile is still queued behind
+    // this timer, so the frozen time does not count against the broker
+    const lag = t - (this._tickAt || t) - 1000;
+    this._tickAt = t;
+    if (lag > 1000 && this._pingSent) this._pingSent += lag;
     if (this._pingSent) {
       if (t - this._pingSent > this.ackTimeout) this._drop('ping timeout');
       return;

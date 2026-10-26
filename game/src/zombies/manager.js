@@ -8,7 +8,7 @@ import { ZOMBIES, DEFAULT_HITBOXES, PART_OF, SEVER } from './defs.js';
 import { buildMannequin } from './mannequin.js';
 import { STANDINS, buildStandin, standinBases } from './standins.js';
 import { NavGrid, NAV } from '../world/nav.js';
-import { pick, rand, clamp, angleDiff, damp } from '../engine/util.js';
+import { pick, rand, clamp, angleDiff, damp, slicer } from '../engine/util.js';
 import { Telegraphs } from './telegraph.js';
 import { retargetClips } from './retarget.js';
 import { patchShell } from '../fx/zfx.js';
@@ -763,7 +763,8 @@ export class ZombieManager {
     }
   }
 
-  async init({ types = Object.keys(ZOMBIES) } = {}) {
+  /** Loads the models of `types` and warms them up (_warmup). onProgress(0..1). */
+  async init({ types = Object.keys(ZOMBIES), onProgress = null } = {}) {
     // animation library (real) or mannequin clips (fallback)
     try {
       const a = await loadGLB('zombies/anims.glb');
@@ -775,7 +776,7 @@ export class ZombieManager {
     for (const t of types) for (const m of ZOMBIES[t]?.models || []) need.add(m);
     await Promise.all([...need].map((m) => this._loadModel(m)));
     await this._buildStandins([...need]);
-    this._warmup();
+    await this._warmup(onProgress);
     // navigation
     const w = this.game.world;
     this.nav = w.nav || (w.collision ? NavGrid.build(w.collision, w.bounds, 0.5) : null);
@@ -831,18 +832,22 @@ export class ZombieManager {
 
   /**
    * Load-time warm-up. One hidden, shell-patched instance of every loaded model (LOD0 + LOD1) under the zombie
-   * root: the loading screen's compileAsync(scene) prepares hidden meshes too, so the first spawn of a type
-   * (stand-in grades, boss materials) never stalls on shader compiles mid-round (the colossus' first frame went
+   * root: the loading screen's scene compile (renderer.compileScene) prepares hidden meshes too, so the first spawn of
+   * a type (stand-in grades, boss materials) never stalls on shader compiles mid-round (the colossus' first frame went
    * from ~1.5 s to ~0.1 s on desktop). Never rendered; dropped on the first update().
+   * In slices (a model's clip retarget is 0.1-0.3 s, its texture uploads more): done in one go it was the longest
+   * task of a match load (3.8 s on an iGPU, 19-27 s with two games on one laptop). onProgress(0..1).
    */
-  _warmup() {
+  async _warmup(onProgress) {
     if (this.warm) return;
     this.warm = new THREE.Group();
     this.warm.name = 'zombie-warmup';
     this.warm.visible = false;
     this.warm.userData.firstUse = true;   // renderer.warmup also draws it with its real materials (programs' first use)
     const bossModels = new Set(Object.values(ZOMBIES).filter((d) => d.boss).map((d) => d.models[0]));
-    for (const [id, e] of this.models) {
+    const slice = slicer(10), models = [...this.models];
+    for (let i = 0; i < models.length; i++) {
+      const [id, e] = models[i];
       if (e.missing || e.fallback) continue;
       // the clip retarget too (~0.1-0.3 s per model): a boss entrance must not freeze the round
       if (!e.standin && this.animSrc && !e.retargeted) {
@@ -856,22 +861,25 @@ export class ZombieManager {
         if (bossModels.has(id)) bossFadeable(s);   // the dithered boss variant compiles with the rest
         this.warm.add(s);
       }
+      onProgress?.(0.3 * (i + 1) / models.length);
+      await slice();
+      if (this.game.disposed) return;
     }
     this.root.add(this.warm);
     // and the GPU texture uploads (2k maps: the first visible frame of a model paid ~0.1-0.5 s for them)
-    const gl = this.game.renderer?.gl;
-    if (gl?.initTexture) {
-      const seen = new Set();
-      this.warm.traverse((o) => {
-        if (!o.isMesh) return;
-        for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-          for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap']) {
-            const t = m?.[k];
-            if (t?.isTexture && !seen.has(t)) { seen.add(t); try { gl.initTexture(t); } catch { /* uploaded on first use instead */ } }
-          }
+    const r = this.game.renderer, gl = r?.gl;
+    if (!gl?.initTexture) return;
+    const list = new Set();
+    this.warm.traverse((o) => {
+      if (!o.isMesh) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap']) {
+          if (m?.[k]?.isTexture) list.add(m[k]);
         }
-      });
-    }
+      }
+    });
+    if (r.uploadTextures) await r.uploadTextures([...list], { onProgress: (p) => onProgress?.(0.3 + 0.7 * p) });
+    else for (const t of list) { try { gl.initTexture(t); } catch { /* uploaded on first use instead */ } }
   }
 
   /**

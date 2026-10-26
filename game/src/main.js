@@ -26,6 +26,7 @@ import { Renderer } from './engine/renderer.js';
 import { Input, KEYMAP } from './engine/input.js';
 import { AudioEngine } from './engine/audio.js';
 import { loadGLB } from './engine/assets.js';
+import { yieldTask } from './engine/util.js';
 import { Game } from './game.js';
 import './weapons/premium/bifang.js';          // M03 畢方 / 鬼車: special, skills, clips, crosshair, kill marks (after the engine)
 import { HUD } from './ui/hud.js';
@@ -48,6 +49,10 @@ import { ResultsScreen } from './ui/results.js';
 import { NetSync } from './net/sync.js';
 import * as fxAtlas from './fx/atlas.js';
 import { hardSurface } from './gfx/materials.js';
+import { prepareDetailTextures } from './gfx/detail.js';
+import { initVmEnv } from './gfx/vmenv.js';
+import { runeTexture } from './gfx/premium.js';
+import { noiseTexture } from './fx/kitutil.js';
 import { Coop } from './net/coop.js';
 
 window.__shotReady = false;
@@ -335,7 +340,8 @@ class App {
       orbitBackdrop(g, info, this.time);
       this.renderer.render(g.scene, g.camera, this.time);
       document.body.classList.remove('bd-loading');
-      // 'auto' quality is measured per map: a map shown for the first time gets its own measurement (no-op otherwise)
+      // 'auto' quality is measured per map: a map shown for the first time gets its own measurement (no-op otherwise;
+      // never in a room: see _calibrate)
       if (this.state !== 'loading') this.calibrateQuality();
     }, (e) => { console.warn('backdrop failed', e); document.body.classList.remove('bd-loading'); });
     return p;
@@ -364,6 +370,8 @@ class App {
    * Loads a match and enters it. Multiplayer: the host already broadcast 'start'; after loading the
    * host attaches NetSync, waits for every guest's 'ready' and says 'go'; guests buffer the host's
    * traffic while loading (coop detached), attach NetSync, report ready and wait for 'go'.
+   * Every step yields to the event loop often (engine/util.js yieldTask): the room's keepalives, the loading bar and
+   * the teammates' progress keep running, and the progress goes to the room (room.setLoading) so the others wait.
    */
   async startMatch({ map, difficulty = 'normal', seed = 0, n = 0, room = null, bots = 0 }) {
     const token = ++this.loadToken;
@@ -381,6 +389,9 @@ class App {
     const guest = room && !room.isHost;
     if (guest) this.coop?.detach();
     const alive = () => token === this.loadToken;
+    // the bar and the room hear the same progress (teammates wait for a player that is still loading)
+    const progress = (p, msg) => { if (!alive()) return; this.loading.progress(p, msg); room?.setLoading(Math.min(0.99, p)); };
+    progress(0);
     // a stuck load (slow phone, a teammate that never reports ready) must not trap the player
     const cancelT = setTimeout(() => {
       if (alive() && this.state === 'loading') this.loading.setCancel(room ? '離開房間' : '返回主選單', () => this.cancelLoading());
@@ -390,23 +401,27 @@ class App {
     const mark = (k) => lt.push(`${k} ${((performance.now() - tLoad) / 1000).toFixed(1)}`);
     this._netMeter(true);
     try {
+      // a quality measurement of the menu backdrop still running stops first (it renders the same scene)
+      await this.stopCalibration();
       let g = this.game;
       if (!g || g.player || g.mapId !== info.id) { this.disposeGame(); g = this.game = this.createGame(); g.mapId = info.id; }
-      this.loading.progress(0.1);
-      this.onWorldProgress = (p) => { if (alive()) this.loading.progress(0.1 + p * 0.3); };
+      progress(0.1);
+      this.onWorldProgress = (p) => progress(0.1 + p * 0.3);
       await this._world(g, info);
       this.onWorldProgress = null;
       mark('world');
       if (!alive()) return;
-      this.loading.progress(0.4, '準備武器與感染者…');
+      progress(0.4, '準備武器與感染者…');
+      await prepareDetailTextures(yieldTask);   // (normally built behind the menu already: prefetchMatch)
       this.attachGameUI(g);
       g.spawnIndex = room ? Math.max(0, room.slot) : 0;
       g.matchOptions = this.dev.noMatch ? null : { difficulty, players: room ? room.players().length : 1, seed, bots: room ? 0 : bots };
-      await g.loadPlayer((p) => { this.loading.progress(0.4 + p * 0.5); mark('p' + p); });
+      let pm = 0;
+      await g.loadPlayer((p) => { progress(0.4 + p * 0.45); if (p >= pm + 0.4 || p === 1) { pm = p; mark('p' + p.toFixed(1)); } });
       mark('player');
       if (!alive()) return;
-      this.loading.progress(0.92, '編譯著色器…');
-      await this.precompile(g, { mates: !!room || bots > 0 });
+      progress(0.85, '編譯著色器…');
+      await this.precompile(g, { mates: !!room || bots > 0, onProgress: (p) => progress(0.85 + p * 0.14) });
       mark('shaders');
       if (!alive()) return;
       this.matchInfo = { map: info.id, difficulty, seed, n, bots, t0: performance.now() };
@@ -414,8 +429,10 @@ class App {
       if (room) {
         new NetSync(g, room);
         this.coop?.attach();
+        room.setLoading(false);
+        const pct = (p) => (p != null ? ` ${Math.round(p * 100)}%` : '');
         if (room.isHost) {
-          await this.coop.waitReady(n, 30000, (ok, total) => this.loading.progress(1, total ? `等待隊友載入…（${ok} / ${total}）` : '準備開始'));
+          await this.coop.waitReady(n, 30000, (ok, total, p) => this.loading.progress(1, total ? `等待隊友載入…（${ok} / ${total}）${pct(p)}` : '準備開始'));
           if (!alive()) return;
           mark('ready');
           const slow = [...room.peers.keys()].filter((id) => !this.coop.ready.has(id)).length;
@@ -424,7 +441,7 @@ class App {
         } else {
           this.coop.sendReady(n);
           this.loading.progress(1, '等待其他玩家…');
-          await this.coop.waitGo(n, 45000);
+          await this.coop.waitGo(n, (p) => { if (alive()) this.loading.progress(1, p != null ? `等待房主載入…${pct(p)}` : '等待其他玩家…'); });
           if (!alive()) return;
           mark('go');
           if (this.coop && this.coop.goN < n) late = '等待房主逾時，已先進入戰場';
@@ -442,6 +459,7 @@ class App {
       this.onWorldProgress = null;
       this._netMeter(false);
       if (!alive()) return;
+      room?.setLoading(false);
       this.loadingMatch = false;
       if (guest) this.coop?.attach();
       this.loading.hide();
@@ -562,14 +580,25 @@ class App {
    */
   calibrateQuality(force = false) {
     // one at a time (boot and a backdrop that just finished loading can both ask)
-    if (!this._calP) this._calP = this._calibrate(force).finally(() => { this._calP = null; });
+    if (!this._calP) { this._calStop = false; this._calP = this._calibrate(force).finally(() => { this._calP = null; }); }
     return this._calP;
+  }
+
+  /** Stops a running quality measurement (a match is starting: it renders the same scene) and waits for it. */
+  async stopCalibration() {
+    if (!this._calP) return;
+    this._calStop = true;
+    await Promise.race([this._calP, new Promise((r) => setTimeout(r, 3000))]);
   }
 
   async _calibrate(force) {
     const g = this.game;
     if (COARSE || this.qualityLock || !g?.bdReady || g.player) return;
     if (!force && this.settings.v.quality !== 'auto') return;
+    // Not in a multiplayer room (lobby included): the benchmark is a few hundred ms of GPU-bound frames per tier, and
+    // a host may start the match any moment. A map without its own measurement uses the most conservative tier
+    // measured so far (settings.js autoQuality); the next visit of the menu measures it.
+    if (this.room && !force) return;
     // measured where the game is played (the backdrop's overview of the town costs more than any view in a match):
     // the first player spawn at eye height, four directions, 4 frames each (the sun shadow follows the camera)
     const sp = g.world.playerSpawns?.[0], yaw0 = g.world.def?.playerSpawnYaws?.[0] ?? 0, cam = g.camera;
@@ -580,9 +609,9 @@ class App {
       cam.updateMatrixWorld();
       if (i % 4 === 0) g.world.update(0, this.time);
     } : null;
-    await calibrateQuality(this.renderer, g.scene, cam, { force, view, map: g.mapId });
+    await calibrateQuality(this.renderer, g.scene, cam, { force, view, map: g.mapId, stop: () => this._calStop || this.game !== g });
     applySettings(this);
-    this.renderer.pinScale(this._bd.scale);
+    if (this.game === g && !g.player) this.renderer.pinScale(this._bd.scale);
   }
 
   /** Live "已下載 x MB" line under the loading bar while files stream in (stops once the loading screen is gone). */
@@ -917,9 +946,9 @@ class App {
    * hard-surface material of a dropped magazine (nothing uses it before the first reload, which hitched on its
    * compile) and, with teammates or bots (mates), their soldier model (co-op teammates only appear after this, a
    * bot's may still be loading: its first frame compiled ~0.5 s per material), then the shadow pass's depth variants,
-   * the programs' first use and the texture / buffer uploads (renderer.warmup).
+   * the programs' first use and the texture / buffer uploads (renderer.warmup). onProgress(0..1).
    */
-  async precompile(g, { mates = false } = {}) {
+  async precompile(g, { mates = false, onProgress = null } = {}) {
     const extra = new Mesh(new BoxGeometry(0.001, 0.001, 0.001), hardSurface('steel'));
     extra.name = 'mag-warmup';   // hidden; renderer.warmup shows it for its shadow-pass variant and first use too
     extra.visible = false;
@@ -940,12 +969,12 @@ class App {
       }
       g.scene.add(mate);
     }
-    try {
-      await Promise.race([this.renderer.gl.compileAsync(g.scene, g.camera), new Promise((r) => setTimeout(r, 20000))]);
-    } catch (e) { console.warn('precompile', e); }
+    // (in slices, then the parallel compile is polled from timers: the page runs meanwhile)
+    try { await this.renderer.compileScene(g.scene, g.camera); } catch (e) { console.warn('precompile', e); }
+    onProgress?.(0.3);
     // the shadow pass's depth variants (zombies, bosses: casters that only appear later), the programs' first use and
     // the GPU uploads
-    try { await this.renderer.warmup(g.scene, g.camera); } catch (e) { console.warn('warm-up', e); }
+    try { await this.renderer.warmup(g.scene, g.camera, { onProgress: (p) => onProgress?.(0.3 + p * 0.7) }); } catch (e) { console.warn('warm-up', e); }
     g.scene.remove(extra);
     extra.geometry.dispose();
     if (mate) {
@@ -1010,6 +1039,15 @@ class App {
       await loadGLB(f).catch(() => null);
       await new Promise((r) => setTimeout(r, 30));
     }
+    await prepareDetailTextures(() => new Promise((r) => setTimeout(r, 30)));   // the weapon materials' CPU noise
+    // the viewmodel's studio environment (PMREM: once per renderer, ~1 s with its programs' first use) behind the menu
+    // too, not inside a match load (a multiplayer start); so are the premium materials' rune canvas (drawn while the
+    // GPU process was busy compiling a match's shaders it took 1.4 s) and the FX kit's noise
+    if (!this.loadingMatch) { await this.renderer.gpuDrain(); initVmEnv(this.renderer.gl); }
+    await yieldTask();
+    runeTexture();
+    await yieldTask();
+    noiseTexture().dispose();   // (builds the shared noise data; the kit makes its own texture of it)
     console.info(`[app] match models prefetched in ${((performance.now() - t) / 1000).toFixed(1)} s`);
   }
 

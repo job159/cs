@@ -37,13 +37,19 @@ export async function weaponIcon(renderer, id, { w = 256, h = 96 } = {}) {
     gl.clear();
     gl.render(scene, cam);
     const px = new Uint8Array(w * h * 4);
-    gl.readRenderTargetPixels(rt, 0, 0, w, h, px);
+    // Read back without blocking: the GPU finishes the frame first (gpuDrain, a polled fence), then the read itself is
+    // async too. A sync read waited on the main thread for the whole GPU queue -- in a match load, its uploads and
+    // shader builds: 0.5-1.8 s per icon.
     gl.setRenderTarget(prevTarget);
     gl.setClearColor(prevClear, prevAlpha);
-    rt.dispose();
+    try {
+      await renderer.gpuDrain?.();
+      await gl.readRenderTargetPixelsAsync(rt, 0, 0, w, h, px);
+    } finally { rt.dispose(); }
     const cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
-    const ctx = cv.getContext('2d');
+    // (a CPU canvas: toDataURL of a GPU-backed one waits for the GPU process as well)
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
     const img = ctx.createImageData(w, h);
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {

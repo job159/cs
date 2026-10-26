@@ -5,7 +5,8 @@
 //   -> replication checks (remote players, zombies / puppets, guest kill credited) -> MP pause keeps running
 //   -> forced victory -> results with the per-player table on both -> 返回大廳 -> second match -> host leaves
 //   -> guest gets the 'host left' dialog.
-//   node tools/mp-flow-test.mjs [--relay] [--quick]   (--quick stops after both are in game)
+//   node tools/mp-flow-test.mjs [--relay] [--quick] [--profile]   (--quick stops after both are in game; --profile
+//   writes CPU profiles of both windows' match load to captures/mpflow_<host|guest>.cpuprofile)
 import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,6 +14,7 @@ import path from 'node:path';
 
 const BASE = 'http://127.0.0.1:5190/?q=low&touch=0';
 const quick = process.argv.includes('--quick');
+const profile = process.argv.includes('--profile');   // CPU profiles of both windows while the match loads -> captures/
 const port = 9700 + Math.floor(Math.random() * 250);
 const exe = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find((p) => fs.existsSync(p));
 const lockDir = path.join(os.tmpdir(), 'cf-shot-locks');
@@ -59,21 +61,46 @@ async function tab(label, url) {
   const ws = new WebSocket(t.webSocketDebuggerUrl);
   await new Promise((r) => { ws.onopen = r; });
   let id = 0; const pend = new Map(); const logs = [];
+  // (each line starts with the test clock when the page logged it: both windows' logs line up)
+  const at = (ts) => `[${(((ts || Date.now()) - t0) / 1000).toFixed(1)}] `;
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); }
-    else if (m.method === 'Runtime.consoleAPICalled') logs.push(m.params.type + ': ' + m.params.args.map((a) => a.value ?? a.description).join(' ').slice(0, 300));
-    else if (m.method === 'Runtime.exceptionThrown') logs.push('EXC ' + (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text));
+    else if (m.method === 'Runtime.consoleAPICalled') logs.push(at(m.params.timestamp) + m.params.type + ': ' + m.params.args.map((a) => a.value ?? a.description).join(' ').slice(0, 300));
+    else if (m.method === 'Runtime.exceptionThrown') logs.push(at(m.params.timestamp) + 'EXC ' + (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text));
   };
-  const send = (method, params = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+  // a dead browser (killed by the memory watchdog, crashed) fails the waits instead of leaving them pending forever
+  ws.onclose = () => { for (const r of pend.values()) r({ result: { exceptionDetails: { text: 'tab closed' } } }); pend.clear(); };
+  const send = (method, params = {}) => new Promise((r) => {
+    const i = ++id; pend.set(i, r);
+    if (ws.readyState !== 1) { pend.delete(i); r({ result: { exceptionDetails: { text: 'tab closed' } } }); return; }
+    ws.send(JSON.stringify({ id: i, method, params }));
+  });
   const ev = async (expr) => {
     const r = await send('Runtime.evaluate', { expression: `(async () => { ${expr} })()`, awaitPromise: true, returnByValue: true, timeout: 60000 });
     return r.result?.exceptionDetails ? 'EXC ' + (r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text) : r.result?.result?.value;
   };
   await send('Runtime.enable');
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: DIAG });
   await send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url });
   return { label, ev, logs, send };
+}
+// In every page from its first script on: long tasks and main-thread gaps (a 50 ms timer that fired > 300 ms late),
+// with epoch times, so a slow match start shows what blocked the page (and what the network layer saw as silence).
+const DIAG = `(() => {
+  const d = window.__diag = { lt: [], gaps: [] };
+  try { new PerformanceObserver((l) => { for (const e of l.getEntries()) d.lt.push([Math.round(performance.timeOrigin + e.startTime), Math.round(e.duration)]); }).observe({ type: 'longtask', buffered: true }); } catch { /* unsupported */ }
+  let last = performance.now();
+  setInterval(() => { const t = performance.now(); if (t - last > 350) d.gaps.push([Math.round(performance.timeOrigin + last), Math.round(t - last)]); last = t; }, 50);
+})();`;
+/** Main-thread blocking of a page between two epoch times: { longest task, longest timer gap, tasks > 200 ms }. */
+async function blocking(t, from, to) {
+  const v = await t.ev(`const d = window.__diag; if (!d) return 'no diag'; const f = (a) => a.filter((x) => x[0] >= ${from} && x[0] <= ${to});
+    const lt = f(d.lt), gp = f(d.gaps);
+    return JSON.stringify({ task: Math.max(0, ...lt.map((x) => x[1])), gap: Math.max(0, ...gp.map((x) => x[1])), over200: lt.filter((x) => x[1] > 200).length,
+      worst: lt.sort((a, b) => b[1] - a[1]).slice(0, 5).map((x) => ((x[0] - ${t0}) / 1000).toFixed(1) + 's:' + x[1] + (${profile} ? '@' + (x[0] - performance.timeOrigin).toFixed(0) : '')) })`);
+  try { return JSON.parse(v); } catch { console.log(`        ${t.label}: no blocking data (${String(v).slice(0, 200)})`); return null; }
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function waitFor(t, expr, ms = 60000) {
@@ -81,6 +108,7 @@ async function waitFor(t, expr, ms = 60000) {
   while (Date.now() < end) {
     const v = await t.ev(`return (${expr})`);
     if (v && !String(v).startsWith('EXC')) return v;
+    if (v === 'EXC tab closed') return null;   // the browser is gone (crash, memory watchdog)
     await sleep(400);
   }
   return null;
@@ -139,14 +167,37 @@ try {
 
   // ---------------------------------------------------------------- host starts (enabled once every player's link settled)
   check('host start button enabled', await waitFor(host, `document.querySelector('.lb-act [data-act=start]') && !document.querySelector('.lb-act [data-act=start]').disabled`, 15000));
+  for (const t of [host, guest]) await t.ev(`if (!window.__diag) ${DIAG} return 1`);
+  if (profile) {
+    for (const t of [host, guest]) {
+      await t.send('Profiler.enable'); await t.send('Profiler.setSamplingInterval', { interval: 1000 }); await t.send('Profiler.start');
+      t.prof0 = JSON.parse(await t.ev('return JSON.stringify({ now: performance.now(), origin: performance.timeOrigin })'));
+    }
+  }
   await click(host, '.lb-act [data-act=start]');
   const tStart = Date.now();
-  if (!check('host enters the game', await waitFor(host, `__app.state === 'game' && !!__cf.game?.match`, 150000), `${((Date.now() - tStart) / 1000).toFixed(1)} s`)) {
+  const hostIn = await waitFor(host, `__app.state === 'game' && !!__cf.game?.match`, 150000);
+  const tHost = Date.now();
+  if (!check('host enters the game', hostIn, `${((tHost - tStart) / 1000).toFixed(1)} s`)) {
     console.log('host', await diag(host)); console.log('guest', await diag(guest));
-    console.log('host log:', host.logs.slice(-12).join(' || ')); console.log('guest log:', guest.logs.slice(-12).join(' || '));
+    console.log('host log:\n  ' + host.logs.slice(-25).join('\n  ')); console.log('guest log:\n  ' + guest.logs.slice(-25).join('\n  '));
   }
-  if (!check('guest enters the game', await waitFor(guest, `__app.state === 'game' && !!__cf.game?.match`, 90000), `${((Date.now() - tStart) / 1000).toFixed(1)} s`)) {
-    console.log('guest', await diag(guest)); console.log('guest log:', guest.logs.slice(-12).join(' || '));
+  const guestIn = await waitFor(guest, `__app.state === 'game' && !!__cf.game?.match`, 90000);
+  const tGuest = Date.now();
+  if (profile) {
+    for (const t of [host, guest]) {
+      const r = await t.send('Profiler.stop');
+      if (r.result?.profile) { fs.writeFileSync(`captures/mpflow_${t.label}.cpuprofile`, JSON.stringify({ ...r.result.profile, pageNow0: t.prof0.now, timeOrigin: t.prof0.origin })); console.log(`        profile captures/mpflow_${t.label}.cpuprofile`); }
+    }
+  }
+  // what blocked each page's main thread while the match loaded (the network layer's keepalives run there)
+  for (const [t, end] of [[host, tHost], [guest, tGuest]]) {
+    const b = await blocking(t, tStart, end);
+    if (b) console.log(`        ${t.label} loading: longest task ${b.task} ms, longest timer gap ${b.gap} ms, ${b.over200} tasks > 200 ms; worst ${b.worst.join(', ')}`);
+  }
+  if (!check('guest enters the game', guestIn, `${((tGuest - tStart) / 1000).toFixed(1)} s`)) {
+    console.log('guest', await diag(guest));
+    console.log('host log:\n  ' + host.logs.slice(-25).join('\n  ')); console.log('guest log:\n  ' + guest.logs.slice(-25).join('\n  '));
     throw new Error('guest not in game');
   }
   const hMeta = await host.ev(`return JSON.stringify({ meta: __app.room.meta, map: __app.matchInfo.map, diff: __cf.game.match.diffId })`);

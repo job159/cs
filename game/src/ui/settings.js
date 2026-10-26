@@ -152,11 +152,10 @@ export function syncShadowMaps(scene, size) {
 /**
  * GPU time per frame of render(i) for i = 0..n-1 (EXT_disjoint_timer_query_webgl2; the first quarter wakes the GPU
  * clocks up and is dropped), else the wall time per frame of the back-to-back batch. -> { ms, gpu }
+ * The GPU is waited for without blocking the page (renderer.gpuDrain: a fence polled from timers).
  */
 async function frameCost(renderer, render, n) {
   const ctx = renderer.gl.getContext();
-  const px = new Uint8Array(4);
-  const sync = () => ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
   const ext = ctx.getExtension('EXT_disjoint_timer_query_webgl2');
   if (ext) {
     const qs = [];
@@ -167,7 +166,7 @@ async function frameCost(renderer, render, n) {
       ctx.endQuery(ext.TIME_ELAPSED_EXT);
       qs.push(q);
     }
-    sync();
+    await renderer.gpuDrain();
     // query results only arrive once the browser has had control back
     for (let k = 0; k < 100 && !ctx.getQueryParameter(qs[n - 1], ctx.QUERY_RESULT_AVAILABLE); k++) await new Promise((r) => setTimeout(r, 10));
     const ok = !ctx.getParameter(ext.GPU_DISJOINT_EXT);
@@ -178,7 +177,7 @@ async function frameCost(renderer, render, n) {
   }
   const t = performance.now();
   for (let i = 0; i < n; i++) render(i);
-  sync();
+  await renderer.gpuDrain(5000, 1);
   return { ms: (performance.now() - t) / n, gpu: false };
 }
 
@@ -191,7 +190,7 @@ async function frameCost(renderer, render, n) {
  * re-measures. Leaves the renderer on the tier it measured last: the caller re-applies the settings. Returns the
  * picked tier.
  */
-export async function calibrateQuality(renderer, scene, camera, { force = false, view = null, map = 'map' } = {}) {
+export async function calibrateQuality(renderer, scene, camera, { force = false, view = null, map = 'map', stop = null } = {}) {
   if (COARSE) return null;
   const size = `${Math.round(renderer.width * (window.devicePixelRatio || 1) / 64)}x${Math.round(renderer.height * (window.devicePixelRatio || 1) / 64)}`;
   const store = calStore() || { v: CAL_V, gpu: GPU, build: CAL_BUILD, maps: {} };
@@ -200,9 +199,6 @@ export async function calibrateQuality(renderer, scene, camera, { force = false,
   const cap = desktopGpuCap(GPU);
   const res = { size, q: cap === 'medium' ? 'medium' : 'low', ms: {} };
   if (cap !== 'medium') {
-    const ctx = renderer.gl.getContext();
-    const px = new Uint8Array(4);
-    const sync = () => ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
     let scale = 1, out = null;
     // (the scale is pinned every batch in case anything touched it while the query results came back)
     const frame = (i) => { if (i === 0) renderer.pinScale(scale); view?.(i); renderer.render(scene, camera, 0.05 + i * 0.016, out); };
@@ -214,7 +210,8 @@ export async function calibrateQuality(renderer, scene, camera, { force = false,
       syncShadowMaps(scene, renderer.q.shadows);
       out?.dispose();
       out = renderer.offscreenTarget?.() || null;
-      for (let i = 0; i < 4; i++) { frame(i); sync(); }   // targets, shadow map + its static cache, programs
+      for (let i = 0; i < 4; i++) { frame(i); await renderer.gpuDrain(); }   // targets, shadow map + its static cache, programs
+      if (stop?.()) break;
       let m = await frameCost(renderer, frame, 16);
       const lim = CAL_LIMIT[tier] * (m.gpu ? 1 : CAL_WALL);
       // a noisy run (another app or tab busy on the GPU) near the limit gets one more chance; the better one counts
@@ -223,9 +220,12 @@ export async function calibrateQuality(renderer, scene, camera, { force = false,
       res.gpuTimer = m.gpu;
       await new Promise((r) => setTimeout(r, 0)); // let the loading screen breathe
       if (m.ms <= lim) { res.q = tier; break; }
+      if (stop?.()) break;
     }
     out?.dispose();
     renderer.gl.setRenderTarget(null);
+    // stopped (a match is starting): nothing is stored, the caller re-applies the settings
+    if (stop?.()) { console.info(`[settings] auto quality on ${map}: measurement stopped`); return null; }
   }
   store.maps[map] = res;
   try { localStorage.setItem(CAL_KEY, JSON.stringify(store)); } catch { /* private mode */ }

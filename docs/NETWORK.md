@@ -33,6 +33,7 @@ room.broadcast(type, data, { reliable, except });  // 房主
 room.on('message', ({ from, type, data, reliable }) => {});
 room.on('peer-join' | 'peer-leave' | 'peer-update' | 'meta' | 'status' | 'closed', fn);
 room.setMeta({ state: 'playing' });  room.kick(id);  room.close();  room.stats();  room.players();
+room.setLoading(0.42);  room.setLoading(false);   // 載入對戰中（進度 0..1）／載入完成；對方的 peers.get(id).loading
 ```
 
 - `closed` 原因：`local`、`host-left`（房主離開或斷線）、`kicked`、`timeout`、`network`。`peer-leave` 原因：`left`、`kicked`、`lost`（遺囑／斷線）、`timeout`。
@@ -49,11 +50,13 @@ room.setMeta({ state: 'playing' });  room.kick(id);  room.close();  room.stats()
 |---|---|---|
 | `start` | 房主→全體 | `{map, difficulty, seed, n}`，在房主**開始載入前**送出；客人收到後載入同一張地圖 |
 | `ready` | 客人→房主 | `{n}`：地圖載入完成、NetSync 已掛上 |
-| `go` | 房主→全體 | `{n}`：全員 ready（或 30 秒逾時）後開打；客人等 `go` 才進入遊戲 |
+| `go` | 房主→全體 | `{n}`：全員 ready 後開打；客人等 `go` 才進入遊戲。房主等 30 秒，之後只等「進度還在動」（20 秒內有變化）的客人，最多 120 秒；客人等 `go` 最多 135 秒，房主還在載入時再延長 |
 | `st` / `board` | 客人→房主 / 房主→全體 | 個人戰績 `{k,h,m}`（每 2 秒＋結算時）／全員戰績表（結算畫面、MVP） |
 | `lobby` | 房主→全體 | 房主回到大廳（meta `state` 改回 `lobby`） |
 
 客人載入期間把 coop 的 `message` 監聽拿掉，房間會把房主的快照／事件暫存在 inbox，NetSync 掛上後一次補收，不會漏掉殭屍生成。
+載入進度：雙方從開始載入起用 `room.setLoading(p)` 回報進度（內部訊息 `$ld`：開始／結束可靠送達，中間的進度每 400 ms 最多一則不可靠），載入畫面顯示隊友／房主的百分比；載入完成（掛上 NetSync 後、等 ready／go 前）送 `setLoading(false)`。
+載入本身不會長時間卡住主執行緒（每一步都讓出事件迴圈：貼圖分批上傳、著色器首次使用分批並等 GPU fence），所以 keepalive 照常送出；就算卡住，下面的「載入中」逾時與停頓補償也會撐住。
 房主開始時 `setMeta({state:'playing'})`（遊戲中的房間不能加入），回大廳時改回 `lobby`。
 端對端 UI 測試：`node tools/mp-flow-test.mjs`（建立房間→小鍵盤輸入房號加入→開始→雙方進入遊戲→複製／暫停／結算／回大廳／第二局／房主離開）。
 
@@ -93,7 +96,9 @@ frame：`{"f": 發送者 id, "m": [item, ...]}`，item 用 `to`（某 id 或 `*`
 
 ## 斷線偵測
 
-- 任何傳輸上 10 秒沒收到對方任何東西就判定離線（房主：`peer-leave timeout`；客人：`closed timeout`）。
+- 任何傳輸上 10 秒沒收到對方任何東西就判定離線（房主：`peer-leave timeout`；客人：`closed timeout`）。對方回報正在載入對戰（`setLoading`）時放寬到 60 秒：載入時主執行緒可能忙上數秒（同一台電腦開兩個遊戲時兩邊共用 GPU 行程）。
+- 停頓補償：自己的計時器晚了 1 秒以上才觸發，表示是**自己**的頁面卡住（長任務），對方這段時間送來的資料還排在後面沒處理；這段時間不算對方沉默（`lastHeard` 往後推）。MQTT 的 PINGRESP 逾時同樣扣掉自己卡住的時間。
+- 判定逾時會在 console 留一行 `net: host timeout: silent 10283 ms (tick gap 4365 ms, p2p)`：沉默多久、當時自己的計時器延遲多久。
 - 客人的 MQTT 遺囑是給房主的 `bye lost`；房主的遺囑會清空房間資訊，客人一直訂閱著 `i`，看到空資訊即視為房主可能已離開。這兩種提示之後若 2.5 秒（P2P）／8 秒（中繼，對方可能正在重連 broker）內都沒再收到對方的資料，就判定離開（`lost` / `host-left`）。
 - 正常離開：先送出所有待送資料再送 `bye`（DataChannel 與中繼各送一次）；房主離開時客人收到 `closed host-left`。
 - 自己的 broker 連線斷了會用同一個 client id 自動重連（1/2/4/8 秒退避）；期間 P2P 的連結照常運作。

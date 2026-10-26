@@ -193,3 +193,19 @@ export function detailTextures() {
   cache.wood = tex(woodData(), N);
   return cache;
 }
+
+/**
+ * detailTextures() built ahead, one texture per task (pause: () => Promise, e.g. engine/util.js yieldTask): ~0.3 s of
+ * CPU noise that the first weapon material compile otherwise paid in one block, inside a match load.
+ */
+export async function prepareDetailTextures(pause) {
+  const c = { normal: {} };
+  for (const [k, fn] of Object.entries(builders)) {
+    if (cache) return cache;
+    c.normal[k] = tex(fn(), N);
+    await pause();
+  }
+  if (!cache) { c.grunge = tex(grungeData(), N); await pause(); }
+  if (!cache) { c.wood = tex(woodData(), N); cache = c; }
+  return cache;
+}
