@@ -258,11 +258,11 @@ function strap(s0, s1, t, wOf, sd, bw = 3, th = 0.8, n = 6) {
 // ------------------------------------------------------------------------------------------ materials per sabre
 // M: material keys of this sabre. Built at w = 0 for the right hand; the left one is mirrored.
 const MATS_R = {
-  metal: 'bronze_aged', trim: 'gold', hamon: 'brass', silk: 'silk_red', fin: 'lacquer_red', mouth: 'lacquer_red', eye: 'glaze_ochre',
+  metal: 'bronze_aged', trim: 'gold', hamon: 'brass', silk: 'silk_red', fin: 'lacquer_red', mouth: 'lacquer_red', eye: 'glaze_ochre', iris: 'glaze_vermilion',
   bands: ['glaze_vermilion', 'glaze_ochre', 'glaze_jade'], pearl: 'crystal', vein: 'glow_vermilion', edge: 'glow_gold', flare: 'glow_orange',
 };
 const MATS_L = {
-  metal: 'silver_aged', trim: 'chrome', hamon: 'steel_blued', silk: 'silk_violet', fin: 'glaze_cobalt', mouth: 'glaze_aubergine', eye: 'glaze_teal',
+  metal: 'silver_aged', trim: 'chrome', hamon: 'steel_blued', silk: 'silk_violet', fin: 'glaze_cobalt', mouth: 'glaze_aubergine', eye: 'glaze_teal', iris: 'glaze_cobalt',
   bands: ['glaze_aubergine', 'glaze_cobalt', 'glaze_teal'], pearl: 'glass', vein: 'glow_purple', edge: 'glow_ice', flare: 'glow_blue',
 };
 const STEEL = { spine: 'steel_bright', flat: 'black_chrome', bevel: 'steel_bright', edge: 'chrome', polish: 'steel_bright', floor: 'black_chrome' };
@@ -337,7 +337,7 @@ const HEAD = (() => {
     // brow arch over the eye: a flat-topped bar, crisp towards the socket; three flame ridges sweeping back
     if (s < -42 && t > 6 && t < 56) {
       const b = BR.near(s, t, 5.0);
-      if (b) { const u = b.u / b.len, hb = 1.0 + 4.6 * Math.pow(Math.sin(Math.PI * u), 0.5); z += hb * (1 - sstep(2.8, 5.0, b.d)); }
+      if (b) { const u = b.u / b.len, hb = 1.3 + 5.8 * Math.pow(Math.sin(Math.PI * u), 0.5); z += hb * (1 - sstep(2.8, 5.0, b.d)); }
     }
     if (s < -34 && t < 22) { const f = FL.near(s, t, 1.8); if (f) z += 1.5 * (1 - 0.55 * f.u / f.len) * halfRound(f.d, 1.7); }
     // nose: the bulb's wing swells round a drilled nostril, a C ridge open to the front, a scroll behind it
@@ -396,7 +396,7 @@ const HEAD = (() => {
 
 /** the head's geometry once (both sabres share it): { role: { part: [geo] } } with roles metal / trim / mouth / ... */
 let HEAD_GEO = null;
-const DEC = { error: 0.42, normals: 0.3, lattice: 10 };   // QEM decimation of the head solids (mm; analytic normals kept)
+const DEC = { error: 0.28, normals: 0.22, lattice: 8 };   // QEM decimation of the head solids (mm; analytic normals kept; 0.42 left facets in the polished metal)
 function headGeo() {
   if (HEAD_GEO) return HEAD_GEO;
   const G = {};
@@ -408,7 +408,7 @@ function headGeo() {
 
   // ---- the two solids: faces + walls (the mouth inside: the lip walls)
   const solid = (O, h, I, part) => {
-    const F = hfFace([{ pts: O.loop, tag: 'o' }], h, { tol: 0.05, minCell: 0.5, maxCell: 6, edge: 0.9, walls: true, decimate: { error: DEC.error, normals: DEC.normals, ao: 0.6, lattice: DEC.lattice } });
+    const F = hfFace([{ pts: O.loop, tag: 'o' }], h, { tol: 0.05, minCell: 0.5, maxCell: 6, edge: 0.9, walls: true, eps: 0.45, decimate: { error: DEC.error, normals: DEC.normals, ao: 0.6, lattice: DEC.lattice } });
     both('metal', part, F.face);
     const W = splitTris(F.walls, (s, t) => (near(I, 'lip', s, t, 3) < 1.2 ? 'mouth' : 'metal'));
     for (const [k, g] of Object.entries(W)) add(k, part, g);
@@ -452,6 +452,14 @@ function headGeo() {
     const on = onField(eyeH);
     both('trim', 'gun', mapTris(ribbonT(arcP(0, 0, 3.6, 0, 350, 32).map(([x, y]) => [x * 0.85, y * 1.3]), 0.65, -0.05, 0.22, { closed: true, step: 0.9, b: 0.12 }), (u, v, z) => on(c[0] + u, c[1] + v, z), 60));
     both('obsidian', 'gun', mapTris(ribbonT([[0, -3.2], [0, 3.2]], (f) => 1.3 * Math.sin(Math.PI * Math.max(0.08, Math.min(0.92, f))), -0.05, 0.12, { step: 0.5, b: 0.05 }), (u, v, z) => on(c[0] + u, c[1] + v, z), 60));   // slit pupil
+    both('iris', 'gun', mapTris(fanT(arcP(0, 0, 3.35, 0, 360, 28).map(([x, y]) => [x * 0.85, y * 1.3]), -0.05, 0.09, { b: 0.06, step: 0.7, rings: 1 }), (u, v, z) => on(c[0] + u, c[1] + v, z), 60));
+    // lids: rolls along the almond, the upper one (spine side, -s) heavy and hooded over the top of the eye
+    const lid = (pts, r, lift) => both('metal', 'gun', ttube(pts.map(([s, t]) => { const o = [s - c[0], t - c[1]], l = Math.hypot(...o) || 1; return onSk(s + o[0] / l * 0.6, t + o[1] / l * 0.6, lift); }),
+      (u) => r * Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, u))), 0.45) + 0.15, null, { radial: 8, seg: 30 }));
+    lid([[-40.5, 43.5], [-46, 42.5], [-51, 39.5], [-54.6, 33.5], [-55.2, 26.5], [-53.6, 20.5], [-51.5, 17.8]], 1.7, 0.6);
+    lid([[-51, 18.5], [-47.5, 20.5], [-43, 23.5], [-39.2, 27.5], [-37.3, 33]], 0.95, 0.3);
+    // the cornea: a clear dome just over the enamel (a wet highlight that rolls with the view)
+    both('cornea', 'gun', ell([c[0], c[1], c[2] + 0.2], A, [0, 0, sd], 11.8, 7.0, 5.8, 20));
   }
   // ---- gold cords in the lip grooves (upper and lower)
   {
@@ -577,7 +585,7 @@ function headGeo() {
 function sabre(M) {
   const P = { gun: {}, fx_edge: {}, fx_flare: {}, fx_vein: {}, fx_jaw: {}, fx_pearl: {}, fx_tassel: {} };
   const add = (part, mat, geo) => { if (geo) (P[part][mat] ||= []).push(geo); };
-  const roleMat = { metal: M.metal, trim: M.trim, mouth: M.mouth, fin: M.fin, eye: M.eye, bone: 'bone', obsidian: 'obsidian' };
+  const roleMat = { metal: M.metal, trim: M.trim, mouth: M.mouth, fin: M.fin, eye: M.eye, iris: M.iris, bone: 'bone', obsidian: 'obsidian', cornea: 'glass_clear' };
 
   // ======================================================================== blade
   {

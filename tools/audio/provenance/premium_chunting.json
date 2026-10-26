@@ -1,0 +1,182 @@
+{
+  "category": "premium_chunting",
+  "producer": "premium_chunting",
+  "sounds": {
+    "chunting_blade": [
+      "fs:675817"
+    ],
+    "chunting_burst": [
+      "fs:244394",
+      "fs:758580",
+      "fs:609587",
+      "fs:569510",
+      "fs:516914"
+    ],
+    "chunting_catch": [
+      "fs:390462",
+      "fs:675817"
+    ],
+    "chunting_charge": [
+      "fs:594042",
+      "fs:382313"
+    ],
+    "chunting_close": [],
+    "chunting_coil": [],
+    "chunting_crack": [],
+    "chunting_draw": [
+      "fs:334219",
+      "fs:268227",
+      "fs:594042",
+      "fs:675817"
+    ],
+    "chunting_dry": [
+      "fs:632822"
+    ],
+    "chunting_far": [],
+    "chunting_first": [
+      "fs:675817",
+      "fs:264031",
+      "fs:373921",
+      "fs:373258"
+    ],
+    "chunting_fly": [],
+    "chunting_glove_zap": [
+      "fs:494797"
+    ],
+    "chunting_idle": [],
+    "chunting_impact": [
+      "fs:522099",
+      "fs:321478",
+      "fs:640204",
+      "fs:569510",
+      "fs:758580"
+    ],
+    "chunting_inspect": [],
+    "chunting_kill": [
+      "fs:390462",
+      "fs:626405",
+      "fs:382313"
+    ],
+    "chunting_porcelain": [
+      "fs:530233"
+    ],
+    "chunting_reload_hum": [],
+    "chunting_reload_in": [
+      "fs:390462",
+      "fs:675817",
+      "fs:632822"
+    ],
+    "chunting_reload_out": [
+      "fs:632822"
+    ],
+    "chunting_return": [
+      "fs:758580",
+      "fs:569510"
+    ],
+    "chunting_rod_arc": [
+      "fs:626405"
+    ],
+    "chunting_rod_end": [
+      "fs:569510",
+      "fs:758580"
+    ],
+    "chunting_rod_loop": [
+      "fs:382313"
+    ],
+    "chunting_rod_plant": [
+      "fs:522099",
+      "fs:201094"
+    ],
+    "chunting_seg": [
+      "fs:393734",
+      "fs:675817"
+    ],
+    "chunting_stage": [
+      "fs:632822"
+    ],
+    "chunting_streamer": [],
+    "chunting_tail": [],
+    "chunting_throw": [
+      "fs:268227",
+      "fs:507466"
+    ],
+    "chunting_thrust": [
+      "fs:268227",
+      "fs:675817"
+    ],
+    "chunting_thunder": [
+      "fs:366086",
+      "fs:258195",
+      "fs:375260",
+      "fs:374255",
+      "fs:374021",
+      "fs:373258",
+      "fs:764339",
+      "fs:373943",
+      "fs:594042",
+      "fs:264031",
+      "fs:275196"
+    ],
+    "chunting_thunder_roll": [
+      "fs:405601",
+      "fs:372847",
+      "fs:264031",
+      "fs:275196"
+    ],
+    "chunting_zap_end": [
+      "fs:632822"
+    ],
+    "chunting_zap_hit": [
+      "fs:626405"
+    ],
+    "chunting_zap_loop": [
+      "fs:382313",
+      "fs:363092"
+    ],
+    "chunting_zap_start": [
+      "fs:632822",
+      "fs:382313"
+    ],
+    "ready_chunting": [
+      "fs:632822"
+    ]
+  },
+  "loaded": [
+    "fs:201094",
+    "fs:244394",
+    "fs:258195",
+    "fs:264031",
+    "fs:268227",
+    "fs:275196",
+    "fs:321478",
+    "fs:334219",
+    "fs:363092",
+    "fs:366086",
+    "fs:372847",
+    "fs:373258",
+    "fs:373921",
+    "fs:373943",
+    "fs:374021",
+    "fs:374255",
+    "fs:375260",
+    "fs:382313",
+    "fs:390462",
+    "fs:393734",
+    "fs:405601",
+    "fs:494797",
+    "fs:507466",
+    "fs:516914",
+    "fs:522099",
+    "fs:530233",
+    "fs:569510",
+    "fs:594042",
+    "fs:609587",
+    "fs:626405",
+    "fs:632822",
+    "fs:640204",
+    "fs:675817",
+    "fs:758580",
+    "fs:764339"
+  ],
+  "original": false
+}

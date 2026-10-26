@@ -1,0 +1,398 @@
+{
+  "category": "premium_yazi",
+  "producer": "premium_yazi",
+  "sounds": {
+    "ready_yazi": [
+      "fs:190595",
+      "fs:42201",
+      "fs:341090",
+      "fs:263115"
+    ],
+    "ready_yazi_white": [
+      "fs:190595",
+      "fs:42201",
+      "fs:341090",
+      "fs:263115"
+    ],
+    "yazi_blood": [
+      "fs:495118",
+      "fs:495117"
+    ],
+    "yazi_charge": [],
+    "yazi_charge_full": [
+      "fs:190595",
+      "fs:42201",
+      "fs:341090",
+      "fs:263115"
+    ],
+    "yazi_charge_stage": [
+      "fs:412558"
+    ],
+    "yazi_close": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_crisis": [
+      "fs:565642",
+      "fs:221528",
+      "fs:203381",
+      "fs:190595",
+      "fs:42201",
+      "fs:341090",
+      "fs:263115"
+    ],
+    "yazi_draw": [
+      "fs:688765"
+    ],
+    "yazi_draw_first": [
+      "fs:163164",
+      "kenney_impact/Audio/impactWood_light_002"
+    ],
+    "yazi_far": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_final": [],
+    "yazi_first_sting": [
+      "fs:127265",
+      "fs:452400",
+      "fs:375497",
+      "fs:375378",
+      "fs:375265"
+    ],
+    "yazi_flick": [
+      "fs:495118",
+      "fs:495117",
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_growl": [
+      "fs:190595",
+      "fs:42201",
+      "fs:341090",
+      "fs:263115"
+    ],
+    "yazi_hit": [
+      "fs:420674",
+      "fs:504615",
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:488659",
+      "fs:578874",
+      "fs:355052"
+    ],
+    "yazi_hit_flesh": [
+      "fs:420674",
+      "fs:504615",
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:488659",
+      "fs:578874",
+      "fs:355052"
+    ],
+    "yazi_hit_wall": [
+      "fs:321477",
+      "fs:569510",
+      "kenney_impact/Audio/impactMetal_medium_000",
+      "fs:406562",
+      "kenney_impact/Audio/impactMetal_medium_001",
+      "kenney_impact/Audio/impactMetal_medium_002",
+      "kenney_impact/Audio/impactMetal_medium_003",
+      "kenney_impact/Audio/impactMetal_medium_004"
+    ],
+    "yazi_idle": [],
+    "yazi_inspect": [],
+    "yazi_issen": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024",
+      "fs:146932",
+      "fs:386799"
+    ],
+    "yazi_issen_burst": [
+      "fs:420674",
+      "fs:504615",
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:488659",
+      "fs:578874",
+      "fs:355052",
+      "fs:414296",
+      "fs:452400",
+      "fs:375497",
+      "fs:641046"
+    ],
+    "yazi_issen_ring": [
+      "fs:35213",
+      "kenney_impact/Audio/impactMetal_light_003",
+      "fs:406562",
+      "kenney_impact/Audio/impactMetal_light_004"
+    ],
+    "yazi_issen_ring_white": [
+      "fs:35213",
+      "kenney_impact/Audio/impactMetal_light_003",
+      "fs:406562",
+      "kenney_impact/Audio/impactMetal_light_004"
+    ],
+    "yazi_kill": [],
+    "yazi_koiguchi": [
+      "kenney_impact/Audio/impactMetal_light_002",
+      "kenney_impact/Audio/impactMetal_light_003",
+      "kenney_impact/Audio/impactMetal_light_004"
+    ],
+    "yazi_parry": [
+      "kenney_impact/Audio/impactMetal_light_001",
+      "kenney_impact/Audio/impactMetal_medium_002",
+      "kenney_impact/Audio/impactMetal_light_002",
+      "kenney_impact/Audio/impactMetal_medium_003"
+    ],
+    "yazi_parry_cymbal": [
+      "fs:375506",
+      "fs:452400",
+      "fs:375497"
+    ],
+    "yazi_recover": [
+      "fs:494797"
+    ],
+    "yazi_reflect": [
+      "fs:420674",
+      "fs:504615",
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:488659",
+      "fs:578874",
+      "fs:355052"
+    ],
+    "yazi_sever": [
+      "fs:420674",
+      "fs:504615",
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:488659",
+      "fs:578874",
+      "fs:355052",
+      "fs:414296",
+      "fs:641046",
+      "fs:134025",
+      "fs:35213"
+    ],
+    "yazi_sheathe": [
+      "fs:388819",
+      "kenney_impact/Audio/impactMetal_light_001",
+      "kenney_impact/Audio/impactMetal_light_002",
+      "kenney_impact/Audio/impactMetal_light_003",
+      "kenney_impact/Audio/impactMetal_light_004"
+    ],
+    "yazi_soul": [],
+    "yazi_swing": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_swing_heavy": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_swing_heavy_white": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_swing_white": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_tail": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_ult_bed": [
+      "fs:372839",
+      "fs:372845",
+      "fs:375378",
+      "fs:452400",
+      "fs:375497",
+      "fs:127265",
+      "fs:375260",
+      "fs:373919"
+    ],
+    "yazi_ult_bed_white": [
+      "fs:372839",
+      "fs:372845",
+      "fs:375378",
+      "fs:452400",
+      "fs:375497",
+      "fs:127265",
+      "fs:375260",
+      "fs:373919"
+    ],
+    "yazi_ult_boom": [
+      "fs:258195",
+      "fs:523089",
+      "fs:522099",
+      "fs:452400",
+      "fs:375497",
+      "fs:127265",
+      "fs:703247"
+    ],
+    "yazi_ult_boom_white": [
+      "fs:258195",
+      "fs:523089",
+      "fs:522099",
+      "fs:452400",
+      "fs:375497",
+      "fs:127265",
+      "fs:703247"
+    ],
+    "yazi_ult_cast": [],
+    "yazi_ult_cast_white": [],
+    "yazi_ult_issen": [
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_ult_puppet": [
+      "fs:163164"
+    ],
+    "yazi_ult_seal": [
+      "fs:375260",
+      "fs:127265",
+      "fs:452400",
+      "fs:375497"
+    ],
+    "yazi_ult_sheathe": [
+      "fs:508110"
+    ],
+    "yazi_ult_sheathe_white": [
+      "fs:508110"
+    ],
+    "yazi_ult_slash": [
+      "fs:420674",
+      "fs:504615",
+      "fs:269483",
+      "fs:779805",
+      "fs:626405",
+      "fs:641040",
+      "fs:488659",
+      "fs:578874",
+      "fs:355052",
+      "fs:263595",
+      "fs:471097",
+      "fs:507466",
+      "fs:268227",
+      "fs:60024"
+    ],
+    "yazi_ult_suona": [],
+    "yazi_unsheathe": [
+      "fs:377145"
+    ],
+    "yazi_vengeance": [
+      "fs:127265",
+      "fs:452400",
+      "fs:375497"
+    ],
+    "yazi_vengeance_end": []
+  },
+  "loaded": [
+    "fs:127265",
+    "fs:134025",
+    "fs:146932",
+    "fs:163164",
+    "fs:190595",
+    "fs:203381",
+    "fs:221528",
+    "fs:258195",
+    "fs:263115",
+    "fs:263595",
+    "fs:268227",
+    "fs:269483",
+    "fs:321477",
+    "fs:341090",
+    "fs:35213",
+    "fs:355052",
+    "fs:372839",
+    "fs:372845",
+    "fs:373919",
+    "fs:375260",
+    "fs:375265",
+    "fs:375378",
+    "fs:375497",
+    "fs:375506",
+    "fs:377145",
+    "fs:386799",
+    "fs:388819",
+    "fs:406562",
+    "fs:412558",
+    "fs:414296",
+    "fs:420674",
+    "fs:42201",
+    "fs:452400",
+    "fs:471097",
+    "fs:488659",
+    "fs:494797",
+    "fs:495117",
+    "fs:495118",
+    "fs:504615",
+    "fs:507466",
+    "fs:508110",
+    "fs:522099",
+    "fs:523089",
+    "fs:565642",
+    "fs:569510",
+    "fs:578874",
+    "fs:60024",
+    "fs:626405",
+    "fs:641040",
+    "fs:641046",
+    "fs:688765",
+    "fs:703247",
+    "fs:779805",
+    "kenney_impact/Audio/impactMetal_light_001",
+    "kenney_impact/Audio/impactMetal_light_002",
+    "kenney_impact/Audio/impactMetal_light_003",
+    "kenney_impact/Audio/impactMetal_light_004",
+    "kenney_impact/Audio/impactMetal_medium_000",
+    "kenney_impact/Audio/impactMetal_medium_001",
+    "kenney_impact/Audio/impactMetal_medium_002",
+    "kenney_impact/Audio/impactMetal_medium_003",
+    "kenney_impact/Audio/impactMetal_medium_004",
+    "kenney_impact/Audio/impactWood_light_002"
+  ],
+  "original": false
+}

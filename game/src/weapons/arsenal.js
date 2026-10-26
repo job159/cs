@@ -474,10 +474,18 @@ export class Arsenal {
       ? { ...def, pen: (def.pen ?? 1) + (mods.pierce || 0), head: (def.head ?? 4) * this.headMul, knock: (def.knock ?? 1) * this.knockMul } : def;
     let anyHit = false, kills = 0, head = false;
     const muzzleApparent = this.vm.socketApparent('muzzle', _p);
+    // def.pelletRings [[k, n], ...]: a fixed centre-weighted pattern instead of the random disc: one pellet on the aim,
+    // then n on a ring at k x the cone for each ring (alternate rings staggered), turned a random step each shot, a little
+    // jitter; pellets past the rings join the centre (premium pump guns: the volley lands on one body)
+    const rings = pellets > 1 ? def.pelletRings : null, ringRot = Math.random() * Math.PI * 2;
     for (let i = 0; i < pellets; i++) {
       // pellets: uniform-ish disc; single bullets: centre-weighted
-      const r = pellets > 1 ? Math.sqrt(Math.random()) * spread : Math.abs(gauss()) * spread;
-      const a = Math.random() * Math.PI * 2;
+      let r, a = Math.random() * Math.PI * 2;
+      let ri = 0, j = i - 1;
+      if (rings) while (ri < rings.length && j >= rings[ri][1]) j -= rings[ri++][1];
+      if (rings && (i === 0 || ri >= rings.length)) r = Math.random() * 0.12 * spread;
+      else if (rings) { const [k, n] = rings[ri]; r = k * (0.88 + Math.random() * 0.24) * spread; a = ringRot + (ri % 2) * (Math.PI / n) + (j / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.3; }
+      else r = pellets > 1 ? Math.sqrt(Math.random()) * spread : Math.abs(gauss()) * spread;
       const d = new THREE.Vector3().copy(_dir).addScaledVector(_right, Math.cos(a) * Math.tan(r)).addScaledVector(_up, Math.sin(a) * Math.tan(r)).normalize();
       if (def.projectile) { this._launch(ws, origin, d); continue; }
       const res = fireBullet(g, origin, d, fdef, {
@@ -557,7 +565,9 @@ export class Arsenal {
     v.y += 0.6;
     const floorY = g.world.collision.floorBelow(ep, 0.2, 5);
     const fy = isFinite(floorY) ? floorY : g.player.pos.y;
-    g.fx?.shells.spawn(type, ep.clone(), v, fy);
+    // a 70 mm 12-gauge hull tumbling past the eye read as a big red stick across the frame: it leaves at 0.55 x and
+    // grows to its true size as it falls away
+    g.fx?.shells.spawn(type, ep.clone(), v, fy, type === '12g' ? { scale: 0.55 } : undefined);
     if (cat === 'mg' && type !== '12g') g.fx?.shells.spawn('link', ep.clone(), v.clone().multiplyScalar(0.8), fy);
   }
 
@@ -873,7 +883,10 @@ export class Arsenal {
       if (t.r.stopped || !t.o.keep && (!vm.clip.active || vm.clip.clip !== t.clip)) { t.r.stop(); this.trails.delete(id); continue; }
       const a = vm.socketCam(t.from, _ta);
       if (!a) continue;
-      if (t.to) t.r.push(a, vm.socketCam(t.to, _tb)); else t.r.push(a);
+      if (!t.to) { t.r.push(a); continue; }
+      const b = vm.socketCam(t.to, _tb);
+      if (t.o.ext && b) b.sub(a).multiplyScalar(t.o.ext).add(a);   // ext: the band reaches past the tip (a wider sweep)
+      t.r.push(a, b);
     }
   }
   /** Melee hit during a trail with hitColor: the rest of the swing burns in the element colour (§1.17). */

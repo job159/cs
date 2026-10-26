@@ -7,7 +7,7 @@
 //           climbs instead of piling up); 4 per target, the 5th merges into the top one (sum + punch); premium
 //           skins merge same-frame hits per target (one number a pellet volley / skill tick), ≤ 8 new a frame
 //   skins   standard white | anti series-colour edge | exotic element gradient | mythic vermilion with a gold edge;
-//           crit swaps to gold (x1.3); premium.dmgSkin may name any SKINS key
+//           crit swaps to gold (x1.3, or SKINS['<skin>_crit'] when the skin has one); premium.dmgSkin may name any SKINS key
 //   new DamageNumbers(parent, game).add(point, amount, { head, crit, armored, elem, skin, hex, target })  .update(dt)
 import * as THREE from 'three';
 import { injectCSS } from './crosshairs.js';
@@ -45,6 +45,8 @@ export class DamageNumbers {
 
   /** Skin colours for a hit: crit / armour / element tiers win over the weapon skin. */
   _colors(tier, o) {
+    // a weapon may register its own big-hit skin as SKINS['<skin>_crit'] (its element colour on the gold tier's burst)
+    if (tier === 'crit' && SKINS[o.skin + '_crit']) return SKINS[o.skin + '_crit'];
     if (tier === 'crit') return o.skin === 'mythic' ? ['#fff1b8', '#ffc21a', '#ff7a00', '#8a0a14'] : SKINS.crit;
     if (tier === 'armor') return SKINS.armor;
     if (tier === 'elem') return SKINS[o.elem] || SKINS.fire;
@@ -74,7 +76,7 @@ export class DamageNumbers {
     const d = document.createElement('div');
     const c = this._colors(tier, o);
     d.className = 'dn2 t-' + tier;
-    d.style.cssText = `--f0:${c[0]};--f1:${c[1]};--f2:${c[2]};--e:${c[3]}`;
+    d.style.cssText = `--f0:${c[0]};--f1:${c[1]};--f2:${c[2]};--e:${c[3]}` + (tier === 'crit' && SKINS[o.skin + '_crit'] ? `;--sf:${c[1]};--se:${c[3]}` : '');
     d.innerHTML = (tier === 'crit' ? BURST : '') + (T.ghosts ? '<i class="g g2"></i><i class="g g1"></i>' : '') + '<span class="o"></span><span class="f"></span>';
     this.el.appendChild(d);
     const n = { el: d, T, tier, n: 0, t: 0, born: now, lift, y: lift, dx: (Math.random() - 0.5) * 28, p: { x: point.x, y: point.y, z: point.z }, key, punch: 0, dead: false,
@@ -150,7 +152,7 @@ injectCSS('cf-dn', `
 .dn2 .g1 { opacity: .28; } .dn2 .g2 { opacity: .12; }
 .dn2.t-crit { font-weight: 900; }
 .dn2 .bst { width: 25px; height: 25px; left: auto; right: 50%; margin-right: calc(var(--w, 2) * .25em - .12em); bottom: -.05em; transform: none; animation: dnBurst .11s ease-out both; }
-.dn2 .bst polygon { fill: #fff2a0; stroke: #2a0e00; stroke-width: 1.6; stroke-linejoin: round; }
+.dn2 .bst polygon { fill: var(--sf, #fff2a0); stroke: var(--se, #2a0e00); stroke-width: 1.6; stroke-linejoin: round; }
 @keyframes dnBurst { from { transform: rotate(-20deg) scale(1.4); } to { transform: rotate(0) scale(1); } }
 .dn2.t-armor .o { -webkit-text-stroke-width: 3px; }
 `);

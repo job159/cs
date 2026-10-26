@@ -211,17 +211,22 @@ def({ id: 'chiwen', zh: '螭吻．吞潮', en: 'Chiwen Tidewarden', cat: 'rifle'
 // wrist flick that rings them). ◎ / RMB 鐘彈: a bronze bell spirit drops 6 m onto the impact and tolls three times
 // (4.5 m, 140 + knockback each), then two sound pillars toss what stands there 4 m up. ★ / Q 警世: one 8 m toll round
 // the caster (every zombie staggers 0.8 s, elites / bosses outlined 5 s for the whole team; 20 s). Hold Q 百八鐘 (鐘吼,
-// ~45 s of damage): a 6 m bell with 蒲牢 on its crown slams over the aim point (3 m trapped 2.4 s), tolls nine times
-// faster and faster (7 m, 200 each), then bursts into 32 bronze shards (50 each). Crisis 金鐘罩: a bell drops over the
-// player. Aura 鐘聲護體: every toll gives teammates in its reach 5 armour. Hidden until the refine stage releases it.
-def({ id: 'pulao', zh: '蒲牢．鐘吼', en: 'Pulao Bellroar', cat: 'shotgun', tier: 'mythic', line: 'jiuzi', element: ['lunar', 'storm'], model: 'pulao',
-  hidden: true,
-  price: 7200, wear: 0.2, dmg: 26, head: 2, pellets: 9, rpm: 75, mode: 'pump',
+// ~45 s of damage): a 6 m bell with 蒲牢 on its crown slams over the aim point (3 m trapped 2.4 s; it drags what stands
+// within 10 m into its ring between tolls), tolls nine times faster and louder (7 m, 200 each), then bursts into cast
+// bronze slabs and 32 shard rays (50 each). Crisis 金鐘罩: a bell drops over the player. Aura 鐘聲護體: every toll gives teammates in its reach 5 armour.
+// Feel (a mythic pump gun, not a rifle): a fixed centre-weighted pattern (pelletRings: one pellet on the aim, four on a
+// ring at 0.4 of the 2.6° cone, four staggered at 0.84) keeps a volley on one body inside 6 m, so a chest volley kills a
+// walker there and a head volley lands 3-5 on the head; the camera rise settles before the next pump (recoil.pause
+// 0.36 x 0.8 s, recover 20); the weight is in the viewmodel kick and the view punch, not a lingering camera offset.
+def({ id: 'pulao', zh: '蒲牢．鐘吼', en: 'Pulao Bellroar', cat: 'shotgun', tier: 'mythic', line: 'jiuzi', element: ['lunar', 'storm'], model: 'pulao', tpModel: 'pulao_tp',
+  price: 7200, wear: 0.2, dmg: 26, head: 2, pellets: 9, pelletRings: [[0.4, 4], [0.84, 4]], rpm: 75, mode: 'pump',
   mag: 8, reserve: Infinity, reload: 0.5, reloadStart: 0.36, reloadEnd: 0.42, draw: 0.75, pen: 0.35, range: [10, 28, 0.35], speed: 4.9, knock: 3.4, stagger: 0.9,
-  spread: [4.4, 3.8, 1.0, 2, 0, 4.4, 10], recoil: { up: 6, side: 1.3, upMax: 14, recover: 12, first: 1 }, kick: { back: 0.085, up: 13, side: 2.4, roll: 5 },
-  // first person: the 蒲牢 on the receiver and the bell rack read best a little lower / further out than a rifle
-  vm: { hip: [0.165, -0.232, -0.4, 1.5, 4.5, -6] },
-  // sound: its own 12-gauge set with the §1.12 bronze bell overtone (until it exists, pulao.js plays the stock shotgun)
+  spread: [2.6, 2.1, 1.0, 2, 0, 4.4, 10], recoil: { up: 6, side: 1.1, upMax: 10, recover: 20, first: 1, pause: 0.36 }, kick: { back: 0.115, up: 9, side: 1.8, roll: 7 },
+  // first person: the 蒲牢 on the receiver and the bell rack read best a little lower / further out than a rifle; the
+  // gun sits low and points outward like a rifle (yaw -2.5) so the bell mouth and its crown stay well off the crosshair
+  // and a struck body is never behind the barrel
+  vm: { hip: [0.178, -0.252, -0.4, 1.5, -2.5, -6] },
+  // sound: its own 12-gauge set with the §1.12 bronze bell overtone (tools/audio/producers/premium_pulao.mjs)
   sound: 'pulao', shell: '12g', flash: 'shotgun', tracer: 0,
   // the fireball stays small: the bronze / cyan sound-wave crown out of the bell mouth (premium/pulao.js crown()) is
   // the muzzle look; three pellets of a volley trace thin gold
@@ -231,10 +236,12 @@ def({ id: 'pulao', zh: '蒲牢．鐘吼', en: 'Pulao Bellroar', cat: 'shotgun', 
     palette: { base: '#7a5a2e', trim: '#e3b04b', core: '#7fd8ff', rim: '#ffc74a', mote: '#c99a4b', accent: ['#9a1420', '#3f6a58', '#2c2d30'], twin: '#c8302a' },
     presets: { bronze_aged: 'pv_metal', bronze_cast: 'pv_metal', bronze_dark: 'pv_metal', gold: 'pv_metal', lacquer_red: 'pv_glaze', lacquer_carved: 'pv_glaze',
       glow_ice: 'pv_energy', glow_gold: 'pv_energy', crystal: 'pv_crystal' },
-    pv: { pv_metal: { shine: 1.5, sweepT: 5 }, pv_glaze: { shine: 0.9, sweepT: 4.5, shardScale: 0, irid: 0 }, pv_energy: { veinFreq: 10, veinSpeed: 0.45 } },
+    // the sweep is a narrow gilt glint on the bronze (a pale wide band read as milky white on the rack and the tail)
+    pv: { pv_metal: { shine: 0.8, sweepT: 5, shineTint: [1, 0.68, 0.28], shineW: 16000 }, pv_glaze: { shine: 0.6, sweepT: 4.5, shardScale: 0, irid: 0, shineTint: [1, 0.72, 0.4], shineW: 14000 },
+      pv_energy: { veinFreq: 10, veinSpeed: 0.45 } },
     // the bell-mouth liner: VEIN round the bore axis (§1.5.3 pVeinAxis 1: 鐘口 / 環圈); the cast bronze glints a value
     // under the gilt so dragon, plinth and gold trim read apart
-    pvKey: { glow_ice: { veinAxis: 1, veinFreq: 7, veinSpeed: 0.35 }, bronze_cast: { shine: 0.7 }, bronze_dark: { shine: 0.5 }, bronze_aged: { shine: 0.8 } },
+    pvKey: { glow_ice: { veinAxis: 1, veinFreq: 7, veinSpeed: 0.35 }, bronze_cast: { shine: 0.45 }, bronze_dark: { shine: 0.3 }, bronze_aged: { shine: 0.5 } },
     hero: 'fx_mouth', crosshair: 'xh_bell', meters: ['segments', 'ring'],
     ready: { sfx: 'ready_pulao', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.5, glowMul: 1.5, idleExtra: 'pulao_ready' } },
     idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'pulao_sway', every: 6 }],   // §1.17 idle tiers
@@ -265,7 +272,7 @@ def({ id: 'pulao', zh: '蒲牢．鐘吼', en: 'Pulao Bellroar', cat: 'shotgun', 
       alt: { id: 'pulao_bellShell', key: 'RMB', zh: '鐘彈', desc: '銅鐘從 6 m 落下・連響 3 次各 140＋擊退・音柱拋飛 4 m', meter: 'bell', cost: 1, range: 40,
         drop: 6, rings: 3, every: 0.4, r: 4.5, dmg: 140, knock: 6, toss: 4, pillar: 1.3, pillarDmg: 40, level: 'L2' },
       tap: { id: 'pulao_knell', key: 'Q', zh: '警世', desc: '8 m 鐘響：殭屍硬直 0.8 秒・精英描邊 5 秒（全隊）', cd: 20, r: 8, stun: 0.8, mark: 5, level: 'L2' },
-      ult: { id: 'pulao_108', key: 'hold Q', zh: '百八鐘', desc: '巨鐘罩下連響 9 聲各 200・3 m 困住 2.4 秒・碎成 32 片銅片各 50', meter: 'ult', range: 30,
+      ult: { id: 'pulao_108', key: 'hold Q', zh: '百八鐘', desc: '巨鐘罩下連響 9 聲各 200・10 m 內拖入鐘下困住 2.4 秒・碎成銅片 32 道各 50', meter: 'ult', range: 30,
         r: 7, dmg: 200, tolls: 9, trapR: 3, trap: 2.4, shards: 32, shardDmg: 50, sigil: 7, level: 'L3' },
     },
     passive: { per: 8, armor: 5 },
@@ -719,9 +726,9 @@ def({ id: 'greataxe', zh: '刑天．舞戚', en: 'Xingtian Wardancer', cat: 'mel
 // stance, release dashes 8 m through the horde (70 each) and 0.3 s later everything passed bursts (後斬 180); RMB held
 // 交虹 cross guard (-70 % frontal; a hit within 0.3 s of raising it = parry -> 霓返 8-cut flurry); Q 虹輪 (40 刃氣: six
 // spirit blades orbit 5 s, +10 % team damage within 4 m); hold Q 千刃蓮華 (twelve giant blades bloom out of a lotus,
-// close through the centre, spin and burst 600). Hidden until the refine stage releases it (?w=twinblades).
+// close through the centre, spin and burst 600). Released (shop + armory; ?w=twinblades).
 def({ id: 'twinblades', zh: '虹霓．雙絕', en: 'Hongni Prismedge', cat: 'melee', tier: 'mythic', line: 'shanhai', element: ['radiant'], model: 'twinblades',
-  price: 7900, hidden: true, wear: 0.15, dmg: 60, head: 1.5, rpm: 240, mode: 'melee', mag: 0, reserve: 0, draw: 0.45,
+  price: 7900, wear: 0.15, dmg: 60, head: 1.5, rpm: 240, mode: 'melee', mag: 0, reserve: 0, draw: 0.45,
   // shop card bars: the fastest premium melee (two blades), the dash and the parry are what the derived melee bars miss
   shopStats: [['傷害', 0.6], ['攻速', 1.0], ['機動', 1.0], ['範圍', 0.62], ['控場', 0.72]],
   icon: { roll: -90 },   // shop / HUD silhouette (ui/icons.js): the pair laid along the strip
@@ -748,7 +755,9 @@ def({ id: 'twinblades', zh: '虹霓．雙絕', en: 'Hongni Prismedge', cat: 'mel
     // violet), the projected blades (gold / violet)
     mat: {
       // the flats: dark mirror with a faint folded-steel (damascus) figure so the largest surface is never an empty slab
-      black_chrome: { color: '#26282e', rough: 0.12, env: 1.1, wood: { dark: '#17181c', light: '#464a54', scale: 42, marble: 1 } }, steel_bright: { color: '#b8bcc2', rough: 0.22, dStr: 0.12 },
+      // (lifted from #26282e / rough 0.12 / metal 1: the biggest surface rendered as a pure black slab in a dark room and
+      // the figure never showed; a quarter dielectric lets the key light draw the folded-steel figure under any sky)
+      black_chrome: { color: '#3a3e48', rough: 0.22, metal: 0.75, env: 1.15, wood: { dark: '#1e2128', light: '#7a8292', scale: 42, marble: 1 } }, steel_bright: { color: '#b8bcc2', rough: 0.22, dStr: 0.12 },
       // temper bands: a frosted fringe along the temper line (baked into the cavity channel, light cavCol = nioi)
       brass: { color: '#c79a4a', metal: 1, rough: 0.2, detail: 'brushed', dStr: 0.08, cavity: 1.2, cavCol: '#f2e2b8' }, steel_blued: { color: '#5a4a9a', rough: 0.22, dStr: 0.08, cavity: 1.2, cavCol: '#d6d0f0' },
       // cast metals: verdigris / tarnish pooled in the recesses (cavity from the bake), satin there, polished high points
@@ -756,11 +765,13 @@ def({ id: 'twinblades', zh: '虹霓．雙絕', en: 'Hongni Prismedge', cat: 'mel
       silver_aged: { color: '#aab2ba', rough: 0.32, cavity: 1.5, cavCol: '#1a1c2a', cavMetal: 0.4, wear: { color: '#eef2f6', metal: 1, rough: 0.1, amount: 0.9 } },
       leather_pebble: { color: '#d9d0bc', rough: 0.55, metal: 0, detail: 'stipple', dScale: 170, dStr: 1.25 },   // ray skin: a coarse granule field
       lacquer_red: { color: '#7c0f1a', rough: 0.24, env: 1.1 }, pearl: { color: '#eae6ee', rough: 0.18 },
-      crystal: { color: '#ffb08a', emissive: '#ff5a1a', glow: 0.7, env: 1.4, rough: 0.04 }, glass: { color: '#a890ff', emissive: '#7a4aff', glow: 0.7, env: 1.4, rough: 0.04, metal: 0.2 },
+      // the pearls are the focus: brighter than the fuller veins (veins ≤ 0.5 x in luminance; they read by colour)
+      crystal: { color: '#ffb08a', emissive: '#ff5a1a', glow: 1.15, env: 1.4, rough: 0.04 }, glass: { color: '#a890ff', emissive: '#7a4aff', glow: 1.2, env: 1.4, rough: 0.04, metal: 0.2 },
       obsidian: { color: '#0a0a0e', rough: 0.08 },
-      glow_vermilion: { emissive: '#ff5a1e', glow: 2.4 }, glow_purple: { emissive: '#9a5aff', glow: 2.6 },
+      glow_vermilion: { emissive: '#ff4a14', glow: 1.3 }, glow_purple: { emissive: '#8a4aff', glow: 1.45 },
       glow_gold: { emissive: '#ffd9a0', glow: 1.8 }, glow_ice: { emissive: '#d4c8ff', glow: 1.8 },
-      glow_orange: { emissive: '#ffb04a', glow: 3.0 }, glow_blue: { emissive: '#8a7aff', glow: 3.0 },
+      // projected blades: saturated 虹 / 霓 bodies (at 3.0 they tone-mapped to white); the white is the fx_edge hairline
+      glow_orange: { emissive: '#ff6a12', glow: 1.9 }, glow_blue: { emissive: '#6a34ff', glow: 2.1 },
     },
     hero: 'R_fx_pearl', crosshair: 'xh_twin', meters: ['arc', 'segments', 'ring'],
     ready: { sfx: 'ready_twinblades', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.4, glowMul: 1.5, idleExtra: 'twinblades_ready' } },
@@ -804,6 +815,191 @@ def({ id: 'twinblades', zh: '虹霓．雙絕', en: 'Hongni Prismedge', cat: 'mel
     chain: 0.4, recover: 0.9,
     dash: { hold: 0.18, max: 1.5, range: 8, time: 0.2, width: 1.4, pass: 70, after: 180, delay: 0.3, cd: 1.6, invuln: 0.1 },
     guard: { cone: 150, mul: 0.3, speedMul: 0.6, raise: 0.12, perfect: 0.18, rearm: 0.4, flurry: { n: 8, dur: 0.5, r: 3.2, dmg: 40 } },
+  } });
+
+// ---------------------------------------------------------------- 神兵 九子 M02 (docs/PREMIUM_WEAPONS.md M02, Appendix A)
+// 睚眥．裂魂: a ring-pommel long sabre with its cinnabar scabbard in the left hand (presentation + mechanics:
+// weapons/premium/yazi.js). Dual grip in the model only: the sabre (R_gun) and the scabbard (L_gun) are posed by the
+// weapon. The special drives its own attacks (mode 'melee' -> special.melee): LMB taps chain 三段斬 (95 / 95 / 160: a
+// diagonal cut, a flat cut, a lunging cleave), every target in the arc; RMB held 居合 (the blade goes home in 0.15 s; a hit
+// in the next 0.25 s = perfect parry -> a free full 一閃; else it charges 1.2 s in 3 rune stages, release = 一閃: a 6 m
+// dash-cut through everything in the lane, 180 -> 520); Q 睚眥必報 (4 s: melee damage -50 %, 200 % reflected, 18 s
+// cooldown); hold Q 裂魂 (怨氣 100 %: shadow-puppet swordsmen rise beside up to 6 targets, cut in turn, the 報 seal falls,
+// one draw through the middle 600). Released: in the shop and the armory (mythic frame, 7,700).
+def({ id: 'yazi', zh: '睚眥．裂魂', en: 'Yazi Soulrend', cat: 'melee', tier: 'mythic', line: 'jiuzi', element: ['demonic'], model: 'yazi', tpModel: 'yazi_tp',
+  price: 7700, wear: 0.15, dmg: 95, head: 1.5, rpm: 158, mode: 'melee', mag: 0, reserve: 0, draw: 0.35,
+  // shop card bars: the iai (to 520 through a lane), the parry and the dash are what the derived melee bars miss
+  shopStats: [['傷害', 0.62], ['攻速', 0.72], ['重擊', 0.95], ['機動', 0.9], ['控場', 0.8]],
+  icon: { roll: -90 },   // shop / HUD silhouette (ui/icons.js): laid along the strip, the point to the right
+  range: [2.6, 2.6, 1], speed: 5.3, knock: 1.8, stagger: 0.5, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
+  kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'yazi', shell: null, flash: null, tracer: 0,
+  // first person: the pivot (midway between the grip and the scabbard's mouth) low in the middle; both posed by yazi.js
+  vm: { hip: [0, -0.24, -0.4, 0, 0, 0] },
+  premium: {
+    element: ['demonic'], look: 'yazi',
+    // 睚眥: black lacquer and mirror steel, red gold (赤金), the cinnabar scabbard; crimson-crystal light, ember motes
+    palette: { base: '#121012', trim: '#c8902e', core: '#ff2a3a', rim: '#ff4b2b', mote: '#ffb070', accent: ['#9a1420'], twin: '#dfe6f0' },
+    rune: '#8c160c',   // (the rune shader lifts it x4: a deep red that stays red after tone mapping)
+    presets: { gold: 'pv_metal', gold_leaf: 'pv_metal', bronze_aged: 'pv_metal', bronze_dark: 'pv_metal', chrome: 'pv_metal', black_chrome: 'pv_metal', steel_bright: 'pv_metal', steel: 'pv_metal',
+      lacquer_red: 'pv_glaze', lacquer_black: 'pv_glaze', crystal: 'pv_crystal', glow_red: 'pv_energy', leather_pebble: 'pv_metal' },
+    pv: { pv_metal: { shine: 1.1, sweepT: 5 }, pv_glaze: { shine: 0.55, sweepT: 6, shardScale: 0, irid: 0, rimPower: 8 }, pv_energy: { veinFreq: 14, veinSpeed: 0.5, veinAxis: 0 } },
+    // per key: the lacquers carry a fine 斷紋 crackle (old lacquer), the blade's polish zones a slow cool sweep
+    pvKey: { gold: { rimPower: 10 }, gold_leaf: { rimPower: 10, leaf: 0.4, leafScale: 360 }, bronze_dark: { rimPower: 10, shine: 0.5 }, bronze_aged: { rimPower: 10, shine: 0.6 },
+      chrome: { rimPower: 14 }, black_chrome: { rimPower: 12, shine: 1.8, sweepT: 6 }, steel_bright: { rimPower: 12, shine: 1.2 }, steel: { rimPower: 12, shine: 0.8 }, leather_pebble: { shine: 0, rimPower: 40, flashMask: 0 },
+      lacquer_red: { shardScale: 230, shardPal: ['#6a0a14', '#6a0a14', '#6a0a14', '#6a0a14'], grout: '#3a0610', groutW: 0.022, rimPower: 12 },
+      lacquer_black: { shardScale: 140, shardPal: ['#121012', '#121012', '#121012', '#121012'], grout: '#2a1a12', groutW: 0.04, rimPower: 8 },
+      crystal: { coreTint: '#ff2a1a' } },
+    mat: {
+      // red gold with dark recesses (cavity from the bake) and bright rubbed high points
+      gold: { color: '#c8902e', rough: 0.26, metal: 1, detail: 'brushed', dScale: 70, dStr: 0.05, cavity: 1.4, cavCol: '#3a2410', wear: { color: '#f2c27a', metal: 1, rough: 0.14, amount: 0.75 } },
+      gold_leaf: { color: '#d9a548', rough: 0.22 },
+      // 烏銅 blackened bronze (the head, the guard): near-black, warm where hands polished it
+      bronze_dark: { color: '#4a3a2c', rough: 0.36, dScale: 220, dStr: 0.12, cavity: 1.3, cavCol: '#0c0806', wear: { color: '#b08a56', metal: 1, rough: 0.24, amount: 0.8 } },
+      bronze_aged: { color: '#7e5e32', rough: 0.44, env: 0.8, cavity: 1.6, cavCol: '#2e4a3c', cavMetal: 0.2 },
+      // the blade's polish: burnished dark mirror shinogi-ji, grey satin ji with a frosted nioi fringe (cavity), a white
+      // frosted temper band, a mirror edge
+      black_chrome: { color: '#30343b', rough: 0.09, metal: 1, env: 1.05 },
+      steel_bright: { color: '#a4a9b0', rough: 0.24, metal: 1, detail: 'brushed', dScale: 120, dStr: 0.04, cavity: 1.2, cavCol: '#eef1f5' },
+      steel: { color: '#e4e7ec', rough: 0.34, metal: 1, detail: 'brushed', dScale: 160, dStr: 0.03, env: 1.2 },
+      chrome: { color: '#eceff3', rough: 0.05, metal: 1 },
+      // aged ivory ray skin: the nodules are geometry; the bake yellows the cavities between them and the tops polish pale
+      leather_pebble: { color: '#b8a987', rough: 0.55, metal: 0, detail: 'stipple', dScale: 150, dStr: 0.9, cavity: 1.0, cavCol: '#6e5530', wear: { color: '#efe7d2', metal: 0, rough: 0.4, amount: 0.75 } },
+      // cinnabar urushi: a deep red with a crisp but low reflection (at env 1.3 the overcast sky washed it to pink)
+      lacquer_red: { color: '#6a0a14', rough: 0.28, env: 0.58 }, lacquer_black: { color: '#121012', rough: 0.3, env: 0.75 },
+      glaze_black: { color: '#0d0a0b', rough: 0.22, metal: 0 },   // the rune strips' floor (the glyphs are pv_rune light)
+      ceramic: { color: '#efebe2', rough: 0.78, metal: 0, detail: 'fabric', dScale: 260, dStr: 0.12 },   // the wrap's paper hishigami (washi)
+      // the ruby eyes are the focus: brighter than any other glow at rest (the runes and the edge stay under half)
+      crystal: { color: '#b4101c', emissive: '#ff1a10', glow: 0.9, env: 1.1, rough: 0.04 },
+      glow_red: { emissive: '#ff2a18', glow: 2.4 },
+    },
+    hero: 'R_fx_eyes', crosshair: 'xh_blade', meters: ['ring', 'timing'],
+    ready: { sfx: 'ready_yazi', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.4, glowMul: 1.5, idleExtra: 'yazi_ready' } },
+    // §1.17 idle tiers: below a third the rare idle (血振り, the blade flicked clean), then a glint run along the edge
+    idleLayers: [{ breathMul: 1, jitterHz: 0, jitterDeg: 0, glowMul: 1, idleExtra: 'yazi_flick', every: 11 }, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.15, glowMul: 1.15, idleExtra: 'yazi_glint', every: 7 }],
+    firstDraw: 'yazi_first', drawClip: 'yazi_draw', inspect: ['yazi_inspect'], rareInspect: 'yazi_inspect_rare',
+    killFx: 'KE_SOUL', killMark: 'km_yazi', dmgSkin: 'mythic', skillSkin: 'soulrend',
+    crisis: { name: '怒目', kind: 'counter', fx: 'yazi_crisis', sfx: 'yazi_crisis', flash: [1.3, 0.4, 0.34] },   // the blade draws itself, 360° (300)
+    aura: { type: 'headDmg', mul: 1.1, when: 'skill', source: ['yazi_ult'] },   // 報仇: team headshots +10 % for 4 s after 裂魂
+    twin: 'yazi_white', phases: ['liehun', 'bairen'],
+    showcase: ['yazi_first', 'fire:3', 'alt', 'tap', 'ult', 'yazi_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '三段斬', desc: '連點：斜斬 → 橫斬 → 突進劈（強擊退）' },
+      { key: 'hold RMB', zh: '居合', desc: '按住收刀蓄力 3 段，放開一閃 6 m 貫穿；收刀瞬間被打＝完美彈反並自動一閃' },
+      { key: 'Q', zh: '睚眥必報', desc: '4 秒內近戰傷害減半，反彈 200%（冷卻 18 秒）' }, { key: 'hold Q', zh: '裂魂', desc: '怨氣 100%（或 Q 再按 F）' },
+      { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'yazi',
+    meters: {
+      ult: { max: 100, onHit: 1, onKill: 1, onParry: 15, skillFill: false, hud: 'ring', label: '怨氣', src: '命中 +1、擊殺 +3（靈光飛回刀身）、完美彈反 +15（約 35 秒）' },
+      iai: { max: 100, hud: 'timing', label: '居合', color: '#ff4b2b', src: '按住右鍵收刀蓄力（白區＝彈反窗）' },   // live charge (display only; the stance's timing bar)
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q). 居合 is driven by the special itself (a held stance, not a cast)
+      alt: { id: 'yazi_iai', key: 'RMB', zh: '居合', desc: '按住收刀蓄力・放開一閃 6 m 貫穿 180→520・收刀 0.25 秒內被打＝完美彈反', hold: true, cost: 0, level: 'L2' },
+      tap: { id: 'yazi_vengeance', key: 'Q', zh: '睚眥必報', desc: '4 秒內近戰傷害 −50%・反彈 200%（Boss 50%）', cd: 18, dur: 4, mul: 0.5, reflect: 2, bossReflect: 0.5, level: 'L2' },
+      ult: { id: 'yazi_ult', key: 'hold Q', zh: '裂魂', desc: '皮影刀客立於 6 個目標旁各斬 150・報印落下・一閃穿心 600', meter: 'ult', range: 10,
+        cone: 70, max: 6, slash: 150, every: 0.1, pull: 3, final: 600, finalR: 6, invuln: 1.0, level: 'L4' },
+    },
+    combo: [
+      { id: 'kesa', dur: 0.38, hit: 0.14, dmg: 95, r: 2.6, arc: 110, knock: 1.8, stagger: 0.5 },
+      { id: 'yoko', dur: 0.38, hit: 0.14, dmg: 95, r: 2.6, arc: 110, knock: 1.8, stagger: 0.5 },
+      { id: 'kabuto', dur: 0.6, hit: 0.25, dmg: 160, r: 2.6, arc: 110, knock: 5.5, stagger: 1, heavy: true, lunge: 1.5 },   // single target ≈ 257 / s
+    ],
+    chain: 0.4, recover: 1.6,
+    // 居合: sheathe 0.15 s, perfect-parry window 0.25 s after it, charge to 1.2 s (stages 0.4 / 0.8 / 1.2), release = 一閃
+    iai: { sheathe: 0.15, perfect: 0.25, stages: [0.4, 0.8, 1.2], dmg: [180, 520], range: 6, width: 1.7, time: 0.15, echoes: 3, stun: 1.5, rearm: 0.35, invuln: 0.12 },
+  } });
+
+// ---------------------------------------------------------------- 異能 啟明工坊 E01 (docs/PREMIUM_WEAPONS.md §2 E01, Appendix A)
+// 春霆神戟．驚蟄: an industrial telescoping high-voltage halberd (presentation + mechanics: weapons/premium/chunting.js). It
+// runs its own trigger (mode 'channel' -> special.trigger): LMB held 放電 (wind-up 0.23 s, then arcs leap to the 3
+// nearest zombies within 7 m: 15 a tick, 10 ticks a second = 150/s each, 0.2 s stun; release crack 0.33 s); 雷能 is the
+// magazine (120: 12/s while discharging, back at 20/s after 1 s; dry = an automatic 2 s battery swap, R swaps early);
+// RMB tap 雷爆 (a thrust: a 3 m blast at 10 m or the first thing in the way, 260 + knock back 6, 15 雷能); RMB held 2 s
+// and released 驚蟄落雷 (the halberd telescopes out, the crescent swings down, it is thrown as a javelin: 1.2 s after it
+// lands a giant bolt falls on it — 1,600 in the middle, 400 to 6 m, 2 s stun — then it flies back; 60 雷能, 3.1 s lock);
+// Q 雷樁 (a lightning rod at the crosshair for 8 s: shots from anyone into zombies within 6 m have a 20 % chance of a
+// 40 arc; 20 s cooldown). Released (shop + armory, exotic frame); teammates see the third-person LOD chunting_tp.
+def({ id: 'chunting', zh: '春霆神戟．驚蟄', en: 'Thunderclap Halberd', cat: 'heavy', tier: 'exotic', line: 'qiming', element: ['storm'], model: 'chunting', tpModel: 'chunting_tp',
+  price: 7600, wear: 0.3, dmg: 15, head: 1, rpm: 600, mode: 'channel', mag: 120, reserve: Infinity, reload: 2.0, reloadEmpty: 2.0, draw: 0.8,
+  resource: { kind: 'mana', max: 120, regen: 20, label: '雷能', color: '#c9b8ff' },
+  range: [7, 7, 1], speed: 5.0, knock: 0.3, stagger: 0.3, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 12 },
+  kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'chunting', shell: null, flash: null, tracer: 0,
+  // shop card bars: auto-targeting arcs at three zombies, a 1,600 thunderbolt, stuns everywhere
+  shopStats: [['傷害', 0.62], ['射速', 0.9], ['範圍', 0.85], ['控場', 1.0], ['機動', 0.55]],
+  // first person: carried one-handed on the pistol grip, rolled 28° out so the receiver's left face (the 雷能 LED bar, the
+  // 高壓危險 plate) and the capacitor on top face the eye above the HUD block, the coils mid-right, the shaft rising
+  // steeply to the upper right with sections 2-3 run in, so the head (and the crescent riding a little open) reads big in
+  // the upper-right quarter, clear of the crosshair lane (chunting.js REST_EXT / BLADE_REST)
+  vm: { hip: [0.125, -0.15, -0.29, 31, -19, -28] },
+  chunting: {
+    discharge: { windup: 0.23, release: 0.33, range: 7, targets: 3, tick: 0.1, dmg: 15, stun: 0.2, drain: 12, delay: 1, regen: 20 },
+  },
+  premium: {
+    element: ['storm'], look: 'chunting',
+    // gunmetal + insulation black (60), hazard yellow / porcelain / copper (30), violet-white arcs (§1.15.1 v1.2: not Gungnir's
+    // carbon + gold line + cyan core); verdigris on the coil lugs
+    palette: { base: '#2a2d33', trim: '#e0b21a', core: '#c4b2ff', rim: '#f4f0ff', mote: '#8a5cff', accent: ['#3f6a58', '#c77a52', '#f3efe6'], twin: '#ffb02e', arc: '#d6ccff' },
+    // (premium.mat retunes only preset materials: the steels and the paint carry a quiet pv_metal / pv_glaze; the rubber and
+    // the polymers take a pv_metal with no sweep and an invisible rim only so their values can be zoned here)
+    presets: { steel: 'pv_metal', steel_bright: 'pv_metal', steel_dark: 'pv_metal', steel_blued: 'pv_metal', paint_yellow: 'pv_glaze', porcelain: 'pv_glaze', chrome: 'pv_metal', copper: 'pv_metal', glow_arc: 'pv_energy',
+      rubber: 'pv_metal', polymer: 'pv_metal', polymer_grip: 'pv_metal' },
+    pv: { pv_metal: { shine: 0.9, sweepT: 5 }, pv_glaze: { shine: 1.4, sweepT: 4.5, shardScale: 0, irid: 0.04, rimPower: 7 }, pv_energy: { veinFreq: 14, veinSpeed: 0.8, veinAxis: 0 } },
+    pvKey: { copper: { rimPower: 14, shine: 0.5, shineTint: [1, 0.82, 0.7] }, chrome: { rimPower: 12, shine: 1.6 }, porcelain: { rimPower: 9 },
+      steel: { rimPower: 16, shine: 0.45, shineTint: [0.9, 0.9, 1] }, steel_blued: { rimPower: 12, shine: 0.55, shineTint: [0.86, 0.84, 1] }, steel_dark: { rimPower: 18, shine: 0.3 }, steel_bright: { rimPower: 14, shine: 0.9 }, paint_yellow: { rimPower: 30, shine: 0.25, flashMask: 0 },
+      rubber: { rimPower: 40, shine: 0, flashMask: 0 }, polymer: { rimPower: 40, shine: 0, flashMask: 0 }, polymer_grip: { rimPower: 40, shine: 0, flashMask: 0 } },
+    // value zoning (refine pass): gunmetal receiver with bright edge wear, a cooler darker steel for the panels and fittings, a
+    // satin spear (grind lines along it, a faint violet temper) instead of a mirror, dead-matte insulation rubber, a warmer grey
+    // polymer for the grip and the cell; the hazard paint scuffs towards the rubber under it, not to bare metal
+    mat: {
+      steel: { color: '#565a62', rough: 0.46, metal: 0.64, detail: 'cast', dScale: 70, dStr: 0.14, env: 1.1, wear: { color: '#a9adb4', metal: 1, rough: 0.28, amount: 1 } },
+      steel_dark: { color: '#33373f', rough: 0.52, metal: 0.6, detail: 'cast', dScale: 120, dStr: 0.1, wear: { color: '#8c9198', metal: 1, rough: 0.3, amount: 0.8 } },
+      steel_bright: { color: '#c8ccd2', rough: 0.22, metal: 1 },
+      steel_blued: { color: '#5c606e', rough: 0.42, metal: 0.78, detail: 'brushed', dScale: 90, dStr: 0.3, env: 1.0 },
+      paint_yellow: { color: '#e0b21a', rough: 0.45, wear: { color: '#2a2622', metal: 0, rough: 0.8, amount: 1 } },
+      rubber: { color: '#141414', rough: 0.93, metal: 0, env: 0.55, detail: 'stipple', dScale: 140, dStr: 0.32 },
+      polymer_grip: { color: '#35322d', rough: 0.62, metal: 0, env: 0.8, detail: 'stipple', dScale: 160, dStr: 0.5 },
+      polymer: { color: '#403d37', rough: 0.58, metal: 0, env: 0.85, detail: 'stipple', dScale: 90, dStr: 0.35 },
+      patina_bronze: { color: '#3f6a58' },
+      porcelain: { color: '#e9e3d6', rough: 0.2, env: 1.1 }, copper: { color: '#c77a52', rough: 0.3, cavity: 1.4, cavCol: '#3f6a58', cavMetal: 0.15 },
+      obsidian: { color: '#0b0a12', rough: 0.1 },
+      glow_arc: { emissive: '#c0acff', glow: 1.25 },   // ≤ HDR 3 at rest (§1.1 #2): the arcs and the charge multiply it up (chunting.js view)
+      glow_white: { emissive: '#c0acff', glow: 0.55 },  // the coil cores: under half the arc glow at rest, so the capacitor stays the hero (view lifts them with the charge)
+    },
+    hero: 'fx_cap', crosshair: 'xh_bolt', meters: ['arc', 'segments'],
+    // "ready" = 雷樁 off cooldown (no ultimate): the fanfare when it comes back, no 2.5 s nagging, a crackle every 8 s
+    ready: { sfx: 'ready_chunting', remind: false, layer: { breathMul: 1.3, jitterHz: 0.5, jitterDeg: 0.3, glowMul: 1.3, idleExtra: 'chunting_ready', every: 8 } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.15, glowMul: 1.15, idleExtra: 'chunting_glint', every: 7 }],   // §1.17 idle tiers
+    firstDraw: 'chunting_first', drawClip: 'chunting_draw', inspect: ['chunting_inspect'], rareInspect: 'chunting_inspect_rare', reload: 'chunting_reload',
+    killFx: 'KE_CHAR', dmgSkin: 'chunting',   // exotic: the generic kill mark in the element colour (§1.9 #8)
+    showcase: ['chunting_draw', 'fire:2', 'alt', 'throw', 'tap', 'chunting_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'hold LMB', zh: '放電', desc: '電弧自動連到 7 m 內最多 3 隻（每隻每秒 150・暈眩）；耗雷能' },
+      { key: 'RMB', zh: '雷爆', desc: '點按：往前一刺，10 m 處雷爆 260＋擊退（15 雷能）' },
+      { key: 'hold RMB', zh: '驚蟄落雷', desc: '按住 2 秒（兩段）放開：擲戟，落點 1.2 秒後巨雷 1,600＋6 m 400（60 雷能）' },
+      { key: 'Q', zh: '雷樁', desc: '準星處插避雷樁 8 秒：樁周 6 m 被射擊的殭屍 20% 追加電弧（冷卻 20 秒）' },
+      { key: 'R', zh: '換電池', desc: '雷能停 1 秒後自己回；R 立即換滿（2 秒）' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'chunting',
+    meters: {
+      // 雷能 is the magazine (ws.ammo): the meter only mirrors it for the arc gauge and the premium glow
+      thunder: { max: 120, start: 120, hud: 'arc', label: '雷能', color: '#c9b8ff', skillFill: false, src: '放電每秒耗 12・停 1 秒後每秒回 20・耗盡自動換電池' },
+      charge: { max: 2, hud: 'segments', segments: 2, label: '驚蟄', color: '#f4f0ff', src: '按住右鍵蓄力兩段' },   // live stage (display only)
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q). 雷能 costs come out of the magazine (energy), not the meters
+      alt: { id: 'chunting_burst', key: 'RMB', zh: '雷爆', desc: '點按：10 m 處 3 m 雷爆 260＋擊退 6・耗 15 雷能（按住 2 秒＝驚蟄落雷）', cost: 0, energy: 15,
+        range: 10, r: 3, dmg: 260, knock: 6, level: 'L2' },
+      throw: { id: 'chunting_throw', key: 'hold RMB', zh: '驚蟄落雷', desc: '擲戟：落點 1.2 秒後巨雷・中心 1,600、6 m 400、暈眩 2 秒・耗 60 雷能', cost: 0, energy: 60,
+        speed: 20, range: 26, delay: 1.2, back: 1.5, dmg: 1600, coreR: 2, ring: 400, ringR: 6, stun: 2, lock: 3.1, charge: 2.0, stages: [1.0, 2.0], level: 'L3' },   // (not `hold`: that makes a channel)
+      tap: { id: 'chunting_rod', key: 'Q', zh: '雷樁', desc: '準星處插避雷樁 8 秒：隊友射擊樁周 6 m 的殭屍 20% 追加電弧 40', cd: 20, dur: 8, r: 6, chance: 0.2, dmg: 40, range: 25, level: 'L2' },
+    },
   } });
 
 // ---------------------------------------------------------------- melee

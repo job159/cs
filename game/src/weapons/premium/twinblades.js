@@ -80,7 +80,7 @@ function ssOf(ws) {
     lockT: 0, combos: 0, dash: null, dashCd: 0, ct: 0, guard: null, guardEnd: -9, storm: null, ultK: null, q: [], view: { w: null },
     hum: null, chargeSnd: null, readyN: false, readyT: 0, finalWave: -1, lastHand: 'L',
     pose: { R: { p: V3(), q: new THREE.Quaternion() }, L: { p: V3(), q: new THREE.Quaternion() } }, poseOK: false,
-    kick: { R: { x: 0, v: 0, y: 0, w: 0 }, L: { x: 0, v: 0, y: 0, w: 0 } },
+    kick: { R: { x: 0, v: 0, y: 0, w: 0 }, L: { x: 0, v: 0, y: 0, w: 0 } }, dev: DEV,
   });
 }
 function later(ws, sec, fn) { ssOf(ws).q.push([sec, fn]); }
@@ -99,8 +99,10 @@ const floorAt = (g, p) => { const y = g.world?.collision?.floorBelow?.(_f.set(p.
 // KE_PRISM cut pairs, the dash path, flying X waves, the real sabres for the ult throw
 function sys(g) {
   if (g._tb) return g._tb;
-  const S = g._tb = { cuts: [], cutPool: [], kf: 0, ck: [], path: null, blades: null, update: (dt) => sysUpdate(g, S, dt) };
+  const S = g._tb = { cuts: [], cutPool: [], slashPool: [], kf: 0, ck: [], path: null, blades: null, update: (dt) => sysUpdate(g, S, dt) };
   for (let i = 0; i < 3; i++) { const m = cutPair(); g.scene.add(m); S.cutPool.push(m); }
+  for (let i = 0; i < 6; i++) { const m = cutPair(); g.scene.add(m); S.slashPool.push(m); }
+  S.screenX = cutPair(); g.camera.add(S.screenX);                // the after-cut X across the view
   S.path = pathMesh(); g.scene.add(S.path);
   g.systems.push(S);
   // the real sabres (world materials) for the 千刃蓮華 throw: R_gun / L_gun cut out of the model, loaded once per game
@@ -129,15 +131,15 @@ function sysUpdate(g, S, dt) {
   S.kf = 0;
   for (let i = S.ck.length - 1; i >= 0; i--) if ((S.ck[i].t -= dt) <= 0) S.ck.splice(i, 1);
   for (let i = S.cuts.length - 1; i >= 0; i--) {
-    const c = S.cuts[i];
+    const c = S.cuts[i], T = c.T || CUT_T;
     c.t += dt;
     for (const [k, m] of c.mesh.userData.mats.entries()) {
-      const tt = c.t - k * 0.05;
-      m.uniforms.uT.value = clamp(tt / 0.07, 0, 1);
-      m.uniforms.uFade.value = tt < 0.18 ? 1 : Math.max(0, 1 - (tt - 0.18) / 0.22);
+      const tt = c.t - k * (c.slash ? 0.02 : 0.05);
+      m.uniforms.uT.value = clamp(tt / T.ramp, 0, 1);
+      m.uniforms.uFade.value = tt < T.hold ? 1 : Math.max(0, 1 - (tt - T.hold) / T.fade);
     }
     if (c.z) c.mesh.position.copy(c.z.pos).add(c.off);
-    if (c.t >= 0.48) { c.mesh.visible = false; S.cuts.splice(i, 1); }
+    if (c.t >= T.end) { c.mesh.visible = false; S.cuts.splice(i, 1); }
   }
 }
 
@@ -214,6 +216,7 @@ function sweep(ws, g, c, hand) {
     const res = strike(ws, g, z, c.dmg, dir, { knock: c.knock, stagger: c.stagger, sever: c.id === 'x' ? SEVER_HI : null, tag: c.id === 'x' ? 'cross' : 'cut', head, light: c.id !== 'x', blood: n < 3 ? 1 : 0.3 });
     n++; if (head) heads++;
     if (res?.killed) kills++;
+    else if (n <= 4) slashOn(g, z, hand, c.id);              // the cut drawn across the body (a kill gets the KE X)
     hitBurst(g, zc, dir, hand, n <= 3 ? 1 : 0.45, n <= 1 ? 1 : n <= 3 ? 0.5 : 0);
     if (n <= 3) sfx(g, 'twinblades_hit_flesh', { pos: zc, volume: 0.8 - n * 0.1, pitch: (hand === 'L' ? 1.1 : 0.95) + R() * 0.15, delay: (n - 1) * 0.015 });
     if (res?.killed && kills <= 2) sfx(g, 'twinblades_kill', { pos: zc, volume: 0.6, delay: (kills - 1) * 0.04 });
@@ -222,6 +225,7 @@ function sweep(ws, g, c, hand) {
   if (n) {
     g.arsenal?._trailHit?.();                              // §1.17 the rest of the cut burns in its colour
     edgeSparks(g, hand, 8 + Math.min(10, n * 3));
+    tipFlare(g, hand, heavy ? 1.4 : 1);
     stop(g, heavy ? (kills >= 2 ? 0.1 : 0.08) : kills >= 2 || (heads && kills) ? 0.06 : 0.04);
     shake(g, (heavy ? 0.2 : 0.07) + Math.min(heavy ? 0.15 : 0.08, n * 0.03));
     g.punch?.impulse?.((heavy ? -1.8 : -0.7) * 0.0175, sweepDir * 0.6 * 0.0175, sweepDir * 1.2 * 0.0175);
@@ -260,6 +264,57 @@ function edgeSparks(g, hand, n) {
     }
   }
 }
+/**
+ * The contact frame on the blade itself: a hot prism star at the point, a ring of spectral sparks, and a one-frame
+ * smear (short streaks laid along the blade, flung with the point's speed)
+ */
+function tipFlare(g, hand, k = 1) {
+  const vm = g.vm, P = g.fx?.particles;
+  if (!P) return;
+  for (const H of hand === 'X' ? ['R', 'L'] : [hand]) {
+    const C = COLS[H], t = vm.socketCam('tip_' + SIDE(H), _a), b = vm.socketCam('base_' + SIDE(H), _b);
+    if (!t || !b) continue;
+    const v = ssOf(g.arsenal.current).view.tipV?.[H] || _c.set(0, 0, 0);
+    // the star sits a little in from the point (the part of the edge that bit)
+    const s = _d.copy(t).lerp(b, 0.12);
+    P.spawn({ additive: true, vm: true, x: s.x, y: s.y, z: s.z, life: 0.09, size: 0.05 * k, size1: 0.1 * k, color: [...WHITE, 1], color1: [...C.body, 0], frame: FRAME.glint, rot: R() * 6 });
+    P.spawn({ additive: true, vm: true, x: s.x, y: s.y, z: s.z, life: 0.12, size: 0.07 * k, size1: 0.13 * k, color: [...C.body, 0.8], color1: [...C.tail, 0], frame: FRAME.glow });
+    for (let i = 0; i < 12 * k; i++) {
+      const a = R() * 6.283, sp = 0.5 + R() * 0.9;
+      P.spawn({ additive: true, vm: true, x: s.x, y: s.y, z: s.z, vx: Math.cos(a) * sp + v.x * 0.15, vy: Math.sin(a) * sp + v.y * 0.15, vz: 0.1, life: 0.1 + R() * 0.1,
+        size: 0.0035, stretch: 0.025, color: [...(i % 3 ? spec(R(), 2.6) : WHITE), 1], color1: [...C.tail, 0], frame: FRAME.spark, gravity: 1.2, drag: 2 });
+    }
+    // smear: a sheet of streaks along the blade, one frame long
+    for (let i = 0; i < 9; i++) {
+      const u = 0.25 + i / 8 * 0.8, x = b.x + (t.x - b.x) * u, y = b.y + (t.y - b.y) * u, z = b.z + (t.z - b.z) * u;
+      P.spawn({ additive: true, vm: true, x, y, z, vx: v.x * 0.35 * u, vy: v.y * 0.35 * u, vz: v.z * 0.35 * u, life: 0.05, size: 0.006, stretch: 0.06, color: [...C.core, 0.9], color1: [...C.body, 0], frame: FRAME.spark });
+    }
+  }
+}
+// screen angle of each cut's stroke on a body (the line drawn along it), radians from +x (camera right)
+const CUT_ANG = { r1: -2.4, l1: -0.74, r2: Math.PI, l2: 0.72, flurry: 0 };
+/** the cut drawn across a body that took it (warm 虹 / cool 霓, a pair for 交虹): 0.1 s, the KE_PRISM line, smaller */
+function slashOn(g, z, hand, id) {
+  const S = sys(g), cam = g.camera, c = z.center(V3());
+  const m = S.slashPool.find((x) => !x.visible) || S.cuts.find((x) => x.slash)?.mesh;
+  if (!m) return;
+  const old = S.cuts.findIndex((x) => x.mesh === m); if (old >= 0) S.cuts.splice(old, 1);
+  m.quaternion.copy(cam.quaternion);
+  const L = 0.62 + R() * 0.15, j = (R() - 0.5) * 0.25;
+  const pair = hand === 'X' ? [[0, 0.75 + j], [1, -0.75 + j]] : [[hand === 'L' ? 1 : 0, (CUT_ANG[id] ?? 0) + j]];
+  m.children.forEach((ch) => { ch.visible = false; });
+  for (const [ci, ang] of pair) {
+    const mesh = m.children[ci];
+    mesh.visible = true;
+    mesh.rotation.set(0, 0, ang);
+    mesh.position.set(-Math.cos(ang) * L / 2, -Math.sin(ang) * L / 2, 0);
+    mesh.scale.set(L, 0.11, 1);
+  }
+  m.position.copy(c).addScaledVector(_a.copy(c).sub(cam.position).normalize(), -0.25);   // in front of the body
+  m.visible = true;
+  S.cuts.push({ mesh: m, t: 0, z, off: m.position.clone().sub(z.pos), slash: true, T: SLASH_T });
+}
+const CUT_T = { ramp: 0.07, hold: 0.18, fade: 0.22, end: 0.48 }, SLASH_T = { ramp: 0.035, hold: 0.07, fade: 0.1, end: 0.2 };
 /** prism sparks, a coloured streak, blood chunks where the edge bites (gk: the glint, thinned on multi-hits) */
 function hitBurst(g, p, dir, hand, k = 1, gk = 1) {
   const P = g.fx?.particles;
@@ -276,17 +331,19 @@ function hitBurst(g, p, dir, hand, k = 1, gk = 1) {
       frame: FRAME.rock, lit: true, gravity: 12, spin: (R() - 0.5) * 16, rot: R() * 6, collide: true, bounce: 0.2 });
   }
   if (gk > 0) P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.1, size: 0.3 * k * gk, size1: 0.5 * k * gk, color: [...WHITE, 0.85], color1: [0, 0, 0, 0], frame: FRAME.glint, rot: R() * 6 });
-  if (gk > 0) P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.16, size: 0.26 * k, size1: 0.55 * k, color: [...(hand === 'L' ? NI.body : HONG.body), 0.55], color1: [0, 0, 0, 0], frame: FRAME.glow });
+  if (gk > 0) P.spawn({ additive: true, x: p.x, y: p.y, z: p.z, life: 0.14, size: 0.18 * k, size1: 0.36 * k, color: [...(hand === 'L' ? NI.body : HONG.body), 0.5], color1: [0, 0, 0, 0], frame: FRAME.glow });
 }
 /** KE_PRISM: a warm and a cool cut crossing on the body, prism chips; the n-th kill of a frame gets less */
 function prismKill(g, z, dir, n = 1) {
   const S = sys(g), cam = g.camera, c = z.center(V3());
-  const m = n <= 2 ? S.cutPool.find((x) => !x.visible) || S.cuts.shift()?.mesh : null;
+  let m = n <= 2 ? S.cutPool.find((x) => !x.visible) : null;
+  if (!m && n <= 2) { const i = S.cuts.findIndex((x) => !x.slash); if (i >= 0) m = S.cuts.splice(i, 1)[0].mesh; }
   if (m) {
     const L = 0.9 + R() * 0.3;
     m.quaternion.copy(cam.quaternion);
     const [m0, m1] = m.children;
     for (const [mesh, ang] of [[m0, 0.75 + (R() - 0.5) * 0.3], [m1, -0.75 + (R() - 0.5) * 0.3]]) {
+      mesh.visible = true;
       mesh.rotation.set(0, 0, ang);
       mesh.position.set(-Math.cos(ang) * L / 2, -Math.sin(ang) * L / 2, 0);
       mesh.scale.set(L, 0.16, 1);
@@ -302,9 +359,10 @@ function prismKill(g, z, dir, n = 1) {
       life: 0.6 + R() * 0.5, size: 0.03 + R() * 0.03, size1: 0.006, color: [...spec(R(), 2.2), 1], color1: [0.3, 0.2, 0.5, 0], frame: i % 2 ? FRAME.glint : FRAME.glow, drag: 1.3, spin: (R() - 0.5) * 5, rot: R() * 6 });
   }
   if (n > 3) return;
+  // a small star where the cuts cross (a body-sized pale glint and a lavender light washed whole packs pale violet)
   const gk = 1 / (1 + 0.6 * (n - 1));
-  P?.spawn({ additive: true, x: c.x, y: c.y, z: c.z, life: 0.18, size: 0.7 * gk, size1: 1.1 * gk, color: [1.4, 1.2, 1.8, 0.7], color1: [0, 0, 0, 0], frame: FRAME.glint, rot: R() * 6 });
-  if (n <= 1) g.fx?.lights?.flash?.(c, '#c8a8ff', 1.1, 2.2, 0.1);
+  P?.spawn({ additive: true, x: c.x, y: c.y, z: c.z, life: 0.14, size: 0.32 * gk, size1: 0.55 * gk, color: [2.2, 1.9, 1.6, 0.8], color1: [0, 0, 0, 0], frame: FRAME.glint, rot: R() * 6 });
+  if (n <= 1) g.fx?.lights?.flash?.(c, R() < 0.5 ? '#ff9a50' : '#8a7aff', 0.6, 1.3, 0.08);
 }
 
 // ------------------------------------------------------------------------------------------ the blade pose layer
@@ -327,11 +385,12 @@ const EASE = {
   linear: (t) => t, in: (t) => t * t, out: (t) => 1 - (1 - t) * (1 - t), inOut: (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
   in3: (t) => t * t * t, out3: (t) => 1 - (1 - t) ** 3, outBack: (t) => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2; }, snap: (t) => (t < 1 ? 0 : 1),
 };
-// rest poses (camera space): 虹 standing up on the right, the flat half to the eye, the edge out; 霓 lower left,
-// reaching forward and out, its edge out to the left -- the middle of the screen stays open between them
+// rest poses (camera space): both canted in, tips towards the upper middle (an open A round the crosshair), the flats
+// and the dragon heads in profile to the eye (eye + pearl read), edges out; the fists low and wide, mostly under the
+// frame (seen from behind they were two black balls over a quarter of the screen); 虹 a little taller than 霓
 const IDLE = {
-  R: { p: [0.15, -0.2, -0.42], d: N3(0.06, 0.8, -0.6), m: N3(0.95, 0.05, -0.3) },
-  L: { p: [-0.17, -0.215, -0.4], d: N3(-0.52, 0.56, -0.64), m: N3(-0.75, -0.2, -0.62) },
+  R: { p: [0.2, -0.24, -0.42], d: N3(-0.11, 0.8, -0.58), m: N3(1, 0.09, -0.065) },
+  L: { p: [-0.205, -0.25, -0.41], d: N3(0.15, 0.76, -0.62), m: N3(-1, 0.1, -0.08) },
 };
 const IDLE_Q = { R: bq(IDLE.R.d, IDLE.R.m), L: bq(IDLE.L.d, IDLE.L.m) };
 const _iq = new THREE.Quaternion(), _ie = new THREE.Euler();
@@ -430,6 +489,12 @@ function view(ws, g, dt) {
     vm.supportGrip = { ...vm.supportGrip, pose: 'fist' };
     vm.arms?.setPose('R', 'fist', 0.05); vm.arms?.setPose('L', 'fist', 0.05);
     ss.poseOK = false;
+    // the viewmodel lights every glow_* part at the stock intensity (7-8) whatever the def says: per-key factors bring
+    // them to the def's (veins 1.3, edges 1.8, projected blades ~2: at 8 the veins outshone the pearls and the
+    // projected blades tone-mapped to white)
+    v.gk = {};
+    const mats = ws.def.premium?.mat || {};
+    for (const { m, base } of w.glowMats || []) { const k = m.userData.preset, d = mats[k]?.glow; if (d != null && base > 0) v.gk[k] = d / base; }
     warm(g);
   }
   v.t += dt;
@@ -455,13 +520,18 @@ function view(ws, g, dt) {
   const jaw = charging ? 1 : v.readyFlash > 0 ? 0.8 : guarding ? 0.4 : 0;
   for (const H of ['R', 'L']) { const p = psOf(vm, H + '_fx_jaw'); if (!p.tw) p.v = damp(p.v || 0, jaw, jaw > (p.v || 0) ? 20 : 8, dt); }
   XH.guard = guarding; XH.charge = charging; XH.storm = !!ss.storm;
-  // ---- glow: the pearls breathe (0.6 Hz, faster when ready), veins step up in the stance
-  const G = vm._glowMat;
+  // ---- glow: the pearls breathe (0.6 Hz, faster when ready), veins step up in the stance; at rest the pearls stay
+  // the brightest thing on the pair (veins and edges ≤ 0.5 x, the card's focus rule), ready lifts the pearls only
+  const G = vm._glowMat, gk = (k) => v.gk?.[k] ?? 1;
   if (G) {
     const br = 0.5 + 0.5 * Math.sin(v.t * (readyIdle ? 7.5 : 3.8));
-    G.crystal = G.glass = (readyIdle ? 1.25 : 1) * (0.8 + 0.3 * br) * (v.readyFlash > 0 ? 1.6 : 1);
-    G.glow_vermilion = G.glow_purple = charging ? 1.6 + 0.4 * br : readyIdle ? 1.2 : 1;
-    G.glow_gold = G.glow_ice = charging || guarding ? 1.5 : 1;
+    // (pv_energy scales the glow parts by the charge: ~0.23 at rest, 1 + pulses and a x1.5 ready layer when ready --
+    // so the veins get more at rest and less when ready, where the pearls must stay on top)
+    const pearl = (readyIdle ? 1.5 : 1) * (0.85 + 0.3 * br) * (v.readyFlash > 0 ? 1.6 : 1), vein = charging ? 2.5 + 0.5 * br : readyIdle ? 0.6 : 1.8, edge = charging ? 2.2 : guarding ? 1.1 : readyIdle ? 0.8 : 1.5;
+    G.crystal = gk('crystal') * pearl; G.glass = gk('glass') * pearl;
+    G.glow_vermilion = gk('glow_vermilion') * vein; G.glow_purple = gk('glow_purple') * vein;
+    G.glow_gold = gk('glow_gold') * edge; G.glow_ice = gk('glow_ice') * edge;
+    G.glow_orange = gk('glow_orange'); G.glow_blue = gk('glow_blue');
   }
   // ---- prism motes drifting off the edges (idle ≤ 8; in the stance they stream towards the points)
   const P = g.fx?.particles;
@@ -502,6 +572,7 @@ function startSwing(ws, g, step) {
   sfx(g, c.hand === 'X' ? 'twinblades_swing_cross' : c.hand === 'L' ? 'twinblades_swing_l' : 'twinblades_swing_r', { volume: 0.9, pitch: 0.95 + R() * 0.1, delay: c.hit * 0.4 });
   XH.flash = c.hand; XH.flashT = 0.12; XH.step = step + 1;
   ss.lastHand = c.hand;
+  if (c.hand !== 'X') bladeKick(ws, c.hand === 'R' ? 'L' : 'R', -0.75);   // the resting blade flicks ~6° (not frozen)
   g.noise?.(g.camera.position, 10);
   // the view rolls a hair towards the cutting side
   if (g.punch && clipComfort.shake) g.punch.impulse(0, 0, (c.hand === 'R' ? -1 : c.hand === 'L' ? 1 : 0) * 0.6 * 0.0175);
@@ -544,7 +615,10 @@ function releaseDash(ws, g) {
   if (!pl) { ss.mode = 'idle'; return; }
   const to = V3(), len = dashTarget(ws, g, to), from = pl.pos.clone();
   const dir = V3().subVectors(to, from).setY(0).normalize();
-  ss.dash = { from, to, dir, len, t: 0, T: p.time * Math.max(0.5, len / p.range), passed: new Set(), list: [], landed: false };
+  const T = p.time * Math.max(0.5, len / p.range), t0 = Math.max(0.03, T - 0.15);
+  // the iai pass-through turn (see dashUpdate) only when the lane holds someone to cut
+  const expect = laneCount(g, from, to, p.width);
+  ss.dash = { from, to, dir, len, t: 0, T, passed: new Set(), list: [], landed: false, turn: expect && clipComfort.autoTurn !== false ? -TURN : 0, turnT0: t0, turnDur: T - t0 + 0.1, yawDone: 0 };
   ss.mode = 'dash'; ss.t = 0; ss.fresh = false;
   pl.onGround = false;
   if (g.status) g.status.invuln = Math.max(g.status.invuln || 0, ss.dash.T + p.invuln);
@@ -558,11 +632,30 @@ function releaseDash(ws, g) {
   startSkill(g, ev, { ws, local: true });
   g.net?.sendSkill?.(ev);
 }
+const TURN = 175 * Math.PI / 180;
+/** alive zombies inside the dash lane (from -> to, width w) */
+function laneCount(g, a, b, w) {
+  const sx = b.x - a.x, sz = b.z - a.z, L2 = Math.max(1e-6, sx * sx + sz * sz);
+  let n = 0;
+  for (const z of g.zombies?.list || []) {
+    if (!z.alive) continue;
+    const u = clamp(((z.pos.x - a.x) * sx + (z.pos.z - a.z) * sz) / L2, 0, 1);
+    if (Math.hypot(z.pos.x - a.x - sx * u, z.pos.z - a.z - sz * u) <= w / 2 + (z.radius ?? 0.4) && Math.abs(z.pos.y - a.y) < 2) n++;
+  }
+  return n;
+}
 /** the dash: the controller is steered along the line (walls still resolve); every body within the lane is cut once */
 function dashUpdate(ws, g, dt) {
   const ss = ssOf(ws), D = ss.dash, pl = g.player, p = ws.def.special.dash;
   if (!D || !pl) return;
   D.t += dt;
+  // iai pass-through: over the last 0.15 s of the dash and 0.1 s after it the view swings 175° round (to the right,
+  // the way the draw-cut went) to face the row it cut through, so the 後斬 bursts in front of the eye
+  // (comfort: clipComfort.autoTurn = false keeps the heading; the after-cut then draws a full-screen X instead)
+  if (D.turn) {
+    const u = clamp((D.t - D.turnT0) / D.turnDur, 0, 1), e = u * u * u * (u * (6 * u - 15) + 10), y = D.turn * e;
+    pl.yaw += y - D.yawDone; D.yawDone = y;
+  }
   const u2 = Math.min(1, (D.t + dt) / D.T);
   const h = Math.max(dt, 1 / 240);
   const nx = D.from.x + (D.to.x - D.from.x) * u2, nz = D.from.z + (D.to.z - D.from.z) * u2, ny = D.from.y + (D.to.y - D.from.y) * u2;
@@ -591,11 +684,11 @@ function dashUpdate(ws, g, dt) {
     ss.mode = 'after'; ss.t = 0;
     stop(g, 0.03);
     // 後斬 a beat later: every body passed bursts at once
-    const list = D.list.slice();
-    later(ws, p.delay, () => afterCut(ws, g, list, D.dir.clone()));
+    const list = D.list.slice(), turned = !!D.turn;
+    later(ws, p.delay, () => afterCut(ws, g, list, D.dir.clone(), turned));
   }
 }
-function afterCut(ws, g, list, dir) {
+function afterCut(ws, g, list, dir, turned = false) {
   const p = ws.def.special.dash, ss = ssOf(ws);
   const pts = [];
   let n = 0, kills = 0;
@@ -603,6 +696,7 @@ function afterCut(ws, g, list, dir) {
     if (!z.alive) continue;
     const zc = z.center(V3()), d = V3().copy(dir).addScaledVector(_c.set((R() - 0.5), 0.3, (R() - 0.5)), 0.6).normalize();
     pts.push([zc.x, zc.y, zc.z]);
+    if (n < 6) afterColumn(g, z, n);
     const res = strike(ws, g, z, p.after, d, { knock: 3.2, stagger: 1, sever: SEVER_ANY, tag: 'after', skill: 'twinblades_dash', explosive: n < 3, blood: n < 3 ? 1 : 0.3 });
     if (res?.killed) kills++;
     if (!res?.killed) prismCutAt(g, z, n);
@@ -613,28 +707,44 @@ function afterCut(ws, g, list, dir) {
   const ev = { type: 'skill', id: 'twinblades_after', w: ID, slot: 'fx', seed: (R() * 2147483647) | 0, pos: pts[0] || [0, 0, 0], dir: [dir.x, 0, dir.z], by: g.localId, ph: 0, pts };
   if (pts.length) { g.net?.sendSkill?.(ev); }
   sfx(g, 'twinblades_aftercut', { volume: 1 });
-  if (n) screenSlash(g);
+  if (n) screenSlash(g, turned ? 0.7 : 1.6);
+  if (n && clipComfort.overlay) g.fx?.overlay?.radial?.(0.5, 0.15, { r0: 0.3, density: 0.32, thin: 0.55 });
   if (n) {
     stop(g, kills >= 2 ? 0.1 : 0.08);
-    shake(g, 0.22 + Math.min(0.15, n * 0.03));
+    shake(g, 0.22 + Math.min(0.08, n * 0.02));
     g.punch?.impulse?.(-1.2 * 0.0175, 0, 0);
     haptic(40); setTimeout(() => haptic(40), 100);
     sfx(g, 'twinblades_hit', { volume: 1 });
   }
   ss.dashCd = p.cd;
 }
-/** two long slash streaks crossing the screen in the viewmodel layer (warm high-left to low-right, cool the other way) */
-function screenSlash(g) {
-  const P = g.fx?.particles;
-  if (!P || !clipComfort.overlay) return;
-  for (const [C, sx, sy] of [[HONG, -1, 1], [NI, 1, 1]]) {
-    for (let i = 0; i < 3; i++) {
-      const k = 0.7 + i * 0.15, x0 = sx * 0.26 * k, y0 = sy * 0.15 * k;
-      P.spawn({ additive: true, vm: true, x: x0, y: y0, z: -0.42, vx: -sx * 2.6, vy: -sy * 1.5, vz: 0, delay: i * 0.02, life: 0.16, size: 0.006 + i * 0.002, stretch: 0.09,
-        color: [...(i ? C.core : WHITE), 1], color1: [...C.body, 0], frame: FRAME.spark, drag: 3 });
+/**
+ * The after-cut on the screen: a warm and a cool slash crossing the view (k 1.6 = edge to edge, when the view did not
+ * turn round and the bursts are behind), drawn as two KE cut lines on the camera, plus a pale prism tint
+ */
+function screenSlash(g, k = 1) {
+  const S = sys(g), m = S.screenX;
+  if (!clipComfort.overlay) return;
+  if (m) {
+    const L = 0.75 * k;
+    for (const [mesh, ang] of [[m.children[0], -0.52], [m.children[1], Math.PI + 0.52]]) {
+      mesh.visible = true;
+      mesh.rotation.set(0, 0, ang);
+      mesh.position.set(-Math.cos(ang) * L / 2, -Math.sin(ang) * L / 2, 0);
+      mesh.scale.set(L, 0.035 + 0.012 * k, 1);
     }
+    m.position.set(0, -0.02, -0.6);
+    m.visible = true;
+    const old = S.cuts.findIndex((x) => x.mesh === m); if (old >= 0) S.cuts.splice(old, 1);
+    S.cuts.push({ mesh: m, t: 0, z: null, slash: true, T: { ramp: 0.06, hold: 0.12, fade: 0.16, end: 0.36 } });
   }
   g.fx?.overlay?.tint?.([1.15, 1.0, 1.3], 0.08, 0.25, { fadeIn: 0.02, fadeOut: 0.2 });
+}
+/** 後斬 on each body: a thin column of warm / cool light up through it (reads past the edge of the view too) */
+function afterColumn(g, z, i) {
+  const c = z.pos, C = i % 2 ? NI : HONG;
+  g.fx?.sigils?.pillar?.(_e.set(c.x, c.y, c.z), { radius: 0.32, height: 5.5, color: [C.body[0] * 1.3, C.body[1] * 1.3, C.body[2] * 1.3], life: 0.45, motes: 3, ring: false });
+  g.fx?.shockwave?.(_e.set(c.x, c.y + 0.05, c.z), { normal: UP, r0: 0.2, r1: 1.4, life: 0.3, color: C.core, thin: true });
 }
 /** a lingering X cut on a body that survived the after-cut (the KE cut pair without the kill glow) */
 function prismCutAt(g, z, n) { if (n < 3) prismKill(g, z, _a.set(0, 0, -1), 4); }
@@ -679,7 +789,14 @@ function driver(ws, dt, g) {
       const fwd = eyeFwd(g, _a, _b);
       mk.rotation.set(0, Math.atan2(-fwd.x, -fwd.z), 0);
       mk.scale.set(p.dash.width, 1, 1);
-      const u = mk.material.uniforms; u.uLen.value = len; u.uAmt.value = damp(u.uAmt.value, 1, 10, dt); u.uHot.value = 0;
+      const u = mk.material.uniforms; u.uLen.value = len; u.uW.value = p.dash.width; u.uAmt.value = damp(u.uAmt.value, 1, 10, dt); u.uHot.value = 0;
+      // the landing mark: warm and cool motes rising off the ring
+      if ((ss.moteT = (ss.moteT ?? 0) - dt) <= 0) {
+        ss.moteT = 0.05;
+        const C = R() < 0.5 ? HONG : NI, a = R() * 6.283;
+        g.fx?.particles?.spawn({ additive: true, x: to.x + Math.cos(a) * 0.55, y: mk.position.y + 0.05, z: to.z + Math.sin(a) * 0.55, vy: 1.2 + R() * 0.8, life: 0.55, size: 0.035, size1: 0.008,
+          color: [...C.body, 1], color1: [...C.tail, 0], frame: FRAME.glow });
+      }
     }
     if (!g.status?.alive) { mk.visible = false; ss.mode = 'idle'; }
   } else if (ss.mode === 'dash') dashUpdate(ws, g, dt);
@@ -973,9 +1090,10 @@ registerSkill('twinblades_storm', {
     d.blades = []; d.ang = k.rng() * Math.PI * 2; d.prev = d.ang;
     for (let i = 0; i < p.n; i++) {
       const C = i % 2 ? NI : HONG;
-      const h = gh?.ghost?.({ geometry: phantomGeometry(), size: 1.7, pos: k.feet(V3()), appear: 0.18, life: p.dur, out: 0.3, motion: 'none', big: false,
-        base: [C.body[0] * 0.25, C.body[1] * 0.25, C.body[2] * 0.25], core: C.core, rim: C.core, edge: C.core, opacity: 0.7, exit: { kind: 'ember', count: 6, color: C.core, speed: 2 } });
-      const tr = g.fx?.trail?.({ vm: false, width: 0.7, life: 0.2, profile: 'crescent', color: [...C.core, 1], color1: [...C.tail, 0], segs: 20 });
+      // a broad glazed spirit blade (2.4 x the sabre's width), its flat turned to the caster so the colour reads
+      const h = gh?.ghost?.({ geometry: phantomGeometry(2.4), size: 1.7, pos: k.feet(V3()), appear: 0.18, life: p.dur, out: 0.3, motion: 'none', big: false,
+        ...glaze(C), opacity: 0.78, exit: { kind: 'ember', count: 6, color: C.body, speed: 2 } });
+      const tr = g.fx?.trail?.({ vm: false, width: 0.7, life: 0.2, profile: C === NI ? 'prismRev' : 'prism', color: [...C.body, 1], color1: [...C.tail, 0], segs: 20 });
       d.blades.push({ h, tr, C });
     }
     d.ring = orbitRing(p.r - 0.35, p.r + 0.35); g.scene.add(d.ring);
@@ -1000,10 +1118,11 @@ registerSkill('twinblades_storm', {
       const x = c.x + Math.cos(a) * rr, z = c.z + Math.sin(a) * rr, y = c.y + 1.15 + Math.sin(k.t * 5 + i * 1.3) * 0.12;
       if (b.h?.obj) {
         b.h.obj.position.set(x, y, z);
-        // blade lying along the orbit, the edge out, tilted up through the swing
-        const tan = _a.set(-Math.sin(a), 0, Math.cos(a)), out = _b.set(Math.cos(a), 0, Math.sin(a));
+        // blade lying along the orbit, tilted up through the swing, the edge up: the flat faces the caster (edge out
+        // showed only a thin white streak from the middle)
+        const tan = _a.set(-Math.sin(a), 0, Math.cos(a));
         _d.copy(tan).multiplyScalar(0.92).addScaledVector(UP, 0.38).normalize();
-        b.h.obj.quaternion.copy(bq(_d.toArray(), out.toArray()));
+        b.h.obj.quaternion.copy(bq(_d.toArray(), [0, 1, 0]));
         b.h.obj.position.addScaledVector(_d, -0.6);
       }
       if (b.tr) { const root = _e.set(x, y, z).addScaledVector(_d, -0.15), tip = _f.set(x, y, z).addScaledVector(_d, 0.6); b.tr.push(root, tip); }
@@ -1048,7 +1167,14 @@ registerSkill('twinblades_storm', {
 // ------------------------------------------------------------------------------------------ 千刃蓮華 ultimate (★ held)
 // Beats (§1.7.3): 0-0.35 cast + the throw, 0.25 the lotus sigil, 0.35-0.9 twelve petals rise round the edge, 0.9-2.35
 // they close through the centre one by one (a lane each), 2.35-2.95 spin (pulling in), 2.95 the bloom, 3.5 the catch.
-const ULT = { sigil: 0.25, rise: [0.35, 0.9], close: [0.9, 2.35], spin: [2.35, 2.95], bloom: 2.95, back: [3.0, 3.5], end: 3.9 };
+// The sabres fly back in from the sides and vanish ~2 m out (back[1]); the viewmodel pair sweeps in from the frame's
+// edges and lands in the palms at `catch` (they used to fly through the eye at 2.6 x: a screen full of dragon head).
+const ULT = { sigil: 0.25, rise: [0.35, 0.9], close: [0.9, 2.35], spin: [2.35, 2.95], bloom: 2.95, back: [3.0, 3.42], catch: 3.54, end: 3.9 };
+const _u0 = V3(), _u1 = V3(), _u2 = V3();
+/** a spirit blade's glaze: the saturated 虹 / 霓 body colour through and through, a bright edge (white read as a storm) */
+const glaze = (C, o = {}) => ({ base: C.body.map((v) => v * 0.42), core: C.body, rim: C.body.map((v) => v * 0.7), edge: C.core, ...o });
+/** ult trauma: everything up to the bloom stacks to at most 0.3 (the card: 0.08 a petal, 0.5 at the bloom) */
+const ultShake = (g, a, cap = 0.3) => { if (clipComfort.shake && (g.shake ?? 0) < cap) g.addShake?.(Math.min(a, cap - (g.shake ?? 0))); };
 function ultAim(k) {
   const g = k.game, eye = k.pos, dir = k.dir, range = k.p.range;
   const hit = g.world?.collision?.raycast(eye, dir, range);
@@ -1102,7 +1228,8 @@ registerSkill('twinblades_ult', {
     // ① the throw: the two real sabres fly spinning from the caster to the centre (all clients)
     if (d.beat < 1 && t >= 0.09) {
       d.beat = 1;
-      const S = sys(g), from = k.local ? g.camera.position.clone().add(_a.set(0, -0.3, 0)) : k.caster(V3(), V3());
+      // (the local pair leaves from 0.7 m out at 1 x and grows to 2.6 x on the way: never a giant blade at the eye)
+      const S = sys(g), from = k.local ? g.camera.position.clone().add(_a.set(0, -0.3, 0)).addScaledVector(eyeFwd(g, _u0, _u1), 0.7) : k.caster(V3(), V3());
       for (const H of ['R', 'L']) {
         const proto = S.blades?.[H];
         const obj = proto ? proto.clone(true) : new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.02), new THREE.MeshBasicMaterial({ color: H === 'R' ? 0xffaa44 : 0xaa88ff }));
@@ -1117,12 +1244,24 @@ registerSkill('twinblades_ult', {
       // out (0.09 -> 0.35), hovering and spinning over the lotus, back to the hands (ULT.back)
       let pos;
       const top = _c.set(c.x, c.y + 3.2, c.z);
-      if (t < 0.35) pos = _a.copy(f.from).lerp(top, clamp((t - 0.09) / 0.26, 0, 1));
+      if (t < 0.35) { const uo = clamp((t - 0.09) / 0.26, 0, 1); pos = _a.copy(f.from).lerp(top, uo); f.obj.scale.setScalar(1 + 1.6 * uo); }
       else if (t < ULT.back[0]) { const a = t * 6 + (f.H === 'R' ? 0 : Math.PI); pos = _a.set(c.x + Math.cos(a) * 0.9, c.y + 3.2 + Math.sin(t * 3) * 0.15, c.z + Math.sin(a) * 0.9); }
       else {
-        const hand = k.local ? g.camera.position.clone().add(_b.set(0, -0.35, 0)) : k.caster(V3(), V3());
-        pos = _a.copy(top).lerp(hand, clamp((t - ULT.back[0]) / (ULT.back[1] - ULT.back[0]), 0, 1));
-        if (t >= ULT.back[1] && f.obj.visible) { f.obj.visible = false; f.tr?.stop?.(); }
+        const ub = clamp((t - ULT.back[0]) / (ULT.back[1] - ULT.back[0]), 0, 1), e = ub * ub * (3 - 2 * ub);
+        if (k.local) {
+          // home in on a curve from the hand's side, shrinking 2.6 -> 1, and stop ~2 m out of the eye (out to the side
+          // and below it): never through the near volume
+          const eye = g.camera.position, fw = eyeFwd(g, _u0, _u1), sd = f.H === 'R' ? 1 : -1, rt = _u2.set(-fw.z, 0, fw.x);
+          const end = _d.copy(eye).addScaledVector(fw, 1.7).addScaledVector(rt, 1.15 * sd); end.y -= 0.35;
+          const mid = _e.copy(top).lerp(end, 0.5).addScaledVector(rt, 2.2 * sd); mid.y += 0.6;
+          const a0 = (1 - e) * (1 - e), a1 = 2 * (1 - e) * e, a2 = e * e;
+          pos = _a.set(top.x * a0 + mid.x * a1 + end.x * a2, top.y * a0 + mid.y * a1 + end.y * a2, top.z * a0 + mid.z * a1 + end.z * a2);
+          f.obj.scale.setScalar(2.6 - 1.6 * e);
+          if (f.obj.visible && (ub >= 1 || pos.distanceTo(eye) < 2.2)) { f.obj.visible = false; f.tr?.stop?.(); }
+        } else {
+          pos = _a.copy(top).lerp(k.caster(V3(), V3()), e);
+          if (ub >= 1 && f.obj.visible) { f.obj.visible = false; f.tr?.stop?.(); }
+        }
       }
       f.spin += dt * 24;
       f.obj.position.copy(pos);
@@ -1132,7 +1271,7 @@ registerSkill('twinblades_ult', {
     // ② the lotus sigil
     if (d.beat < 2 && t >= ULT.sigil) {
       d.beat = 2;
-      d.sigil = fx?.sigils?.sigil?.(c, { design: 'lotus', radius: p.r, color: [2.6, 1.6, 0.8], color1: [1.4, 0.9, 2.8], life: ULT.end - 0.4, spin: 0.6, seed: k.ev.seed });
+      d.sigil = fx?.sigils?.sigil?.(c, { design: 'lotus', radius: p.r, color: [2.4, 0.95, 0.2], color1: [0.85, 0.4, 2.6], life: ULT.end - 0.4, spin: 0.6, seed: k.ev.seed });
       sfx(g, 'twinblades_ult_sigil', { pos: c, volume: 0.9 });
     }
     // ③ twelve petals rise round the edge, warm and cool alternating, tips out a little
@@ -1140,16 +1279,22 @@ registerSkill('twinblades_ult', {
       d.beat = 3;
       for (let i = 0; i < p.petals; i++) {
         const a = d.yaw0 + i * Math.PI * 2 / p.petals, C = i % 2 ? NI : HONG;
-        const h = fx?.summons?.ghost?.({ geometry: phantomGeometry(), size: 6.2, pos: _a.set(c.x + Math.sin(a) * (p.r - 1), c.y - 4, c.z + Math.cos(a) * (p.r - 1)), appear: 0.25, life: ULT.bloom - ULT.rise[0] + 0.6, out: 0.35,
-          motion: 'none', big: false, base: [C.body[0] * 0.2, C.body[1] * 0.2, C.body[2] * 0.2], core: C.core, rim: [C.core[0] * 0.6, C.core[1] * 0.6, C.core[2] * 0.6], edge: C.core, opacity: 0.6,
-          exit: { kind: 'shard', count: 10, palette: [C.body, C.core, [1.2, 1.1, 1.3]], speed: 4, up: 1.5 } });
+        const h = fx?.summons?.ghost?.({ geometry: phantomGeometry(1.5), size: 6.2, pos: _a.set(c.x + Math.sin(a) * (p.r - 1), c.y - 4, c.z + Math.cos(a) * (p.r - 1)), appear: 0.25, life: ULT.bloom - ULT.rise[0] + 0.6, out: 0.35,
+          motion: 'none', big: false, ...glaze(C), opacity: 0.72,
+          exit: { kind: 'shard', count: 10, palette: [C.body, C.core, C.tail], speed: 4, up: 1.5 } });
         d.petals.push({ a, h, C, state: 'rise', tr: null });
         const pp = _b.set(c.x + Math.sin(a) * (p.r - 1), c.y, c.z + Math.cos(a) * (p.r - 1));
         fx?.knockDust?.(pp, _e.set(Math.sin(a) * 3, 0, Math.cos(a) * 3), 1.0);
         rubble(g, pp, 3, 3.5, k.rng);
       }
       sfx(g, 'twinblades_ult_rise', { pos: c, volume: 0.9 });
-      if (k.local) shake(g, 0.15);
+      if (k.local) {
+        ultShake(g, 0.15);
+        // a 0.3 s nudge of the view down towards the lotus (seen from above, the twelve petals read as a flower)
+        const eye = g.camera.position, want = Math.atan2(eye.y - c.y, Math.max(1, Math.hypot(c.x - eye.x, c.z - eye.z)));
+        const amt = clamp((want - (g.player?.pitch ?? 0)) * 0.5, 0, 0.14);
+        if (amt > 0.01 && g.player && clipComfort.autoTurn !== false) d.nudge = { t0: t, amt, done: 0 };
+      }
     }
     // pose the petals
     const tc = (t - ULT.close[0]) / (ULT.close[1] - ULT.close[0]);
@@ -1158,14 +1303,14 @@ registerSkill('twinblades_ult', {
       if (!h?.obj) continue;
       const out = _a.set(Math.sin(P.a), 0, Math.cos(P.a)), tan = _b.set(Math.cos(P.a), 0, -Math.sin(P.a));
       const rise = clamp((t - ULT.rise[0] - i * 0.025) / 0.4, 0, 1), base = _c.set(c.x, c.y, c.z).addScaledVector(out, p.r - 1.6);
-      let ang = -0.35, y = -4.2 + 4.4 * (1 - (1 - rise) ** 3);
+      let ang = -0.6, y = -4.2 + 4.4 * (1 - (1 - rise) ** 3);          // tips flared out (a cup, not a fence)
       const dir = _d.copy(UP).multiplyScalar(Math.cos(ang)).addScaledVector(out, -Math.sin(ang)).normalize();
       const edge = _f.copy(UP).multiplyScalar(-Math.sin(ang)).addScaledVector(out, -Math.cos(ang)).normalize();
       const ci = clamp((tc - i / p.petals) * p.petals * 0.9, 0, 1);   // this petal's close (0 -> 1)
       if (t >= ULT.close[0] && ci > 0) {
         // fold in: the blade swings down across the centre (a lane), the root sliding in from the edge
         const sw = 1 - (1 - ci) ** 2.4;
-        ang = -0.35 + 2.0 * sw;
+        ang = -0.6 + 2.25 * sw;
         dir.copy(UP).multiplyScalar(Math.cos(ang)).addScaledVector(out, -Math.sin(ang)).normalize();
         edge.copy(UP).multiplyScalar(-Math.sin(ang)).addScaledVector(out, -Math.cos(ang)).normalize();
         base.addScaledVector(out, -2.2 * sw);
@@ -1173,7 +1318,7 @@ registerSkill('twinblades_ult', {
           P.cut = true;
           laneCut(k, P, out.clone().negate());
         }
-        if (!P.tr && ci > 0.05) P.tr = fx?.trail?.({ vm: false, width: 2.2, life: 0.26, profile: 'crescent', color: [...P.C.core, 1], color1: [...P.C.tail, 0], segs: 18 });
+        if (!P.tr && ci > 0.05) P.tr = fx?.trail?.({ vm: false, width: 2.2, life: 0.26, profile: P.C === NI ? 'prismRev' : 'prism', color: [...P.C.body, 1], color1: [...P.C.tail, 0], segs: 18 });
       }
       if (t >= ULT.spin[0]) {
         // all twelve spin round the centre, laid flat, pulling in
@@ -1214,17 +1359,21 @@ registerSkill('twinblades_ult', {
             if (dist > p.spinR || Math.abs(zc.y - c.y) > 2.6) continue;
             strike(k.ws, g, z, p.spin, V3().set(c.x - zc.x, 0, c.z - zc.z).normalize(), { knock: 0.5, stagger: 0.8, tag: 'ult', skill: 'twinblades_ult', blood: 0.25 });
           }
-          shake(g, 0.06);
+          ultShake(g, 0.06);
         }
       }
       if (k.rng() < 0.5) g.fx?.knockDust?.(_a.set(c.x + (k.rng() - 0.5) * 4, c.y, c.z + (k.rng() - 0.5) * 4), _b.set((k.rng() - 0.5) * 6, 0, (k.rng() - 0.5) * 6), 0.7);
     }
     // ⑤ the bloom
     if (d.beat < 5 && t >= ULT.bloom) { d.beat = 5; bloom(k); }
-    // the catch
-    if (d.beat < 6 && t >= ULT.back[1]) {
+    // the catch: the viewmodel pair lands in the palms
+    if (d.beat < 6 && t >= ULT.catch) {
       d.beat = 6;
       if (k.local && k.ws) catchBlades(k);
+    }
+    if (k.local) {
+      if (d.nudge) { const u = clamp((t - d.nudge.t0) / 0.3, 0, 1), v = d.nudge.amt * u * u * (3 - 2 * u); g.player.pitch += v - d.nudge.done; d.nudge.done = v; if (u >= 1) d.nudge = null; }
+      if (t < ULT.bloom && g.shake > 0.3) g.shake = 0.3;             // kills and hits stack no more than the cap either
     }
     return true;
   },
@@ -1250,7 +1399,7 @@ function laneCut(k, P, dir) {
   d.closed++;
   const a = _la.copy(c).addScaledVector(dir, -p.r), fx = g.fx;
   for (let i = 0; i < 6; i++) { const q = _lb.copy(a).addScaledVector(dir, p.r * 2 * i / 5); q.y = c.y; fx?.knockDust?.(q, _le.copy(dir).multiplyScalar(4), 0.6); }
-  if (k.local) shake(g, 0.08);
+  if (k.local) ultShake(g, 0.08);
   if (!k.local || !k.ws) return;
   let n = 0;
   for (const z of g.zombies?.list || []) {
@@ -1308,9 +1457,14 @@ function catchBlades(k) {
   g.punch?.impulse?.(-1.2 * 0.0175, 0, 0);
   haptic(40);
   ss.mode = 'idle'; ss.lockT = 0.25;
+  // the palms 'pop' the blades in: a coloured ring and a spark spray at each grip
+  const P = g.fx?.particles;
   for (const H of ['R', 'L']) {
-    const c = g.vm.socketCam('grip_' + SIDE(H), _a);
-    if (c) g.fx?.shockwave?.(c, { r0: 0.02, r1: 0.12, life: 0.25, color: COLS[H].core, thin: true, vm: true });
+    const c = g.vm.socketCam('grip_' + SIDE(H), _a), C = COLS[H];
+    if (!c) continue;
+    g.fx?.shockwave?.(c, { r0: 0.02, r1: 0.16, life: 0.28, color: C.body, thin: true, vm: true });
+    g.fx?.shockwave?.(c, { r0: 0.01, r1: 0.08, life: 0.18, color: C.core, thin: true, vm: true });
+    for (let i = 0; i < 10; i++) { const a = R() * 6.283, sp = 0.4 + R() * 0.6; P?.spawn({ additive: true, vm: true, x: c.x, y: c.y + 0.03, z: c.z, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp + 0.3, vz: 0, life: 0.16, size: 0.004, stretch: 0.02, color: [...C.core, 1], color1: [...C.tail, 0], frame: FRAME.spark, gravity: 2 }); }
   }
 }
 
@@ -1324,8 +1478,8 @@ registerSkill('twinblades_crisis', {
     const pos = _c.copy(eye).addScaledVector(fwd, 1.2).addScaledVector(side, -0.2).add(_d.set(0, -0.45, 0));
     for (const [C, ang] of [[HONG, 0.7], [NI, -0.7]]) {
       const q = bq([Math.sin(ang) * side.x, Math.cos(ang), Math.sin(ang) * side.z], [fwd.x, 0, fwd.z]);
-      g.fx?.summons?.ghost?.({ geometry: phantomGeometry(), size: 1.1, pos: pos.clone().addScaledVector(UP, -0.3), quat: q, appear: 0.05, life: 0.26, out: 0.18, motion: 'none', big: false,
-        base: [C.tail[0] * 0.3, C.tail[1] * 0.3, C.tail[2] * 0.3], core: C.body, rim: C.core, edge: C.core, opacity: 0.5,
+      g.fx?.summons?.ghost?.({ geometry: phantomGeometry(1.5), size: 1.1, pos: pos.clone().addScaledVector(UP, -0.3), quat: q, appear: 0.05, life: 0.26, out: 0.18, motion: 'none', big: false,
+        ...glaze(C), opacity: 0.55,
         exit: { kind: 'shard', count: 7, palette: [C.body, C.core, [1.2, 1.1, 1.3]], speed: 6, up: 1, scale: 1 } });
     }
     g.fx?.shockwave?.(_a.set(c.x, c.y + 0.1, c.z), { normal: UP, r0: 0.4, r1: 4.5, life: 0.4, color: [1.6, 1.1, 2.6], thin: false });
@@ -1342,8 +1496,8 @@ registerSkill('twinblades_final', {
     // two spirit blades cross-cut the spot from the sky
     const yaw = Math.atan2(g.camera.position.x - c.x, g.camera.position.z - c.z);
     const across = _b.set(Math.cos(yaw), 0, -Math.sin(yaw));
-    const pair = [[HONG, 1], [NI, -1]].map(([C, sd]) => ({ sd, C, h: fx?.summons?.ghost?.({ geometry: phantomGeometry(), size: 4.2, pos: c.clone(), appear: 0.08, life: 0.7, out: 0.3, motion: 'none', big: false,
-      base: [C.tail[0] * 0.3, C.tail[1] * 0.3, C.tail[2] * 0.3], core: C.body, rim: C.core, edge: C.core, opacity: 0.55, exit: { kind: 'shard', count: 8, palette: [C.body, C.core], speed: 3 } }) }));
+    const pair = [[HONG, 1], [NI, -1]].map(([C, sd]) => ({ sd, C, h: fx?.summons?.ghost?.({ geometry: phantomGeometry(1.5), size: 4.2, pos: c.clone(), appear: 0.08, life: 0.7, out: 0.3, motion: 'none', big: false,
+      ...glaze(C), opacity: 0.6, exit: { kind: 'shard', count: 8, palette: [C.body, C.core], speed: 3 } }) }));
     let t = 0;
     const sysA = { update: (dt) => {
       t += dt;
@@ -1458,7 +1612,7 @@ function warm(g) {
   if (g._tbWarm) return;
   g._tbWarm = true;
   try {
-    phantomGeometry();
+    phantomGeometry(); phantomGeometry(1.5); phantomGeometry(2.4);   // (the broad variants re-crease their normals)
     g.fx?.sigils?.preload?.(['lotus']);
     for (const t of g.fx?.sigils?.tex || []) if (t) g.renderer?.gl?.initTexture?.(t);
     const grp = new THREE.Group();
@@ -1506,9 +1660,9 @@ function link(g, rainbow) {
   // a little arched rainbow between the two pearls, hanging a moment, dissolving into motes
   const pa = g.vm.socketCam('pearl_r', _d), pb = g.vm.socketCam('pearl_l', _e);
   if (!pa || !pb) return;
-  for (let band = 0; band < 7; band++) for (let i = 0; i <= 14; i++) {
-    const u = i / 14, x = pa.x + (pb.x - pa.x) * u, z = pa.z + (pb.z - pa.z) * u, y = pa.y + (pb.y - pa.y) * u + Math.sin(Math.PI * u) * (0.1 - band * 0.006);
-    P.spawn({ additive: true, vm: true, x, y, z, vy: 0.01, delay: u * 0.15, life: 0.8, fadeIn: 0.1, size: 0.01, size1: 0.005, color: [...spec(band / 7, 1.8), 1], color1: [...spec(band / 7, 1.2), 0], frame: FRAME.glow });
+  for (let band = 0; band < 7; band++) for (let i = 0; i <= 26; i++) {
+    const u = i / 26, x = pa.x + (pb.x - pa.x) * u, z = pa.z + (pb.z - pa.z) * u, y = pa.y + (pb.y - pa.y) * u + Math.sin(Math.PI * u) * (0.15 - band * 0.007);
+    P.spawn({ additive: true, vm: true, x, y, z, vy: 0.01, delay: u * 0.15, life: 0.8, fadeIn: 0.1, size: 0.015, size1: 0.008, color: [...spec(band / 7, 1.8), 1], color1: [...spec(band / 7, 1.2), 0], frame: FRAME.glow });
   }
 }
 
@@ -1516,17 +1670,22 @@ function link(g, rainbow) {
 // Keys per hand: [t (0..1 of the clip), grip [x, y, z] | null (keep), blade dir | null (keep), edge | null (leads the
 // motion), ease into the key]. Camera space: +x right, +y up, -z forward. Each clip starts from where the sabres are
 // and ends on the live idle pose. TR / TROFF: a cut's trails (crescent + soft glow + white core), one colour a blade.
-const TRC = { R: ['#ffd27a', '#ff3a14', '#ff8a3a', '#6a0a04'], L: ['#9fe8ff', '#7a3aff', '#c08aff', '#24085a'] };
-const TRAIL = (H, o = {}) => ({ on: true, id: 'cut' + H, from: 'base_' + SIDE(H), to: 'tip_' + SIDE(H), profile: 'crescent', color: TRC[H][0], color1: TRC[H][1], k: 1.8,
-  hitColor: TRC[H][2], hitColor1: TRC[H][3], life: 0.17, ...o });
-const GLOW = (H, o = {}) => ({ on: true, id: 'glow' + H, from: 'tip_' + SIDE(H), to: null, profile: 'soft', width: 0.07, color: TRC[H][0], color1: TRC[H][3], k: 2, life: 0.12, segs: 16, ...o });
-const CORE = (H, o = {}) => ({ on: true, id: 'core' + H, from: 'tip_' + SIDE(H), to: null, profile: 'beam', width: 0.0035, color: '#fff6ea', color1: TRC[H][1], k: 4, life: 0.09, segs: 14, ...o });
-const TR = (t, H, o = {}) => [[t, 'trail', TRAIL(H, o)], [t, 'trail', GLOW(H, { life: (o.life ?? 0.17) * 0.9 })], [t, 'trail', CORE(H, { life: (o.life ?? 0.17) * 0.7 })]];
+// The band is the 'prism' ribbon (fx/ribbons.js): saturated gold -> vermilion (虹) / cyan -> violet (霓) with white only
+// in its leading fifth and on the tip hairline, a spectral fringe inside the edge (the colour order reversed per blade);
+// ext 1.25 carries the sweep past the point (a band about twice the old visible width). The hit colours (§1.17: the
+// rest of a cut that connects) are the deeper element colours, brighter.
+const TRC = { R: ['#ffae14', '#ff2a06', '#ff6a08', '#c80800'], L: ['#3a8cff', '#9a1aff', '#8a2aff', '#5000d8'] };
+const TRAIL = (H, o = {}) => ({ on: true, id: 'cut' + H, from: 'base_' + SIDE(H), to: 'tip_' + SIDE(H), profile: H === 'L' ? 'prismRev' : 'prism', ext: 1.25, color: TRC[H][0], color1: TRC[H][1], k: 2.1,
+  hitColor: TRC[H][2], hitColor1: TRC[H][3], life: 0.2, segs: 24, ...o });
+const GLOW = (H, o = {}) => ({ on: true, id: 'glow' + H, from: 'tip_' + SIDE(H), to: null, profile: 'soft', width: 0.12, color: TRC[H][0], color1: TRC[H][1], k: 1.5, life: 0.14, segs: 16, ...o });
+const CORE = (H, o = {}) => ({ on: true, id: 'core' + H, from: 'tip_' + SIDE(H), to: null, profile: 'beam', width: 0.0055, color: '#fff6ea', color1: TRC[H][0], k: 4.5, life: 0.08, segs: 14, ...o });
+const TR = (t, H, o = {}) => [[t, 'trail', TRAIL(H, o)], [t, 'trail', GLOW(H, { life: (o.life ?? 0.2) * 0.7 })], [t, 'trail', CORE(H, { life: (o.life ?? 0.2) * 0.4 })]];
 const TROFF = (t, H) => [[t, 'trail', { on: false, id: 'cut' + H }], [t, 'trail', { on: false, id: 'glow' + H }], [t, 'trail', { on: false, id: 'core' + H }]];
 const FLARE = (H, a, b, c, d) => ({ [H + '_fx_flare.scale']: [[0, [1, 0.03, 1]], [a, [1, 0.03, 1]], [b, [1, 1, 1], 'out3'], [c, [1, 1, 1]], [d, [1, 0.03, 1]]],
   [H + '_fx_flare.vis']: [[0, 0], [a, 1, 'snap'], [d, 1], [Math.min(1, d + 0.01), 0, 'snap']] });
 const mx = (p) => (p ? [-p[0], p[1], p[2]] : p);            // mirror a key across the view (the other hand)
 const mk = (keys) => keys.map(([t, p, d, m, e]) => [t, mx(p), mx(d), mx(m), e]);
+const mx3 = ([p, d, m]) => [mx(p), mx(d), mx(m)];          // a [grip, dir, edge] key mirrored
 // a cut: wind-up W (grip, blade dir), the arc through the dirs A (grip moving from W to F with a forward bulge), the
 // follow-through F; times: wind-up, arc start, hit, arc end, follow-through
 function cutKeys(W, A, F, [tw, ta, th, te, tf], low = null) {
@@ -1541,10 +1700,11 @@ function cutKeys(W, A, F, [tw, ta, th, te, tf], low = null) {
   if (low) out.push([low[0], low[1], low[2], null, 'inOut']);
   return out;
 }
-// the off hand pulls back a little while the other cuts (and is ready for its own)
-const OFF = (H, t0, t1) => { const I = IDLE[H]; return [[t0, [I.p[0] * 1.08, I.p[1] - 0.035, I.p[2] + 0.03], I.d, I.m, 'out3'], [t1, null, null, null, 'linear']]; };
+// the off hand pulls back and out while the other cuts (the point leaning out, clear of the middle) and is ready for
+// its own
+const OFF = (H, t0, t1) => { const I = IDLE[H], sx = H === 'R' ? 1 : -1; return [[t0, [I.p[0] * 1.15, I.p[1] - 0.04, I.p[2] + 0.04], N3(sx * 0.35, 0.74, -0.58), N3(sx, 0.12, -0.1), 'out3'], [t1, null, null, null, 'linear']]; };
 // ① 虹 right diagonal: up over the right shoulder, down across the front to the lower left
-const C_R1 = cutKeys([[0.22, -0.08, -0.36], N3(0.55, 0.75, -0.38)], [N3(0.3, 0.85, -0.45), N3(-0.35, 0.45, -0.82), N3(-0.8, -0.25, -0.55)], [[-0.08, -0.27, -0.42], N3(-0.7, -0.6, -0.4)], [0.14, 0.22, 0.32, 0.42, 0.56],
+const C_R1 = cutKeys([[0.26, -0.06, -0.32], N3(0.55, 0.75, -0.38)], [N3(0.3, 0.85, -0.45), N3(-0.35, 0.45, -0.82), N3(-0.8, -0.25, -0.55)], [[-0.08, -0.27, -0.42], N3(-0.7, -0.6, -0.4)], [0.14, 0.22, 0.32, 0.42, 0.56],
   [0.76, [0.12, -0.32, -0.38], N3(0.3, -0.2, -0.93)]);
 // ③ 虹 flat sweep: drawn back out to the right, flat across the front at chest height to the left
 const C_R2 = cutKeys([[0.26, -0.18, -0.32], N3(0.95, 0.15, -0.3)], [N3(0.6, 0.12, -0.8), N3(0.0, 0.1, -1), N3(-0.6, 0.08, -0.8), N3(-0.9, 0.05, -0.42)], [[-0.14, -0.24, -0.4], N3(-0.9, -0.15, -0.4)], [0.14, 0.2, 0.33, 0.46, 0.58],
@@ -1557,7 +1717,7 @@ registerClip('twinblades_l1', (vm) => twinClip(vm, { L: mk(C_R1), R: OFF('R', 0.
 registerClip('twinblades_r2', (vm) => twinClip(vm, { R: C_R2, L: OFF('L', 0.3, 0.7), events: [...TR(0.2, 'R'), [0.3, 'haptic', 'tick'], ...TROFF(0.62, 'R')] }));
 registerClip('twinblades_l2', (vm) => twinClip(vm, { L: C_L2, R: OFF('R', 0.3, 0.7), events: [...TR(0.2, 'L'), [0.3, 'haptic', 'tick'], ...TROFF(0.62, 'L')] }));
 // ⑤ 交虹: both raised over the shoulders, down and in through an X in front of the eye (crossing below the crosshair)
-const C_XR = cutKeys([[0.2, -0.04, -0.33], N3(0.4, 0.82, -0.42)], [N3(0.12, 0.9, -0.42), N3(-0.42, 0.42, -0.8), N3(-0.66, -0.42, -0.62)], [[0.1, -0.27, -0.42], N3(-0.6, -0.58, -0.55)], [0.2, 0.28, 0.37, 0.48, 0.6],
+const C_XR = cutKeys([[0.26, -0.02, -0.29], N3(0.35, 0.85, -0.38)], [N3(0.12, 0.9, -0.42), N3(-0.42, 0.42, -0.8), N3(-0.66, -0.42, -0.62)], [[0.1, -0.27, -0.42], N3(-0.6, -0.58, -0.55)], [0.2, 0.28, 0.37, 0.48, 0.6],
   [0.78, [0.14, -0.33, -0.36], N3(0.3, -0.25, -0.92)]);
 registerClip('twinblades_x', (vm) => twinClip(vm, { R: C_XR, L: mk(C_XR), events: [...TR(0.24, 'R', { life: 0.16, k: 2 }), ...TR(0.24, 'L', { life: 0.16, k: 2 }), [0.36, 'tb', { do: 'clash', k: 1.1 }],
   [0.37, 'haptic', 'thud'], [0.37, 'snd', 'twinblades_clash'], ...TROFF(0.6, 'R'), ...TROFF(0.6, 'L')], tracks: { ...FLARE('R', 0.18, 0.26, 0.42, 0.55), ...FLARE('L', 0.18, 0.26, 0.42, 0.55) } }));
@@ -1580,18 +1740,23 @@ registerClip('twinblades_iai', (vm) => twinClip(vm, {
   L: [[0.22, ...IAI_L, 'out3'], [0.45, ...tremble(IAI_L, [-0.002, 0.002, 0]), 'inOut'], [0.65, ...tremble(IAI_L, [0.002, 0, -0.001]), 'inOut'], [0.85, ...IAI_L, 'inOut']],
   loop: [0.25, 0.85], events: [[0.04, 'snd', 'cloth'], [0.2, 'tb', 'pearls']],
 }));
-// 虹貫 the draw-cut: out of the stance across the front to the right and back (0 -> 0.4 of the clip ~ the dash), then
-// the after-cut flourish: both flicked down, points to the street, and back to the stance
+// 虹貫 the draw-cut: out of the stance across the front to the right (0 -> 0.35 of the clip ~ the dash and the turn
+// round), then 收刀 just before the after-cut (~0.59): the fists just past the frame's side edges (the forearms out
+// of view), both blades flicked down and in at ~45° from there -- the heads at the edges, the points towards the
+// bottom middle: a V in the lower third that frames the row as it bursts -- held, back to the stance
+const SHOU_R = [[0.42, -0.08, -0.42], N3(-0.5, -0.65, -0.57), [0.6, -0.5, 0]];
 registerClip('twinblades_dash', (vm) => twinClip(vm, {
   R: [[0.06, [0.0, -0.22, -0.4], N3(-0.6, 0.12, -0.8), null, 'in'], [0.16, [0.12, -0.2, -0.43], N3(0.2, 0.15, -0.97), null, 'linear'], [0.28, [0.26, -0.2, -0.34], N3(0.92, 0.12, -0.38), null, 'out'],
-    [0.55, [0.19, -0.24, -0.38], N3(0.2, -0.7, -0.68), N3(0, 0, -1), 'out3'], [0.7, null, null, null, 'linear']],
+    [0.46, ...SHOU_R, 'out3'], [0.5, ...tremble(SHOU_R, [0.004, 0.006, 0]), 'outBack'], [0.8, ...SHOU_R, 'inOut']],
   L: [[0.09, [-0.1, -0.24, -0.38], N3(-0.5, 0.02, -0.86), null, 'in'], [0.19, [0.02, -0.22, -0.43], N3(0.3, 0.08, -0.95), null, 'linear'], [0.3, [0.16, -0.24, -0.35], N3(0.88, 0.05, -0.47), null, 'out'],
-    [0.55, [-0.19, -0.25, -0.38], N3(-0.2, -0.7, -0.68), N3(0, 0, -1), 'out3'], [0.7, null, null, null, 'linear']],
-  events: [...TR(0.04, 'R', { life: 0.18, k: 2.2 }), ...TR(0.07, 'L', { life: 0.18, k: 2.2 }), ...TROFF(0.32, 'R'), ...TROFF(0.34, 'L'), [0.5, 'snd', 'cloth']],
+    [0.47, ...mx3(SHOU_R), 'out3'], [0.51, ...mx3(tremble(SHOU_R, [0.004, 0.006, 0])), 'outBack'], [0.8, ...mx3(SHOU_R), 'inOut']],
+  events: [...TR(0.04, 'R', { life: 0.18, k: 2.2 }), ...TR(0.07, 'L', { life: 0.18, k: 2.2 }), ...TROFF(0.32, 'R'), ...TROFF(0.34, 'L'), [0.44, 'snd', 'cloth'], [0.47, 'haptic', 'tick']],
   tracks: { ...FLARE('R', 0, 0.02, 0.28, 0.4), ...FLARE('L', 0, 0.02, 0.3, 0.42) },
 }));
-// 交虹 guard: crossed in front, the crossing low (under the crosshair), edges out; loops while held
-const GR = [[0.07, -0.21, -0.36], N3(-0.62, 0.76, -0.2), N3(0, 0.1, -1)], GL = [[-0.07, -0.22, -0.35], N3(0.62, 0.76, -0.2), N3(0, 0.1, -1)];
+// 交虹 guard: an X in front -- the grips wide and low, the blades crossing at mid-blade ~9° under the crosshair (the
+// crosshair sits in the upper V), edges forward and out (the projected blades show beside each blade in their own
+// colour; edge-on they were two white lines); 虹 a hair in front of 霓 where they meet; loops while held
+const GR = [[0.17, -0.26, -0.38], N3(-0.57, 0.58, -0.57), N3(0.6, 0.2, -0.75)], GL = [[-0.17, -0.265, -0.39], N3(0.57, 0.58, -0.57), N3(-0.6, 0.2, -0.75)];
 registerClip('twinblades_guard', (vm) => twinClip(vm, {
   R: [[0.1, ...GR, 'out3'], [0.5, ...tremble(GR, [0, 0.002, 0]), 'inOut'], [0.9, ...GR, 'inOut']],
   L: [[0.1, ...GL, 'out3'], [0.5, ...tremble(GL, [0, -0.002, 0]), 'inOut'], [0.9, ...GL, 'inOut']],
@@ -1610,8 +1775,8 @@ registerClip('twinblades_flurry', (vm) => {
 });
 // 虹輪 cast: both flung out wide (the spirits leave the blades), back
 registerClip('twinblades_storm_cast', (vm) => twinClip(vm, {
-  R: [[0.3, [0.22, -0.17, -0.38], N3(0.9, 0.3, -0.32), null, 'out3'], [0.55, null, null, null, 'linear']],
-  L: [[0.3, [-0.22, -0.18, -0.37], N3(-0.9, 0.3, -0.32), null, 'out3'], [0.55, null, null, null, 'linear']],
+  R: [[0.3, [0.3, -0.2, -0.36], N3(0.85, 0.4, -0.35), null, 'out3'], [0.55, null, null, null, 'linear']],
+  L: [[0.3, [-0.3, -0.21, -0.35], N3(-0.85, 0.4, -0.35), null, 'out3'], [0.55, null, null, null, 'linear']],
   events: [[0.28, 'haptic', 'tick'], [0.3, 'tb', 'pearls']], tracks: { ...FLARE('R', 0.1, 0.25, 0.5, 0.8), ...FLARE('L', 0.1, 0.25, 0.5, 0.8) },
 }));
 // 千刃蓮華 (3.9 s): crossed overhead, thrown (0.09: the viewmodel pair hides, the special flies the real ones), both
@@ -1619,19 +1784,22 @@ registerClip('twinblades_storm_cast', (vm) => twinClip(vm, {
 const SWORD_R = { pos: [0.12, -0.14, -0.4], F: [-0.1, 0.92, -0.36], N: [-0.6, 0.0, -0.8], pose: 'point', palm: [0.015, 0.05] };
 const SWORD_L = { pos: [0.16, -0.2, -0.36], F: [-0.2, 0.3, -0.93], N: [-0.3, -0.95, -0.1], pose: 'relaxed', palm: [0.02, 0.05] };
 registerClip('twinblades_ult_cast', (vm) => twinClip(vm, {
-  R: [[0.02, [0.1, 0.02, -0.3], N3(-0.4, 0.85, 0.3)], [0.023, null, null, null, 'linear'], [0.88, [0.5, -0.2, -0.2], N3(1, 0.2, 0), null, 'snap'], [0.92, [0.2, -0.22, -0.36], IDLE.R.d, null, 'out3']],
-  L: [[0.02, [-0.1, 0.0, -0.3], N3(0.4, 0.85, 0.3)], [0.023, null, null, null, 'linear'], [0.88, [-0.5, -0.2, -0.2], N3(-1, 0.2, 0), null, 'snap'], [0.92, [-0.2, -0.24, -0.36], IDLE.L.d, null, 'out3']],
+  // (0.872 = 3.40 s: the snap out to the side happens while the pair is still hidden; they sweep in from the frame's
+  // edges as the world sabres vanish ~2 m out, and land at ULT.catch)
+  R: [[0.02, [0.1, 0.02, -0.3], N3(-0.4, 0.85, 0.3)], [0.023, null, null, null, 'linear'], [0.872, [0.5, -0.2, -0.2], N3(1, 0.2, 0), null, 'snap'], [0.915, [0.2, -0.22, -0.36], IDLE.R.d, null, 'out3']],
+  L: [[0.02, [-0.1, 0.0, -0.3], N3(0.4, 0.85, 0.3)], [0.023, null, null, null, 'linear'], [0.872, [-0.5, -0.2, -0.2], N3(-1, 0.2, 0), null, 'snap'], [0.915, [-0.2, -0.24, -0.36], IDLE.L.d, null, 'out3']],
   events: [[0.01, 'haptic', 'thud'], [0.02, 'tb', { do: 'clash', k: 0.8 }], [0.03, 'anchorR', [SWORD_R, 0.12]], [0.035, 'anchorL', [SWORD_L, 0.14]],
-    [0.88, 'anchorR', ['grip_r', 0.05]], [0.885, 'anchorL', ['grip_l', 0.05]], [0.9, 'haptic', 'thud']],
+    [0.872, 'anchorR', ['grip_r', 0.05]], [0.876, 'anchorL', ['grip_l', 0.05]], [0.905, 'haptic', 'thud']],
   dur: ULT.end,
 }));
 // first draw (1.6 s, once per match, fire cancels): flipped up from the lower corners, crossed and struck together (a
-// prism burst), swung apart while the edges light, a pose (虹 forward, 霓 across the chest), a 0.2 s hold
+// prism burst), swung apart while the edges light (stopping at the frame's edges, the points up and out), a pose (虹
+// forward, 霓 across the chest at a third of the height), a 0.2 s hold
 registerClip('twinblades_first', (vm) => twinClip(vm, {
   R: [[0.0, [0.28, -0.5, -0.2], N3(0.4, -0.6, -0.7), N3(0, 0, -1), 'snap'], [0.16, [0.14, -0.26, -0.38], N3(-0.1, 0.9, -0.4), null, 'out3'], [0.26, [0.06, -0.18, -0.4], N3(-0.62, 0.74, -0.25), N3(0, 0.1, -1), 'inOut'],
-    [0.3, [0.07, -0.18, -0.39], null, null, 'out'], [0.5, [0.26, -0.18, -0.34], N3(0.92, 0.3, -0.25), null, 'out3'], [0.66, [0.16, -0.2, -0.44], N3(-0.05, 0.25, -0.97), N3(0.9, 0.2, 0), 'inOut'], [0.86, null, null, null, 'linear']],
+    [0.3, [0.07, -0.18, -0.39], null, null, 'out'], [0.5, [0.2, -0.17, -0.38], N3(0.6, 0.64, -0.48), null, 'out3'], [0.66, [0.16, -0.2, -0.44], N3(-0.05, 0.25, -0.97), N3(0.9, 0.2, 0), 'inOut'], [0.86, null, null, null, 'linear']],
   L: [[0.0, [-0.28, -0.5, -0.2], N3(-0.4, -0.6, -0.7), N3(0, 0, -1), 'snap'], [0.17, [-0.14, -0.27, -0.38], N3(0.1, 0.9, -0.4), null, 'out3'], [0.26, [-0.06, -0.19, -0.4], N3(0.62, 0.74, -0.25), N3(0, 0.1, -1), 'inOut'],
-    [0.3, [-0.07, -0.19, -0.39], null, null, 'out'], [0.5, [-0.26, -0.2, -0.34], N3(-0.92, 0.3, -0.25), null, 'out3'], [0.66, [-0.12, -0.27, -0.36], N3(0.95, 0.05, -0.3), N3(0, 0.6, -0.8), 'inOut'], [0.86, null, null, null, 'linear']],
+    [0.3, [-0.07, -0.19, -0.39], null, null, 'out'], [0.5, [-0.2, -0.18, -0.38], N3(-0.6, 0.62, -0.5), null, 'out3'], [0.66, [-0.16, -0.2, -0.37], N3(0.85, 0.35, -0.4), N3(0, 0.6, -0.8), 'inOut'], [0.86, null, null, null, 'linear']],
   dur: 1.6, endEase: 'inOut',
   tracks: { R_fx_jaw: [[0, 0], [0.5, 0], [0.56, 1, 'out3'], [0.72, 1], [0.8, 0]], L_fx_jaw: [[0, 0], [0.51, 0], [0.57, 1, 'out3'], [0.73, 1], [0.81, 0]],
     ...FLARE('R', 0.48, 0.58, 0.68, 0.8), ...FLARE('L', 0.49, 0.59, 0.69, 0.81) },
@@ -1645,9 +1813,11 @@ registerClip('twinblades_draw', (vm) => twinClip(vm, {
   endEase: 'out3', events: [[0.02, 'snd', 'twinblades_draw']],
 }));
 // inspect (4.4 s): the flats turned to the eye (0.12 -> 0.24 loops on a held F), the right sabre spun once in the hand,
-// the ring pommels hooked together over the middle into an arch (the two heads hanging down: the 虹 glyph), apart
+// the ring pommels hooked together under the middle, the pair held up half a metre out, both blades sweeping up and
+// out: the two heads and their pearls frame the middle, the fists low under them (the forearms meet below the frame),
+// the rare rainbow arching between the heads over the crosshair; apart
 const IR = [[0.1, -0.2, -0.36], N3(-0.15, 0.95, -0.25), N3(1, 0.1, 0.1)], IL = [[-0.12, -0.22, -0.36], N3(0.15, 0.95, -0.25), N3(-1, 0.1, 0.1)];
-const ARC_R = [[0.075, -0.115, -0.42], N3(0.94, -0.24, -0.24), N3(0, -1, -0.1)], ARC_L = [[-0.075, -0.115, -0.42], N3(-0.94, -0.24, -0.24), N3(0, -1, -0.1)];
+const ARC_R = [[0.065, -0.17, -0.5], N3(0.32, 0.92, -0.22), N3(0.92, -0.32, 0)], ARC_L = [[-0.065, -0.17, -0.5], N3(-0.32, 0.92, -0.22), N3(-0.92, -0.32, 0)];
 function inspectClip(vm, rare) {
   const spinR = [];
   for (let i = 1; i <= 4; i++) { const a = i / 4 * Math.PI * 2; spinR.push([0.26 + 0.04 * i, IR[0], [Math.sin(a) * 0.95, Math.cos(a), -0.25], [Math.cos(a), -Math.sin(a), 0.1], 'linear']); }
@@ -1776,5 +1946,8 @@ registerKillMark('km_twinblades', {
 });
 // prism skin for skill hits (虹橋, 虹貫, 霓返, 虹輪, 千刃蓮華): white -> warm gold -> violet on a gold edge
 SKINS.prism = ['#ffffff', '#ffc46a', '#9a6bff', '#e3b04b'];
+
+// pose tuning from the console / QA scripts (ws.sp.tb.dev): the key tables are live (clips are built when played)
+const DEV = { IDLE, bq, N3, ULT, keys: { GR, GL, IR, IL, ARC_R, ARC_L, SHOU_R }, setIdle(H, p, d, m) { IDLE[H] = { p, d: N3(...d), m: N3(...m) }; IDLE_Q[H] = bq(IDLE[H].d, IDLE[H].m); } };
 
 export { SFX as TWINBLADES_SFX };

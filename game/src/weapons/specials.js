@@ -288,6 +288,10 @@ export const SPECIALS = {
 //     crisis: { kind: 'knock'|'counter'|'blink'|'heal', name, fx }   (or premium.crisis; see crisis.js)
 //   }
 //   premium.aura: { type: 'dmg'|'reloadSpeed'|'regen'|<any>, mul, radius = 4, when: 'held'|'ready'|<other: the weapon’s own addAura> } (team aura, §1.4)
+//   premium.ready: { sfx, layer, remind: false (the ready fanfare only, no 2.5 s reminder: a cooldown skill that is ready
+//                   most of the time, E01 雷樁) }
+//   Extra skill slots beyond alt / tap / hold / ult (e.g. E01 skills.throw) work with castSkill(ws, '<slot>'); the HUD
+//   dock and hint card show only the four.
 // Input (§1.8): ◎ / right mouse = skills.alt; ★ / Q tap = skills.tap; ★ held 0.35 s = skills.ult when its meter is full,
 // else skills.hold; desktop also Q then F within 0.3 s = ult. Nothing to long-press for -> the tap casts on press.
 //
@@ -416,11 +420,12 @@ function v2Tick(ws, dt, g) {
     if (c.regen) meterAdd(ws, k, c.regen * dt, true);
     if (c.decay && g.time - (s.gainAt[k] ?? -99) > (c.decayDelay ?? 2)) s.m[k] = Math.max(0, s.m[k] - c.decay * dt);
   }
-  // ready (§1.7.1 beat 7): fanfare once, then a soft reminder every 2.5 s while held
+  // ready (§1.7.1 beat 7): fanfare once, then a soft reminder every 2.5 s while held (premium.ready.remind false: the
+  // fanfare only -- a weapon whose "ready" is a short-cooldown skill, ready most of the time, must not nag)
   if (!isReady(ws)) { s.readyN = false; s.readyT = 0; return; }
   if (g.arsenal?.current !== ws) return;
   if (!s.readyN) { s.readyN = true; s.readyT = 0; readyFanfare(ws, g); }
-  else if ((s.readyT += dt) >= READY_EVERY) { s.readyT = 0; if (g.hud?.settings?.readyReminder !== false) { g.audio?.play(ws.def.premium?.ready?.sfx || 'special_ready', { volume: 0.25 }); g.hud?.readyPulse?.(ws); } }
+  else if (ws.def.premium?.ready?.remind !== false && (s.readyT += dt) >= READY_EVERY) { s.readyT = 0; if (g.hud?.settings?.readyReminder !== false) { g.audio?.play(ws.def.premium?.ready?.sfx || 'special_ready', { volume: 0.25 }); g.hud?.readyPulse?.(ws); } }
 }
 
 function readyFanfare(ws, g) {

@@ -25,11 +25,14 @@ const V3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 // Two crescents in a local frame travelling along -Z: each an arc band (uv.x along the arc, uv.y inner -> outer edge)
 // whose tips sweep back behind the centre; arm 0 is turned +45° (the 虹 stroke), arm 1 -45° (霓). A white-hot outer
 // edge, the body in the arm's colour, the tips feathered, a streaky shimmer; uAmt fades the whole wave.
+const SPECTRUM = /* glsl */`
+vec3 spectrum(float x) { return clamp(vec3(abs(x * 6.0 - 3.0) - 1.0, 2.0 - abs(x * 6.0 - 2.0), 2.0 - abs(x * 6.0 - 4.0)), 0.0, 1.0); }`;
 const WAVE_FRAG = /* glsl */`
-uniform float uAmt, uTime;
+uniform float uAmt, uTime, uRev;
 uniform vec3 uCore, uBody, uTail;
 varying vec2 vUv;
 ${NOISE}
+${SPECTRUM}
 void main() {
   float x = vUv.x, y = vUv.y;
   float ends = smoothstep(0.0, 0.22, x) * smoothstep(1.0, 0.78, x);
@@ -38,6 +41,9 @@ void main() {
   float body = smoothstep(0.0, 0.55, y) * (1.0 - edge * 0.6);
   float streak = 0.6 + 0.4 * vn(vec2(x * 40.0 - uTime * 6.0, y * 3.0));
   vec3 c = uCore * edge * (0.6 + 0.4 * mid) + mix(uTail, uBody, smoothstep(0.1, 0.8, y)) * body * streak;
+  // a thin spectral fringe inside the rim (虹 red outermost, 霓 violet outermost)
+  float f = clamp((y - 0.72) / 0.2, 0.0, 1.0), hue = uRev > 0.5 ? 0.78 * f : 0.78 * (1.0 - f);
+  c += spectrum(hue) * exp(-pow((y - 0.83) * 13.0, 2.0)) * 1.5 * (0.6 + 0.4 * mid);
   gl_FragColor = vec4(c * ends * uAmt, 1.0);
 }`;
 function crescentGeo(R = 1.35, width = 0.42, arc = 2.0, sweep = 0.55, seg = 36) {
@@ -62,7 +68,7 @@ export function waveMesh() {
   _crescent ||= crescentGeo();
   const grp = new THREE.Group(), mats = [];
   [[HONG, Math.PI / 4], [NI, -Math.PI / 4]].forEach(([C, rot]) => {
-    const m = additive(WAVE_FRAG, { uAmt: { value: 1 }, uTime: materialUniforms.time, uCore: { value: V3(C.core) }, uBody: { value: V3(C.body) }, uTail: { value: V3(C.tail) } });
+    const m = additive(WAVE_FRAG, { uAmt: { value: 1 }, uTime: materialUniforms.time, uRev: { value: C === NI ? 1 : 0 }, uCore: { value: V3(C.core) }, uBody: { value: V3(C.body) }, uTail: { value: V3(C.tail) } });
     const mesh = new THREE.Mesh(_crescent, m);
     mesh.rotation.z = rot;
     mesh.frustumCulled = false; mesh.renderOrder = 8;
@@ -73,33 +79,41 @@ export function waveMesh() {
 }
 
 // ------------------------------------------------------------------------------------------ 虹貫 dash path (ground)
-// A strip along local -Z, length uLen (m), 1 m wide (scale x for the real width): seven faint rainbow lanes across,
-// chevrons racing forward, a ring at the far end; uAmt fades it, uHot brightens it at release.
+// A strip along local -Z, length uLen (m), 1 m wide (scale x for the real width uW): a thin white-hot core line with a
+// spectral fringe either side (虹 right: red outermost, 霓 left: violet outermost), motes running forward along it,
+// two faint hairlines at the lane's edges, and at the far end a pulsing double ring with a cross (the landing mark);
+// uAmt fades it, uHot brightens it at release. (A filled full-spectrum band read as a toy rainbow road.)
 const PATH_VERT = /* glsl */`
 varying vec2 vP;
 void main() { vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const PATH_FRAG = /* glsl */`
-uniform float uLen, uAmt, uHot, uTime;
+uniform float uLen, uAmt, uHot, uTime, uW;
 varying vec2 vP;
-vec3 spectrum(float x) { return clamp(vec3(abs(x * 6.0 - 3.0) - 1.0, 2.0 - abs(x * 6.0 - 2.0), 2.0 - abs(x * 6.0 - 4.0)), 0.0, 1.0); }
+${SPECTRUM}
 void main() {
-  float along = -vP.y, across = vP.x * 2.0;                      // along 0 .. uLen, across -1 .. 1
-  if (along < 0.0 || along > uLen + 0.8) discard;
-  float lane = 1.0 - smoothstep(0.75, 1.0, abs(across));
-  float rim = exp(-pow((abs(across) - 0.9) * 9.0, 2.0));
-  vec3 spec = spectrum(clamp(across * 0.5 + 0.5, 0.0, 1.0)) * 1.4;
-  float chev = smoothstep(0.75, 1.0, fract((along - abs(across) * 0.35) * 1.6 - uTime * 3.0));
-  float fadeIn = smoothstep(0.0, 0.6, along), endFade = 1.0 - smoothstep(uLen - 0.2, uLen + 0.1, along);
-  vec2 e = vec2(across * 0.5, along - uLen);
-  float ring = exp(-pow((length(e) - 0.45) * 14.0, 2.0)) + exp(-dot(e, e) * 14.0) * 0.5;
-  vec3 c = (spec * (0.18 + 0.5 * chev) * lane + vec3(2.4, 2.2, 2.6) * rim * 0.35) * fadeIn * endFade + vec3(2.6, 2.3, 3.0) * ring;
+  float along = -vP.y, across = vP.x * 2.0;                      // along 0 .. uLen (m), across -1 .. 1
+  if (along < 0.0 || along > uLen + 0.9) discard;
+  float ax = abs(across);
+  float fadeIn = smoothstep(0.0, 0.8, along), endFade = 1.0 - smoothstep(uLen - 0.45, uLen - 0.1, along);
+  float core = exp(-pow(ax * 26.0, 2.0));
+  float f = clamp((ax - 0.05) / 0.12, 0.0, 1.0), hue = across > 0.0 ? 0.78 * (1.0 - f) : 0.78 * f;
+  float fr = smoothstep(0.03, 0.06, ax) * (1.0 - smoothstep(0.15, 0.21, ax));
+  float m = fract(along * 0.9 - uTime * 2.6);
+  float mote = exp(-pow((m - 0.5) * 12.0, 2.0)) * exp(-pow(ax * 10.0, 2.0));
+  float rim = exp(-pow((ax - 0.92) * 30.0, 2.0)) * 0.22;
+  vec2 e = vec2(vP.x * uW, along - uLen);
+  float r = length(e);
+  float ring = (exp(-pow((r - 0.6) * 24.0, 2.0)) + 0.6 * exp(-pow((r - 0.42) * 34.0, 2.0))) * (0.75 + 0.25 * sin(uTime * 9.0));
+  float crs = (exp(-pow(e.x * 45.0, 2.0)) + exp(-pow(e.y * 45.0, 2.0))) * (1.0 - smoothstep(0.22, 0.32, r));
+  vec3 W = vec3(2.7, 2.5, 2.3);
+  vec3 c = (W * core * 1.2 + spectrum(hue) * fr * 1.7 + W * mote * 1.4 + vec3(1.5, 1.4, 1.8) * rim) * fadeIn * endFade + W * ring * 1.1 + vec3(2.3, 2.1, 2.7) * crs;
   gl_FragColor = vec4(c * uAmt * (1.0 + uHot * 2.0), 1.0);
 }`;
 export function pathMesh() {
   const g = new THREE.PlaneGeometry(1, 12, 1, 1);
   g.rotateX(-Math.PI / 2);
   g.translate(0, 0, -5.6);                                       // from 0.4 behind the feet to 11.6 ahead
-  const m = additive(PATH_FRAG, { uLen: { value: 8 }, uAmt: { value: 0 }, uHot: { value: 0 }, uTime: materialUniforms.time }, { vert: PATH_VERT, mat: { polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 } });
+  const m = additive(PATH_FRAG, { uLen: { value: 8 }, uAmt: { value: 0 }, uHot: { value: 0 }, uW: { value: 1.4 }, uTime: materialUniforms.time }, { vert: PATH_VERT, mat: { polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 } });
   const mesh = new THREE.Mesh(g, m);
   mesh.frustumCulled = false; mesh.renderOrder = 6; mesh.visible = false;
   return mesh;
@@ -210,9 +224,16 @@ function loftXYZ(rings, capA = true, capB = true) {
   if (vol < 0) { const I = g.index.array; for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t; } }
   return g.toNonIndexed();
 }
-let _phantom = null;
-export function phantomGeometry() {
-  if (_phantom) return _phantom;
+const _phantom = new Map();
+/** the phantom sabre; wide > 1: a broader spirit blade (width x wide, thickness half as much) for the storm / petals */
+export function phantomGeometry(wide = 1) {
+  if (_phantom.has(wide)) return _phantom.get(wide);
+  if (wide !== 1) {
+    const g = toCreasedNormals(phantomGeometry(1).clone().scale(1 + (wide - 1) * 0.5, 1, wide), 0.7);
+    g.computeBoundingBox();
+    _phantom.set(wide, g);
+    return g;
+  }
   const parts = [bladeGeo()];
   // the head: a skull over the spine side, a snout along the blade, a jaw under the edge, two horns swept back
   const skull = new THREE.SphereGeometry(1, 12, 8); skull.scale(0.017, 0.034, 0.02); skull.translate(0, 0.03, 0.04);
@@ -227,7 +248,8 @@ export function phantomGeometry() {
   const ring = new THREE.TorusGeometry(0.022, 0.005, 6, 16); ring.rotateY(Math.PI / 2); ring.translate(0, -0.192, 0.002);
   parts.push(skull, snout, jaw, pearl, grip, ring);
   const geos = parts.map((g) => { const n = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(n.attributes)) if (k !== 'position') n.deleteAttribute(k); return n; });
-  _phantom = toCreasedNormals(mergeGeometries(geos, false), 0.7);
-  _phantom.computeBoundingBox();
-  return _phantom;
+  const g = toCreasedNormals(mergeGeometries(geos, false), 0.7);
+  g.computeBoundingBox();
+  _phantom.set(1, g);
+  return g;
 }

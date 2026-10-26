@@ -60,10 +60,15 @@ export const SHELL = {
   // X05 kill (KE_CLEAVE): the cut body chars dark under a thin molten crimson rim (smouldering; a wide bright rim lit
   // whole bodies pale pink). char: albedo darkening (0..1), follows the amount
   cleavekill: { col: [2.0, 0.24, 0.07], amt: 0.5, fres: 1, exp: 4.2, char: 0.55, prio: 9, decay: true },
-  // X06 kill (KE_PRISM): a thin pale violet-white rim (the warm / cool cuts carry the colour; a wide rim read as glass)
-  prismkill: { col: [1.5, 1.25, 2.4], amt: 0.42, fres: 0.98, exp: 3.0, prio: 9, decay: true },
+  // X06 kill (KE_PRISM): a thin pale violet-white rim (the warm / cool cuts carry the colour; a wide rim read as glass,
+  // exp 3 still lit whole packs lavender: the rim only)
+  prismkill: { col: [1.5, 1.25, 2.4], amt: 0.36, fres: 1, exp: 5.2, prio: 9, decay: true },
   // X04 連霆 / KE_THUNDER: a flickering cold-white rim (electrocuted), never a solid blue body
   shocked: { col: [1.4, 2.6, 3.6], amt: 0.42, hz: 22, depth: 0.5, flicker: true, fres: 0.95, exp: 2.2, prio: 6 },
+  // E01 放電 (violet-white arcs): the same flickering electrocuted rim in the halberd's colour
+  arcshock: { col: [1.5, 0.95, 3.2], amt: 0.3, hz: 24, depth: 0.6, flicker: true, fres: 1, exp: 3.2, prio: 6 },
+  // E01 kill (KE_CHAR): the body chars dark under a thin flickering violet rim
+  charkill: { col: [1.3, 0.8, 2.8], amt: 0.36, hz: 18, depth: 0.5, flicker: true, fres: 1, exp: 4, char: 0.75, prio: 9, decay: true },
   frozen: { col: [0.8, 1.8, 2.6], amt: 0.5, fres: 1, prio: 5 },
   poisoned: { col: [0.6, 1.6, 0.2], amt: 0.4, hz: 2, depth: 0.3, fres: 0.7, prio: 4 },
   // enraged boss: a thin ember-red rim; the readable cue is the model's own vein glow + embers (_rageStep)

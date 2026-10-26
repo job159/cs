@@ -172,7 +172,7 @@ export class MeterView {
   }
   set(m) {
     const v = Math.max(0, Math.min(1, m.value || 0)), t = this.type;
-    const key = `${t}|${(v * 200) | 0}|${m.ready ? 1 : 0}|${m.color}|${m.raw | 0}|${m.max}|${m.segments}|${m.window}`;
+    const key = `${t}|${(v * 200) | 0}|${m.ready ? 1 : 0}|${m.color}|${m.raw | 0}|${m.max}|${m.segments}|${m.window}|${m.w}|${m.h}|${m.fill}`;
     if (key === this.cache) return;
     this.cache = key;
     const el = this.el;
@@ -193,10 +193,12 @@ export class MeterView {
       const n = Math.max(1, Math.min(10, m.max || 5)), lit = Math.round((m.max || 5) > 10 ? v * n : m.raw ?? v * n), x0 = -((n - 1) * 8) / 2, y = -40 - this.i * 9;
       el.innerHTML = Array.from({ length: n }, (_, i) => `<path class="${i < lit ? 'on' : 'off'}" d="M${x0 + i * 8 - 3} ${y + 2} L${x0 + i * 8} ${y - 2} L${x0 + i * 8 + 3} ${y + 2}"/>`).join('');
     } else if (t === 'timing') {
-      // centre timing bar with the window zone(s) and the travelling needle (Impulse-Flail style)
-      const W = 110, y = 46 + this.i * 10, x0 = -W / 2, wins = Array.isArray(m.window?.[0]) ? m.window : m.window ? [m.window] : [];
-      el.innerHTML = `<rect class="tr2" x="${x0}" y="${y}" width="${W}" height="5"/>` + wins.map(([a, b], i) => `<rect class="win${i ? ' w2' : ''}" x="${x0 + a * W}" y="${y - 2}" width="${(b - a) * W}" height="9"/>`).join('') +
-        `<rect class="ndl" x="${x0 + v * W - 1.5}" y="${y - 4}" width="3" height="13"/>`;
+      // centre timing bar with the window zone(s) and the travelling needle (Impulse-Flail style); m.w / m.h: the
+      // bar's width and thickness (px, default 110 x 5); m.fill: the bar fills up to the needle in the meter colour
+      const W = m.w || 110, H = m.h || 5, y = 46 + this.i * 10, x0 = -W / 2, wins = Array.isArray(m.window?.[0]) ? m.window : m.window ? [m.window] : [];
+      el.innerHTML = `<rect class="tr2" x="${x0}" y="${y}" width="${W}" height="${H}"/>` + (m.fill ? `<rect class="win" x="${x0}" y="${y}" width="${v * W}" height="${H}"/>` : '') +
+        wins.map(([a, b], i) => `<rect class="win${i ? ' w2' : ''}" x="${x0 + a * W}" y="${y - 2}" width="${(b - a) * W}" height="${H + 4}"/>`).join('') +
+        `<rect class="ndl" x="${x0 + v * W - 1.5}" y="${y - 4}" width="3" height="${H + 8}"/>`;
     }
   }
 }

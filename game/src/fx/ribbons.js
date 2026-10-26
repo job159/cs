@@ -44,6 +44,34 @@ void main() {
     float band = vPrm.z > 0.0 ? 0.8 + 0.2 * sin((vUv.x - uTime * vPrm.z) * 6.2832) : 1.0;
     col = mix(col * 0.6, vec3(dot(col, vec3(0.33))) * 1.4 + col * 0.5, core);
     a = (core + glow) * band;
+  } else if (vPrm.x > 6.5) {
+    // katana (M02 sabre cuts): a crisp white-hot line along the tip edge and only a faint streaked wake behind it (a
+    // cut of light, not a sheet), the newest node whitest, the tail in the trail's tail colour
+    float t = vUv.y, u = vUv.x;
+    float streak = 0.6 + 0.4 * hash(floor(t * 34.0 + floor(u * 8.0) * 7.0));
+    float edge = smoothstep(0.9, 0.975, t) * smoothstep(1.0, 0.985, t);
+    float body = smoothstep(0.35, 0.95, t) * smoothstep(1.0, 0.93, t) * streak * 0.32;
+    float lead = exp(-u * 10.0);
+    col = mix(col, vec3(dot(col, vec3(0.3))) * 1.4 + col * 0.3, min(1.0, lead * 0.8 + edge * 0.5));
+    a = (edge * 1.6 + body) * (0.6 + 0.8 * lead) * (1.0 - smoothstep(0.5, 1.0, u));
+  } else if (vPrm.x > 4.5) {
+    // prism (X06 sabre cuts): the band fills the blade's sweep (t 0 root .. 1 tip edge) in a saturated body colour;
+    // white only in the leading ~20 % (u 0 = newest node) and along a hairline at the tip edge; a thin spectral
+    // fringe just inside that edge (5 = red outermost, 6 = violet outermost: 虹 / 霓, the colour order reversed)
+    float t = vUv.y, u = vUv.x;
+    float streak = 0.8 + 0.2 * hash(floor(t * 26.0 + floor(u * 5.0) * 7.0));
+    a = smoothstep(0.02, 0.6, t) * smoothstep(1.0, 0.965, t) * streak * (0.4 + 0.6 * t);
+    float rim = smoothstep(0.9, 0.975, t) * smoothstep(1.0, 0.98, t);
+    float lead = 1.0 - smoothstep(0.08, 0.22, u);
+    vec3 white = vec3(dot(col, vec3(0.3))) * 1.25 + col * 0.3;
+    float x = clamp((t - 0.82) / 0.14, 0.0, 1.0);
+    float h = vPrm.x > 5.5 ? 0.78 * x : 0.78 * (1.0 - x);          // hue 0 red .. 0.78 violet
+    vec3 spec = clamp(vec3(abs(h * 6.0 - 3.0) - 1.0, 2.0 - abs(h * 6.0 - 2.0), 2.0 - abs(h * 6.0 - 4.0)), 0.0, 1.0);
+    float fr = exp(-pow((t - 0.89) * 16.0, 2.0)) * (1.0 - 0.6 * lead);
+    float lum = max(max(col.r, col.g), col.b);
+    col = mix(col, white, max(lead * smoothstep(0.35, 0.9, t), rim * 0.85)) + spec * lum * 0.9 * fr;
+    a = a * (0.7 + 0.6 * lead) + rim * 0.9 + fr * 0.5;
+    a *= 1.0 - smoothstep(0.6, 1.0, u);
   } else if (vPrm.x > 3.5) {
     // crescent (energy blade arcs, X02): alpha weighted to the outer half (v 0 root .. 1 tip edge), a white-hot leading
     // edge (u 0 = the newest node), a feathered tail and cap -- an arc of light, not a sheet hanging off the blade
@@ -174,7 +202,8 @@ export class Ribbons {
   /**
    * Trail: t.push(a [, b]) every frame; b given = blade ribbon from a (root) to b (tip).
    * opts: width (m, camera-facing trails), life (s, node lifetime), color [r,g,b,a] (HDR) at the head,
-   * color1 at the tail, taper (width at the tail, 0..1), segs (max nodes), profile ('soft'|'beam'|'slash'|'crescent'), vm.
+   * color1 at the tail, taper (width at the tail, 0..1), segs (max nodes), profile ('soft'|'beam'|'slash'|'crescent'|
+   * 'prism'|'prismRev': a saturated blade band with a white lead + tip hairline and a spectral fringe), vm.
    */
   trail({ width = 0.06, life = 0.25, color = [4, 3, 2, 1], color1 = null, taper = 0, segs = 24, profile = 'soft', vm = false } = {}) {
     const t = { kind: 'trail', nodes: [], width, life, color, color1: color1 || [color[0], color[1], color[2], 0], taper, segs, vm, profile: PROFILE[profile] ?? 0, stopped: false, age: 0 };
@@ -299,4 +328,4 @@ export class Ribbons {
   }
 }
 
-const PROFILE = { soft: 0, beam: 1, slash: 2, crescent: 4 };
+const PROFILE = { soft: 0, beam: 1, slash: 2, crescent: 4, prism: 5, prismRev: 6, katana: 7 };

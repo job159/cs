@@ -64,6 +64,8 @@ const GHOST_FRAG = /* glsl */`
 uniform float uTime;
 uniform vec3 uBase, uCore, uRim, uEdge;
 uniform vec4 uLook;            // opacity, rim power, glaze, dark (black silhouette 0..1)
+uniform vec4 uLook2;           // inner opacity (body x this where it faces the eye: rim-only), gain (whole output), fade (alpha and light), -
+uniform vec3 uFlashCol;        // flash() colour (white by default)
 uniform vec4 uDis;             // dissolve 0..1, mode (0 ground-up, 1 extremities first), flash, flow speed
 uniform vec3 uBoxMin, uBoxSize, uCenter;
 uniform vec3 uKey;             // key light direction (view space)
@@ -102,11 +104,13 @@ void main() {
   vec3 body = mix(uBase, uCore * 0.6, smoothstep(0.45, 0.8, cloud) * 0.5) * sky;
   body = mix(body, vec3(0.01, 0.008, 0.012), uLook.w);
   body = mix(body, vTint.rgb * sky, vTint.a);                    // tinted parts: their own glaze colour
-  float a = clamp(uLook.x + fres * 0.45 + spec * 0.6 + vTint.a * 0.25, 0.0, 1.0);
+  float inner = mix(uLook2.x, 1.0, pow(1.0 - ndv, 1.3));
+  float a = clamp((uLook.x + vTint.a * 0.25) * inner + fres * 0.45 + spec * 0.6, 0.0, 1.0);
   vec3 emit = uRim * fres * 2.2 + vec3(1.0, 0.97, 0.92) * spec * 2.0 + uCore * flow * 0.9 * (1.0 - uLook.w) * (1.0 - vTint.a);
   emit += vTint.rgb * vTint.a * 0.45;
-  emit += uEdge * edge * 6.0 + vec3(1.0) * uDis.z * (0.4 + fres);
-  gl_FragColor = vec4(body * a + emit, a);
+  emit += uEdge * edge * 6.0 + uFlashCol * uDis.z * (0.4 + fres);
+  a *= uLook2.z;
+  gl_FragColor = vec4((body * a + emit * uLook2.z) * uLook2.y, a);
 #endif
 }`;
 
@@ -360,6 +364,8 @@ export class Summons {
       uBase: { value: hdr(o.base ?? [0.85, 0.82, 0.76]) }, uCore: { value: hdr(o.core ?? [1.6, 1.2, 0.6]) },
       uRim: { value: hdr(o.rim ?? [2.4, 1.4, 0.5]) }, uEdge: { value: hdr(o.edge ?? o.rim ?? [3, 1.6, 0.6]) },
       uLook: { value: new THREE.Vector4(o.opacity ?? 0.5, o.rimPower ?? 2.6, o.glaze ?? 1, o.dark ? 1 : 0) },
+      // inner (1: off; < 1 thins the body where it faces the eye to that fraction: rim-only spirits), gain, fade, flash colour
+      uLook2: { value: new THREE.Vector4(o.inner ?? 1, o.gain ?? 1, o.fade ?? 1, 0) }, uFlashCol: { value: new THREE.Vector3(...(o.flashColor ?? [1, 1, 1])) },
       uDis: { value: new THREE.Vector4(1, 0, 0, o.flowSpeed ?? 0.25) },
       uFlap: { value: new THREE.Vector4(o.flap?.amp ?? 0.7, o.flap?.hz ?? 2.2, o.wave?.amp ?? 0, o.wave?.hz ?? 0.6) },
       uWaveAxis: { value: new THREE.Vector3(...(o.wave?.axis ?? [1, 0, 0])) }, uWaveLen: { value: o.wave?.len ?? 1.2 },
@@ -379,7 +385,10 @@ export class Summons {
    *   shape ('bird' | 'fish' | 'serpent' | 'bell' | 'stele' | 'orb' | 'blade') or mesh (Object3D, its meshes are
    *   re-skinned) or geometry; shapeOpts (e.g. { tail: 2.4 }); pos, yaw (rad) or quat; size (m: scales the
    *   shape's 1 m unit); colors: base (glaze body), core (inner light), rim (fresnel), edge (dissolve edge);
-   *   opacity (0.35–0.6), glaze (highlight), dark (black silhouette + rim), rimPower;
+   *   opacity (0.35–0.6), glaze (highlight), dark (black silhouette + rim), rimPower; inner (< 1: the body thins to
+   *   that where it faces the eye, rim-only), gain (whole output: e.g. 1 / map exposure), fade (alpha and light, e.g.
+   *   a spirit right at the eye), flashColor ([1, 1, 1]); all live in handle.mats[i].u (uLook2 = inner, gain, fade)
+   *   for per-frame changes;
    *   appear (s, ground-up dissolve, default 0.35), life (s, Infinity = until dissolveOut()), out (s, 0.5);
    *   motion: 'rise' (comes up out of the ground while appearing) | 'hover' | null; bob (m);
    *   flap { amp, hz } (bird wings), wave { amp (m in shape units), hz, axis [x,y,z], len } (body wave);

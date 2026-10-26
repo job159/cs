@@ -6,7 +6,7 @@ import { FRAME } from './atlas.js';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
-const _s = new THREE.Vector3(1, 1, 1);
+const _s = new THREE.Vector3(1, 1, 1), _s2 = new THREE.Vector3();
 const _ax = new THREE.Vector3();
 
 function caseGeo(type) {
@@ -56,7 +56,8 @@ export class Shells {
     }
   }
 
-  spawn(type, pos, vel, floorY) {
+  /** opts.scale: start size (a first-person ejection right by the eye), growing to 1 over its first 0.5 s */
+  spawn(type, pos, vel, floorY, opts = {}) {
     const pool = this.pools[type];
     if (!pool) return;
     if (pool.items.length >= this.max) pool.items.shift();
@@ -66,7 +67,7 @@ export class Shells {
     pool.items.push({
       p: pos.clone(), v: vel.clone(), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 6, Math.random() * 6, Math.random() * 6)),
       ax, w: tumble, roll: (Math.random() - 0.5) * 30,
-      floor: floorY, age: 0, bounces: 0, rest: false, type, glint: type !== 'link' && type !== '12g' ? 0.35 : 0, seed: Math.random() * 6,
+      floor: floorY, age: 0, bounces: 0, rest: false, type, scale: opts.scale ?? 1, glint: type !== 'link' && type !== '12g' ? 0.35 : 0, seed: Math.random() * 6,
     });
   }
 
@@ -109,7 +110,8 @@ export class Shells {
       }
       const mesh = pool.mesh;
       for (let i = 0; i < items.length; i++) {
-        _m.compose(items[i].p, items[i].q, _s);
+        const sc = items[i].scale;
+        _m.compose(items[i].p, items[i].q, sc < 1 ? _s2.setScalar(sc + (1 - sc) * Math.min(1, items[i].age / 0.5)) : _s);
         mesh.setMatrixAt(i, _m);
       }
       mesh.count = items.length;

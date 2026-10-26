@@ -74,7 +74,7 @@ export const MATS = {
   // verdigris crust in the recesses), oil-darkened bronze for the plinths, 紫檀 rosewood, carved cinnabar lacquer (satin)
   bronze_cast:  { color: '#6a4a24', metal: 1, rough: 0.5, detail: 'cast', dScale: 140, dStr: 0.07, cavity: 1.2, cavCol: '#3f6a58', cavMetal: 0, wear: { color: '#c8995a', metal: 1, rough: 0.28, amount: 0.6 } },
   bronze_dark:  { color: '#3d2c18', metal: 1, rough: 0.44, detail: 'cast', dScale: 160, dStr: 0.05, cavity: 1.1, cavCol: '#17100a', wear: { color: '#b08a50', metal: 1, rough: 0.3, amount: 0.6 } },
-  wood_rose:    { color: '#41190d', metal: 0, rough: 0.42, detail: 'flat', wood: { dark: '#1f0905', light: '#5a2410', scale: 14 }, wear: { color: '#6a3a24', metal: 0, rough: 0.5, amount: 0.45 } },
+  wood_rose:    { color: '#41190d', metal: 0, rough: 0.42, detail: 'flat', wood: { dark: '#2a0e06', light: '#4f1f0d', scale: 26 }, wear: { color: '#6a3a24', metal: 0, rough: 0.5, amount: 0.45 } },   // fine, low-contrast 紫檀 grain
   lacquer_carved: { color: '#8a1a16', metal: 0, rough: 0.32, detail: 'flat', env: 1.1, wear: { color: '#3a1a12', metal: 0, rough: 0.55, amount: 0.35 } },
   steel_stipple: { color: '#16191f', metal: 0.85, rough: 0.56, detail: 'stipple', dScale: 280, dStr: 0.5, wear: { color: '#8a8d92', metal: 1, rough: 0.3, amount: 0.4 } },   // matted engraving ground
   obsidian:     { color: '#0f0d12', metal: 0.2, rough: 0.12, detail: 'flat', wear: { color: '#2a2630', metal: 0.2, rough: 0.2, amount: 0.2 } },

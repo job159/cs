@@ -1,0 +1,773 @@
+{
+  "sounds": {
+    "chunting_blade": {
+      "files": [
+        "premium_chunting/chunting_blade_1.ogg",
+        "premium_chunting/chunting_blade_2.ogg",
+        "premium_chunting/chunting_blade_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_burst": {
+      "files": [
+        "premium_chunting/chunting_burst_1.ogg",
+        "premium_chunting/chunting_burst_2.ogg",
+        "premium_chunting/chunting_burst_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        160
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chunting_catch": {
+      "files": [
+        "premium_chunting/chunting_catch_1.ogg",
+        "premium_chunting/chunting_catch_2.ogg",
+        "premium_chunting/chunting_catch_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        4,
+        40
+      ],
+      "loop": false
+    },
+    "chunting_charge": {
+      "files": [
+        "premium_chunting/chunting_charge.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "chunting_close": {
+      "files": [
+        "premium_chunting/chunting_close_1.ogg",
+        "premium_chunting/chunting_close_2.ogg",
+        "premium_chunting/chunting_close_3.ogg",
+        "premium_chunting/chunting_close_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        70
+      ],
+      "loop": false,
+      "priority": 2
+    },
+    "chunting_coil": {
+      "files": [
+        "premium_chunting/chunting_coil_1.ogg",
+        "premium_chunting/chunting_coil_2.ogg",
+        "premium_chunting/chunting_coil_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_crack": {
+      "files": [
+        "premium_chunting/chunting_crack_1.ogg",
+        "premium_chunting/chunting_crack_2.ogg",
+        "premium_chunting/chunting_crack_3.ogg",
+        "premium_chunting/chunting_crack_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_draw": {
+      "files": [
+        "premium_chunting/chunting_draw_1.ogg",
+        "premium_chunting/chunting_draw_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_dry": {
+      "files": [
+        "premium_chunting/chunting_dry_1.ogg",
+        "premium_chunting/chunting_dry_2.ogg",
+        "premium_chunting/chunting_dry_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.96,
+        1.04
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_far": {
+      "files": [
+        "premium_chunting/chunting_far_1.ogg",
+        "premium_chunting/chunting_far_2.ogg",
+        "premium_chunting/chunting_far_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.04
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        40,
+        320
+      ],
+      "loop": false
+    },
+    "chunting_first": {
+      "files": [
+        "premium_chunting/chunting_first.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_fly": {
+      "files": [
+        "premium_chunting/chunting_fly_1.ogg",
+        "premium_chunting/chunting_fly_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        120
+      ],
+      "loop": false
+    },
+    "chunting_glove_zap": {
+      "files": [
+        "premium_chunting/chunting_glove_zap_1.ogg",
+        "premium_chunting/chunting_glove_zap_2.ogg",
+        "premium_chunting/chunting_glove_zap_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_idle": {
+      "files": [
+        "premium_chunting/chunting_idle.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": true
+    },
+    "chunting_impact": {
+      "files": [
+        "premium_chunting/chunting_impact_1.ogg",
+        "premium_chunting/chunting_impact_2.ogg",
+        "premium_chunting/chunting_impact_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        10,
+        150
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chunting_inspect": {
+      "files": [
+        "premium_chunting/chunting_inspect.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_kill": {
+      "files": [
+        "premium_chunting/chunting_kill_1.ogg",
+        "premium_chunting/chunting_kill_2.ogg",
+        "premium_chunting/chunting_kill_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chunting_porcelain": {
+      "files": [
+        "premium_chunting/chunting_porcelain_1.ogg",
+        "premium_chunting/chunting_porcelain_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_reload_hum": {
+      "files": [
+        "premium_chunting/chunting_reload_hum_1.ogg",
+        "premium_chunting/chunting_reload_hum_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_reload_in": {
+      "files": [
+        "premium_chunting/chunting_reload_in_1.ogg",
+        "premium_chunting/chunting_reload_in_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_reload_out": {
+      "files": [
+        "premium_chunting/chunting_reload_out_1.ogg",
+        "premium_chunting/chunting_reload_out_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_return": {
+      "files": [
+        "premium_chunting/chunting_return_1.ogg",
+        "premium_chunting/chunting_return_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        80
+      ],
+      "loop": false
+    },
+    "chunting_rod_arc": {
+      "files": [
+        "premium_chunting/chunting_rod_arc_1.ogg",
+        "premium_chunting/chunting_rod_arc_2.ogg",
+        "premium_chunting/chunting_rod_arc_3.ogg",
+        "premium_chunting/chunting_rod_arc_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        70
+      ],
+      "loop": false
+    },
+    "chunting_rod_end": {
+      "files": [
+        "premium_chunting/chunting_rod_end_1.ogg",
+        "premium_chunting/chunting_rod_end_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        50
+      ],
+      "loop": false
+    },
+    "chunting_rod_loop": {
+      "files": [
+        "premium_chunting/chunting_rod_loop.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        5,
+        40
+      ],
+      "loop": true
+    },
+    "chunting_rod_plant": {
+      "files": [
+        "premium_chunting/chunting_rod_plant_1.ogg",
+        "premium_chunting/chunting_rod_plant_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        12,
+        200
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "chunting_seg": {
+      "files": [
+        "premium_chunting/chunting_seg_1.ogg",
+        "premium_chunting/chunting_seg_2.ogg",
+        "premium_chunting/chunting_seg_3.ogg",
+        "premium_chunting/chunting_seg_4.ogg",
+        "premium_chunting/chunting_seg_5.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_stage": {
+      "files": [
+        "premium_chunting/chunting_stage_1.ogg",
+        "premium_chunting/chunting_stage_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_streamer": {
+      "files": [
+        "premium_chunting/chunting_streamer_1.ogg",
+        "premium_chunting/chunting_streamer_2.ogg",
+        "premium_chunting/chunting_streamer_3.ogg",
+        "premium_chunting/chunting_streamer_4.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.95,
+        1.05
+      ],
+      "voices": 4,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        70
+      ],
+      "loop": false
+    },
+    "chunting_tail": {
+      "files": [
+        "premium_chunting/chunting_tail_1.ogg",
+        "premium_chunting/chunting_tail_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_throw": {
+      "files": [
+        "premium_chunting/chunting_throw_1.ogg",
+        "premium_chunting/chunting_throw_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 1,
+      "bus": "sfx",
+      "spatial": false,
+      "range": [
+        2,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_thrust": {
+      "files": [
+        "premium_chunting/chunting_thrust_1.ogg",
+        "premium_chunting/chunting_thrust_2.ogg",
+        "premium_chunting/chunting_thrust_3.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        50
+      ],
+      "loop": false
+    },
+    "chunting_thunder": {
+      "files": [
+        "premium_chunting/chunting_thunder_1.ogg",
+        "premium_chunting/chunting_thunder_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.99,
+        1.01
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        25,
+        450
+      ],
+      "loop": false,
+      "priority": 5
+    },
+    "chunting_thunder_roll": {
+      "files": [
+        "premium_chunting/chunting_thunder_roll_1.ogg",
+        "premium_chunting/chunting_thunder_roll_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        25,
+        400
+      ],
+      "loop": false
+    },
+    "chunting_zap_end": {
+      "files": [
+        "premium_chunting/chunting_zap_end_1.ogg",
+        "premium_chunting/chunting_zap_end_2.ogg"
+      ],
+      "vol": 1.1,
+      "pitch": [
+        0.97,
+        1.03
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        60
+      ],
+      "loop": false
+    },
+    "chunting_zap_hit": {
+      "files": [
+        "premium_chunting/chunting_zap_hit_1.ogg",
+        "premium_chunting/chunting_zap_hit_2.ogg",
+        "premium_chunting/chunting_zap_hit_3.ogg",
+        "premium_chunting/chunting_zap_hit_4.ogg",
+        "premium_chunting/chunting_zap_hit_5.ogg",
+        "premium_chunting/chunting_zap_hit_6.ogg"
+      ],
+      "vol": 1.2,
+      "pitch": [
+        0.94,
+        1.06
+      ],
+      "voices": 5,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        50
+      ],
+      "loop": false
+    },
+    "chunting_zap_loop": {
+      "files": [
+        "premium_chunting/chunting_zap_loop.ogg"
+      ],
+      "vol": 1.3,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        55
+      ],
+      "loop": true
+    },
+    "chunting_zap_start": {
+      "files": [
+        "premium_chunting/chunting_zap_start_1.ogg",
+        "premium_chunting/chunting_zap_start_2.ogg",
+        "premium_chunting/chunting_zap_start_3.ogg"
+      ],
+      "vol": 1.15,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 3,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        8,
+        70
+      ],
+      "loop": false,
+      "priority": 3
+    },
+    "ready_chunting": {
+      "files": [
+        "premium_chunting/ready_chunting_1.ogg",
+        "premium_chunting/ready_chunting_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        1,
+        1
+      ],
+      "voices": 2,
+      "bus": "ui",
+      "spatial": false,
+      "range": [
+        1,
+        1
+      ],
+      "loop": false,
+      "priority": 3
+    }
+  }
+}

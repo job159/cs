@@ -120,6 +120,7 @@ export function runeTexture() {
 /** Material-level defaults (spec defaults in parentheses of §1.5.3), overridable per weapon / per part. */
 const PARAM_DEFAULTS = {
   rimPower: 3.5, veinFreq: 12, veinSpeed: 0.5, veinAxis: 0, shine: 2, sweepT: 4, leaf: 0, leafScale: 180,
+  shineTint: [1, 0.93, 0.75], shineW: 5000,   // the sweep's colour and sharpness (exp(-d² w): 5000 ~ a 1 cm band)
   shardScale: 0, shardStretch: [1, 1, 1], shardRough: 0.17, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, iridCool: 0, gem: 1, coreSkin: 0, runeSpeed: 0.15,
   runeAxis: 0, runeOrigin: [0, 0, 0], runeWidth: 0.006, flashMask: 1, coreMode: -1, coreScale: 1,
   gemSun: 0,   // > 0: the stone's radius (m) about its part pivot -- a sun burns inside it (X03 日珠)
@@ -153,7 +154,7 @@ export function premiumUniforms(state, prm) {
     pGrout: prm.grout ? f(C(prm.grout)) : u.pGrout, pCoreMode: prm.coreMode >= 0 ? f(prm.coreMode) : u.pCoreMode,
     pBox: f(new THREE.Vector4(-0.5, 0.2, -0.15, 0.1)),
     pRimPower: f(prm.rimPower), pVeinFreq: f(prm.veinFreq), pVeinSpeed: f(prm.veinSpeed), pVeinAxis: f(prm.veinAxis),
-    pShine: f(prm.shine), pSweepT: f(prm.sweepT), pLeaf: f(prm.leaf), pLeafScale: f(prm.leafScale),
+    pShine: f(prm.shine), pSweepT: f(prm.sweepT), pShineTint: f(new THREE.Vector3(...prm.shineTint)), pShineW: f(prm.shineW), pLeaf: f(prm.leaf), pLeafScale: f(prm.leafScale),
     pShardScale: f(prm.shardScale), pShardStretch: f(new THREE.Vector3(...prm.shardStretch)), pShardRough: f(prm.shardRough), pGroutW: f(prm.groutW), pGroutMetal: f(prm.groutMetal), pIrid: f(prm.irid),
     pIridScale: f(prm.iridScale), pGem: f(prm.gem), pGemSun: f(prm.gemSun), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pRuneSpeed: f(prm.runeSpeed),
     pRuneAxis: f(prm.runeAxis), pRuneOrigin: f(new THREE.Vector3(...prm.runeOrigin)), pRuneWidth: f(prm.runeWidth),
@@ -342,7 +343,8 @@ uniform float pRimPower;
 uniform float pVeinFreq, pVeinSpeed, pVeinAxis;
 #endif
 #ifdef PREMIUM_SWEEP
-uniform float pShine, pSweepT;
+uniform float pShine, pSweepT, pShineW;
+uniform vec3 pShineTint;
 #endif
 #ifdef PREMIUM_LEAF
 uniform float pLeaf, pLeafScale;
@@ -541,8 +543,8 @@ export const PREMIUM_EMIT = /* glsl */`
       float sw = fract(time / pSweepT + pSeed * 0.37);
       float s0 = -pBox.y - 0.25, s1 = -pBox.x + 0.25;
       float d = (-vRest.z * 0.86 + vRest.y * 0.5) - mix(s0, s1, sw / 0.8);
-      float shine = exp(-d * d * 5000.0) * step(sw, 0.8);   // ~1 cm band; bloom adds the halo
-      totalEmissiveRadiance += vec3(1.0, 0.93, 0.75) * shine * pShine * (0.3 + 0.5 * sqrt(1.0 - pNdv)) * (0.7 + 0.3 * pCharge);
+      float shine = exp(-d * d * pShineW) * step(sw, 0.8);   // ~1 cm band at 5000; bloom adds the halo
+      totalEmissiveRadiance += pShineTint * shine * pShine * (0.3 + 0.5 * sqrt(1.0 - pNdv)) * (0.7 + 0.3 * pCharge);
     }
     #endif
     #ifdef PREMIUM_IRID

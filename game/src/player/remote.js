@@ -194,7 +194,9 @@ export class RemotePlayer {
     this._returnMag();
     if (this.gun) { this.gun.parent?.remove(this.gun); this.gun = null; }
     try {
-      const g = await instanceGLB(`weapons/${id}.glb`);
+      // def.tpModel: a third-person LOD (premium guns whose viewmodel carries 150k triangles of relief)
+      const tpm = WEAPONS[id]?.tpModel;
+      const g = await (tpm ? instanceGLB(`weapons/${tpm}.glb`).catch(() => instanceGLB(`weapons/${id}.glb`)) : instanceGLB(`weapons/${id}.glb`));
       await this.ready; // the character (and its hand bone) may still be loading
       if (this.weaponId !== id) return;
       // premium guns keep their glow and focus in third person (lite presets, emission x0.5; PREMIUM_WEAPONS §1.5.6)

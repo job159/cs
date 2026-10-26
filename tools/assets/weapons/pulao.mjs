@@ -1,7 +1,7 @@
 // 蒲牢．鐘吼 Pulao Bellroar — 神兵 shotgun M08 (docs/PREMIUM_WEAPONS.md M08 card, §1.5, §1.1).
 // An 870-class pump gun (1,000 mm overall, 470 mm barrel, 8-round tube) dressed as 蒲牢, the bell-knob dragon that
 // loves to roar:
-//   - muzzle = a cast bronze bell mouth (Ø28 -> Ø92 over 110 mm, a scalloped 八波 lip with a gilt bead) with three raised
+//   - muzzle = a cast bronze bell mouth (Ø28 -> Ø100 over 110 mm, a deep late flare, a scalloped 八波 lip with a gilt bead) with three raised
 //     bands of cloud curls; eight pierced 如意 windows in gilt frames, backed by bronze lattice over a glowing cyan
 //     liner; inside, a terraced bronze throat (six stepped ribs) with the glow only in the grooves between them
 //   - receiver top = the coiled 蒲牢: an arched S-body with a dorsal keel, flank scale rows, belly plates, flame spines
@@ -12,7 +12,7 @@
 //     antlers with knob rings, grooved mane, ears, gill fins, whiskers in gilt sockets
 //   - receiver right: a bronze 鐘架 rack with three hanging 梵鐘-style bells fx_bell1..3 (篆帶 bands, 3 x 3 枚 bosses,
 //     lotus striking bosses, plain 鉦 panels with a cloud, a rolled lip; pendulum on their top rings); a clapper inside
-//     whose gilt bead fx_lit1..3 shows a loaded bell shell
+//     whose gilt bead and a glowing ring inside the lip (fx_lit1..3) show a loaded bell shell; drawn at Ø24 so the count reads at hip
 //   - engraving: both flanks sunk into panels with a matted (stippled) ground, v-cut scroll grooves inlaid with gilt
 //     wire, beaded gilt frames; left: running scroll fields round a cast bronze bell cartouche, cut-and-gilt stroke-font
 //     roll-marks; right: a 青海波 wave scene with the house mark under the bells, a scroll band under the port, a gilt
@@ -30,7 +30,8 @@
 // gold / glow (the bell's cyan liner and throat grooves, the gilt clappers). Side view, mm: s forward from the rear face
 // of the receiver, t up from the bore axis, w right.
 import * as THREE from 'three';
-import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+import { toCreasedNormals, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { MeshoptSimplifier } from 'meshoptimizer';
 import { Gun, V, profile, plan, section, lathe, cyl, tube, box, sphere, cut, cutters, merge, xform, makeShape } from '../lib/gunkit.mjs';
 import { bakeMeshes } from '../lib/bake.mjs';
 import { postBake } from './m4.mjs';
@@ -380,6 +381,22 @@ class Pod {
   }
 }
 
+/** QEM-decimate a (non-indexed, creased) mesh in metres to at most err mm of surface error; returns non-indexed */
+function decimate(geo, err, nw = 0.3, prune = false) {
+  for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
+  const w = mergeVertices(geo.index ? geo.toNonIndexed() : geo, 1e-7);
+  const P = w.attributes.position.array, N = w.attributes.normal.array;
+  const Pmm = new Float32Array(P.length);
+  for (let i = 0; i < P.length; i++) Pmm[i] = P[i] * 1000;
+  const [I] = MeshoptSimplifier.simplifyWithAttributes(Uint32Array.from(w.index.array), Pmm, 3, N, 3, [nw, nw, nw], null, 0, err, prune ? ['ErrorAbsolute', 'Prune'] : ['ErrorAbsolute']);
+  const pos = new Float32Array(I.length * 3), nrm = new Float32Array(I.length * 3);
+  for (let k = 0; k < I.length; k++) for (let c = 0; c < 3; c++) { pos[k * 3 + c] = P[I[k] * 3 + c]; nrm[k * 3 + c] = N[I[k] * 3 + c]; }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+  return out;
+}
+
 // ------------------------------------------------------------------------------------------ bake settings
 const TESS = 22;
 /** per-material wear [curvature (1/m) mapped to full wear, cap]: the bronze rubs gold-brown on its ridges */
@@ -388,7 +405,7 @@ const WEAR = {
   '*:steel_dark': [1 / 1000, 0.6], '*:steel': [1 / 800, 0.7], '*:steel_bright': [1 / 500, 0.7], '*:lacquer_red': [1 / 1200, 0.38],
   '*:wood': [1 / 700, 0.55], '*:black_chrome': [0, 0], '*:crystal': [0, 0], '*:glow_ice': [0, 0], '*:glow_gold': [0, 0], '*:paint_red': [1 / 900, 0.4],
   '*:bronze_cast': [1 / 380, 0.75], '*:bronze_dark': [1 / 450, 0.7], '*:wood_rose': [1 / 700, 0.5], '*:lacquer_carved': [1 / 1000, 0.42],
-  '*:steel_stipple': [1 / 1200, 0.3], '*:silk_red': [0, 0],
+  '*:steel_stipple': [1 / 1200, 0.3], '*:silk_red': [0, 0], '*:rubber': [0, 0],
 };
 
 // ------------------------------------------------------------------------------------------ model
@@ -398,10 +415,10 @@ export default function build() {
   const TT = -23, TR = 11.2;              // magazine tube axis / radius
   const BR = 10.6;                        // barrel radius
   const MUZ = 684;                        // bell lip
-  const RL = 46;                          // bell lip radius (the card's Ø62, flared to Ø92 so it reads at the far end of the gun)
+  const RL = 50;                          // bell lip radius (the card's Ø62, flared to Ø100 so it reads at the far end of the gun)
   const RACK_T = 38, RACK_W = 25.5;       // bell rack crossbar
   const BELLS = [23, 51, 79];             // bell hinge s
-  const BK = 1.22;                        // the bells are drawn at Ø18 x 22 and enlarged about their hinge (first person)
+  const BK = 1.36;                        // the bells are drawn at Ø18 x 22 and enlarged about their hinge (first person: Ø24)
 
   // ======================================================================== receiver (blued steel)
   const recSec = [[-14.5, -34, 2], [14.5, -34, 2], [14.5, 7, 2.5], [13.3, 12.6, 3], [9, 15.5, 2.2], [-9, 15.5, 2.2], [-13.3, 12.6, 3], [-14.5, 7, 2.5]];
@@ -477,7 +494,7 @@ export default function build() {
     const gf = grooveField(paths, hw), o = 1.4, loop = [[s0 - o, t0 - o], [s1 + o, t0 - o], [s1 + o, t1 + o], [s0 - o, t1 + o]];
     const F = hfFace([{ pts: loop, tag: 'p' }], (s, t) => -0.27 * gf(s, t), {
       map: (x, y, z) => [x, y, sd * (GROUND + z)], walls: false, tol: 0.1, minCell: 0.4, maxCell: 8, edge: 2.4,
-      decimate: { error: 0.16, normals: 0.45, lattice: 6 } });   // the lattice keeps triangles short: no shading streaks
+      decimate: { error: 0.24, normals: 0.45, lattice: 8 } });   // the lattice keeps triangles short: no shading streaks
     g.add(F.face, MT);
     const wires = [];
     for (const p of paths) if (p.gild !== false) wires.push(...wireT(thin(p.pts, 1.35), (f) => 0.5 * (p.w ?? 1) * (p.taper ? 1 - 0.7 * f : 1), -0.29, -0.02, { step: 2.4 }));
@@ -731,11 +748,14 @@ export default function build() {
     }
   }
 
-  {
+  // the head at rest: raised 12° and turned 15° towards the shooter (the -w flank faces the eye at hip), so 蒲牢 shows
+  // its face instead of a tuft of antlers and mane; the sockets take the same matrix
+  const HM = (() => {
     const n0 = V(...NECK), n1 = V(...NECK2);
-    const HM = new THREE.Matrix4().makeTranslation(n1.x, n1.y, n1.z).multiply(new THREE.Matrix4().makeScale(HKS, HKS, HKS)).multiply(new THREE.Matrix4().makeTranslation(-n0.x, -n0.y, -n0.z));
-    for (const name of ['fx_pulao', 'fx_jaw']) { for (const list of g.part(name).geos.values()) for (const geo of list) geo.applyMatrix4(HM); g.part(name).pivot.applyMatrix4(HM); }
-  }
+    const R = new THREE.Matrix4().makeRotationY(15 * D2R).multiply(new THREE.Matrix4().makeRotationX(12 * D2R));
+    return new THREE.Matrix4().makeTranslation(n1.x, n1.y, n1.z).multiply(R).multiply(new THREE.Matrix4().makeScale(HKS, HKS, HKS)).multiply(new THREE.Matrix4().makeTranslation(-n0.x, -n0.y, -n0.z));
+  })();
+  for (const name of ['fx_pulao', 'fx_jaw']) { for (const list of g.part(name).geos.values()) for (const geo of list) geo.applyMatrix4(HM); g.part(name).pivot.applyMatrix4(HM); }
   // ======================================================================== three hanging bells (fx_bell1..3)
   // each: lip at t 8.5 (22 mm under the hinge), Ø18; gilt lip bead, a shoulder band, a belt of 8 bosses, cloud curls,
   // the hanging loop on the rack hook, a clapper inside; its gilt bead fx_litN shows only while that bell shell is loaded
@@ -777,6 +797,10 @@ export default function build() {
     b.add(sphere([s, lip + 4.6, RACK_W], 1.9, { seg: 10 }), BZ);
     const lit = g.part(`fx_lit${i + 1}`, { parent: `fx_bell${i + 1}`, pivot: [s, lip + 4.6, RACK_W], extras: { note: 'gilt clapper bead: hidden while that bell shell is not loaded' } });
     lit.add(sphere([s, lip + 4.6, RACK_W], 2.25, { seg: 12 }), 'glow_gold');
+    // a glowing bead round the rim's edge: the loaded bell reads from the side at hip, not only from below
+    lit.add(lax([[-0.6, 9.0], [-0.3, 9.6], [0.3, 9.9], [0.8, 9.5], [0.7, 8.7], [0.0, 8.5], [-0.6, 9.0]], at, 't', 28), 'glow_gold');
+    // and a glowing collar over the gilt shoulder band (faces up: the count reads from the eye above the gun at hip)
+    lit.add(lax([[15.7, 7.15], [16.1, 7.75], [17.1, 7.7], [17.5, 7.05], [16.6, 6.95], [15.7, 7.15]], at, 't', 28), 'glow_gold');
   });
   BELLS.forEach((s, i) => {
     const hp = V(s, RACK_T - 3.6, RACK_W), M = new THREE.Matrix4().makeTranslation(hp.x, hp.y, hp.z).multiply(new THREE.Matrix4().makeScale(BK, BK, BK)).multiply(new THREE.Matrix4().makeTranslation(-hp.x, -hp.y, -hp.z));
@@ -785,12 +809,16 @@ export default function build() {
   });
   g.socket('bells', [51, RACK_T - 16, RACK_W]);
   BELLS.forEach((s, i) => g.socket(`bell${i + 1}`, [s, RACK_T - 19, RACK_W]));
+  // under the bell lips, a little outboard: the inspect's flicking hand stays below the bells it shows
+  g.socket('bells_low', [51, -6, RACK_W + 6]);
+  BELLS.forEach((s, i) => g.socket(`bell${i + 1}_low`, [s, -4, RACK_W + 5]));
 
   // ======================================================================== barrel, tube, cap (blued) and the bell mouth (bronze)
   // the barrel carries a slim bronze whisker rib on cloud-curl posts, a cast band, gold damascene scrolls past the
   // receiver nut and ahead of the clamp; a figure-8 band and the cast clamp tie it to the tube, whose exposed run wears an
   // engraved bronze sleeve bound in red silk cord. The crown sits deep in the bell's throat.
-  g.add(lathe([[RS1 - 1, 9.3], [RS1 - 1, 12.4], [RS1, 12.9], [RS1 + 16, 12.9], [RS1 + 18, 11.6], [RS1 + 19, BR], [645, BR], [646.2, BR - 0.8], [646.2, 9.25], [RS1 - 1, 9.25]], { seg: 32 }), 'steel_blued');
+  g.add(lathe([[RS1 - 1, 9.3], [RS1 - 1, 12.4], [RS1, 12.9], [RS1 + 16, 12.9], [RS1 + 18, 11.6], [RS1 + 19, BR], [645, BR], [646.2, BR - 0.8], [646.2, 9.25], [RS1 - 1, 9.25]], { seg: 32 }), 'steel_dark');
+  g.add(lathe([[600, 0], [600, 9.2], [601.5, 9.2], [601.5, 0]], { seg: 24 }), 'rubber');   // matte plug deep in the bore
   for (const s of [236, 241]) g.add(lathe([[s - 0.6, BR - 0.1], [s, BR + 0.42], [s + 0.6, BR - 0.1]], { seg: 32 }), 'gold');
   // receiver nut: a knurled ring
   g.add(revolve([[RS1 + 3, 12.6], [RS1 + 3.6, 13.3], [RS1 + 12.4, 13.3], [RS1 + 13, 12.6]], { M: 64, mod: (s, a) => [0, s > RS1 + 3.4 && s < RS1 + 12.6 ? 0.28 * Math.cos(a * 32) : 0] }), 'steel_blued');
@@ -847,7 +875,7 @@ export default function build() {
     g.add(mapTris(WR, sMap(BR, { a0: 25 }), 40), 'gold');
   }
   // magazine tube + cap (bronze knob with a knurled ring) + swivel
-  g.add(tube(RS1 - 2, 566, TR, TR - 1.2, { t: TT, seg: 28 }), 'steel_blued');
+  g.add(tube(RS1 - 2, 566, TR, TR - 1.2, { t: TT, seg: 28 }), 'steel_dark');
   g.add(revolve([[565, TR - 0.4], [565, 12.4], [567, 13.0], [573, 13.0], [574, 12.2], [576, 12.2], [577, 13.2], [584, 13.2], [585, 12.2], [592, 10.8], [596, 8.2], [597.6, 4.6], [598, 0.5], [565, 0.5]], {
     t: TT, M: 40, mod: (s, a) => [0, s > 577.2 && s < 583.8 ? 0.35 * Math.cos(a * 30) : 0] }), BZ);
   {
@@ -876,7 +904,7 @@ export default function build() {
     // its own part: it rings (a short scale shiver) on every shot and toll (pulao.js onParts)
     const M = g.part('fx_mouth', { pivot: [572, 0, 0], extras: { note: 'bell mouth: rings with a scale shiver about its root (pulao.js)' } });
     const bandAt = [592, 618, 674], bump = (s) => bandAt.reduce((a, c) => a + 1.3 * Math.exp(-(((s - c) / 3.3) ** 8)), 0);
-    const Rf = (s) => lerp(14.4, RL, Math.pow(clamp01((s - 572) / (MUZ - 572)), 2.4));
+    const Rf = (s) => lerp(14.4, RL, Math.pow(clamp01((s - 572) / (MUZ - 572)), 2.9));   // a late, deep trumpet flare
     const Ro = (s) => Rf(s) + bump(s), Ri = (s) => Math.max(12.2, Rf(s) - 2.2);
     const st = [];
     for (let s = 568; s <= MUZ - 2;) { st.push([s, Ro(s)]); const nb = bandAt.some((c) => Math.abs(s - c) < 4.6); s += nb ? 1.05 : s < 640 ? 4 : 2.4; }
@@ -1176,7 +1204,7 @@ export default function build() {
   g.socket('grip_l', [372, -42.6, 0]);
   g.socket('sight_rear', [48, 34.5, 0]);
   g.socket('sight_front', [MUZ - 3.5, RL + 3.0, 0]);
-  const HS = ([s, t, w]) => [NECK2[0] + (s - NECK[0]) * HKS, NECK2[1] + (t - NECK[1]) * HKS, w * HKS];
+  const HS = ([s, t, w]) => { const v = V(s, t, w).applyMatrix4(HM); return [-v.z, v.y, v.x]; };
   g.socket('head', HS([166, 32, 0]));
   g.socket('mouth', HS([179, 29, 0]));
   g.socket('eye_r', HS(H.surf(161.8, 26 * D2R, 1.4)));
@@ -1197,10 +1225,26 @@ export default function build() {
   // wear from curvature), then verdigris pooled in the bronze's cast recesses (cavity from the AO)
   g.build = (o = {}) => {
     const root = Gun.prototype.build.call(g, { ...o, bake: false });
+    // QEM decimation of every dense mesh (filigree, scale rows, carved lacquer, the bell mouth's lathes): welded by
+    // position + normal (crease splits stay split), the normal as an attribute, at most 0.16 mm off the authored surface
+    // (~0.4 px at hip, ~1 px in the 20 cm inspect close-up; the relief is 0.3-0.9 mm deep, so it stays); the engraved
+    // grounds keep their own lattice. g.lod 1 (pulao_tp, third person): 1.2 mm, small parts pruned, the grounds too.
+    const tp = g.lod === 1;
+    if (o.decimate !== false) {
+      let before = 0, after = 0;
+      root.traverse((m) => {
+        if (!m.isMesh || /^(glow_|crystal)/.test(m.userData.mat) || (!tp && m.userData.mat === MT)) return;
+        const n = m.geometry.attributes.position.count / 3;
+        before += n;
+        if (n > 600 || tp) m.geometry = tp ? decimate(m.geometry, 1.2, 0.1, true) : decimate(m.geometry, /^gold/.test(m.userData.mat) ? 0.14 : 0.16);
+        after += m.geometry.attributes.position.count / 3;
+      });
+      if (o.log !== false) console.log(`pulao decimate: ${Math.round(before)} -> ${Math.round(after)} triangles`);
+    }
     if (o.bake === false) return root;
     const meshes = [];
     root.traverse((m) => { if (m.isMesh && !/^(glow_|crystal)/.test(m.userData.mat)) meshes.push(m); });
-    const tess = (o.tessellate ?? TESS) * 0.001;
+    const tess = (o.tessellate ?? TESS) * 0.001 * (tp ? 2.5 : 1);
     for (const m of meshes) {
       const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
       for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);

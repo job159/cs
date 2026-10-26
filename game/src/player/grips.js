@@ -101,4 +101,10 @@ Object.assign(HAND_POSES, {
   bowHold: { index: [58, 66, 34], middle: [70, 80, 42], ring: [74, 84, 44], pinky: [76, 84, 44], spread: [-3, 0, 2, 4], thumb: [38, 50, 62, 30, 18] },
   // thumb draw: the thumb bent round the string, the index curled tight over the thumbnail, the rest in a fist
   thumbDraw: { index: [78, 92, 48], middle: [88, 98, 62], ring: [88, 98, 62], pinky: [86, 95, 60], spread: [2, 0, 0, 0], thumb: [42, 18, 58, 62, 40] },
+  // a sword hilt (tsuka, ~30 x 24 mm oval) held in a ring of fingers: each finger wraps round it with a gap (not a
+  // closed fist), the index loosest against the guard, the little finger tightest at the pommel end, the thumb over
+  // the middle finger; used with palm [0.027, 0.072] (the hilt under the finger roots, inside the curl)
+  tsuka: { index: [72, 66, 50], middle: [80, 70, 58], ring: [82, 72, 60], pinky: [84, 74, 60], spread: [-3, 0, 2, 5], thumb: [40, 50, 70, 40, 30] },
+  // the same round a thicker scabbard near its mouth (~36 x 30 mm)
+  saya: { index: [66, 62, 46], middle: [74, 66, 52], ring: [76, 68, 54], pinky: [78, 70, 54], spread: [-3, 0, 2, 5], thumb: [36, 46, 66, 36, 26] },
 });

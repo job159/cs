@@ -109,7 +109,10 @@ void main() {
   } else {
     vec3 n = normalize(iDir + vec3(0.0, 1e-6, 0.0));
     vec3 t = normalize(abs(n.y) < 0.95 ? cross(vec3(0.0, 1.0, 0.0), n) : cross(vec3(1.0, 0.0, 0.0), n));
+    // the material is one-sided: seen from the back of its dir (a ring facing down a barrel) the quad flips an axis so
+    // it still faces the eye instead of being culled
     vec3 b = cross(n, t);
+    if (dot(mat3(modelViewMatrix) * n, -mv.xyz) < 0.0) t = -t;
     vec2 c2 = vec2(cr.x * corner.x - cr.y * corner.y, cr.y * corner.x + cr.x * corner.y) * size;
     mv = modelViewMatrix * vec4(iPos + t * c2.x + b * c2.y, 1.0);
     clip = project(mv);
