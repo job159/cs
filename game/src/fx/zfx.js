@@ -57,6 +57,8 @@ export const SHELL = {
   emberkill: { col: [2.8, 1.1, 0.25], amt: 0.6, fres: 0.95, exp: 1.8, prio: 9, decay: true },
   // X02 kill: a star-blue rim flash (a pack cut down at once must not turn into a crowd of white glass bodies)
   starkill: { col: [0.9, 1.5, 3.4], amt: 0.45, fres: 0.97, exp: 2.6, prio: 9, decay: true },
+  // E07 kill (KE_GALE): a thin wet cyan-white rim (the wind cut and the spray carry the colour; never a glass body)
+  gustkill: { col: [0.9, 2.1, 2.8], amt: 0.38, fres: 1, exp: 4, prio: 9, decay: true },
   // X05 kill (KE_CLEAVE): the cut body chars dark under a thin molten crimson rim (smouldering; a wide bright rim lit
   // whole bodies pale pink). char: albedo darkening (0..1), follows the amount
   cleavekill: { col: [2.0, 0.24, 0.07], amt: 0.5, fres: 1, exp: 4.2, char: 0.55, prio: 9, decay: true },

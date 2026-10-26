@@ -3,14 +3,40 @@
 //   host -> all    'start'  { map, difficulty, seed, n }  sent BEFORE the host loads, so everyone loads the same map
 //   guest -> host  'ready'  { n }                         map loaded and NetSync attached
 //   host -> all    'go'     { n }                         everyone ready (or a timeout): start playing
-//   guest -> host  'st'     { k, h, m }                   own match stats (every 2 s and at the end)
-//   host -> all    'board'  [[id, name, slot, k, h, m]]   everybody's stats (results table / MVP)
+//   guest -> host  'st'     { k, h, a, d, b, m, c, lv, dn, dd, up, sp, bw }   own match stats (every second in a match,
+//                                                         every 2 s on the results, and at the end)
+//   host -> all    'board'  [[id, name, slot, k, h, m, d, b, a, lv, dn, dd, c, up, bw, sp]]   everybody's stats (Tab
+//                                                         scoreboard, results table / MVP)
 //   host -> all    'lobby'  {}                            the host went back to the lobby
+// Stats board (ui/scoreboard.js row fields): kills k, headshots h, assists a, damage d, boss damage b and the best
+// weapon bw are the host's own count (Match.tally: the zombies and every hit on them live on the host; a guest's hits
+// are predictions there); level lv, money now c / earned m / spent sp, upgrade levels up, downs dn and bleed-outs dd
+// belong to each player's own client (its economy and its PlayerStatus), so the guests report them.
 // While a guest loads, this listener is detached: the room buffers the host's snapshots / events
 // (Room inbox) until NetSync attaches, so no zombie spawn is missed.
 // Loading: every player reports its load progress (room.setLoading -> peers.get(id).loading). The host waits for
 // the guests' ready up to its limit and past it for a guest whose progress still moves (READY_CAP_MS at most); a
 // guest waits for 'go' the same way while the host is still loading.
+import { bestWeapon } from '../ui/scoreboard.js';
+
+// 'board' row fields, in order (ui/scoreboard.js rows)
+const BOARD = ['id', 'name', 'slot', 'k', 'h', 'm', 'd', 'b', 'a', 'lv', 'dn', 'dd', 'c', 'up', 'bw', 'sp'];
+const REPORT = ['k', 'h', 'a', 'd', 'b', 'm', 'c', 'lv', 'dn', 'dd', 'up', 'sp'];
+/** Our 'st' report of a match (null: an empty one). */
+function ownReport(m) {
+  const s = m?.stats || {};
+  return { k: s.kills | 0, h: s.headshots | 0, a: s.assists | 0, d: Math.round(s.damage || 0), b: Math.round(s.bossDamage || 0),
+    m: Math.round(s.money || 0), c: Math.round(m?.money || 0), lv: m ? m.level | 0 : 0, dn: s.downs | 0, dd: s.died | 0,
+    up: s.upgrades | 0, sp: Math.round(s.spent || 0), bw: bestWeapon(s.weaponKills) || '' };
+}
+/** A guest's 'st' as received: whole non-negative numbers, a short weapon id. */
+function cleanReport(d) {
+  const r = {};
+  for (const k of REPORT) r[k] = Math.max(0, Math.min(1e9, Math.round(+d[k] || 0)));
+  r.bw = typeof d.bw === 'string' ? d.bw.slice(0, 40) : '';
+  return r;
+}
+
 const READY_CAP_MS = 120000;   // host: never wait longer than this for the guests' ready
 const GO_CAP_MS = READY_CAP_MS + 15000;   // guest: the host may wait that long for a slower teammate, then says go
 const LOAD_STALL_MS = 20000;   // a teammate whose progress did not move for this long is not "still loading"
@@ -23,7 +49,7 @@ export class Coop {
     this.loadingN = 0;        // guest: match being loaded
     this.ready = new Set();
     this.goN = 0;
-    this.stats = new Map();   // host: guest id -> { k, h, m }
+    this.stats = new Map();   // host: guest id -> its last 'st' report
     this.board = [];          // guest: last board from the host
     this.tick = 0;
     this.onMsg = (m) => this._msg(m);
@@ -66,6 +92,7 @@ export class Coop {
     room.setMeta({ state: 'playing', map: start.map, difficulty: start.difficulty });
     this.ready.clear();
     this.stats.clear();
+    this.lastOwn = null; this.lastTally = null;
     room.broadcast('start', start);
     app.startMatch({ ...start, room });
   }
@@ -123,15 +150,16 @@ export class Coop {
   }
 
   // ---------------------------------------------------------------- stats board
+  /** Our own match stats as an 'st' report (the running match, or its copy once it ended). */
   _own() {
-    const s = this.app.game?.match?.stats || this.lastOwn || { kills: 0, headshots: 0, money: 0 };
-    return { k: s.kills | 0, h: s.headshots | 0, m: Math.round(s.money || 0), d: Math.round(s.damage || 0), b: Math.round(s.bossDamage || 0) };
+    const m = this.app.game?.match;
+    return m ? ownReport(m) : this.lastOwn || ownReport(null);
   }
 
-  /** Called every frame while a multiplayer match (or its results) is up. */
+  /** Called every frame while a multiplayer match (or its results) is up: every second in play, every 2 s after. */
   update(dt) {
     this.tick += dt;
-    if (this.tick < 2) return;
+    if (this.tick < (this.app.state === 'game' ? 1 : 2)) return;
     this.tick = 0;
     this.flushStats();
   }
@@ -142,32 +170,45 @@ export class Coop {
     else this.room.send('st', this._own());
   }
 
-  /** Match ended: remember own stats, push them now (host: again shortly after, to catch late guests). */
+  /** Match ended: remember own stats (and the host's tallies), push them now (host: again shortly after, for late guests). */
   final() {
-    const s = this.app.game?.match?.stats;
-    if (s) this.lastOwn = { ...s };
+    const m = this.app.game?.match;
+    if (m) { this.lastOwn = ownReport(m); this.lastTally = m.tally; }
     this.flushStats();
     if (this.room.isHost) setTimeout(() => { this.flushStats(); this.app.screens.results?.refresh(); }, 1500);
   }
 
+  /**
+   * Host: everybody's row (BOARD order). Kills / headshots / assists / damage / boss damage / best weapon from our own
+   * tallies (Match.tally, by the guest's id: its hits arrive as 'hits' with shooter = its link id); the rest from the
+   * guest's last report. A guest the tallies have not met yet keeps what it reported.
+   */
   _boardData() {
-    const own = this._own();
+    const own = this._own(), tally = this.app.game?.match?.tally || this.lastTally;
     return this.room.players().map((p) => {
-      const s = p.self ? own : this.stats.get(p.id) || { k: 0, h: 0, m: 0, d: 0, b: 0 };
-      return [p.id, p.name, p.slot, s.k, s.h, s.m, s.d, s.b];
+      const s = p.self ? own : this.stats.get(p.id) || {};
+      const t = p.self ? null : tally?.get(p.id);
+      const v = t ? { k: t.k, h: t.h, a: t.a, d: Math.round(t.d), b: Math.round(t.b), bw: bestWeapon(t.wk) || s.bw || '' } : s;
+      return [p.id, p.name, p.slot, v.k | 0, v.h | 0, s.m | 0, v.d | 0, v.b | 0, v.a | 0, s.lv | 0, s.dn | 0, s.dd | 0, s.c | 0, s.up | 0, v.bw || '', s.sp | 0];
     });
   }
 
-  /** Rows for the results table: { id, name, slot, k, h, m, d (damage), b (boss damage), self, host }. */
+  /**
+   * Rows for the Tab scoreboard and the results table (ui/scoreboard.js row fields) + self, host; by slot. A guest
+   * shows its own economy / downs fresher than the board (they are its own); the counts stay the host's. Players the
+   * board does not list yet (it arrives every second) get an empty row.
+   */
   boardRows() {
     const room = this.room;
     const data = room.isHost ? this._boardData() : this.board;
-    const rows = data.map(([id, name, slot, k, h, m, d = 0, b = 0]) => ({ id, name, slot, k, h, m, d, b, self: id === room.selfId, host: slot === 0 }));
+    const rows = data.map((a) => ({ ...Object.fromEntries(BOARD.map((k, i) => [k, a[i] ?? (k === 'bw' ? '' : 0)])), self: a[0] === room.selfId, host: a[2] === 0 }));
     if (!room.isHost) {
       const own = this._own();
       const me = rows.find((r) => r.self);
-      if (me) Object.assign(me, own); else rows.push({ id: room.selfId, name: room.name, slot: room.slot, ...own, self: true, host: false });
+      if (me) Object.assign(me, { m: own.m, c: own.c, lv: own.lv, dn: own.dn, dd: own.dd, up: own.up, sp: own.sp });
+      else rows.push({ id: room.selfId, name: room.name, slot: room.slot, ...own, self: true, host: false });
     }
+    for (const p of room.players()) if (!rows.some((r) => r.id === p.id)) rows.push({ ...ownReport(null), id: p.id, name: p.name, slot: p.slot, self: !!p.self, host: p.slot === 0 });
     return rows.sort((a, b) => a.slot - b.slot);
   }
 
@@ -176,8 +217,8 @@ export class Coop {
     const app = this.app, room = this.room;
     if (room.isHost) {
       if (type === 'ready' && data?.n === this.n) { this.ready.add(from); this._wake?.(); }
-      else if (type === 'st' && data) {
-        this.stats.set(from, { k: data.k | 0, h: data.h | 0, m: data.m | 0, d: data.d | 0, b: data.b | 0 });
+      else if (type === 'st' && data && typeof data === 'object') {
+        this.stats.set(from, cleanReport(data));
         if (app.state === 'results') app.screens.results?.refresh();
       }
       return;
@@ -186,10 +227,13 @@ export class Coop {
     if (type === 'start' && data && data.n !== this.loadingN) {
       this.loadingN = data.n;
       this.board = [];
-      this.lastOwn = null;
+      this.lastOwn = null; this.lastTally = null;
       app.startMatch({ ...data, room });
     } else if (type === 'go') this.goN = Math.max(this.goN, data?.n | 0);
-    else if (type === 'board' && Array.isArray(data)) { this.board = data; if (app.state === 'results') app.screens.results?.refresh(); }
+    else if (type === 'board' && Array.isArray(data)) {
+      this.board = data.filter((a) => Array.isArray(a) && a.length >= 6);
+      if (app.state === 'results') app.screens.results?.refresh();
+    }
     else if (type === 'lobby') app.onHostLobby();
   }
 }

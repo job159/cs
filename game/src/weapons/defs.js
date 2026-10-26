@@ -1002,6 +1002,187 @@ def({ id: 'chunting', zh: '春霆神戟．驚蟄', en: 'Thunderclap Halberd', ca
     },
   } });
 
+// ---------------------------------------------------------------- 異能 暑期 E07 (docs/PREMIUM_WEAPONS.md E07, 05d §8.2, Appendix A)
+// 颱風眼．斬浪: a two-handed weather-instrument greatsword (presentation + mechanics: weapons/premium/taifeng.js). The special
+// drives its own attacks (mode 'melee' -> special.melee): LMB taps chain 三段斬 (橫斬 110 -> 反橫斬 110 -> 劈地 200 with a 3 m
+// ring), LMB during the draw or 0.3 s after it = 破浪 (a 4 m water arc, 160); RMB held 三階蓄力 (stage 1 at 0.4 s, then one
+// every 0.9 s; release: 1 = a 6 m wind blade 180, 2 = two crossed blades 180 each, 3 = 颱風眼 when 颱風能量 is full); Q 斬浪擲
+// (a homing water-wind blade out to 25 m, 300, pierces, flies home; 1.5 s invulnerable; 15 s); hold Q 颱風眼 (the eye wall:
+// r 5 m, 2.5 s, pulls in 3 m/s, a bolt 120 every 0.4 s, the wall collapses 700 in 8 m). WIP: hidden until refined.
+def({ id: 'taifeng', zh: '颱風眼．斬浪', en: 'Typhoon-Eye Tidecleaver', cat: 'melee', tier: 'exotic', line: 'summer', element: ['storm'], model: 'taifeng', hidden: true,
+  price: 7200, wear: 0.2, dmg: 110, head: 1.5, rpm: 110, mode: 'melee', mag: 0, reserve: 0, draw: 0.55,
+  // shop card bars: the eye wall and the homing throw are the reach the derived melee bars miss
+  shopStats: [['傷害', 0.6], ['攻速', 0.55], ['重擊', 0.85], ['範圍', 0.95], ['控場', 0.9]],
+  icon: { roll: -90 },   // shop / HUD silhouette: laid along the strip, the point to the right
+  range: [3.2, 3.2, 1], speed: 5.2, knock: 3, stagger: 0.6, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },
+  kick: { back: 0, up: 0, side: 0, roll: 0 }, sound: 'taifeng', shell: null, flash: null, tracer: 0,
+  // first person: the blade rises from the lower right, its flat (the wind tunnel, the barometer) turned to the camera
+  vm: { hip: [0.23, -0.23, -0.5, -8, -72, 30] },
+  premium: {
+    element: ['storm'], look: 'taifeng',
+    // gunmetal blade + guard (60), brass instruments (30), cyan-white wind light (10); storm red only on the dial and the lamp
+    palette: { base: '#4a5058', trim: '#c99a4b', core: '#bff4ff', rim: '#5fd8ff', mote: '#e8fbff', accent: ['#ff4a3a', '#c99a4b'], twin: '#ffcf6a' },
+    // (premium.mat retunes only preset materials: the leathers take a pv_metal with no sweep and an invisible rim so their
+    // values can be zoned here)
+    presets: { glow_cyan: 'pv_energy', glow_red: 'pv_energy', brass: 'pv_metal', steel: 'pv_metal', steel_dark: 'pv_metal', steel_bright: 'pv_metal', steel_blued: 'pv_metal',
+      porcelain: 'pv_glaze', glaze_cobalt: 'pv_glaze', glaze_vermilion: 'pv_glaze', crystal: 'pv_crystal', obsidian: 'pv_core', leather_black: 'pv_metal', leather_grain: 'pv_metal', glass_clear: 'pv_metal' },
+    pv: { pv_metal: { shine: 1.0, sweepT: 5 }, pv_glaze: { shine: 1.2, sweepT: 4.5, shardScale: 0, irid: 0, rimPower: 9 },
+      pv_energy: { veinFreq: 9, veinSpeed: 0.7, veinAxis: 2 }, pv_core: { coreMode: 5, coreAxis: 1, coreScale: 1 } },
+    pvKey: { steel_dark: { rimPower: 16, shine: 0.7, shineTint: [0.86, 0.94, 1] }, steel: { rimPower: 16, shine: 0.45 }, steel_bright: { rimPower: 12, shine: 1.2, shineTint: [0.9, 0.97, 1] },
+      steel_blued: { rimPower: 14, shine: 0.6 }, brass: { rimPower: 12, shine: 1.0 }, porcelain: { rimPower: 10 },
+      leather_black: { rimPower: 40, shine: 0, flashMask: 0 }, leather_grain: { rimPower: 40, shine: 0, flashMask: 0 },
+      obsidian: { coreTint: '#9fe8ff' }, glow_red: { veinAxis: 0, veinFreq: 0.01 }, glass_clear: { shine: 0.8, rimPower: 6, flashMask: 0 } },
+    // value zoning: a light satin gunmetal blade (brushed along it) so the brass isobars and the slot frame read on it, a
+    // mirror edge bevel, a darker cast gunmetal guard / mast, warm satin brass, white enamel dial, oxblood leather cord
+    mat: {
+      steel_dark: { color: '#6b727b', rough: 0.3, metal: 0.92, detail: 'brushed', dScale: 22, dStr: 0.1, env: 1.05, wear: { color: '#b9bec5', metal: 1, rough: 0.2, amount: 0.7 } },
+      steel_bright: { color: '#d7dbe0', rough: 0.12, metal: 1, detail: 'brushed', dScale: 40, dStr: 0.04 },
+      steel: { color: '#4b5059', rough: 0.4, metal: 0.82, detail: 'cast', dScale: 90, dStr: 0.1, env: 1.05, wear: { color: '#a9adb4', metal: 1, rough: 0.28, amount: 1 } },
+      steel_blued: { color: '#1c2436', rough: 0.25, metal: 0.9, detail: 'flat' },
+      brass: { color: '#c9a35a', rough: 0.24, metal: 1, detail: 'brushed', dScale: 50, dStr: 0.06, cavity: 0.8, cavCol: '#4a3a1c', wear: { color: '#f0d49a', metal: 1, rough: 0.15, amount: 0.6 } },
+      porcelain: { color: '#efece4', rough: 0.18, env: 1.2 }, glaze_cobalt: { color: '#2a56b8' }, glaze_vermilion: { color: '#c8302a' },
+      leather_black: { color: '#17130f', rough: 0.6, metal: 0, env: 0.7 }, leather_grain: { color: '#3a2216', rough: 0.66, metal: 0, env: 0.75, dScale: 210, dStr: 0.8 },
+      crystal: { color: '#3a0d0b', rough: 0.05, env: 1.4 },
+      obsidian: { color: '#05080c', rough: 0.08 },
+      glass_clear: { env: 1.0, opacity: 0.2 },   // the wind-tunnel panes: a faint sheen over the core, not a mirror
+      glow_cyan: { emissive: '#8feaff', glow: 2.6 },   // ≤ HDR 3 at rest (§1.1 #2): the charge and skills multiply it up (taifeng.js view)
+      glow_red: { emissive: '#ff3a26', glow: 6 },
+    },
+    hero: 'fx_core', crosshair: 'xh_typhoon', meters: ['dial', 'segments'],
+    ready: { sfx: 'ready_taifeng', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.6, glowMul: 1.5, idleExtra: 'taifeng_ready' } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'taifeng_gust', every: 7 }],   // §1.17 idle tiers
+    firstDraw: 'taifeng_first', drawClip: 'taifeng_draw', inspect: ['taifeng_inspect'], rareInspect: 'taifeng_inspect_rare',
+    killFx: 'KE_GALE', killMark: 'km_taifeng', dmgSkin: 'typhoon', skillSkin: 'typhoon',
+    showcase: ['taifeng_first', 'fire:3', 'alt', 'tap', 'ult', 'taifeng_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '三段斬', desc: '點按連斬：橫斬 → 反橫斬 → 劈地（3 m 震環）' }, { key: 'LMB', zh: '破浪', desc: '拔劍途中或拔出後 0.3 秒內按：4 m 拔出斬 160' },
+      { key: 'hold RMB', zh: '三階蓄力', desc: '放開：1 階風刃 6 m／2 階交叉雙風刃／3 階（颱風能量滿）颱風眼' },
+      { key: 'Q', zh: '斬浪擲', desc: '擲出追蹤水風之刃 25 m・300・貫穿・飛回；1.5 秒無敵（冷卻 15 秒）' },
+      { key: 'hold Q', zh: '颱風眼', desc: '颱風能量 100%（或 Q 再按 F）：眼牆拉扯、落雷、崩落 700' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'taifeng',
+    meters: {
+      ult: { max: 100, source: 'damage', per: 5200, skillFill: false, hud: 'dial', label: '颱風能量', color: '#5fd8ff', src: '命中累積（約 40 秒）' },
+      charge: { max: 3, hud: 'segments', segments: 3, label: '蓄力', color: '#bff4ff', src: '按住右鍵蓄力' },   // live stage (display only)
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q). 三階蓄力 is a held channel driven by the special
+      alt: { id: 'taifeng_gale', key: 'hold RMB', zh: '三階蓄力', desc: '放開：1 階風刃 6 m 180／2 階交叉雙風刃 各 180／3 階颱風眼', hold: true, cost: 0, level: 'L1' },
+      tap: { id: 'taifeng_throw', key: 'Q', zh: '斬浪擲', desc: '追蹤水風之刃 25 m・300・貫穿・飛回・1.5 秒無敵', cd: 15, range: 25, speed: 26, dmg: 300, invuln: 1.5, level: 'L2' },
+      ult: { id: 'taifeng_eye', key: 'hold Q', zh: '颱風眼', desc: '12 m 內升起眼牆：拉扯 3 m/s、每 0.4 秒落雷 120、崩落 8 m 700', meter: 'ult',
+        range: 12, r: 5, h: 7, wall: 2.5, pull: 3, boltEvery: 0.4, boltDmg: 120, collapseR: 8, collapseDmg: 700, level: 'L4' },
+    },
+    combo: [
+      { id: 'sweep', dur: 0.48, hit: 0.15, dmg: 110, r: 3.2, arc: 150, knock: 3, stagger: 0.6 },
+      { id: 'backsweep', dur: 0.48, hit: 0.17, dmg: 110, r: 3.2, arc: 150, knock: 3, stagger: 0.6 },
+      { id: 'cleave', dur: 0.8, hit: 0.33, dmg: 200, r: 3, reach: 1.7, knock: 6, stagger: 1, heavy: true },
+    ],
+    chain: 0.45, recover: 1.4,
+    drawSlash: { window: 0.3, dur: 0.42, hit: 0.18, dmg: 160, r: 4, arc: 170, knock: 5 },
+    gale: { stages: [0.4, 1.3, 2.2], range: 6, speed: 30, dmg: 180, width: 2.4, cross: 18 },
+  } });
+
+// ---------------------------------------------------------------- 神兵 啟明工坊旗艦 M04 (docs/PREMIUM_WEAPONS.md M04, Appendix A)
+// 焰樞．破限 Pyrecore Unbound: a heavy bullpup forge-core cannon (presentation + mechanics: weapons/premium/yanshu.js, FX pieces
+// yanshu_fx.js, models tools/assets/weapons/yanshu.mjs + yanshu_drone.mjs). LMB 樞彈: 300 rpm x 40, and 0.15 s after a hit
+// the round bursts on the target (2.5 m, 35). RMB 爐環 (a 4 m 360° fire ring, 120 + knockback); RMB again within 1.2 s
+// 吸爐震擊 (an 8 m 50° cone pulled 4 m in, then the ram strikes a 160 shock wave): both done = 超載 8 s (fins up into a heat
+// tower, the doors open, the ram out 60 mm, the core white-hot): LMB is then a molten beam (300/s, pierces 2), RMB the 樞錘
+// 衝撞 (an 8 m dash in 0.35 s, invulnerable to everything, 300 in 4 m where it lands). R R (or hold Q) at 樞能 100 % (fills
+// in 40 s, +2 % a kill) = 破限: the seal flies off, 14 s of overload, the beam x1.5, the drones fire thin beams, and for the
+// last 2 s both drones dock beside the ram for a 30 m triple beam (900/s). Passive: two falcon drones over the shoulders
+// shoot the nearest zombie within 15 m (6 x 18 a second each, x1.6 when one is within 4 m). Crisis 爐壁護盾: the six fins
+// form a hexagonal furnace wall that takes the killing blow and bursts (300 in 4 m). Aura 分機: during 破限 the two
+// teammates nearest the caster get a mini drone for 10 s. WIP: hidden until the refine stage releases it.
+def({ id: 'yanshu', zh: '焰樞．破限', en: 'Pyrecore Unbound', cat: 'heavy', tier: 'mythic', line: 'qiming', element: ['cyber'], model: 'yanshu', tpModel: 'yanshu_tp', hidden: true,
+  price: 9400, wear: 0.25, dmg: 40, head: 3, rpm: 300, mode: 'auto', mag: 30, reserve: Infinity, reload: 2.4, reloadEmpty: 2.4, draw: 0.7,
+  pen: 1.5, range: [40, 100, 0.8], speed: 4.6, knock: 2.4, stagger: 0.55,
+  // a heavy single-shot rhythm: the aim climbs little (recoil.up) and settles between shots; the weight is the 2.5° view punch,
+  // the viewmodel kick and the ram's recoil (premium/yanshu.js onFire)
+  spread: [0.9, 0.3, 1.2, 5, 0.22, 2.2, 9], recoil: { up: 0.9, side: 0.3, upMax: 3.6, recover: 16, first: 1, pause: 0.7, pattern: [0, 0.25, -0.3, 0.2, -0.2] },
+  kick: { back: 0.05, up: 5.5, side: 1.2, roll: 2.4 },
+  shopStats: [['傷害', 0.7], ['射速', 0.45], ['範圍', 0.85], ['控場', 0.8], ['機動', 0.75]],
+  // first person: further out and lower than a rifle, rolled 12° out so the furnace's left flank (the window, the gauge, the
+  // hydraulic lines) faces the eye in the lower right; the fin stack mid right, the ram well right of the crosshair
+  vm: { hip: [0.165, -0.222, -0.45, 2.2, -1.5, -12] },
+  // sound: its own set (yanshu_close / _tail / _mech, a later audio stage); the stock .50 under the forge overtone until then
+  sound: 'yanshu', shell: null, flash: 'rifle', tracer: 0,
+  // the gun's own fireball stays small: the square forge crown out of the ram face (yanshu.js crown()) is the muzzle look; every
+  // round traces a short orange-white streak
+  fx: { flashScale: 0.35, ramp: 7, tracer: { color: [6, 3.4, 1.1], glow: [1.4, 0.55, 0.12], width: 0.012, length: 2.2 }, tracerEvery: 1 },
+  premium: {
+    element: ['cyber'], look: 'yanshu',
+    // white ceramic armour + gunmetal (60), safety orange + brass (30), molten core (10); hologram cyan only on the drones' eyes
+    // the rim is a warm molten edge on the gun (§1.6 cyber rim cyan is only the drones' eyes and the holograms: holo)
+    palette: { base: '#e6e3dc', trim: '#e2571a', core: '#ffb02e', rim: '#ff9a3a', mote: '#ffcf7a', accent: ['#2a2d33', '#121316', '#c99a4b'], twin: '#6fe3ff', hot: '#fff1d0' }, holo: '#3fd8ff',
+    // (premium.mat retunes only preset materials: the steels, the paint and the polymers carry a quiet pv_metal / pv_glaze)
+    presets: { ceramic_armor: 'pv_metal', black_chrome: 'pv_metal', steel: 'pv_metal', steel_dark: 'pv_metal', steel_bright: 'pv_metal', brass: 'pv_metal',
+      paint_safety: 'pv_glaze', paint_red: 'pv_glaze', polymer_grip: 'pv_metal', polymer: 'pv_metal', rubber: 'pv_metal',
+      glow_orange: 'pv_energy', glow_vermilion: 'pv_energy', obsidian: 'pv_core' },
+    pv: { pv_metal: { shine: 1.0, sweepT: 5, shineTint: [1, 0.95, 0.88] }, pv_glaze: { shine: 0.5, sweepT: 4.5, shardScale: 0, irid: 0, rimPower: 12 },
+      pv_energy: { veinFreq: 10, veinSpeed: 0.55 }, pv_core: { coreMode: 3, coreScale: 1.5 } },
+    // the white ceramic takes the §1.5.3 sweep as a soft satin glint; only the safety paint flashes (pFlash: the unbound
+    // stripes); the dark parts keep a tight rim so they never read chrome-blue
+    pvKey: { ceramic_armor: { rimPower: 7, shine: 0.75, shineW: 3000, flashMask: 0 }, black_chrome: { rimPower: 10, shine: 1.6, flashMask: 0 }, steel: { rimPower: 16, shine: 0.45, flashMask: 0 },
+      steel_dark: { rimPower: 18, shine: 0.35, flashMask: 0 }, steel_bright: { rimPower: 12, shine: 1.1, flashMask: 0 }, brass: { rimPower: 12, shine: 0.9, shineTint: [1, 0.85, 0.55], flashMask: 0 },
+      paint_safety: { flashMask: 1 }, paint_red: { flashMask: 0 }, polymer_grip: { rimPower: 40, shine: 0, flashMask: 0 }, polymer: { rimPower: 40, shine: 0, flashMask: 0 },
+      rubber: { rimPower: 40, shine: 0, flashMask: 0 }, obsidian: { coreTint: '#ff7a1a', coreScale: 1.6, flashMask: 0 },
+      glow_orange: { flashMask: 0 }, glow_vermilion: { veinFreq: 0.01, flashMask: 0 } },
+    mat: {
+      ceramic_armor: { color: '#e2dfd7', rough: 0.4, env: 1.0, wear: { color: '#a9a499', metal: 0, rough: 0.6, amount: 0.5 } },
+      steel: { color: '#4a4e55', rough: 0.44, metal: 0.7, detail: 'cast', dScale: 70, dStr: 0.14, env: 1.05, wear: { color: '#a9adb4', metal: 1, rough: 0.28, amount: 1 } },
+      steel_dark: { color: '#2b2e34', rough: 0.5, metal: 0.66, detail: 'cast', dScale: 110, dStr: 0.1, wear: { color: '#8c9198', metal: 1, rough: 0.3, amount: 0.8 } },
+      black_chrome: { color: '#141518', rough: 0.22, metal: 0.9, detail: 'brushed', dScale: 40, dStr: 0.08, wear: { color: '#9a9ca0', metal: 1, rough: 0.2, amount: 0.6 } },
+      paint_safety: { color: '#e2571a', rough: 0.42, wear: { color: '#8f9296', metal: 1, rough: 0.3, amount: 1 } },
+      obsidian: { color: '#070605', rough: 0.1 },
+      glow_orange: { emissive: '#ff9a2e', glow: 2.2 },     // ≤ HDR 3 at rest (§1.1 #2): the core and the slits; skills multiply it (yanshu.js view)
+      glow_vermilion: { emissive: '#ff5a24', glow: 3.0 },  // the fins' heat inserts: dimmed to ~0 at rest by the view, white-hot in overload
+    },
+    hero: 'fx_core', crosshair: 'xh_tri', meters: ['arc', 'ring'],
+    ready: { sfx: 'ready_yanshu', layer: { breathMul: 1.4, jitterHz: 0.5, jitterDeg: 0.5, glowMul: 1.5, idleExtra: 'yanshu_ready' } },
+    idleLayers: [null, { breathMul: 1.15, jitterHz: 0.4, jitterDeg: 0.2, glowMul: 1.15, idleExtra: 'yanshu_vent', every: 7 }],   // §1.17 idle tiers
+    firstDraw: 'yanshu_first', drawClip: 'yanshu_draw', inspect: ['yanshu_inspect'], rareInspect: 'yanshu_inspect_rare',
+    reload: 'yanshu_reload', rareReload: 'yanshu_reload_rare', rareReloadEvery: 8,
+    killFx: 'KE_FORGE', killMark: 'km_yanshu', dmgSkin: 'yanshu',
+    crisis: { name: '爐壁護盾', kind: 'counter', r: 4, fx: 'yanshu_crisis', sfx: 'yanshu_crisis', flash: [2.6, 1.5, 0.6] },
+    aura: { type: 'drone', when: 'skill', radius: 30, source: ['yanshu_ult'] },
+    twin: 'yanshu_zero', phases: ['duanhuo', 'lengduan'],
+    showcase: ['yanshu_first', 'fire:3', 'alt', 'alt2', 'beam', 'ram', 'ult', 'yanshu_inspect'],
+    // desktop controls for the hint card / help (the ★ dock reads special.skills)
+    hints: [
+      { key: 'LMB', zh: '樞彈', desc: '命中 0.15 秒後在目標處引爆 2.5 m・35；超載時改成熔流光束（每秒 300・貫穿 2）' },
+      { key: 'RMB', zh: '爐環', desc: '360° 火環 4 m・120＋擊退' }, { key: 'RMB ×2', zh: '吸爐震擊', desc: '1.2 秒內再按：前方錐形拉近 4 m、震波 160；兩段完成＝超載 8 秒' },
+      { key: 'RMB', zh: '樞錘衝撞', desc: '超載中：0.35 秒前衝 8 m、全程無敵、落點 4 m・300' },
+      { key: 'R R', zh: '破限', desc: '樞能 100%：連點兩下 R（或長按 Q）・超載 14 秒・最後 2 秒三點巨光束' },
+      { key: 'R', zh: '換彈' }, { key: 'F', zh: '檢視', desc: '按住循環' },
+    ],
+  },
+  special: {
+    type: 'yanshu',
+    meters: {
+      ult: { max: 100, regen: 2.5, onKill: 2, hud: 'arc', label: '樞能', color: '#ffb02e', src: '每 40 秒自然充滿・擊殺 +2%' },
+      over: { max: 1, hud: 'ring', label: '超載', color: '#fff1d0', src: '爐環＋吸爐震擊（1.2 秒內）' },   // live overload time left (display only)
+    },
+    skills: {
+      // key: desktop binding (◎ = right mouse, ★ = Q). The RMB press is routed by the special (ring -> inhale, or the ram in overload)
+      alt: { id: 'yanshu_ring', key: 'RMB', zh: '爐環', desc: '360° 火環 4 m・120＋擊退（1.2 秒內再按＝吸爐震擊）', cd: 0.6, r: 4, dmg: 120, knock: 7, level: 'L2' },
+      alt2: { id: 'yanshu_inhale', key: 'RMB ×2', zh: '吸爐震擊', desc: '前方 8 m 50° 拉近 4 m・震波 160・進入超載 8 秒', range: 8, cone: 50, pull: 4, dmg: 160, wave: 6, level: 'L2' },
+      ram: { id: 'yanshu_ram', key: 'RMB（超載）', zh: '樞錘衝撞', desc: '0.35 秒前衝 8 m・全程無敵・落點 4 m 300', cd: 1.2, range: 8, time: 0.35, r: 4, dmg: 300, knock: 8, level: 'L2' },
+      ult: { id: 'yanshu_ult', key: 'R R', zh: '破限', desc: '超載 14 秒・光束寬 ×1.5・僚機改射光束・最後 2 秒三點巨光束每秒 900', meter: 'ult', level: 'L3' },
+    },
+    passive: { drones: { range: 15, rate: 6, dmg: 18, near: 4, nearMul: 1.6 } },
+  },
+  // mechanics numbers the special reads (premium/yanshu.js) [建議值]
+  yanshu: {
+    burst: { delay: 0.15, r: 2.5, dmg: 35 },
+    combo: 1.2, overload: 8, vent: 5,                              // ring -> inhale window, overload s, cooling lock after it (RMB)
+    beam: { dps: 300, pierce: 2, range: 40, tick: 0.1, width: 0.2 },
+    ult: { dur: 14, beamMul: 1.5, pierce: 3, giant: { dps: 900, range: 30, dur: 2, r: 0.9 }, droneDps: 108, mini: { dur: 10, n: 2 } },
+  } });
+
 // ---------------------------------------------------------------- melee
 def({ id: 'knife', zh: '戰術刀', en: 'Field Knife', cat: 'melee', price: 0, dmg: 55, head: 2, rpm: 140, mode: 'melee', heavy: { dmg: 140, time: 0.9, range: 2.0 },
   mag: 0, reserve: 0, range: [1.9, 1.9, 1], speed: 5.6, knock: 2.2, stagger: 0.5, spread: [0, 0, 0, 0, 0, 0, 0], recoil: { up: 0, side: 0, upMax: 0, recover: 10 },

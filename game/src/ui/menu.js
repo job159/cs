@@ -1,14 +1,13 @@
-// Main menu, solo setup, chapter select and armory screens, plus the cinematic menu backdrop (the current
-// map seen through a slow curated camera dolly / orbit behind a dark gradient).
+// Main menu, solo setup and chapter select (the armory screen: armory.js), plus the cinematic menu backdrop (the
+// current map seen through a slow curated camera dolly / orbit behind a dark gradient).
 import * as THREE from 'three';
 import { Screen, header, esc, ICON } from './kit.js';
 import { DIFFICULTY, ROUNDS } from '../match/rules.js';
 import { CHAPTERS, TRAINING, mapInfo, mapKicker, hasMap } from '../world/maps/index.js';
-import { CATS, listed, tierOf, skillText } from '../weapons/defs.js';
-import { weaponIcon } from './icons.js';
-import { TIERS, tierIcon, injectCSS } from './crosshairs.js';
+import { injectCSS } from './crosshairs.js';
+import { inventory } from './inventory.js';
 import { mapThumb } from './mapthumb.js';
-import { primaryKey, bindLabel } from '../engine/keybinds.js';
+import { warmArmory } from './armory.js';
 
 /** UI text + colour per difficulty (multipliers come from match/rules.js). */
 export const DIFF_INFO = {
@@ -145,6 +144,11 @@ injectCSS('menu-pc-css', `
 .map-card.pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .diff:focus-visible, .ar-card:focus-visible, .ch-card:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .ar-card, .diff, .ch-card { transition: border-color .12s, background .12s; }
+.mm-badge { display: none; margin-left: auto; padding: .12rem .5rem; font: 700 .72rem/1.3 var(--font); font-style: normal; letter-spacing: .06em; color: #1b1406;
+  background: var(--accent); box-shadow: 0 0 .7rem rgba(242,181,68,.45); animation: mm-badge 2.4s ease-in-out infinite; }
+.mm-badge.on { display: inline-block; }
+@keyframes mm-badge { 0%, 100% { box-shadow: 0 0 .25rem rgba(242,181,68,.25); } 50% { box-shadow: 0 0 .9rem rgba(242,181,68,.6); } }
+@media (prefers-reduced-motion: reduce) { .mm-badge { animation: none; } }
 `);
 
 export class MainMenu extends Screen {
@@ -157,7 +161,7 @@ export class MainMenu extends Screen {
       <nav class="mm-nav">
         <button data-act="solo" class="pri"><b>單人遊戲</b><small>SOLO</small></button>
         <button data-act="mp"><b>多人連線</b><small>MULTIPLAYER</small></button>
-        <button data-act="armory"><b>武器庫</b><small>ARMORY</small></button>
+        <button data-act="armory"><b>武器庫</b><small>ARMORY</small><em class="mm-badge" aria-label="未開啟的補給箱"></em></button>
         <button data-act="settings"><b>設定</b><small>SETTINGS</small></button>
         ${canExit() ? '<button data-act="exit"><b>離開</b><small>EXIT</small></button>' : ''}
       </nav>
@@ -175,9 +179,17 @@ export class MainMenu extends Screen {
   }
 
   enter() {
+    // back from the armory's 試用 (test range, or its load failed / was cancelled): that screen again
+    if (inventory.endTryout() && inventory.returnTo === 'armory') { inventory.returnTo = null; this.app.show('armory'); return; }
     this.$('.mm-name span').textContent = this.app.playerName;
     this.$('.mm-card').innerHTML = `<div class="mm-card-h">作戰地圖</div>${mapCard(mapInfo(this.app.mapId), { small: true, act: 'map' })}`;
+    // crates waiting to be opened (earned in matches, or the starter ones)
+    const n = inventory.crates.owned, b = this.$('.mm-badge');
+    b.textContent = n > 0 ? `補給箱 ${n}` : '';
+    b.classList.toggle('on', n > 0);
     this.app.ensureBackdrop(this.app.mapId);
+    // the armory's card images get ready behind an idle menu (off the disk, else rendered one at a time)
+    warmArmory(this.app);
   }
 
   /** Back on the title screen: ask to exit the app (Android); the web build has nothing to go back to. */
@@ -247,121 +259,5 @@ export class SoloSetup extends Screen {
 
 // ---------------------------------------------------------------- armory
 
-// tab order; categories a later weapon brings (great bows, staffs...) join before melee, unknown ones at the end
-const ARMORY_ORDER = ['rifle', 'smg', 'pistol', 'shotgun', 'mg', 'sniper', 'heavy', 'bow', 'staff', 'melee'];
-const CAT_ZH = { bow: '弓', staff: '法杖', polearm: '長柄', thrown: '投擲武器' };
-const catZh = (c) => CATS[c]?.zh || CAT_ZH[c] || c;
-function armoryTabs() {
-  const cats = new Set(listed().map((w) => w.cat).filter((c) => c && c !== 'grenade'));
-  return [...ARMORY_ORDER.filter((c) => cats.has(c)), ...[...cats].filter((c) => !ARMORY_ORDER.includes(c))];
-}
-// what a weapon fires from: magazines (guns), or a resource (def.resource { kind, max, regen } / def.ammoKind)
-const RES_ZH = { arrow: '箭矢', arrows: '箭矢', mana: '法力', charge: '充能', charges: '充能', energy: '能量', ammo: '彈藥' };
-function ammoTag(w) {
-  const kind = w.resource?.kind || w.ammoKind || (w.cat === 'bow' ? 'arrow' : w.cat === 'staff' ? 'mana' : '');
-  const res = RES_ZH[kind];
-  if (w.cat === 'melee' && !w.resource) return '';
-  if (res) {
-    const max = w.resource?.max ?? w.mag;
-    const regen = w.resource?.regen ? `　回復 ${w.resource.regen}/秒` : '';
-    return max ? `${res} ${max}${w.reserve && !w.resource?.regen ? ` / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}` : ''}${regen}` : res;
-  }
-  return w.mag ? `彈匣 ${w.mag} / ${Number.isFinite(w.reserve) ? w.reserve : '∞'}` : '';
-}
-// premium series: card frame + series tag in the tier colours (crosshairs.js TIERS), the signature skill in the detail
-injectCSS('armory-prem-css', `
-.ar-card.prem { border-color: var(--tc); }
-.ar-card.prem.on { border-color: var(--th); background: linear-gradient(180deg, var(--tb), rgba(16,17,19,.82)); }
-.ar-card .ar-tier { position: absolute; top: .4rem; right: .45rem; display: flex; }
-.ar-card { position: relative; }
-.ad-tags span.tier { display: inline-flex; align-items: center; gap: .25rem; color: var(--th); background: var(--tb); }
-.ad-sk { margin: .45rem 0 .1rem; padding: .35rem .55rem; border-left: 2px solid var(--th); background: var(--tb); font-size: var(--fs-xs); color: #d6dde0; line-height: 1.4; }
-.ad-sk b { color: var(--th); margin-right: .35rem; letter-spacing: .06em; }
-.ad-sk small { display: block; color: var(--dim); }`);
-const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
-/** style="--tc --tb --th" tier colours of a premium weapon ('' for standard issue). */
-function tierVars(w) {
-  const t = tierOf(w), T = t !== 'standard' && TIERS[t];
-  return T ? ` style="--tc:${rgba(T.edge, 0.55)};--tb:${rgba(T.edge, 0.14)};--th:${T.hi}"` : '';
-}
-const MODE_ZH = { auto: '全自動', semi: '半自動', burst: '點放', bolt: '栓動', pump: '泵動', melee: '近戰', single: '單發',
-  charge: '蓄力', draw: '拉弓', channel: '引導', beam: '光束', throw: '投擲' };
-
-function weaponStats(w) {
-  const dmg = w.dmg || 0;
-  const dps = (dmg * (w.pellets || 1) * (w.rpm || 60)) / 60;
-  const acc = 1 - Math.min(1, ((w.spread?.[0] ?? 2) + (w.spread?.[1] ?? 0.5) * 2) / 9);
-  return [
-    ['傷害', Math.min(1, Math.sqrt((dmg * (w.pellets || 1)) / 320))],
-    ['射速', Math.min(1, (w.rpm || 60) / 1200)],
-    ['輸出', Math.min(1, dps / 900)],
-    ['精準', acc],
-    ['機動', Math.min(1, ((w.speed ?? 5) - 3.6) / 2)],
-  ];
-}
-
-function weaponNums(w) {
-  const rows = w.dmg ? [['傷害', w.pellets ? `${w.dmg}×${w.pellets}` : String(w.dmg)], ['爆頭倍率', `×${w.head ?? 4}`]] : [];
-  if (w.rpm && w.cat !== 'melee') rows.push(['射速', `${w.rpm} RPM`]);
-  if (w.reload) rows.push(['換彈', `${w.reload.toFixed(1)} 秒`]);
-  if (w.speed) rows.push(['移動速度', `${w.speed.toFixed(1)} m/s`]);
-  if (w.range) rows.push(['有效距離', `${w.range[0]}–${w.range[1]} m`]);
-  return rows;
-}
-
-export class Armory extends Screen {
-  constructor(app) {
-    super(app, 'armory fe-shade2', `${header('武器庫', 'ARMORY', { right: '<span class="fe-hint">局內於購買時間購買</span>' })}
-      <nav class="ar-tabs fe-seg"></nav>
-      <div class="fe-body ar-body">
-        <div class="ar-grid fe-scroll"></div>
-        <section class="fe-panel ar-detail"></section>
-      </div>`);
-    this.tab = 'rifle';
-    this.sel = 'akm';
-  }
-
-  enter() { this.render(); }
-
-  onAct(act, t) {
-    if (act === 'tab') { this.tab = t.dataset.tab; this.sel = this._list()[0]?.id; this.render(); }
-    else if (act === 'pick') { this.sel = t.dataset.id; this.render(); }
-  }
-
-  /** Weapons this build offers (defs.js listed(): no unfinished premium, nothing without a model). */
-  _list() { return listed(this.tab); }
-
-  render() {
-    const tabs = armoryTabs();
-    if (!tabs.includes(this.tab)) { this.tab = tabs[0]; this.sel = this._list()[0]?.id; }
-    this.$('.ar-tabs').innerHTML = tabs.map((c) => `<button data-act="tab" data-tab="${c}" class="${c === this.tab ? 'on' : ''}">${esc(catZh(c))}</button>`).join('');
-    const list = this._list();
-    this.$('.ar-grid').innerHTML = list.map((w) => `<button class="ar-card${w.id === this.sel ? ' on' : ''}${tierVars(w) ? ' prem' : ''}" data-act="pick" data-id="${w.id}"${tierVars(w)}>
-      ${tierVars(w) ? `<span class="ar-tier">${tierIcon(tierOf(w), 14)}</span>` : ''}<span class="ar-img"><img alt=""><i class="ar-ph"></i></span><b>${esc(w.zh)}</b><small>${esc(w.en)}</small><span class="ar-price">${w.price ? '$' + w.price : '初始裝備'}</span></button>`).join('');
-    for (const card of this.$$('.ar-card')) this._icon(card.querySelector('.ar-img'), card.dataset.id);
-    const w = list.find((o) => o.id === this.sel) || list[0];
-    const det = this.$('.ar-detail');
-    if (!w) { det.innerHTML = ''; return; }
-    // bars never drop below a sliver, so a weak stat still reads as a (short) bar rather than a missing one
-    const tier = tierOf(w), sk = skillText(w), tv = tierVars(w);
-    det.innerHTML = `<div class="ad-img ar-img big"><img alt=""><i class="ar-ph"></i></div>
-      <div class="ad-n"><b>${esc(w.zh)}</b><small>${esc(w.en)}</small></div>
-      <div class="ad-tags"${tv}>${tv ? `<span class="tier">${tierIcon(tier, 12)}${TIERS[tier].zh}系列</span>` : ''}<span>${esc(catZh(w.cat))}</span>${w.mode ? `<span>${MODE_ZH[w.mode] || w.mode}</span>` : ''}${ammoTag(w) ? `<span>${esc(ammoTag(w))}</span>` : ''}<span>${w.price ? '$' + w.price : '初始'}</span></div>
-      ${sk ? `<div class="ad-sk"${tv}><b>${sk.key} ${esc(sk.zh)}</b>${esc(sk.desc)}${sk.src ? `<small>充能：${esc(sk.src)}　·　局內按 ${sk.key === '◎' ? '滑鼠右鍵' : esc(bindLabel(primaryKey('special')) || '★')} 發動</small>` : ''}</div>` : ''}
-      <div class="ad-cols">
-        <div class="ad-stats">${w.cat === 'melee' ? '' : weaponStats(w).map(([k, v]) => `<div><span>${k}</span><i><u style="width:${(Math.max(0.06, v) * 100).toFixed(0)}%"></u></i></div>`).join('')}</div>
-        <div class="ad-nums">${weaponNums(w).map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
-      </div>`;
-    this._icon(det.querySelector('.ad-img'), w.id, true);
-  }
-
-  _icon(box, id, big = false) {
-    box.classList.add('loading');
-    weaponIcon(this.app.renderer, id, big ? { w: 384, h: 144 } : undefined).then((u) => {
-      if (!box.isConnected) return;
-      box.classList.remove('loading');
-      if (u) { box.querySelector('img').src = u; box.classList.add('ok'); }
-      else box.classList.add('none');
-    }, () => { box.classList.remove('loading'); box.classList.add('none'); });
-  }
-}
+// the collection screen (finishes, premium phases, crates, the weapon catalog) lives in armory.js
+export { Armory } from './armory.js';

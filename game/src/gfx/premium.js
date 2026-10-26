@@ -123,6 +123,7 @@ const PARAM_DEFAULTS = {
   shineTint: [1, 0.93, 0.75], shineW: 5000,   // the sweep's colour and sharpness (exp(-d² w): 5000 ~ a 1 cm band)
   shardScale: 0, shardStretch: [1, 1, 1], shardRough: 0.17, groutW: 0.8, groutMetal: 0, irid: 0, iridScale: 45, iridCool: 0, gem: 1, coreSkin: 0, runeSpeed: 0.15,
   runeAxis: 0, runeOrigin: [0, 0, 0], runeWidth: 0.006, flashMask: 1, coreMode: -1, coreScale: 1,
+  coreAxis: 0,   // 1: the core's flow runs along the part's +Y (a sword's blade: E07 風洞槽) instead of -Z (a gun's muzzle)
   gemSun: 0,   // > 0: the stone's radius (m) about its part pivot -- a sun burns inside it (X03 日珠)
 };
 const KEY_DEFAULTS = {
@@ -156,7 +157,7 @@ export function premiumUniforms(state, prm) {
     pRimPower: f(prm.rimPower), pVeinFreq: f(prm.veinFreq), pVeinSpeed: f(prm.veinSpeed), pVeinAxis: f(prm.veinAxis),
     pShine: f(prm.shine), pSweepT: f(prm.sweepT), pShineTint: f(new THREE.Vector3(...prm.shineTint)), pShineW: f(prm.shineW), pLeaf: f(prm.leaf), pLeafScale: f(prm.leafScale),
     pShardScale: f(prm.shardScale), pShardStretch: f(new THREE.Vector3(...prm.shardStretch)), pShardRough: f(prm.shardRough), pGroutW: f(prm.groutW), pGroutMetal: f(prm.groutMetal), pIrid: f(prm.irid),
-    pIridScale: f(prm.iridScale), pGem: f(prm.gem), pGemSun: f(prm.gemSun), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pRuneSpeed: f(prm.runeSpeed),
+    pIridScale: f(prm.iridScale), pGem: f(prm.gem), pGemSun: f(prm.gemSun), pCoreSkin: f(prm.coreSkin), pCoreScale: f(prm.coreScale), pCoreAxis: f(prm.coreAxis), pRuneSpeed: f(prm.runeSpeed),
     pRuneAxis: f(prm.runeAxis), pRuneOrigin: f(new THREE.Vector3(...prm.runeOrigin)), pRuneWidth: f(prm.runeWidth),
     pFlashMask: f(prm.flashMask), pDpr: f(Math.min(3, globalThis.devicePixelRatio || 1)), tRunes: f(runeTexture()),
   };
@@ -368,7 +369,7 @@ uniform sampler2D tRunes;
 uniform vec3 pCoreTint;
 #endif
 #ifdef PREMIUM_CORE
-uniform float pCoreMode, pCoreSkin, pCoreScale;   // pCoreScale: pattern density (small capsules want finer water / lava)
+uniform float pCoreMode, pCoreSkin, pCoreScale, pCoreAxis;   // pCoreScale: pattern density (small capsules want finer water / lava)
 uniform vec4 pCoreTint2;
 vec3 pCoreLayer(vec2 uv, float i) {
   float t = time;
@@ -390,6 +391,17 @@ vec3 pCoreLayer(vec2 uv, float i) {
   } else if (pCoreMode < 3.5) {     // lava: dark crust, glowing cracks
     vec3 v = pVor(uv * 60.0 + vec2(t * 0.05, 0.0) + i * 3.7);
     c = pCoreTint * ((1.0 - smoothstep(0.0, 0.09, v.y)) * 2.5 + 0.08 * v.z);
+  } else if (pCoreMode > 4.5) {      // wind tunnel (E07 風洞槽): streamlines racing along +x in gusts, rain streaks; the charge speeds it up
+    float sp = 0.6 + 2.2 * pCharge;
+    float x = uv.x - t * sp * (0.8 + 0.25 * i);
+    float wob = texture2D(tGrunge, vec2(x * 1.1, uv.y * 2.0 + i * 0.37)).g - 0.5;
+    float ly = uv.y * 230.0 + wob * 1.3 + i * 0.5;
+    float lines = pow(max(0.0, 1.0 - abs(fract(ly) - 0.5) * 2.0), 4.0);
+    float seg = smoothstep(0.28, 0.68, texture2D(tGrunge, vec2(x * 1.3, floor(ly) * 0.137 + i * 0.29)).r);
+    float gust = smoothstep(0.25, 0.8, texture2D(tGrunge, vec2(x * 0.7 - t * 0.05, 0.31 + i * 0.2)).b);
+    vec2 rg = vec2((uv.x - t * sp * 1.7) * 26.0, uv.y * 220.0 + i * 3.1);
+    float drop = step(0.9, pH21(floor(rg))) * smoothstep(0.0, 0.6, fract(rg.x)) * (1.0 - smoothstep(0.7, 1.0, fract(rg.x))) * smoothstep(0.5, 0.2, abs(fract(rg.y) - 0.5));
+    c = pCoreTint * (lines * seg * (0.8 + 1.6 * gust) * 2.6 + gust * 0.32 + 0.1) + vec3(0.85, 0.95, 1.0) * drop * (0.6 + 1.2 * pCharge);
   } else {                          // lightning: thin ridges that flicker
     float n = texture2D(tGrunge, uv * 4.0 + floor(t * 12.0) * 0.137).r;
     float bolt = 1.0 - smoothstep(0.0, 0.015, abs(n - 0.5));
@@ -522,8 +534,8 @@ export const PREMIUM_EMIT = /* glsl */`
     float fres = pow(1.0 - pNdv, 3.0);
     #ifdef PREMIUM_VEIN
     {
-      // light pulses flowing rear -> front along -Z (or around the part's local Z axis: bells, rings)
-      float ax = pVeinAxis > 0.5 ? atan(vObjPos.y, vObjPos.x) * length(vObjPos.xy) : -vRest.z;
+      // light pulses flowing rear -> front along -Z (1: around the part's local Z axis: bells, rings; 2: up +Y: a sword's blade)
+      float ax = pVeinAxis > 1.5 ? vRest.y : pVeinAxis > 0.5 ? atan(vObjPos.y, vObjPos.x) * length(vObjPos.xy) : -vRest.z;
       float ph = fract(ax * pVeinFreq - time * pVeinSpeed * (0.6 + 0.8 * pCharge) * pVeinFreq + pSeed);
       float pulse = smoothstep(0.0, 0.12, ph) * (1.0 - smoothstep(0.12, 0.55, ph));
       totalEmissiveRadiance *= (0.12 + 0.88 * pCharge * pCharge + pulse * (0.15 + 0.6 * pCharge)) * (0.85 + 0.15 * br);
@@ -581,8 +593,8 @@ export const PREMIUM_EMIT = /* glsl */`
       // 2-3 parallax layers in the part's rest (-Z, Y) plane, looked at through the capsule wall
       vec3 vd = -normalize(vViewPosition);
       vec3 od = inverseTransformDirection(inverseTransformDirection(vd, viewMatrix), modelMatrix);
-      vec2 base = vec2(-vObjPos.z, vObjPos.y) * pCoreScale;
-      vec2 off = vec2(-od.z, od.y) / max(0.3, abs(od.x));
+      vec2 base = (pCoreAxis > 0.5 ? vec2(vObjPos.y, -vObjPos.z) : vec2(-vObjPos.z, vObjPos.y)) * pCoreScale;
+      vec2 off = (pCoreAxis > 0.5 ? vec2(od.y, -od.z) : vec2(-od.z, od.y)) / max(0.3, abs(od.x));
       vec3 cc = vec3(0.0);
       for (int i = 0; i < 3; i++) {
         float fi = float(i);

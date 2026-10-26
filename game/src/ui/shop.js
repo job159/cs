@@ -14,7 +14,9 @@ import { ECONOMY, UPGRADES, PERKS, PERK, upgradePrice, encodeUpgrades, priceOf, 
 import { KEYMAP } from '../engine/input.js';
 import { weaponIcon } from './icons.js';
 import { TIERS, tierIcon, injectCSS } from './crosshairs.js';
-import { keycap } from './keyhints.js';
+import { keycap, esc } from './keyhints.js';
+import { inventory, itemNames } from './inventory.js';
+import { GRADES, finishDef, finishSwatch } from '../gfx/finishes.js';
 
 const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 const cash = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -251,7 +253,8 @@ export class Shop {
     this.mainEl.innerHTML = this.tab === 'gear' ? this._gear() : this.tab === 'upgrade' ? this._upgrades() : this._weapons(this.tab);
     this.mainEl.scrollTop = top;
     for (const img of this.mainEl.querySelectorAll('img[data-icon]')) {
-      weaponIcon(g.renderer, img.dataset.icon).then((u) => { if (u && img.isConnected) img.src = u; });
+      // (a gun wearing an armory finish: its silhouette is painted with the finish, see _card)
+      weaponIcon(g.renderer, img.dataset.icon).then((u) => { if (!u || !img.isConnected) return; img.src = u; img.parentElement.classList.contains('cskin') && img.parentElement.style.setProperty('--sil', `url(${u})`); });
     }
     if (this._flash) {
       const f = this.mainEl.querySelector(`[data-k="${this._flash}"]`);
@@ -303,10 +306,15 @@ export class Shop {
   _card(w, owned, n = 0) {
     const tier = tierOf(w), T = TIERS[tier] || TIERS.standard, prem = tier !== 'standard', sk = skillText(w), has = owned.has(w.id);
     const stripe = tier === 'mythic' ? `linear-gradient(90deg,${T.edge},${T.edge2},${T.edge})` : T.edge;
-    const style = prem ? ` style="--tc:${rgba(T.edge, 0.55)};--tb:${rgba(T.edge, 0.12)};--th:${T.hi};--tg:${rgba(T.edge, 0.7)};--ts:${stripe}"` : '';
-    return `<div class="card w${prem ? ' prem t-' + tier : ''}${has ? ' owned' : ''}" data-k="${w.id}" data-n="${n}"${style}>
+    // a standard gun with an equipped armory finish (CS2: your skins in the buy menu): the silhouette in the finish,
+    // the grade colour along the bottom, the finish's name
+    const it = !prem && inventory.equippedItem(w.id), G = it && (GRADES[finishDef(it.finish)?.grade] || GRADES.common);
+    const style = prem ? ` style="--tc:${rgba(T.edge, 0.55)};--tb:${rgba(T.edge, 0.12)};--th:${T.hi};--tg:${rgba(T.edge, 0.7)};--ts:${stripe}"`
+      : it ? ` style="--ts:${G.color};--gc:${G.color};--sw:${finishSwatch(it.finish)}"` : '';
+    const img = `<img alt="" data-icon="${w.model || w.id}">`;
+    return `<div class="card w${prem ? ' prem t-' + tier : ''}${it ? ' skin' : ''}${has ? ' owned' : ''}" data-k="${w.id}" data-n="${n}"${style}>
       <div class="ctop">${this._num(n)}${prem ? `${tierIcon(tier, 13)}<span class="tn">${T.zh}</span>` : ''}<span class="cslot">${slotTag(w, prem)}</span></div>
-      <img alt="" data-icon="${w.model || w.id}">
+      ${it ? `<span class="cskin">${img}<span class="cfin" title="已裝備的塗裝（武器庫）"><i></i>${esc(itemNames(it).finish)}</span></span>` : img}
       <div class="cn">${w.zh}<small>${w.en}</small></div>
       ${sk ? `<div class="csk"><b>${sk.key} ${sk.zh}</b>${sk.desc}${sk.src ? `<small>充能：${sk.src}</small>` : ''}</div>` : ''}
       <div class="cs">${stats(w).map(([k, v]) => `<div><span>${k}</span><i style="--v:${Math.round(Math.max(0, Math.min(1, v)) * 100)}%"></i></div>`).join('')}</div>

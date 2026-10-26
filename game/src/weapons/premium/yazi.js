@@ -412,12 +412,12 @@ const IDLE = {
   R: { p: [-0.025, -0.125, -0.43], d: N3(-0.96, -0.03, -0.3), m: N3(0.0, 0.8, -0.6) },
   L: { p: [-0.2, -0.235, -0.37], d: N3(-0.3, -0.45, 0.84), m: N3(0.15, 0.85, 0.5) },
 };
-// the hand on the hilt (player/grips.js 'tsuka'): the dual default's pistol hold turned 40° round the hilt, so the
-// curled fingers and the knuckle row show to the eye instead of the flat back of the glove, the fingers tipped 15°
+// the hand on the hilt (player/grips.js 'tsuka'): the dual default's pistol hold turned 55° round the hilt, so the
+// curled fingers and the knuckle row show to the eye instead of the flat back of the glove, the fingers tipped 18°
 // towards the guard, the hilt under the finger roots inside the curl; the left hand mirrored round the scabbard
 const GRIP_R = (() => {
-  const a = -40 * Math.PI / 180, N = new THREE.Vector3(-0.984, 0, 0.177).applyAxisAngle(UP, a).normalize();
-  const F = new THREE.Vector3(-0.331, 0.089, -0.94).applyAxisAngle(UP, a).applyAxisAngle(N, 15 * Math.PI / 180).normalize();
+  const a = -55 * Math.PI / 180, N = new THREE.Vector3(-0.984, 0, 0.177).applyAxisAngle(UP, a).normalize();
+  const F = new THREE.Vector3(-0.331, 0.089, -0.94).applyAxisAngle(UP, a).applyAxisAngle(N, 18 * Math.PI / 180).normalize();
   return { F, N, pose: 'tsuka', palm: [0.027, 0.072] };
 })();
 const GRIP_L = { F: new THREE.Vector3(-GRIP_R.F.x, GRIP_R.F.y, GRIP_R.F.z), N: new THREE.Vector3(-GRIP_R.N.x, GRIP_R.N.y, GRIP_R.N.z), pose: 'saya', palm: [0.03, 0.072] };
@@ -523,8 +523,9 @@ function partsHook(ws, vm, dt) {
     if (T.prev) { _tv.subVectors(r, T.prev).divideScalar(dt); T.acc.lerp(_ta.subVectors(_tv, T.vel).divideScalar(dt).clampLength(0, 80), Math.min(1, dt * 25)); T.vel.copy(_tv); }
     (T.prev ||= V3()).copy(r);
     const a = _ta.set(0, -9.8, 0).applyQuaternion(_tq.copy(vm.camera.quaternion).invert()).sub(T.acc).applyQuaternion(_tq.copy(Rp.q).invert()).normalize();
-    // (pommel up: it drapes down past the ring on the side away from the eye, not through the ring or the head)
-    if (a.y > 0.75) { const cx = _tv.copy(r).negate().applyQuaternion(_tq.copy(Rp.q).invert()).x; a.set(a.x * 0.4 - Math.sign(cx || 1) * 0.5, 0.75, a.z * 0.4).normalize(); }
+    // (pommel up: it drapes down over the ring's rim in the ring's own plane, beside it -- not through the ring and
+    // the head, not behind them)
+    if (a.y > 0.45) a.set(a.x * 0.3, 0.45, (Math.sign(a.z) || 1) * 0.9).normalize();
     T.dir ||= V3().set(0, -1, 0); T.v ||= V3();
     T.v.addScaledVector(_tv.subVectors(a, T.dir), 230 * dt).multiplyScalar(Math.exp(-5 * dt));
     T.dir.addScaledVector(T.v, dt).normalize();
@@ -1738,8 +1739,8 @@ registerClip('yazi_draw', (vm) => yClip(vm, {
 // held F loops it), the blade sent home (0.22 -> 0.3) and the thumb breaks the mouth an inch and back (0.32), drawn and
 // spun once round in the fingers (0.5 -> 0.68), the point turned to the eye, the 睚眥 eyes light, held (0.82 -> 1)
 const IN_FLAT = [[0.06, -0.15, -0.4], N3(-0.9, 0.42, 0.06), N3(0.42, 0.9, 0.0)];
-// the fist low, the ring raised ~26 cm before the eye with its flat (the 睚眥's face) turned to it, the blade hanging
-const IN_RING = [[0.0, -0.185, -0.33], N3(-0.3, -0.9, -0.3), N3(-0.9, 0.3, 0.05)];
+// the fist low, the ring raised ~25 cm before the eye with its flat (the 睚眥's face) turned to it, the blade hanging
+const IN_RING = [[0.015, -0.17, -0.3], N3(-0.25, -0.92, -0.3), N3(-0.92, 0.25, 0.05)];
 function inspectClip(vm, rare) {
   const R1 = [[0.04, ...IN_FLAT, 'inOut'], [0.11, IN_FLAT[0], N3(-0.9, 0.38, -0.2), N3(0.1, 0.25, -0.96), 'inOut'], [0.18, ...IN_FLAT, 'inOut']];
   const L1 = [[0.04, ...SAYA_HOLD(0, 0)[0].slice(1, 4), 'inOut'], [0.2, null, null, null, 'linear']];

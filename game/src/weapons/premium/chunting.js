@@ -5,7 +5,8 @@
 //
 //   LMB held   放電: wind-up 0.23 s (the head pushes forward, 「嗞」), then arcs leap from the electrode (S_arc) to the 3
 //              zombies nearest the crosshair within 7 m (a 70° cone, in sight): 15 a tick, 10 ticks a second (150/s
-//              each), knock 0.15, a 0.2 s stun kept up while they are held; release crack 0.33 s (「啪」). 12 雷能/s.
+//              each), knock 0.15, a 0.2 s stun kept up while they are held (locked in their hit pose, jerking with the
+//              current: stun / jolt); release crack 0.33 s (「啪」). 12 雷能/s.
 //   雷能       ws.ammo of 120 (HUD: the pool + the arc gauge + the LED bar on the receiver); back at 20/s 1 s after the
 //              last use; dry = an automatic battery swap (the capacitor cell, 2 s); R swaps early.
 //   RMB tap    雷爆 (15 雷能): a thrust; 0.1 s later a 3 m blast at 10 m along the crosshair (a zombie under it pins
@@ -14,8 +15,9 @@
 //              out 90°; pitch rises, FOV -1° a stage, the screen edge darkens); released after 2 s the halberd is
 //              thrown as a javelin (20 m/s, an arc) to the crosshair point (≤ 26 m); a cloud ring gathers over it,
 //              an isobar sigil marks the ground, streamers climb off its crown; 1.2 s after it lands a giant bolt
-//              falls on it (1,600 within 2 m, 400 to 6 m, 2 s stun), 0.3 s later it pulls free and flies back to the
-//              hand (caught by 3.1 s). Released early = the stage folds back, nothing spent.
+//              falls on it (1,600 within 2 m, 400 to 6 m, 2 s stun), 0.3 s later it pulls free and flies home on a flat
+//              arc in from the right of the view (never through the crosshair) into the catch clip (by 3.1 s).
+//              Released early = the stage folds back, nothing spent.
 //   Q          雷樁 (20 s cooldown): a bolt drives a lightning rod into the crosshair point for 8 s; every client's
 //              hits on zombies within 6 m have a 20 % chance to draw an arc off its crown (40).
 //   kill       KE_CHAR (charred under a violet rim, arcs crawl 0.5 s); the generic kill mark in violet (exotic).
@@ -534,6 +536,9 @@ function javelinProto() {
   return null;
 }
 const THROW = { lift: 0.08, sink: 0.2 };
+// the javelin group (tip along -z, m): the GLB's grip sits JAV.grip behind the balance point; the spear tip (s 1,426 mm
+// drawn), the trail point just behind it, the crown where the arcs leave mid-spear
+const JAV = { grip: 0.52, tip: 0.9, trail: 0.86, crown: 0.7 };
 registerSkill('chunting_throw', {
   level: 'L3', aim: 'target', dur: 6, defaults: { speed: 20, range: 26, delay: 1.2, back: 1.5, dmg: 1600, coreR: 2, ring: 400, ringR: 6, stun: 2, lock: 3.1, energy: 60 },
   start(k) {
@@ -562,8 +567,8 @@ registerSkill('chunting_throw', {
       const u = Math.min(1, d.flight / d.dur), prev = _e.copy(d.pos);
       d.pos.lerpVectors(d.P0, d.T1, u); d.pos.y += 4 * d.apex * u * (1 - u);
       orient(m, d.pos, _d.subVectors(d.pos, prev));
-      d.trails.forEach((tr) => tr?.push(m.localToWorld(_c.set(0, 0, -0.76))));
-      if (R() < dt * 30) arc(g, m.localToWorld(_c.set(0, 0, -0.62)), m.localToWorld(_a.set((R() - 0.5) * 0.5, (R() - 0.5) * 0.5, -0.2 + R() * 0.8)), { w: 0.03, life: 0.06, k: 0.8, levels: 3, jitter: 0.25, branches: 0 });
+      d.trails.forEach((tr) => tr?.push(m.localToWorld(_c.set(0, 0, -JAV.trail))));
+      if (R() < dt * 30) arc(g, m.localToWorld(_c.set(0, 0, -JAV.crown)), m.localToWorld(_a.set((R() - 0.5) * 0.5, (R() - 0.5) * 0.5, -0.2 + R() * 0.8)), { w: 0.03, life: 0.06, k: 0.8, levels: 3, jitter: 0.25, branches: 0 });
       d.cloud?.set?.(clamp01(t / (d.land0 + p.delay)) * 0.6);
       if (u >= 1) landed(k);
     } else if (d.phase === 'stuck') {
@@ -572,7 +577,7 @@ registerSkill('chunting_throw', {
       // streamers climb off the crown towards the cloud (faster as the strike nears)
       if ((d.streamT -= dt) <= 0) {
         d.streamT = Math.max(0.05, 0.3 - since * 0.2);
-        const tip = m.localToWorld(_c.set(0, 0, -0.62)).add(_a.set(0, 0.06, 0)).clone();
+        const tip = m.localToWorld(_c.set(0, 0, -JAV.crown)).add(_a.set(0, 0.06, 0)).clone();
         arc(g, tip, tip.clone().add(_a.set((R() - 0.5) * 1.5, 1 + R() * (1 + since * 3), (R() - 0.5) * 1.5)), { w: 0.05, life: 0.08, k: 0.9, levels: 4, jitter: 0.2, branches: 1 });
         if (R() < 0.3) play(g, 'streamer', { pos: tip, volume: 0.35, pitch: 1 + since * 0.4 });
       }
@@ -599,7 +604,7 @@ registerSkill('chunting_throw', {
       const fw = k.caster(_b, _c) && _c, w = clamp01((u - 0.45) / 0.45);
       orient(m, d.pos, _d.copy(r.vel).normalize().lerp(fw, w * w));
       d.whoosh?.setRate?.(0.85 + 0.5 * e);   // (doppler: the pitch climbs as it closes in)
-      d.trails.forEach((tr) => tr?.push(m.localToWorld(_c.set(0, 0, -0.76))));
+      d.trails.forEach((tr) => tr?.push(m.localToWorld(_c.set(0, 0, -JAV.trail))));
       const eyeD = d.pos.distanceTo(k.caster(_c, _b));
       if (u >= 1 || (k.local && eyeD < 1.2)) { caught(k); return false; }
     }
@@ -622,7 +627,7 @@ registerSkill('chunting_throw', {
 function javelinMesh(g) {
   const proto = javelinProto();
   const grp = new THREE.Group();
-  if (proto) { const m = proto.clone(); m.position.set(0, 0, 0.52); grp.add(m); }
+  if (proto) { const m = proto.clone(); m.position.set(0, 0, JAV.grip); grp.add(m); }
   else {   // (still loading: a stand-in streak)
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.3, 6).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(...k3(COL.core, 0.4)) }));
     grp.add(m);
@@ -666,7 +671,7 @@ function landed(k) {
   hz.normalize();
   const slope = Math.max(40 * D2R, Math.atan2(4 * d.apex / Math.max(0.5, d.P0.distanceTo(d.T1)) + Math.max(0, d.P0.y - d.T1.y) / Math.max(0.5, d.P0.distanceTo(d.T1)), 1));
   const dirW = hz.multiplyScalar(Math.cos(slope)).add(_e.set(0, -Math.sin(slope), 0)).normalize();
-  const tip = c.clone().addScaledVector(dirW, THROW.sink), centre = tip.clone().addScaledVector(dirW, -0.79);
+  const tip = c.clone().addScaledVector(dirW, THROW.sink), centre = tip.clone().addScaledVector(dirW, -JAV.tip);
   orient(d.mesh, centre, dirW);
   d.pos.copy(centre);
   g.fx?.sparkBurst?.(c.clone().add(_a.set(0, 0.15, 0)), { color: k3(COL.white, 0.6), color1: k3(COL.spark, 0.5), count: 18, speed: 7, glow: 0.6, normal: UPV });
@@ -717,7 +722,7 @@ function back(k, t) {
   const ctl = from.clone().lerp(hand, 0.55).addScaledVector(right, Math.min(7, dist * 0.42)).add(_e.set(0, 0.6 + dist * 0.04, 0));
   const dur = Math.max(0.3, Math.min(0.5, (k.local ? p.lock : p.lock + 0.5) - t));
   d.phase = 'back';
-  d.ret = { t: 0, from, dur, ctl, vel: hand.sub(from).normalize() };
+  d.ret = { t: 0, from, dur, ctl, vel: hand.clone().sub(from).normalize() };
   play(g, 'ret', { pos: d.pos, volume: 0.7 });
   // the whoosh coming at the caster, ending on the catch
   d.whoosh = k.local ? play(g, 'whoosh', { volume: 0.85, delay: Math.max(0, dur - 0.4), pitch: 0.85 }) : play(g, 'whoosh', { pos: hand, volume: 0.6, delay: Math.max(0, dur - 0.4) });
@@ -917,6 +922,12 @@ function prewarm(g) {
     const tr = fx?.trail?.({ width: 0.001, life: 0.05, color: [0, 0, 0, 0], segs: 4 });
     if (tr) { tr.push(far); tr.push(far2); tr.stop(); }
     fx?.shockwave?.(far, { normal: UPV, r1: 0.05, life: 0.1, color: [0, 0, 0] });
+    // the particle layers' first draws (world additive / alpha, the viewmodel's additive: a flat ring, a streak)
+    const P = fx?.particles;
+    P?.spawn({ additive: true, x: far.x, y: far.y, z: far.z, life: 0.05, size: 0.01, color: [0, 0, 0, 0], frame: FRAME.glow });
+    P?.spawn({ additive: true, x: far.x, y: far.y, z: far.z, vx: 1, life: 0.05, size: 0.01, color: [0, 0, 0, 0], frame: FRAME.spark, stretch: 0.02 });
+    P?.spawn({ x: far.x, y: far.y, z: far.z, life: 0.05, size: 0.01, color: [0, 0, 0, 0], frame: FRAME.puff, lit: true });
+    P?.spawn({ additive: true, vm: true, x: 0, y: -0.3, z: 0.5, mode: 'flat', dir: [0, 0, 1], life: 0.05, size: 0.001, color: [0, 0, 0, 0], frame: FRAME.thinRing });
     for (const kind of ['glow', 'shock', 'crack']) fx?.zfx?.ground?.add?.(kind, far, { r: 0.05, life: 0.05, col: [0, 0, 0], alpha: 0 });
     fx?.decals?.add?.(far, UPV, { frame: DECAL.scorch, size: 0.01, tint: DECAL_TINT.scorch, life: 0.05 });
     fx?.overlay?.tint?.([1, 1, 1], 0.0001, 0.05);
@@ -937,6 +948,11 @@ function prewarm(g) {
       if (c?.then) c.then(done, done); else done();
     };
     show(grp);
+    // the crosshair's other states (discharging, the charge, thrown) drawn once each, a frame apiece: their first
+    // rebuild came with the first discharge
+    let f = 0;
+    const xs = { update() { f++; Object.assign(XS, f < 3 ? { zap: true } : f < 5 ? { charging: true, stage: 2 } : f < 7 ? { thrown: true } : {}); if (f >= 7) g.systems.splice(g.systems.indexOf(xs), 1); } };
+    g.systems.push(xs);
     javelinProto();
     _javLoad?.then?.(() => { if (!_jav) return; const j = _jav.clone(); j.position.copy(far); j.traverse((o) => { if (o.isMesh) o.frustumCulled = false; }); show(j); });
   } catch (e) { console.warn('[chunting] prewarm', e); }
@@ -996,8 +1012,9 @@ function skyBolt(g) {
   const tip = g.vm?.socketApparent?.('tip', V3());
   if (!tip) return;
   const top = tip.clone().add(_a.set((R() - 0.5) * 2, 9 + R(), (R() - 0.5) * 2));
-  g.fx?.bolt?.(tip, top, { col: k3(COL.white, 0.9), glow: k3(COL.violet, 0.55), width: 0.16, core: 0.28, levels: 6, jitter: 0.08, branches: 3, regen: 0.04, life: 0.16 });
-  after(g, 0.07, () => g.fx?.bolt?.(tip, top, { col: k3(COL.white, 0.7), glow: k3(COL.violet, 0.45), width: 0.12, core: 0.28, levels: 6, jitter: 0.09, branches: 2, regen: 0.04, life: 0.08 }));
+  g.fx?.bolt?.(tip, top, { col: k3(COL.white, 1.0), glow: k3(COL.violet, 0.6), width: 0.24, core: 0.3, levels: 6, jitter: 0.08, branches: 3, regen: 0.04, life: 0.18 });
+  after(g, 0.08, () => g.fx?.bolt?.(tip, top, { col: k3(COL.white, 0.8), glow: k3(COL.violet, 0.5), width: 0.18, core: 0.3, levels: 6, jitter: 0.09, branches: 2, regen: 0.04, life: 0.1 }));
+  vmFlash(g, sock(g, 'tip'), { life: 0.2, size: [0.06, 0.16], col: COL.rim, k: 0.5 });
   g.fx?.lights?.flash?.(tip.clone().add(_a.set(0, 1.5, 0)), 0xc9b8ff, 25, 9, 0.15);
   if (clipComfort.overlay !== false) g.fx?.overlay?.border?.([0.75, 0.68, 1.0], 0.12, 0.22, { fadeIn: 0.01, fadeOut: 0.18 });
   play(g, 'crack', { volume: 0.7, pitch: 0.75 });
@@ -1007,9 +1024,12 @@ function skyBolt(g) {
 function gloveZap(ws, g) {
   const vm = g.vm;
   if (!vm?.handPos?.L) return;
-  const hand = () => vm.handPos.L.clone().add(_e.set((R() - 0.5) * 0.02, 0.012, -0.035));
-  for (let i = 0; i < 4; i++) later(g, i * 0.05, () => vmArcT(g, sock(g, 'flick'), hand, { w: 0.0045, life: 0.09, k: 1.4, levels: 4 }));
-  vmFlash(g, hand, { life: 0.2, size: [0.03, 0.06], col: COL.rim, k: 0.3 });
+  // (on the glove's eye side: the wrist itself sits behind the glove and hid the arcs)
+  const hand = (o) => () => vm.handPos.L.clone().add(_e.set(o[0], o[1], o[2]));
+  const spots = [[0.01, 0.02, 0.03], [-0.02, 0.03, 0.035], [0.02, -0.01, 0.04], [-0.01, 0.0, 0.05]];
+  for (let i = 0; i < 6; i++) later(g, i * 0.04, () => vmArcT(g, sock(g, 'flick'), hand(spots[i % 4]), { w: 0.006, life: 0.1, k: 1.5, levels: 4, jitter: 0.3 }));
+  vmFlash(g, hand([0, 0.01, 0.04]), { life: 0.24, size: [0.04, 0.09], col: COL.rim, k: 0.45 });
+  vmFlash(g, sock(g, 'flick'), { life: 0.12, size: [0.02, 0.05], col: COL.white, k: 0.35 });
   play(g, 'glove', { volume: 0.7 });
   haptic(12);
 }
@@ -1017,6 +1037,8 @@ function gloveZap(ws, g) {
  *  swept 360° by the clip; this is the sound and a faint glint on the porcelain) */
 function insulatorDing(ws, g) {
   play(g, 'ding', { volume: 0.7, pitch: 1.5 });
+  // the violet lights flare with the ring (the comets running round the skirts are glow_arc: x3.5, easing back)
+  const v = stOf(ws).view; if (v) v.pk = Math.max(v.pk, 2.5);
   vmFlash(g, sock(g, 'knock'), { life: 0.1, size: [0.012, 0.02], col: COL.white, k: 0.2 });
 }
 /** rare inspect: arcs close into a little ring between the glove's fingers, then the fist snuffs it */
@@ -1060,8 +1082,8 @@ registerClip('chunting_draw', () => ({
 registerClip('chunting_first', {
   duration: 1.6, segFree: true,
   tracks: {
-    gunPos: [[0, [0.12, -0.26, 0.1]], [0.2, [0.0, 0.03, 0.03], 'out3'], [0.42, [-0.03, 0.035, 0.05]], [0.6, [-0.03, 0.035, 0.05]], [0.8, [0, 0.004, 0], 'inOut'], [1, Z3]],
-    gunRot: [[0, [-30, 30, -60]], [0.2, [6, -8, 6], 'out3'], [0.42, [12, 26, -14], 'inOut'], [0.6, [13, 28, -15]], [0.8, [1, -1, 0], 'inOut'], [1, Z3]],
+    gunPos: [[0, [0.12, -0.26, 0.1]], [0.2, [0.0, 0.0, 0.03], 'out3'], [0.42, [-0.04, -0.02, 0.06]], [0.6, [-0.04, -0.02, 0.06]], [0.8, [0, 0.004, 0], 'inOut'], [1, Z3]],
+    gunRot: [[0, [-30, 30, -60]], [0.2, [-4, -6, 6], 'out3'], [0.42, [-8, 16, 14], 'inOut'], [0.6, [-7, 17, 15]], [0.8, [1, -1, 0], 'inOut'], [1, Z3]],
     fx_seg1: SEG(0, 0.18, 0.26), fx_seg2: SEG(1, 0.24, 0.32, 0.8), fx_seg3: SEG(2, 0.3, 0.38, 0.76),
     fx_blade: [[0, 0], [0.4, 0], [0.47, 1, 'outBack'], [0.62, 1], [0.72, 0, 'in3'], [1, 0]],
     env: [[0, 0], [0.25, 1], [0.8, 1], [1, 0]],
@@ -1208,5 +1230,6 @@ SKINS.chunting = ['#ffffff', '#e2d9ff', '#8a5cff', '#1c1a26'];
 // white over deep violet instead of the generic gold (the weapon's colour on its biggest numbers)
 SKINS.chunting_crit = ['#ffffff', '#cdb8ff', '#7a3dff', '#14082e'];
 
-// dev QA handle (like window.__gfx): replay a teammate's skill event locally -- visuals only, no damage
-if (typeof window !== 'undefined') (window.__cfDev ||= {}).chunting = { replay: (g, ev) => startSkill(g, ev, { local: false }), sounds: CHUNTING_SOUNDS, rest: REST_EXT, clip: registerClip };
+// dev QA handle (like window.__gfx): replay a teammate's skill event locally (visuals only, no damage); the rest
+// extension, clip registration and crosshair state for pose / clip sweeps
+if (typeof window !== 'undefined') (window.__cfDev ||= {}).chunting = { replay: (g, ev) => startSkill(g, ev, { local: false }), sounds: CHUNTING_SOUNDS, rest: REST_EXT, clip: registerClip, xs: XS };

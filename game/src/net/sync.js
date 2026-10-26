@@ -22,6 +22,9 @@
 //   'sh' (unreliable)                          { w: weapon, n: shots, e: [x,y,z] last bullet end }
 //   'rv' (reliable)                            { t: target id }  held E on a downed teammate; the host checks and broadcasts 'rv'
 //   'sk' (reliable)                            encSkill(ev): a skill this guest cast; the host replays it and relays it as 'sk'
+// Armory looks (ui/inventory.js, gfx/finishes.js encodeSkin): 'ps' carries `sk` = our held weapon's skin code (a
+// finish 'f:<id>:<seed>:<float>' or a premium 相 'p:<phase>:<kiln seed>'), the 'sn' snapshot `sk` = [[id, code]...] for
+// every player that has one; RemotePlayer draws that look on its third-person weapon.
 // Money upgrades: 'u' = rules.js encodeUpgrades (one base-36 level per upgrade) in 'ps' and the 'sn' p rows; every
 // client keeps its own health / armour (upgrades included) and applies the host's 'pd' amounts itself, so the code
 // is for the others' view only: RemotePlayer.upgrades { atk: 3, ... } and .maxHp.
@@ -30,6 +33,7 @@ import { RemotePlayer } from '../player/remote.js';
 import { ZOMBIES } from '../zombies/defs.js';
 import { WEAPONS } from '../weapons/defs.js';
 import { replaySkill } from '../weapons/specials.js';
+import { encodeSkin } from '../gfx/finishes.js';
 import { killMoney, killXp, assistShare, encodeUpgrades, decodeUpgrades, UPGRADE } from '../match/rules.js';
 
 const ST = { chase: 0, attack: 1, stagger: 2, special: 3, dead: 4 };
@@ -204,6 +208,8 @@ export class NetSync {
     const m = g.match;
     const boss = m?.boss;
     const snap = { t: +now().toFixed(3), z: zs, p: ps, m: m ? [m.state, m.round, +m.timer.toFixed(1), m.queue.length + g.zombies.alive, boss ? +(boss.hp / boss.maxHp).toFixed(3) : -1, boss?.name || '', m.retries] : null };
+    const sk = this._skins();
+    if (sk.length) snap.sk = sk;
     room.broadcast('sn', snap, { reliable: false });
     if (this.shots) { this.events.push(['sh', g.localId, this.shots.w, this.shots.e]); this.shots = null; } // our own gunfire
     if (this.events.length) { room.broadcast('ev', this.events.splice(0, 200)); }
@@ -215,6 +221,20 @@ export class NetSync {
   _localRow() {
     const g = this.game, p = g.player, st = g.status;
     return [g.localId, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.pitch), this._flags(), Math.round(st.hp), g.arsenal?.def?.id || '', this._upgradeCode()];
+  }
+
+  /** Skin code of the weapon in our hand (its def is one object for the match: the code is built once per weapon). */
+  _skinCode() {
+    const d = this.game.arsenal?.def;
+    if (d !== this._skinDef) { this._skinDef = d; this._skin = encodeSkin(d); }
+    return this._skin || '';
+  }
+  /** Host: [[player id, skin code]] of everyone holding a dressed weapon. */
+  _skins() {
+    const out = [], own = this._skinCode();
+    if (own) out.push([this.game.localId, own]);
+    for (const r of this.remotes.values()) if (r.skinCode) out.push([r.id, r.skinCode]);
+    return out;
   }
 
   /** Our money upgrade levels for 'ps' / 'sn' rows ('' before the match exists). */
@@ -235,7 +255,7 @@ export class NetSync {
 
   _clientSend() {
     const g = this.game, room = this.room, p = g.player, st = g.status;
-    room.send('ps', { x: r2(p.pos.x), y: r2(p.pos.y), z: r2(p.pos.z), yaw: r2(p.yaw), pitch: r2(p.pitch), w: g.arsenal?.def?.id || '', hp: Math.round(st.hp), f: this._flags(), u: this._upgradeCode() }, { reliable: false });
+    room.send('ps', { x: r2(p.pos.x), y: r2(p.pos.y), z: r2(p.pos.z), yaw: r2(p.yaw), pitch: r2(p.pitch), w: g.arsenal?.def?.id || '', hp: Math.round(st.hp), f: this._flags(), u: this._upgradeCode(), sk: this._skinCode() }, { reliable: false });
     if (this.hits.length) room.send('hits', this.hits.splice(0, 120));
     if (this.shots) { room.send('sh', this.shots, { reliable: false }); this.shots = null; }
   }
@@ -246,6 +266,7 @@ export class NetSync {
     if (this.host) {
       if (type === 'ps') {
         const r = this.remotes.get(from);
+        if (r && typeof data.sk === 'string') r.skinCode = data.sk.slice(0, 64);
         if (r) { r.seenAt = now(); r.push({ x: data.x / 100, y: data.y / 100, z: data.z / 100, yaw: data.yaw / 100, pitch: data.pitch / 100, weapon: data.w, hp: data.hp, alive: !!(data.f & 1), downed: !!(data.f & 2), crouch: !!(data.f & 4), reload: !!(data.f & 8), revive: !!(data.f & 16) }, now()); this._setUpgrades(r, data.u); }
       } else if (type === 'rv') {
         this._revive(from, data?.t);
@@ -279,11 +300,12 @@ export class NetSync {
       const off = t - now();
       if (!this.offsetInit) { this.offset = off; this.offsetInit = true; } else this.offset += (off - this.offset) * 0.05;
       for (const row of data.z) g.zombies.pushSnapshot({ id: row[0], x: row[1] / 100, y: row[2] / 100, z: row[3] / 100, yaw: row[4] / 100, st: row[5], hp: row[6] / 100, run: row[7] }, t);
+      const skins = new Map(Array.isArray(data.sk) ? data.sk.filter(Array.isArray) : []);
       for (const row of data.p) {
         if (row[0] === g.localId) continue;
         let r = this.remotes.get(row[0]);
         if (!r) { this._addRemote({ id: row[0], name: this.room.peers?.get?.(row[0])?.name || '隊友', slot: this.room.peers?.get?.(row[0])?.slot ?? 0 }); r = this.remotes.get(row[0]); }
-        if (r) r.seenAt = now();
+        if (r) { r.seenAt = now(); r.skinCode = String(skins.get(row[0]) || '').slice(0, 64); }
         r?.push({ x: row[1] / 100, y: row[2] / 100, z: row[3] / 100, yaw: row[4] / 100, pitch: row[5] / 100, alive: !!(row[6] & 1), downed: !!(row[6] & 2), crouch: !!(row[6] & 4), reload: !!(row[6] & 8), revive: !!(row[6] & 16), hp: row[7], weapon: row[8] }, t);
         this._setUpgrades(r, row[9]);
       }

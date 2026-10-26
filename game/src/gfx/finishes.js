@@ -94,7 +94,8 @@ export const FINISHES = {
   night_snare: { zh: '夜網', en: 'Night Snare', type: 5, grade: 'precious', collection: 'thunder', c: ['#1a1d24', '#c9ccd1'], rough: 0.4, metal: 0, float: [0.06, 0.8], kit: { ...KIT_FREE, salt: 62, webs: [0.7, 0.25, 0.05] } },
   // 6 two glosses
   cinnabar_stripe: { zh: '朱砂斑紋', en: 'Cinnabar Stripe', type: 6, pat: 0, grade: 'exquisite', collection: 'newyear', c: ['#c4161c'], rough: 0.2, metal: 1, float: [0.01, 0.26], kit: { ...KIT_FREE, salt: 71 } },
-  cinnabar_hammer: { zh: '朱砂錘紋', en: 'Cinnabar Hammer', type: 6, pat: 1, grade: 'exquisite', collection: 'newyear', c: ['#c4161c'], rough: 0.16, metal: 1, float: [0.01, 0.26], kit: { ...KIT_FREE, salt: 72 } },
+  cinnabar_hammer: { zh: '朱砂錘紋', en: 'Cinnabar Hammer', type: 6, pat: 1, grade: 'exquisite', collection: 'newyear', c: ['#c4161c'], rough: 0.16, metal: 1, float: [0.01, 0.26], kit: { ...KIT_FREE, salt: 72 },
+    chase: { metric: 'hammerShape', titles: [{ id: 'xinwen', zh: '心紋', top: 0.01 }, { id: 'lingwen', zh: '菱紋', top: 0.01 }] } },
   // 7 etched anodized
   gold_stripe: { zh: '金虎紋', en: 'Gold Stripe', type: 7, pat: 0, grade: 'exquisite', collection: 'qiming_s1', c: ['#e3b04b', '#f6ecd8'], rough: 0.08, metal: 1, float: [0, 0.08], kit: { ...KIT_FREE, salt: 81 } },
   cloud_leopard: { zh: '雲豹', en: 'Clouded Leopard', type: 7, pat: 1, grade: 'precious', collection: 'autumn', c: ['#e9a13b', '#f3e7cf'], rough: 0.1, metal: 1, float: [0, 0.08],
@@ -177,6 +178,244 @@ export function finishRoll(id, seed = 0) {
 export function floatToWear(float) { return Math.min(1.3, 0.04 + 1.6 * Math.pow(Math.max(0, float), 0.9)); }
 /** Exterior grade of a float. */
 export function wearGrade(float) { return WEAR_GRADES.find((g) => float < g.max) || WEAR_GRADES[4]; }
+
+/** The seed's raw draws in the fixed order offsetX, offsetY, rotation, extra (0..1 each; finishRoll lerps them). */
+export function seedDraws(id, seed = 0) {
+  const f = finishDef(id);
+  const r = mulberry32((seed | 0) * 7919 + (f?.kit?.salt | 0));
+  return [r(), r(), r(), r()];
+}
+
+// Rare-pattern rules (§3.3, §3.5 #4) on the seed's draws, so a title is a property of the seed like the pattern it
+// names. The thresholds hit the spec's rates (天青淬．壹等 0.8 % = the blue ramp row (8 %) x its best tenth of web /
+// cloud placements, 網心 = one web centred within ±3 % ...). tools/finish-chase.mjs (offline renders of seeds 0-999,
+// §3.5 #3) is to replace these with measured thresholds; until then the rules decide. Returns the title index or -1.
+const CHASE_RULES = {
+  fadeAngle: (d) => (d[2] < 0.01 ? 0 : -1),                                                  // the steepest 1 % of fade angles
+  bluePct: (d, f) => { const row = pick(f.kit.rows, d[3]); return row === 2 ? (d[0] < 0.1 ? 0 : d[0] < 0.375 ? 1 : -1) : row === 0 && d[0] < 0.106 ? 2 : -1; },
+  redBlue: (d) => (d[0] < 0.02 ? 0 : d[0] > 0.95 ? 1 : -1),                                  // 水火 2 %, 三彩 5 %
+  webCentre: (d, f) => { const webs = 1 + pick(f.kit.webs, d[3]); return webs === 3 ? (d[0] < 0.2 ? 1 : -1) : webs === 1 && Math.abs(d[0] - 0.5) < 0.03 ? 0 : -1; },
+  raindrop: (d, f) => (pick(f.kit.pats, d[3]) === 2 && d[0] < 0.6 ? 0 : -1),               // 3 %
+  centredSpot: (d) => (Math.abs(d[0] - 0.5) < 0.01 ? 0 : -1),                               // 2 %
+  hammerShape: (d) => (d[0] < 0.01 ? 0 : d[0] > 0.99 ? 1 : -1),
+};
+/** Rare-pattern title of a finish seed: { id, zh } or null. */
+export function chaseTitle(id, seed = 0) {
+  const f = finishDef(id), ch = f?.chase;
+  const rule = ch && CHASE_RULES[ch.metric];
+  if (!rule) return null;
+  const i = rule(seedDraws(id, seed), f);
+  return i >= 0 ? ch.titles[i] || null : null;
+}
+
+/** Collections (§3.10 `collection`): crate series and the item cards' series line. */
+export const COLLECTIONS = {
+  qiming_s1: { zh: '啟明工坊．壹', en: 'Qiming Works I' },
+  newyear: { zh: '開春', en: 'Spring Festival' },
+  thunder: { zh: '驚雷', en: 'Thunderclap' },
+  summer: { zh: '盛夏', en: 'Midsummer' },
+  autumn: { zh: '秋山', en: 'Autumn Hills' },
+};
+
+/** Style families for the armory filter (fType -> family). */
+export const FAMILIES = {
+  fade: { zh: '漸層', types: [1, 3] }, nebula: { zh: '星渦', types: [2] }, temper: { zh: '淬火', types: [4] }, web: { zh: '蛛網', types: [5] },
+  candy: { zh: '糖果漆', types: [6] }, etched: { zh: '蝕刻', types: [7] }, forged: { zh: '鍛紋', types: [8] }, anod: { zh: '陽極．分件', types: [9] },
+  camo: { zh: '迷彩', types: [10] }, engraved: { zh: '雕花', types: [11] },
+};
+export const familyOf = (id) => { const t = finishDef(id)?.type; return Object.keys(FAMILIES).find((k) => FAMILIES[k].types.includes(t)) || 'anod'; };
+
+/** CSS background that suggests a finish (card fallbacks, crate odds rows, swatches). */
+export function finishSwatch(id) {
+  const f = finishDef(id);
+  if (!f) return '#2a2c30';
+  const c = [...f.c]; while (c.length < 3) c.push(c[c.length - 1]);
+  switch (f.type) {
+    case 1: return `linear-gradient(115deg, ${c[0]} 8%, ${c[1]} 48%, ${c[2]} 92%)`;
+    case 2: return `radial-gradient(circle at 30% 35%, ${c[2]} 0 12%, transparent 30%), radial-gradient(circle at 70% 65%, ${c[0]} 0 18%, transparent 42%), linear-gradient(135deg, #15131a, ${c[1]} 55%, #0c0b10)`;
+    case 3: return `linear-gradient(115deg, ${c[0]} 10%, ${c[1]} 50%, ${c[2]} 90%)`;
+    case 4: return 'linear-gradient(115deg, #9a9ea4 0%, #d8c58a 22%, #c99a4f 38%, #6a3d7a 58%, #2b3f8c 74%, #7a8ea3 100%)';
+    case 5: return `repeating-radial-gradient(circle at 40% 50%, ${c[0]} 0 7px, ${c[1]} 7px 8px)`;
+    case 8: return `repeating-linear-gradient(12deg, ${c[0]} 0 4px, ${c[1]} 4px 6px)`;
+    case 10: return `radial-gradient(circle at 25% 35%, ${c[1]} 0 18%, transparent 19%), radial-gradient(circle at 70% 60%, ${c[2]} 0 16%, transparent 17%), ${c[0]}`;
+    case 11: return `repeating-linear-gradient(45deg, ${c[0]} 0 5px, ${c[1]} 5px 6px)`;
+    default: return f.c.length > 1 ? `linear-gradient(135deg, ${c[0]}, ${c[1]})` : `linear-gradient(135deg, ${c[0]}, color-mix(in srgb, ${c[0]} 55%, #000))`;
+  }
+}
+
+// ------------------------------------------------------------------ premium phases (相, §3.8)
+
+/**
+ * 本相 / 相 / 窯變 of the premium weapons (§3.8): palette swaps of the weapon's own premium materials, never generic
+ * finishes and never another model. Per weapon: list[0] = 本相 (the def as authored), then the alternates in the
+ * order of def.premium.phases (ids from defs.js; names / colours here). An entry:
+ *   recolor { matKey: '#hex' }   base colour of a premium material (glow_* keys: its emission); a glaze whose
+ *                                 pvKey has a shard palette gets the new colour in the same pattern (4 tones)
+ *   palette { ... }              premium palette keys (rim / core / mote / trim / feather ...)
+ *   pvKey { matKey: {...} }      extra per-material premium params
+ *   unlock                       mastery kills with that weapon (§3.8: 相 by 熟練度)
+ *   sw                           three swatch colours for the UI
+ * kiln: the 1 % 窯變 colour (defs premium.kiln.special), rolled once when the weapon is first acquired.
+ */
+export const PHASE_UNLOCK = [0, 100, 300];
+export const PHASES = {
+  chiwen: {
+    list: [
+      { id: 'shuangchao', zh: '霜潮', en: 'Frost Tide', sw: ['#eef4f8', '#244aa5', '#6fe3ff'] },
+      { id: 'cuichao', zh: '翠潮', en: 'Jade Tide', sw: ['#e3ece4', '#1d7a4a', '#7dffb8'],
+        recolor: { glaze_cobalt: '#1d7a4a', glaze_jade: '#0f5a3a', porcelain: '#e3ece4', glow_ice: '#7dffb8' }, palette: { core: '#7dffb8', rim: '#2fbf7a', mote: '#e8fff0' } },
+      { id: 'mochao', zh: '墨潮', en: 'Ink Tide', sw: ['#2a2c31', '#17161a', '#c9ccd1'],
+        recolor: { glaze_cobalt: '#17161a', glaze_jade: '#3a3d42', porcelain: '#2a2c31', gold: '#c9ccd1', glow_ice: '#dfe8ff' }, palette: { core: '#dfe8ff', rim: '#9aa6b8', trim: '#c9ccd1' } },
+    ],
+    kiln: { id: 'jun_kiln', zh: '鈞窯', en: 'Jun Kiln', sw: ['#7fa6c8', '#9a5a8a', '#cfe0ea'],
+      recolor: { glaze_cobalt: ['#7fa6c8', '#86a9c9', '#9a5a8a', '#7aa2c4'], porcelain: '#cfe0ea', glaze_jade: '#8a3a6a' }, palette: { rim: '#b0508a', core: '#9fd0ff' } },
+  },
+  pulao: {
+    list: [
+      { id: 'gutong', zh: '古銅', en: 'Old Bronze', sw: ['#6a4a24', '#9a1420', '#e3b04b'] },
+      { id: 'guqing', zh: '古青', en: 'Verdigris', sw: ['#3f6a58', '#24423a', '#7dffd2'],
+        recolor: { bronze_cast: '#3f6a58', bronze_aged: '#4a7a66', bronze_dark: '#24423a', gold: '#b8a46a', glow_gold: '#7dffd2' }, palette: { rim: '#5fe0b8', trim: '#b8a46a' } },
+      { id: 'chijin', zh: '赤金', en: 'Red Gilt', sw: ['#b8862e', '#b3122a', '#ffd36b'],
+        recolor: { bronze_cast: '#b8862e', bronze_aged: '#c99a3a', bronze_dark: '#7a4a18', gold: '#ffd36b', lacquer_red: '#b3122a' }, palette: { rim: '#ffd36b', trim: '#ffd36b' } },
+    ],
+    kiln: { id: 'qinghua_mouth', zh: '青花鐘', en: 'Blue-and-White Bell', sw: ['#e8eef2', '#1d3c8f', '#7fd8ff'],
+      recolor: { bronze_cast: '#e8eef2', bronze_aged: '#dfe6ec', bronze_dark: '#1d3c8f', lacquer_red: '#1d3c8f', lacquer_carved: '#24489a', gold: '#c9ccd1' }, palette: { core: '#7fd8ff', rim: '#3f7fff' } },
+  },
+  bifang: {
+    list: [
+      { id: 'baici', zh: '白瓷', en: 'White Porcelain', sw: ['#ddd7cc', '#1f8f8a', '#c8302a'] },
+      { id: 'qingyu', zh: '青羽', en: 'Azure Plume', sw: ['#cfe4e0', '#1f8f8a', '#7dfff0'],
+        recolor: { porcelain: '#cfe4e0', glaze_vermilion: '#1f8f8a', glaze_teal: '#126e6a', glaze_turquoise: '#3fc9b8', lacquer_red: '#155a5a', glow_sun: '#7dfff0', glow_vermilion: '#3fffe0' },
+        palette: { core: '#c8fff6', rim: '#3fd8c8', feather: ['#1fb5a8', '#3fd8ff'] } },
+      { id: 'chiyu', zh: '赤羽', en: 'Crimson Plume', sw: ['#f0dcc8', '#b92a26', '#ffb43a'],
+        recolor: { porcelain: '#f0dcc8', glaze_teal: '#b92a26', glaze_turquoise: '#e0482a', glaze_cobalt: '#7a1814', glow_sun: '#ffb43a' },
+        palette: { core: '#ffd27a', rim: '#ff5a2a', feather: ['#ff5a2a', '#ffb43a'] } },
+    ],
+    kiln: { id: 'fengcai', zh: '鳳彩', en: 'Phoenix Prism', sw: ['#2a7fff', '#9b3ae8', '#ff3f7a'],
+      recolor: { glaze_teal: '#2a7fff', glaze_turquoise: '#9b3ae8', glaze_vermilion: '#ff3f7a', glaze_cobalt: '#19e3b1' }, palette: { rim: '#ff6fd1', feather: ['#2a7fff', '#ff3fa4'] },
+      pvKey: { porcelain: { irid: 0.3 } } },
+  },
+  guiche: {
+    list: [
+      { id: 'huiyi', zh: '晦翼', en: 'Gloomwing', sw: ['#121012', '#5b2b5e', '#b54bff'] },
+      { id: 'yeyu', zh: '夜羽', en: 'Night Plume', sw: ['#141c3a', '#2a3f8a', '#7aa8ff'],
+        recolor: { glaze_aubergine: '#1d2a5a', glaze_inkteal: '#141c3a', glaze_coldteal: '#2a3f8a', glow_purple: '#5f8bff' },
+        palette: { core: '#7aa8ff', rim: '#3f5fff', mote: '#c8d8ff', feather: ['#3f5fff', '#9fd0ff'] } },
+      { id: 'shuangyu', zh: '霜羽', en: 'Frost Plume', sw: ['#dfe6ec', '#8fb8d8', '#bfe9ff'],
+        recolor: { silver_aged: '#dfe6ec', glaze_aubergine: '#8fb8d8', glaze_inkteal: '#5a7f9a', glaze_coldteal: '#bfe9ff', lacquer_black: '#2a3038', glow_purple: '#bfe9ff' },
+        palette: { core: '#e8f6ff', rim: '#9fd8ff', feather: ['#bfe9ff', '#ffffff'] } },
+    ],
+  },
+  starsword: {
+    list: [
+      { id: 'xinghe', zh: '星河', en: 'Star River', sw: ['#1d2129', '#2449a6', '#bcd2ff'] },
+      { id: 'yedu', zh: '夜渡', en: 'Night Crossing', sw: ['#2a1a4a', '#6a3cff', '#ffcf6a'],
+        recolor: { glaze_cobalt: '#2a1a4a', glaze_inkteal: '#120c24', glaze_turquoise: '#6a3cff', silver_aged: '#6a6f78', glow_white: '#ffd9a0', glow_blue: '#c66bff', glow_arc: '#c66bff' },
+        palette: { core: '#ffcf6a', rim: '#ff9a3a', mote: '#ffe9c0' } },
+    ],
+  },
+  sunbow: {
+    list: [
+      { id: 'tongyang', zh: '彤陽', en: 'Vermilion Sun', sw: ['#9a1420', '#e3b04b', '#ffd36b'] },
+      { id: 'luori', zh: '落日', en: 'Sunset', sw: ['#3a1030', '#c8641a', '#ff5a2a'],
+        recolor: { lacquer_red: '#3a1030', glaze_jade: '#c8641a', gold: '#e8a04a', bronze_aged: '#5a3a2a', glow_sun: '#ff5a2a', glow_gold: '#ff8a3a' },
+        palette: { core: '#ff8a3a', rim: '#ff3f5a', trim: '#e8a04a' } },
+    ],
+  },
+  staff: {
+    list: [
+      { id: 'yuting', zh: '御霆', en: 'Stormherald', sw: ['#7a5a2e', '#2f8f6e', '#9fe8ff'] },
+      { id: 'huiting', zh: '晦霆', en: 'Dusk Thunder', sw: ['#2a2a30', '#4a2a7a', '#b58aff'],
+        recolor: { bronze_aged: '#2a2a30', gold: '#c9ccd1', glaze_jade: '#3a2a5a', glaze_teal: '#4a2a7a', glaze_turquoise: '#7a4aff', glaze_cobalt: '#1a1030', glow_cyan: '#b58aff' },
+        palette: { core: '#d6b8ff', rim: '#9a5cff', mote: '#ead8ff' } },
+    ],
+  },
+  greataxe: {
+    list: [
+      { id: 'wuqi', zh: '舞戚', en: 'Wardance', sw: ['#8a6a3a', '#9a1420', '#ff3a2a'] },
+      { id: 'yewu', zh: '夜舞', en: 'Night Dance', sw: ['#3a3f48', '#1d2a4a', '#8fd0ff'],
+        recolor: { bronze_aged: '#3a3f48', gold: '#9aa6b8', lacquer_red: '#1d2a4a', glaze_turquoise: '#5fa8ff', glaze_teal: '#2a5a9a', glow_red: '#8fd0ff', glow_orange: '#cfe8ff' },
+        palette: { core: '#8fd0ff', rim: '#5fa8ff', mote: '#d8f0ff', ember: '#cfe8ff' } },
+    ],
+  },
+  twinblades: {
+    list: [
+      { id: 'shuangjue', zh: '雙絕', en: 'Twin Peerless', sw: ['#1a1a1e', '#c8302a', '#ffc46a'] },
+      { id: 'yeyao', zh: '夜曜', en: 'Night Radiance', sw: ['#1d2a5a', '#3a5aff', '#cfe8ff'],
+        recolor: { gold: '#c9ccd1', bronze_aged: '#4a4f58', glaze_vermilion: '#3a5aff', glaze_ochre: '#8a6bff', lacquer_red: '#1d2a5a', glow_vermilion: '#6a8bff', glow_orange: '#a86bff', glow_gold: '#cfe8ff' },
+        palette: { core: '#cfe8ff', rim: '#6a8bff', hong: '#6a8bff', ni: '#cfe8ff' } },
+    ],
+  },
+  yazi: {
+    list: [
+      { id: 'liehun', zh: '裂魂', en: 'Soulrend', sw: ['#121012', '#6a0a14', '#ff2a3a'] },
+      { id: 'bairen', zh: '白刃', en: 'Bare Blade', sw: ['#e6e3dc', '#b3122a', '#dfe6f0'],
+        recolor: { lacquer_black: '#e6e3dc', gold: '#c9ccd1', bronze_dark: '#6a7078', lacquer_red: '#b3122a', glow_red: '#dfe6f0' },
+        palette: { core: '#dfe6f0', rim: '#9fc8ff', trim: '#c9ccd1' } },
+    ],
+  },
+};
+/** The phase list of a premium weapon ([] when it has none): 本相 first, then the alternates. */
+export function phasesOf(def) { return def?.premium && PHASES[def.id]?.list || []; }
+/** The weapon's 窯變 entry when its def rolls one (premium.kiln). */
+export function kilnOf(def) { return def?.premium?.kiln && PHASES[def.id]?.kiln || null; }
+
+const _pc = new THREE.Color();
+const tones = (hex, n = 4) => Array.from({ length: n }, (_, i) => '#' + _pc.set(hex).offsetHSL(0, 0, [0, 0.025, -0.02, 0.012][i % 4]).getHexString());
+const darker = (hex, k = 0.45) => '#' + _pc.set(hex).multiplyScalar(k).getHexString();
+const phaseCache = new Map();
+/**
+ * The premium config of a weapon in a phase ('kiln' = its 窯變) with a kiln seed (pSeed: shard arrangement, §3.8):
+ * the def's own object for 本相 without a seed, else a merged copy cached per (weapon, phase, seed) so its identity is
+ * stable (premium states and their materials are cached by config).
+ */
+export function phaseConfig(def, phase = 0, seed = null) {
+  const base = def?.premium;
+  if (!base) return base;
+  const P = PHASES[def.id];
+  const ph = phase === 'kiln' ? P?.kiln : P?.list[phase | 0];
+  const sd = seed ?? base.seed;
+  if ((!ph || !ph.recolor) && sd === base.seed) return base;
+  const key = def.id + ':' + phase + ':' + sd;
+  let cfg = phaseCache.get(key);
+  if (cfg && cfg._base === base) return cfg;
+  const mat = { ...(base.mat || {}) }, pvKey = { ...(base.pvKey || {}) };
+  for (const [k, v] of Object.entries(ph?.recolor || {})) {
+    const hex = Array.isArray(v) ? v[0] : v;
+    mat[k] = { ...(mat[k] || {}), ...(k.startsWith('glow_') ? { emissive: hex } : { color: hex }) };
+    const pk = pvKey[k];
+    if (pk?.shardPal) pvKey[k] = { ...pk, shardPal: Array.isArray(v) ? v : tones(hex), ...(pk.grout ? { grout: darker(hex) } : {}) };
+  }
+  for (const [k, v] of Object.entries(ph?.pvKey || {})) pvKey[k] = { ...(pvKey[k] || {}), ...v };
+  cfg = { ...base, mat, pvKey, palette: { ...(base.palette || {}), ...(ph?.palette || {}) }, seed: sd, _base: base, phase: ph?.id || null };
+  phaseCache.set(key, cfg);
+  return cfg;
+}
+
+// ------------------------------------------------------------------ multiplayer skin code
+
+/**
+ * What a teammate needs to draw our weapon (the 'ps' / 'sn' player rows): 'f:<finish>:<seed>:<float x 1e4>' for a
+ * standard gun with a finish, 'p:<phase>:<kiln seed>' for a premium weapon's phase, '' for the plain weapon.
+ */
+export function encodeSkin(def) {
+  const f = def?.finish;
+  if (f?.id) return `f:${f.id}:${f.seed | 0}:${Math.round((f.float ?? 0) * 10000)}`;
+  const p = def?.premium;
+  if (p && (p.phase || p._base)) {
+    const list = PHASES[def.id], i = p.phase === PHASES[def.id]?.kiln?.id ? 'kiln' : Math.max(0, list?.list.findIndex((e) => e.id === p.phase) ?? 0);
+    return `p:${i}:${p.seed | 0}`;
+  }
+  return '';
+}
+/** Skin code -> { finish } | { phase, seed } | null (unknown finishes / phases are dropped). */
+export function decodeSkin(code) {
+  if (typeof code !== 'string' || !code) return null;
+  const [k, a, b, c] = code.split(':');
+  if (k === 'f' && finishDef(a)) return { finish: { id: finishId(a), seed: Math.max(0, Math.min(999, b | 0)), float: Math.max(0, Math.min(1, (c | 0) / 10000)) } };
+  if (k === 'p') return { phase: a === 'kiln' ? 'kiln' : Math.max(0, Math.min(3, a | 0)), seed: b | 0 };
+  return null;
+}
 /** Drop float (§3.4): bucket FN 12 / MW 23 / FT 40 / WW 12 / BS 13 %, uniform inside, mapped onto the finish range. */
 export function rollFloat(id, rnd = Math.random) {
   const f = finishDef(id);

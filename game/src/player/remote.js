@@ -19,7 +19,8 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { buildMannequin } from '../zombies/mannequin.js';
 import { loadGLB, instanceGLB, shareSkeletons, disposeSkeletons } from '../engine/assets.js';
 import { applyHardSurface } from '../gfx/materials.js';
-import { WEAPONS } from '../weapons/defs.js';
+import { WEAPONS, tierOf } from '../weapons/defs.js';
+import { decodeSkin, phaseConfig } from '../gfx/finishes.js';
 import { RAMP } from '../fx/fx.js';
 import { angleDiff, clamp } from '../engine/util.js';
 
@@ -188,8 +189,12 @@ export class RemotePlayer {
   }
 
   async setWeapon(id) {
-    if (this.weaponId === id) return;
+    // skinCode (net/sync.js): the teammate's armory look of the weapon it holds -- a finish or a premium 相
+    const skin = this.skinCode || '';
+    if (this.weaponId === id && this.gunSkin === skin) return;
     this.weaponId = id;
+    this.gunSkin = skin;
+    const tok = this._gunTok = (this._gunTok || 0) + 1;
     this.wclass = ONE_HAND.has(WEAPONS[id]?.cat) ? 'pistol' : 'rifle';
     this._returnMag();
     if (this.gun) { this.gun.parent?.remove(this.gun); this.gun = null; }
@@ -198,10 +203,14 @@ export class RemotePlayer {
       const tpm = WEAPONS[id]?.tpModel;
       const g = await (tpm ? instanceGLB(`weapons/${tpm}.glb`).catch(() => instanceGLB(`weapons/${id}.glb`)) : instanceGLB(`weapons/${id}.glb`));
       await this.ready; // the character (and its hand bone) may still be loading
-      if (this.weaponId !== id) return;
+      if (this.weaponId !== id || tok !== this._gunTok) return;
       // premium guns keep their glow and focus in third person (lite presets, emission x0.5; PREMIUM_WEAPONS §1.5.6)
-      const prem = WEAPONS[id]?.premium;
-      applyHardSurface(g, prem ? { premium: prem, premiumKey: `p3:${this.id}:${id}`, world: true } : {});
+      const def = WEAPONS[id], prem = def?.premium, sk = decodeSkin(skin);
+      applyHardSurface(g, prem ? { premium: sk?.phase != null ? phaseConfig(def, sk.phase, sk.seed) : prem, premiumKey: `p3:${this.id}:${id}`, world: true }
+        : sk?.finish && tierOf(def) === 'standard' ? { finish: sk.finish } : {});
+      // a look's programs build in parallel before the gun shows (a teammate's first skinned draw would hitch)
+      if (sk) { try { await this.game.renderer?.gl.compileAsync(g, this.game.camera, this.game.scene); } catch { /* first draw compiles */ } }
+      if (this.weaponId !== id || tok !== this._gunTok) return;
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       this.gun = g;
       this._attachGun();

@@ -825,13 +825,13 @@ export default function build() {
     mould(s1, 243, R);
     testedBand(s1, 299, 313, R);
     for (const s0 of H.ins) { const I = insulator(s0, R); s1.add(I.porc, PORC); s1.add(I.cu, CU); s1.add(I.glaze, GLAZE); }
-    // fx_ding: three comets of light hugging the rims of group 2's skirts (hidden at rest: the inspect's knuckle tap
-    // shows them and sweeps them once round the skirts about s)
-    const ding = g.part('fx_ding', { parent: 'fx_seg1', pivot: [H.ins[1] + 26, 0, 0], extras: { note: 'inspect: light running round insulator group 2 (code: hidden at rest, clip fx_ding.vis / .rot)' } });
+    // fx_ding: three comets of light hugging the rims of group 1's skirts (the group nearest the eye; hidden at rest: the
+    // inspect's knuckle tap shows them and sweeps them once round the skirts about s)
+    const ding = g.part('fx_ding', { parent: 'fx_seg1', pivot: [H.ins[0] + 26, 0, 0], extras: { note: 'inspect: light running round insulator group 1 (code: hidden at rest, clip fx_ding.vis / .rot)' } });
     [14, 26, 38].forEach((o, k) => {
-      const sc = H.ins[1] + o - 0.4, r = 32.6, a0 = k * 2.1, pts = [];
-      for (let i = 0; i <= 16; i++) { const a = a0 + i / 16 * 2.2; pts.push([sc, r * Math.sin(a), r * Math.cos(a)]); }
-      ding.add(ttube(pts, 0.25, 1.05, { radial: 6, seg: 24 }), ARC);
+      const sc = H.ins[0] + o - 0.4, r = 33.2, a0 = k * 2.1, pts = [];
+      for (let i = 0; i <= 20; i++) { const a = a0 + i / 20 * 2.6; pts.push([sc, r * Math.sin(a), r * Math.cos(a)]); }
+      ding.add(ttube(pts, 0.4, 2.1, { radial: 8, seg: 30 }), ARC);
     });
     // the grip zone: a moulded grip sleeve with finger ridges (slightly proud)
     const gz = [[370, R - 0.5], [370, R + 0.9], [372, R + 1.7]];
@@ -959,7 +959,7 @@ export default function build() {
   g.socket('cap', [(H.cap[0] + H.cap[1]) / 2, H.capT, 0]);
   g.socket('coil', [H.coils[1], 0, 0]);
   g.socket('flick', [H.coils[0], 4, -33]);                   // inspect: the thumb on coil 1
-  g.socket('knock', [H.ins[1] + 26, 24, -20]);              // inspect: a knuckle on insulator group 2
+  g.socket('knock', [H.ins[0] + 26, 24, -20]);              // inspect: a knuckle on insulator group 1
   g.meta({
     // carried one-handed on the pistol grip (the left hand off the screen between actions: the forearm across the
     // lower centre hid close zombies); grip_l stays for the clips that take the shaft
@@ -972,8 +972,8 @@ export default function build() {
   // bake: pre-tessellated, short AO reach, m4's post-bake (buried AO refill, per-material wear from curvature).
   // First a QEM pass over the dense lathes / sweeps / labels (welded by position + normal, crease splits stay split):
   // at most 0.15 mm off the authored surface (well under a pixel at hip, ~0.4 px in the 20 cm inspect close-up; pulao's
-  // budget), which keeps the GLB under 5 MB (WEAPON_MODELING §6). g.lod 1 (chunting_tp, teammates' hands): 1.4 mm with
-  // small pieces pruned and a 5x coarser bake grid.
+  // budget), which keeps the GLB under 5 MB (WEAPON_MODELING §6). g.lod 1 (chunting_tp, teammates' hands, seen from 3 m
+  // and more: a pixel is ~3 mm there): down to 15 % within 8 mm, small pieces pruned, an 8x coarser bake grid (~25k).
   const build0 = g.build.bind(g);
   g.build = (o = {}) => {
     const root = build0({ ...o, bake: false });
@@ -984,7 +984,7 @@ export default function build() {
         if (!m.isMesh || /^(glow_|glass)/.test(m.userData.mat)) return;
         const n = m.geometry.attributes.position.count / 3;
         before += n;
-        if (tp || n > 400) m.geometry = tp ? decimate(m.geometry, 1.4, 0.1, true) : decimate(m.geometry, 0.15);
+        if (tp || n > 400) m.geometry = tp ? decimate(m.geometry, 8, 0.1, true, 0.15) : decimate(m.geometry, 0.15);
         after += m.geometry.attributes.position.count / 3;
       });
       if (o.log !== false) console.log(`chunting decimate: ${Math.round(before)} -> ${Math.round(after)} triangles`);
@@ -992,7 +992,7 @@ export default function build() {
     if (o.bake !== false) {
       const meshes = [];
       root.traverse((m) => { if (m.isMesh) meshes.push(m); });
-      const tess = (o.tessellate ?? TESS) * 0.001 * (tp ? 5 : 1);
+      const tess = (o.tessellate ?? TESS) * 0.001 * (tp ? 8 : 1);
       for (const m of meshes) {
         let geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
         for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
@@ -1018,13 +1018,14 @@ export default function build() {
 
 const TESS = 18;
 /** QEM simplification of a built (metre) mesh to err mm, position + normal weighted (nw) */
-function decimate(geo, err, nw = 0.3, prune = false) {
+function decimate(geo, err, nw = 0.3, prune = false, ratio = 0) {
   for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
   const w = mergeVertices(geo.index ? geo.toNonIndexed() : geo, 1e-7);
   const P = w.attributes.position.array, N = w.attributes.normal.array;
   const Pmm = new Float32Array(P.length);
   for (let i = 0; i < P.length; i++) Pmm[i] = P[i] * 1000;
-  const [I] = MeshoptSimplifier.simplifyWithAttributes(Uint32Array.from(w.index.array), Pmm, 3, N, 3, [nw, nw, nw], null, 0, err, prune ? ['ErrorAbsolute', 'Prune'] : ['ErrorAbsolute']);
+  const target = ratio ? Math.max(3, Math.floor(w.index.count * ratio / 3) * 3) : 0;
+  const [I] = MeshoptSimplifier.simplifyWithAttributes(Uint32Array.from(w.index.array), Pmm, 3, N, 3, [nw, nw, nw], null, target, err, prune ? ['ErrorAbsolute', 'Prune'] : ['ErrorAbsolute']);
   const pos = new Float32Array(I.length * 3), nrm = new Float32Array(I.length * 3);
   for (let k = 0; k < I.length; k++) for (let c = 0; c < 3; c++) { pos[k * 3 + c] = P[I[k] * 3 + c]; nrm[k * 3 + c] = N[I[k] * 3 + c]; }
   const out = new THREE.BufferGeometry();

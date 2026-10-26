@@ -275,10 +275,11 @@ function funnelMaterial() {
 }
 // (the radius is a uniform: one program for every storm size)
 const SHADE_FRAG = 'uniform float uA, uR; varying vec2 vP; void main() { float d = length(vP) / uR; gl_FragColor = vec4(0.02, 0.015, 0.03, uA * 0.5 * (1.0 - smoothstep(0.35, 1.0, d))); }';
-/** Cloud height over the strike for a viewer at eye (stays inside the vertical field of view when aiming at the street). */
+/** Cloud height over the strike for a viewer at eye: inside the vertical field of view when aiming at the street under
+ *  it, higher over far throws, and lifted again over a point-blank one (4.5 m overhead read as a purple ceiling). */
 export function stormHeight(eye, c) {
   const d = Math.hypot(c.x - eye.x, c.z - eye.z);
-  return THREE.MathUtils.clamp(eye.y + d * 0.33 - c.y, 4.5, 9.5);
+  return THREE.MathUtils.clamp(eye.y - c.y + Math.max(d * 0.33, 6.5 - d * 0.4), 4.5, 9.5);
 }
 /**
  * The storm over c (height h, radius r): three stacked counter-rotating vortex discs with an open eye, a funnel lowering
@@ -401,7 +402,8 @@ export function giantStrike(g, p, { h = 8, r = 6, near = 1, seed, centre = 0, li
   fx.zfx?.ground?.add?.('glow', _b.set(p.x, p.y + 0.04, p.z), { r: r * 0.42, life: 1.6, col: k3(COL.violet, 0.5), alpha: 0, fadeIn: 0.02, fadeOut: 1.3 });
   fx.zfx?.ground?.add?.('shock', _b.set(p.x, p.y + 0.05, p.z), { r: r * 0.9, r1: r, life: 1.2, col: k3(COL.rim, 0.35), alpha: 0, fadeIn: 0.02, fadeOut: 1.0 });
   fx.sparkBurst?.(p.clone().add(_b.set(0, 0.3, 0)), { color: k3(COL.white, 0.7), color1: k3(COL.spark, 0.5), count: lite ? 28 : 44, speed: 13, glow: 1.0, normal: UP });
-  for (let i = 0; i < (lite ? 10 : 16); i++) { const a = i / (lite ? 10 : 16) * TAU + R() * 0.2; fx.knockDust?.(_b.set(p.x + Math.cos(a) * 1.4, p.y, p.z + Math.sin(a) * 1.4), _c.set(Math.cos(a) * 9, 0, Math.sin(a) * 9), 1.3); }
+  // a rolling dust ring (kept short of the thrower at 12 m: a full second of dust wall hid the street after the strike)
+  for (let i = 0; i < (lite ? 8 : 11); i++) { const a = i / (lite ? 8 : 11) * TAU + R() * 0.2; fx.knockDust?.(_b.set(p.x + Math.cos(a) * 1.4, p.y, p.z + Math.sin(a) * 1.4), _c.set(Math.cos(a) * 6.5, 0, Math.sin(a) * 6.5), 0.9); }
   rubble(g, p, lite ? 14 : 22, 9);
   // arcs crawling out over the ground: a burst at the strike, then fewer and shorter for a second
   for (let i = 0; i < (lite ? 5 : 8); i++) { const a = i / 8 * TAU + R() * 0.4, d = r * (0.5 + R() * 0.45); arc(g, _c.set(p.x, p.y + 0.1, p.z), _a.set(p.x + Math.cos(a) * d, p.y + 0.08, p.z + Math.sin(a) * d), { w: 0.08, life: 0.18 + R() * 0.12, k: 0.9, levels: 5, jitter: 0.12, branches: 1 }); }

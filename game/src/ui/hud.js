@@ -25,6 +25,7 @@
 //   cat (melee none, bow / crossbow arrows, staff / wand mana, else ammo). Values: ws.ammo of def.mag, ws.reserve,
 //   unless the special reports its own pool: special.resource(ws, g) -> { kind?, value, max, reserve?, label?, color? }.
 // Teammate name tags (player/remote.js .nametag) fade while they sit over a HUD panel.
+// Holding the 'score' action (Tab) shows the scoreboard (ui/scoreboard.js) over the rest; it never takes input.
 import { weaponIcon } from './icons.js';
 import * as SP from '../weapons/specials.js';
 import { specialOf, hudInfo, auraState, paletteOf } from '../weapons/specials.js';
@@ -33,6 +34,7 @@ import { CrosshairView, MeterView, StarView, tierShape, injectCSS, registerCross
 import { DamageNumbers } from './dmgnums.js';
 import { KillLayer, registerKillMark, bakeKillMark } from './killmarks.js';
 import { KeyHints, keycap, keyify, esc, bindSig } from './keyhints.js';
+import { Scoreboard } from './scoreboard.js';
 
 const el = (cls, parent, html = '') => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; parent?.appendChild(d); return d; };
 
@@ -135,6 +137,8 @@ export class HUD {
     this.cardEl = el('skcard', root, '<b></b><svg viewBox="0 0 200 14" preserveAspectRatio="none"><path d="M4 9 C40 2 90 12 130 6 S180 4 196 8"/></svg><small></small>');
     this.hintEl = el('skhint', root);
     this.hints = new KeyHints({ money: this.money.querySelector('.mkh'), mag: this.magRow, weapon: this.ammo.querySelector('.wrow') });
+    // Tab scoreboard (held 'score' action; ui/scoreboard.js): over everything else on the HUD, never takes input
+    this.scoreboard = new Scoreboard(game, root);
     this.inspT = 0;
     // teammate name tags (player/remote.js appends them here); HUD panel rects they fade over, refreshed twice a second
     this.tagEls = root.getElementsByClassName('nametag');
@@ -182,6 +186,17 @@ export class HUD {
     this.toastEl.classList.add('on');
     clearTimeout(this._toastT);
     this._toastT = setTimeout(() => this.toastEl.classList.remove('on'), ms);
+  }
+
+  /**
+   * The armory's 試用 (test range): a top banner with what is being tried and the way back; the money and its
+   * [B] 商店 hint go (nothing to buy there).
+   */
+  setTryout(label) {
+    this.tryEl?.remove();
+    this.money.classList.toggle('off', !!label);
+    if (!label) { this.tryEl = null; return; }
+    this.tryEl = el('trybar', this.money.parentNode, `<em>試用中</em><b>${esc(label)}</b><span>${this.keyHints ? '<kbd class="kc w">Esc</kbd>' : ''}返回武器庫</span>`);
   }
 
   /** Bottom-centre hint; `use` = it asks for the use key (touch shows its use button while one is up). */
@@ -341,6 +356,7 @@ export class HUD {
     const ar = g.arsenal;
     this.root.style.visibility = this.visible ? 'visible' : 'hidden';
     if (!this.visible) return;
+    this.scoreboard.update(dt, !!g.input?.state.held.score);
     // bled out: no crosshair, a spectating line instead
     const dead = st?.alive === false;
     const kh = this.keyHints;

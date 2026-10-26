@@ -388,8 +388,21 @@ export function hardSurface(key, opts = {}) {
   m.customProgramCacheKey = () => progKey;
   m.userData.preset = key;
   if (pv) m.userData.pv = pv;
+  if (fu) m.userData.finish = fu.id;
   if (!opts.counter) cache.set(ck, m);
   return m;
+}
+
+/**
+ * Drops materials of a closed preview (the armory turntable / item thumbnails) from the cache and frees them: only
+ * finish and premium materials (per seed / float / premium state, so never shared with a world or HUD material).
+ */
+export function releaseMaterials(mats) {
+  for (const [k, m] of cache) {
+    if (!mats.has(m) || !(m.userData.finish || m.userData.pv)) continue;
+    cache.delete(k);
+    m.dispose();
+  }
 }
 
 // ------------------------------------------------------------------ asset application

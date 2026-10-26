@@ -233,7 +233,8 @@ export class Arsenal {
   }
 
   give(id, { select = true } = {}) {
-    const def = WEAPONS[id];
+    // the armory's look (equipped finish / premium 相, game.skin): one def object per weapon for the whole match
+    const def = WEAPONS[id] && (this.game.skin?.(WEAPONS[id]) || WEAPONS[id]);
     if (!def) return null;
     const ws = new WeaponState(def);
     ws.reserve = this.maxReserve(ws);

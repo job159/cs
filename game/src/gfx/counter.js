@@ -119,6 +119,7 @@ export class KillCounter {
     frame.position.x = -S.d / 2; frame.name = 'kc_frame:steel_dark';
     const glass = new THREE.Mesh(bake(new THREE.PlaneGeometry(S.faceW, S.faceH).rotateY(-Math.PI / 2)), makeMaterial('glow_vfd', { viewmodel, counter: this }));
     glass.position.x = -S.d - 0.0002; glass.name = 'kc_face:glow_vfd';
+    this.face = glass;   // its material is this counter's own (uncached: the display uniforms)
     const screwGeo = bake(new THREE.CylinderGeometry(0.0011, 0.0011, 0.0008, 12).rotateZ(Math.PI / 2));
     for (const z of [-S.w / 2 + 0.0018, S.w / 2 - 0.0018]) {
       const s = new THREE.Mesh(screwGeo, makeMaterial('steel_bright', { viewmodel }));
@@ -150,61 +151,148 @@ export class KillCounter {
     if (this.bossT < 1) this.bossT = Math.min(1, this.bossT + dt / 0.6);
     this.u.kcBossFlash.value = 1 - this.bossT;
   }
-  dispose() { removeTicker(this); this.object.removeFromParent(); }
+  /** Stops ticking and frees what the module owns: its geometry (frame / face / screws) and the face material. */
+  dispose() { removeTicker(this); this.object.removeFromParent(); this.object.traverse((o) => o.geometry?.dispose()); this.face.material.dispose(); }
 }
 
-const mountCache = new Map();
+const mountCache = new Map();   // weapon id -> { list: mount spots, pick } (the first-person check may move pick on)
 const _ray = new THREE.Raycaster();
+_ray.layers.enableAll();
+const partOf = (o) => { let p = o.parent; while (p && !p.userData?.part) p = p.parent; return p; };
 
 /**
- * Mounts the counter on a weapon root (rest pose): at S_counter when the model has one, else on a flat
- * playside spot of the front body found by raycasting (cached per weapon id).
+ * Mount spots of a weapon, best first: { part, pos, quat } with pos / quat in that part's space (part null: the
+ * root). S_counter when the model has one; on a handgun with a slide the slide's rear playside (it rides the slide:
+ * the frame in front of the trigger guard is under the support hand's thumb in first person); then flat playside
+ * spots of the front body (handguard first, then the receiver side) found by raycasting from -X; a last resort.
  */
-export function mountKillCounter(root, counter, box = null) {
+function mountSpots(root, box) {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const toPart = (part, pos, quat = new THREE.Quaternion()) => {
+    if (!part) return { part: null, pos, quat };
+    const m = new THREE.Matrix4().multiplyMatrices(new THREE.Matrix4().copy(part.matrixWorld).invert(), root.matrixWorld);
+    const q = new THREE.Quaternion().setFromRotationMatrix(m).multiply(quat);
+    return { part: part.name, pos: pos.clone().applyMatrix4(m), quat: q };
+  };
+  const list = [];
   let sock = null;
   root.traverse((o) => { if (o.name === 'S_counter') sock = o; });
-  const id = root.userData.weapon || root.children[0]?.userData?.weapon || root.name;
-  let place = null;
   if (sock) {
     const m = new THREE.Matrix4().multiplyMatrices(inv, sock.matrixWorld);
-    place = { pos: new THREE.Vector3().setFromMatrixPosition(m), quat: new THREE.Quaternion().setFromRotationMatrix(m) };
-  } else if (mountCache.has(id)) place = mountCache.get(id);
-  else {
-    const meshes = [];
-    root.traverse((o) => { if (o.isMesh && !o.name.startsWith('kc_')) { let p = o.parent; while (p && !p.userData?.part) p = p.parent; if (!p || p.name === 'body') meshes.push(o); } });
-    if (!box) { box = new THREE.Box3(); for (const o of meshes) { o.geometry.computeBoundingBox(); box.union(o.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld))); } }
-    const len = box.max.z - box.min.z;
-    let best = null;
-    // candidates: front half of the body (handguard first, then the receiver side), around the bore height
-    search: for (const fz of [0.36, 0.42, 0.3, 0.48, 0.55, 0.62]) for (const fy of [0.62, 0.55, 0.7, 0.48]) {
-      const z = box.min.z + len * fz, y = box.min.y + (box.max.y - box.min.y) * fy;
-      const o = _v.set(box.min.x - 0.1, y, z).applyMatrix4(root.matrixWorld);
-      _ray.set(o, new THREE.Vector3(1, 0, 0).transformDirection(root.matrixWorld));
-      const hits = _ray.intersectObjects(meshes, false);
-      const h = hits[0];
-      if (!h || !h.face) continue;
-      const n = h.face.normal.clone().transformDirection(h.object.matrixWorld).transformDirection(inv);
-      if (n.x > -0.9) continue;
-      // the module needs ~4 cm of flat side: probe both ends
-      let flat = true;
-      for (const dz of [-0.016, 0.016]) for (const dy of [-0.005, 0.005]) {
-        const o2 = _v.set(box.min.x - 0.1, y + dy, z + dz).applyMatrix4(root.matrixWorld);
-        _ray.set(o2, new THREE.Vector3(1, 0, 0).transformDirection(root.matrixWorld));
-        const h2 = _ray.intersectObjects(meshes, false)[0];
-        if (!h2 || Math.abs(h2.distance - h.distance) > 0.004) flat = false;
-      }
-      if (!flat) continue;
-      const p = h.point.clone().applyMatrix4(inv);
-      best = { pos: p, quat: new THREE.Quaternion() };
-      break search;
-    }
-    place = best || { pos: new THREE.Vector3(box.min.x, (box.min.y + box.max.y) * 0.5, box.min.z + len * 0.4), quat: new THREE.Quaternion() };
-    mountCache.set(id, place);
+    list.push({ part: null, pos: new THREE.Vector3().setFromMatrixPosition(m), quat: new THREE.Quaternion().setFromRotationMatrix(m) });
   }
-  counter.object.position.copy(place.pos);
-  counter.object.quaternion.copy(place.quat);
-  root.add(counter.object);
+  const all = [], body = [];
+  let slide = null;
+  root.traverse((o) => {
+    if (!o.isMesh || o.name.startsWith('kc_')) return;
+    const p = partOf(o);
+    all.push(o);
+    if (!p || p.name === 'body') body.push(o);
+    if (p?.name === 'slide') slide = p;
+  });
+  const boxOf = (meshes) => { const b = new THREE.Box3(); for (const o of meshes) { o.geometry.computeBoundingBox(); b.union(o.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld))); } return b; };
+  if (!box) box = boxOf(body);
+  const dir = new THREE.Vector3(1, 0, 0).transformDirection(root.matrixWorld);
+  const hitAt = (meshes, y, z) => { _ray.set(_v.set(box.min.x - 0.1, y, z).applyMatrix4(root.matrixWorld), dir); return _ray.intersectObjects(meshes, false)[0]; };
+  // a flat playside face at (y, z) of `meshes` with ~4 cm of it around (probes at both ends), first hit from -X on it
+  const spot = (meshes, y, z) => {
+    const h = hitAt(all, y, z);
+    if (!h?.face || !meshes.includes(h.object)) return null;
+    const n = h.face.normal.clone().transformDirection(h.object.matrixWorld).transformDirection(inv);
+    if (n.x > -0.9) return null;
+    for (const dz of [-0.016, 0.016]) for (const dy of [-0.005, 0.005]) {
+      const h2 = hitAt(all, y + dy, z + dz);
+      if (!h2 || !meshes.includes(h2.object) || Math.abs(h2.distance - h.distance) > 0.004) return null;
+    }
+    return h.point.clone().applyMatrix4(inv);
+  };
+  const len = box.max.z - box.min.z;
+  if (slide && len < 0.34) {
+    const sm = all.filter((o) => partOf(o) === slide), sb = boxOf(sm), sl = sb.max.z - sb.min.z;
+    let n = 0;
+    // (fz from the muzzle end: the rear of the slide, clear of the hands and the front sight)
+    for (const fz of [0.76, 0.7, 0.82, 0.64, 0.58]) for (const fy of [0.48, 0.4, 0.56]) {
+      if (n >= 2) break;
+      const p = spot(sm, sb.min.y + (sb.max.y - sb.min.y) * fy, sb.min.z + sl * fz);
+      if (p && !list.some((s) => s.part === 'slide' && Math.abs(s.z - p.z) < 0.02)) { const s = toPart(slide, p); s.z = p.z; list.push(s); n++; }
+    }
+  }
+  let n = 0;
+  for (const fz of [0.36, 0.42, 0.3, 0.48, 0.55, 0.62]) for (const fy of [0.62, 0.55, 0.7, 0.48]) {
+    if (n >= 3) break;
+    const p = spot(body, box.min.y + (box.max.y - box.min.y) * fy, box.min.z + len * fz);
+    if (p && !list.some((s) => !s.part && s.pos.distanceTo(p) < 0.03)) { list.push(toPart(null, p)); n++; }
+  }
+  if (!list.length) list.push({ part: null, pos: new THREE.Vector3(box.min.x, (box.min.y + box.max.y) * 0.5, box.min.z + len * 0.4), quat: new THREE.Quaternion() });
+  return list;
+}
+
+function place(root, counter, s) {
+  let parent = root;
+  if (s.part) root.traverse((o) => { if (o.name === s.part && o.userData?.part) parent = o; });
+  counter.object.position.copy(s.pos);
+  counter.object.quaternion.copy(s.quat);
+  parent.add(counter.object);
+  counter.mount = s;
+}
+
+const mountId = (root) => root.userData.weapon || root.children[0]?.userData?.weapon || root.name;
+
+/**
+ * Mounts the counter on a weapon root (rest pose) at the weapon's current mount spot (mountSpots, cached per weapon
+ * id; a slide-mounted one rides the slide part).
+ */
+export function mountKillCounter(root, counter, box = null) {
+  const id = mountId(root);
+  let m = mountCache.get(id);
+  if (!m) { m = { list: mountSpots(root, box), pick: 0 }; mountCache.set(id, m); }
+  place(root, counter, m.list[Math.min(m.pick, m.list.length - 1)]);
   return counter;
+}
+
+/**
+ * First person (game.js, once per gun resting in the idle pose): the display must face the camera unhidden -- no
+ * hand, arm or part of the gun in front of most of it. A hidden one moves to the weapon's next mount spot (for the
+ * session, the armory and other players' copies included). Returns true when the counter is visible where it ends.
+ */
+export function fitCounterView(counter, root, occluders, camera) {
+  const m = mountCache.get(mountId(root));
+  if (!counter?.face || !m) return true;
+  const objs = [root, ...(occluders ? [occluders] : [])];
+  for (let tries = 0; tries <= m.list.length; tries++) {
+    if (!counterHidden(counter, objs, camera)) return true;
+    if (m.pick >= m.list.length - 1) return false;
+    m.pick++;
+    counter.object.removeFromParent();
+    place(root, counter, m.list[m.pick]);
+  }
+  return false;
+}
+
+const _eye = new THREE.Vector3(), _pt = new THREE.Vector3(), _fwd = new THREE.Vector3();
+const shown = (o) => { for (; o; o = o.parent) if (o.visible === false) return false; return true; };
+/** True when most of the display (its centre and corners) is behind something else or turned away from the camera. */
+function counterHidden(counter, objs, camera) {
+  camera.updateMatrixWorld(true);
+  for (const o of objs) o.updateMatrixWorld(true);
+  for (const o of objs) o.traverse((m) => { if (m.isSkinnedMesh) m.computeBoundingSphere(); });
+  const face = counter.face, S = KC_SIZE;
+  camera.getWorldPosition(_eye);
+  // facing: the display's normal (-X of the module) towards the eye
+  _fwd.set(-1, 0, 0).transformDirection(face.matrixWorld);
+  face.getWorldPosition(_pt);
+  if (_fwd.dot(_eye.clone().sub(_pt).normalize()) < 0.12) return true;
+  let hidden = 0;
+  const pts = [[0, 0], [-0.4, -0.35], [0.4, -0.35], [-0.4, 0.35], [0.4, 0.35]];
+  for (const [fz, fy] of pts) {
+    _pt.set(-0.0005, fy * S.faceH, fz * S.faceW).applyMatrix4(face.matrixWorld);
+    const d = _pt.distanceTo(_eye);
+    _ray.set(_eye, _pt.clone().sub(_eye).normalize());
+    _ray.far = d - 0.0015;
+    const hit = _ray.intersectObjects(objs, true).find((h) => !h.object.name.startsWith('kc_') && shown(h.object));
+    if (hit) hidden++;
+  }
+  _ray.far = Infinity;
+  return hidden >= 2;
 }

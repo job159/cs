@@ -431,6 +431,25 @@
       ],
       "loop": false
     },
+    "chunting_return_whoosh": {
+      "files": [
+        "premium_chunting/chunting_return_whoosh_1.ogg",
+        "premium_chunting/chunting_return_whoosh_2.ogg"
+      ],
+      "vol": 1,
+      "pitch": [
+        0.98,
+        1.02
+      ],
+      "voices": 2,
+      "bus": "sfx",
+      "spatial": true,
+      "range": [
+        6,
+        60
+      ],
+      "loop": false
+    },
     "chunting_rod_arc": {
       "files": [
         "premium_chunting/chunting_rod_arc_1.ogg",

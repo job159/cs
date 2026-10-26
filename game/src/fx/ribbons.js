@@ -9,7 +9,7 @@ import { materialUniforms } from '../gfx/materials.js';
 
 const VERT = /* glsl */`
 attribute vec4 color;
-attribute vec3 prm;     // x profile (0 soft, 1 beam core+glow, 2 blade slash, 3 feather, 4 crescent), y core ratio, z band scroll
+attribute vec3 prm;     // x profile (0 soft, 1 beam core+glow, 2 blade slash, 3 feather, 4 crescent, 5-7 blades, 8 molten), y core ratio, z band scroll
 uniform float uVm;
 uniform mat4 vmProj;
 varying vec4 vColor;
@@ -44,6 +44,16 @@ void main() {
     float band = vPrm.z > 0.0 ? 0.8 + 0.2 * sin((vUv.x - uTime * vPrm.z) * 6.2832) : 1.0;
     col = mix(col * 0.6, vec3(dot(col, vec3(0.33))) * 1.4 + col * 0.5, core);
     a = (core + glow) * band;
+  } else if (vPrm.x > 7.5) {
+    // molten flow (M04 熔流光束): a white-hot core in an orange sheath, lava streaks flowing from the gun along the shaft
+    float k = 1.0 / max(vPrm.y * vPrm.y, 1e-4);
+    float core = exp(-v * v * k * 2.2);
+    float sheath = exp(-v * v * 3.2);
+    float x = vUv.x * 2.4 - uTime * vPrm.z;
+    float flow = 0.5 + 0.5 * sin(x * 6.2832 + sin(x * 2.3 + v * 5.0) * 1.8 + v * 3.0);
+    float blob = smoothstep(0.55, 0.95, flow) * (1.0 - smoothstep(0.4, 0.95, v));
+    col = mix(col * 0.55, vec3(dot(col, vec3(0.33))) * 1.5 + col * 0.45, max(core, blob * 0.55));
+    a = core + sheath * (0.28 + 0.72 * blob);
   } else if (vPrm.x > 6.5) {
     // katana (M02 sabre cuts): a crisp white-hot line along the tip edge and only a faint streaked wake behind it (a
     // cut of light, not a sheet), the newest node whitest, the tail in the trail's tail colour
@@ -220,11 +230,11 @@ export class Ribbons {
 
   /**
    * Energy beam; returns { set(from, to), stop() }. opts: core [r,g,b], glow [r,g,b], wCore, wGlow, life, shrink, scroll,
-   * vm, pattern ('bands' | 'feather': herringbone barbs), wStart (width fraction at `from`) + ramp (m to full width:
+   * vm, pattern ('bands' | 'feather': herringbone barbs | 'molten': lava streaks flowing out, M04), wStart (width fraction at `from`) + ramp (m to full width:
    * a fat shaft that stays thin where it leaves the gun)
    */
   beam(from, to, { core = [3, 4, 8], glow = [0.6, 0.8, 2.4], wCore = 0.03, wGlow = 0.2, life = 0.3, shrink = 0.4, scroll = 0, vm = false, pattern = 'bands', wStart = 1, ramp = 0 } = {}) {
-    const b = { kind: 'beam', from: from.clone(), to: to.clone(), core, glow, wCore, wGlow, life, shrink, scroll, vm, age: 0, stopped: false, prof: pattern === 'feather' ? 3 : 1, wStart, ramp };
+    const b = { kind: 'beam', from: from.clone(), to: to.clone(), core, glow, wCore, wGlow, life, shrink, scroll, vm, age: 0, stopped: false, prof: pattern === 'feather' ? 3 : pattern === 'molten' ? 8 : 1, wStart, ramp };
     b.set = (f, t) => { b.from.copy(f); b.to.copy(t); return b; };
     b.stop = () => { b.age = Math.max(b.age, b.life); return b; };
     this.items.push(b);

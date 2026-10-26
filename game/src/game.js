@@ -16,6 +16,8 @@ import './weapons/premium/twinblades.js';  // X06 虹霓．雙絕 (dual sabres: 
 import './weapons/premium/pulao.js';       // M08 蒲牢．鐘吼 (pump gun: bell shells, knell, 108-bell ultimate, clips, crosshair, kill mark)
 import './weapons/premium/yazi.js';        // M02 睚眥．裂魂 (ring-pommel sabre + scabbard: own pose layer, combo, iai / parry, vengeance, puppet ult, clips, crosshair, kill mark)
 import './weapons/premium/chunting.js';    // E01 春霆神戟．驚蟄 (HV halberd: own trigger, 放電 arcs, 雷爆, thrown 驚蟄 bolt, 雷樁, clips, crosshair)
+import './weapons/premium/yanshu.js';      // M04 焰樞．破限 (forge-core cannon: delayed bursts, fire ring / inhale -> overload beam + ram dash, R R unbound, falcon drones, clips, crosshair, kill mark)
+import './weapons/premium/taifeng.js';     // E07 颱風眼．斬浪 (weather greatsword: combo, draw slash, 3-stage gale charge, homing water blade, eye-wall ult, clips, crosshair, kill mark)
 import { PlayerStatus } from './player/status.js';
 import { ZombieManager } from './zombies/manager.js';
 import { Match } from './match/match.js';
@@ -24,6 +26,9 @@ import { Throwables } from './weapons/throwables.js';
 import { BotSquad } from './player/bots.js';
 import { RemotePlayer } from './player/remote.js';
 import { WEAPONS, registerWeapon, isListed } from './weapons/defs.js';
+import { premiumWarmup } from './gfx/materials.js';
+import { fitCounterView } from './gfx/counter.js';
+import { inventory, MatchRewards } from './ui/inventory.js';
 import { SURF_NAMES } from './world/collision.js';
 
 const _down = new THREE.Vector3(), _feet = new THREE.Vector3(), _stepHit = {};
@@ -167,6 +172,39 @@ export class Game {
     this.match?.onKill(z, info);
     const bot = this.bots?.bots.find((b) => b.id === info?.shooter);
     if (bot) this.hud?.killFeed(bot.name, info.weapon || 'ump', z.def.zh, !!info.headshot);
+    if (info?.shooter === this.localId && info.weapon) this._skinKill(info.weapon, !!z.def?.boss);
+  }
+
+  /**
+   * The armory's look of a weapon the arsenal is given (ui/inventory.js skinDef): the equipped finish of a standard
+   * gun (with its 斬數計), the chosen 相 of a premium weapon -- whose kiln seed is rolled the first time it is bought.
+   */
+  skin(def) {
+    if (def?.premium && !inventory.tryout) {
+      const { rec, fresh } = inventory.ensurePremium(def.id);
+      if (fresh && rec?.kiln.special) this.hud?.toast(`窯變！${def.zh} 燒出了稀有的窯變色（武器庫可切換）`, 4200);
+    }
+    return inventory.skinDef(def);
+  }
+  /**
+   * 斬數計 in first person: once per gun in hand, after it has rested in the idle pose for a moment, the display must
+   * not sit under a hand (gfx/counter.js moves it to the weapon's next mount spot when it does).
+   */
+  _fitCounter(dt) {
+    const vm = this.vm, w = vm?.weapon;
+    if (!w?.counter || w._kcFit || !vm.arms) return;
+    w._kcIdle = (vm.clipWeight ?? 0) < 0.001 && !(vm.inspect > 0) ? (w._kcIdle || 0) + dt : 0;
+    if (w._kcIdle < 0.5) return;
+    w._kcFit = true;
+    try { fitCounterView(w.counter, w.root, vm.arms.model, this.camera); } catch (e) { console.warn('counter fit', e); }
+  }
+  /** One of our kills with `weapon`: the item's 斬數計 flips on the gun in hand; a premium weapon's mastery (相 unlocks). */
+  _skinKill(weapon, boss = false) {
+    const r = inventory.countKill(weapon, { boss });
+    if (!r) return;
+    const w = this.vm?.weapon;
+    if (r.counter && w?.counter && w.def?.id === weapon) w.counter.kill({ boss });
+    if (r.unlocked) { const ph = WEAPONS[weapon]?.zh; this.hud?.toast(`熟練度提升：${ph} 解鎖了新的相（武器庫）`, 3600); }
   }
   onPlayerDowned() { this.hud?.toast('你倒下了！', 2000); }
   /** Bled out: frame() locks every action and spectates until a revive sets status.alive again. */
@@ -219,13 +257,16 @@ export class Game {
     this.aim = new AimAssist(this);
     this.vm = new Viewmodel(this);
     await this.vm.init();
+    // the equipped finishes' first-person programs compile with the scene on the loading screen (no first-draw hitch)
+    const fins = inventory.equippedFinishes();
+    if (fins.length) premiumWarmup(this.vm.container, { presets: [], finishes: fins, world: false });
     progress?.(0.1);
     await yieldTask();
     this.zombies = new ZombieManager(this);
     await this.zombies.init({ onProgress: (p) => progress?.(0.1 + p * 0.7) });
     progress?.(0.8);
     await yieldTask();
-    if (this.matchOptions) { this.match = new Match(this, this.matchOptions); this.match.start(); }
+    if (this.matchOptions) { this.match = new Match(this, this.matchOptions); this.match.start(); this.rewards = new MatchRewards(this); }
     if (this.matchOptions?.bots > 0) this.bots = new BotSquad(this, Math.min(3, this.matchOptions.bots));
     await yieldTask();
     this.fx = new FX(this, this.renderer.q);
@@ -236,7 +277,11 @@ export class Game {
     // the knife has no model in this build (defs.js WIP): slot 3 would equip an invisible gun that never finishes loading
     if (isListed(WEAPONS.knife)) this.arsenal.give('knife', { select: false });
     this.arsenal.give('glock', { select: false });
-    const w = this.arsenal.give(this.startWeapon || 'akm', { select: false });
+    // the armory's 試用: the proving ground with that weapon (its look comes through skin())
+    const tryout = inventory.takeTryout();
+    this.tryout = tryout || null;   // (main.js: Esc returns to the armory; the HUD says what is being tried)
+    if (tryout) this.hud?.setTryout?.(inventory.tryoutLabel(tryout));
+    const w = this.arsenal.give(this.startWeapon || tryout?.weapon || 'akm', { select: false });
     if (this.hipOverride && w) w.def = { ...w.def, vm: { hip: this.hipOverride } };
     await this.arsenal.select(w ? Object.keys(this.arsenal.owned).find((k) => this.arsenal.owned[k] === w) | 0 : 1, true);
   }
@@ -295,9 +340,17 @@ export class Game {
       this.vm.update(dt, { lookX: s.lookX, lookY: s.lookY, speed: p.horizontalSpeed, onGround: p.onGround,
         landImpact: p.landImpact, crouch: p.crouch, moveX: s.move.x });
     }
+    this._fitCounter(dt);
     this.status?.update(dt);
     this.zombies?.update(dt);
     this.match?.update(dt);
+    this.rewards?.update();
+    // a guest's kills are credited by the host ('rw'): the 斬數計 / mastery follow its kill count, for the gun in hand
+    if (this.net && !this.net.host && this.match) {
+      const k = this.match.stats.kills;
+      if (this._kills0 == null || k < this._kills0) this._kills0 = k;
+      for (; this._kills0 < k; this._kills0++) if (this.arsenal?.def) this._skinKill(this.arsenal.def.id);
+    }
     this.net?.update(dt);
     this.bots?.update(dt);
     this._botRevive(dt, s);
@@ -403,6 +456,8 @@ export class Game {
    */
   dispose() {
     this.disposed = true;
+    // left before the end (quit, room closed, host gone): the cleared rounds and bosses still earn crate points
+    try { this.rewards?.leave(); } catch (e) { console.warn(e); }
     try { this.net?.dispose?.(); } catch (e) { console.warn(e); }
     try { this.fx?.particles?.dispose?.(); } catch (e) { console.warn(e); } // FX atlas render targets
     this.touch?.dispose?.();

@@ -49,11 +49,14 @@ export class PauseMenu extends Screen {
   }
 
   enter() {
-    const app = this.app, g = app.game, m = g?.match, mp = !!app.room;
+    const app = this.app, g = app.game, m = g?.match, mp = !!app.room, tryout = !!g?.tryout && !mp;
     this.el.classList.toggle('mp', mp); // lighter backdrop: the fight keeps going underneath
-    this.$('.pz-title b').textContent = mp ? '選單' : '已暫停';
-    this.$('.pz-title small').textContent = mp ? 'MENU' : 'PAUSED';
+    this.$('.pz-title b').textContent = tryout ? '試用中' : mp ? '選單' : '已暫停';
+    this.$('.pz-title small').textContent = tryout ? 'TRYOUT' : mp ? 'MENU' : 'PAUSED';
     this.$('.pz-note').textContent = mp ? '多人遊戲不會暫停，戰鬥仍在進行中。' : '';
+    // the armory's 試用: leaving is going back to the armory (nothing is lost, nothing to confirm)
+    this.$('[data-act="quit"] span').textContent = tryout ? '返回武器庫' : '離開戰鬥';
+    this.$('[data-act="quit"]').classList.toggle('danger', !tryout);
     const info = mapInfo(app.matchInfo?.map);
     const d = DIFF_INFO[app.matchInfo?.difficulty] || DIFF_INFO.normal;
     const rows = [['地圖', esc(info.zh)], ['難度', `<b style="color:${d.color}">${d.zh}</b>`]];
@@ -87,6 +90,7 @@ export class PauseMenu extends Screen {
     else if (act === 'settings') app.openOverlay('settings');
     else if (act === 'keys') app.openOverlay('settings', { tab: 'keys' });
     else if (act === 'quit') {
+      if (app.game?.tryout && !app.room) { app.toMenu(); return; }
       const host = app.room?.isHost;
       const text = !app.room ? '目前的進度不會保存。' : host ? '你是房主：離開會結束所有玩家的這場戰鬥並關閉房間。' : '你將離開房間，回到多人連線選單。';
       app.dialogs.confirm('離開戰鬥', text, { ok: '離開戰鬥', danger: true }).then((ok) => { if (ok) app.quitMatch(); });

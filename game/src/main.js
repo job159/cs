@@ -248,6 +248,8 @@ class App {
     if (top) { this.audio.play('ui_back'); return top.back(); }
     if (this.state === 'game') {
       if (this.game?.shop?.open) { this.game.shop.close(); return true; }
+      // the armory's 試用: Esc goes straight back to the armory (nothing to lose, nothing to confirm)
+      if (this.game?.tryout && !this.room && !this.ending) { this.toMenu(); return true; }
       if (!this.ending) this.pause();
       return true;
     }
@@ -282,6 +284,7 @@ class App {
       else if (top) html = arrows + item(['Escape'], '返回');
       else if (this.state === 'menu') html = arrows + item(['Enter'], '確認');
       else if (this.state === 'results') html = item(['Enter'], this.room && !this.room.isHost ? '確認' : '再來一局') + item(['Escape'], this.room ? '返回大廳' : '主選單');
+      else if (this.screen?.legend) html = this.screen.legend(item, arrows);   // a screen's own keys (the armory's tabs)
       else html = arrows + item(['Enter'], '確認') + item(['Escape'], '返回');
     }
     if (this._legendHtml !== html) {
@@ -726,8 +729,16 @@ class App {
     }, true);
     document.addEventListener('pointerlockchange', () => {
       if (document.pointerLockElement) { this.lockedOnce = true; return; }
-      // desktop: Esc while the mouse is captured only releases the pointer -> open the pause menu
-      if (this.state === 'game' && !this.paused && !this.ending && !this.game?.shop?.open && !this.dialogs.open) this.pause();
+      // desktop: Esc while the mouse is captured only releases the pointer -> open the pause menu (a 試用: back to the
+      // armory when the page still has the focus -- that was Esc; a lost focus (another window) pauses as usual)
+      if (this.state === 'game' && !this.paused && !this.ending && !this.game?.shop?.open && !this.dialogs.open) {
+        if (this.game?.tryout && !this.room) {
+          setTimeout(() => {
+            if (this.state !== 'game' || this.paused || document.pointerLockElement) return;
+            if (document.hasFocus()) this.toMenu(); else this.pause();
+          }, 80);
+        } else this.pause();
+      }
     });
     // first lock of a match (raw input when enabled; Input would take a plain lock) from a click anywhere on the
     // game view, and re-locking on the next click / key press after a menu when the browser refused the immediate

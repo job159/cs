@@ -42,8 +42,14 @@ export class Match {
     this.perkChoices = null;           // the traits offered for the pending point (rolled once per point)
     this.dmgMul = 1; this.reloadMul = 1; this.moveMul = 1; this.adrenT = 0;
     this.retries = this.diff.retries;
-    // deaths: team wipes; downs: our own (player/status.js)
-    this.stats = { kills: 0, headshots: 0, assists: 0, damage: 0, bossDamage: 0, deaths: 0, downs: 0, money: 0, spent: 0 };
+    // deaths: team wipes; downs: our own (player/status.js); died: our own bleed-outs; upgrades: money upgrade levels
+    // bought; weaponKills: { weapon id: kills } (best weapon); level: ours (results)
+    this.stats = { kills: 0, headshots: 0, assists: 0, damage: 0, bossDamage: 0, deaths: 0, downs: 0, died: 0, money: 0, spent: 0, upgrades: 0, level: 1, weaponKills: {} };
+    // Who did what (host / solo: the zombies run here, so this is the authoritative count for every player, AI
+    // teammate and guest alike): shooter id -> { k, h, a, d, b, wk: { weapon id: kills }, dd: bleed-outs (bots) }.
+    // The scoreboard (ui/scoreboard.js) and the multiplayer board (net/coop.js) read it.
+    this.tally = new Map();
+    this.elapsed = 0;          // s of match time (paused solo time excluded): the scoreboard clock
     this.queue = [];           // zombie types left to spawn this round
     this.spawnT = 0;
     this.boss = null;
@@ -75,6 +81,8 @@ export class Match {
     const g = this.game;
     this.timer -= dt;
     this.adrenT = Math.max(0, this.adrenT - dt);
+    if (this.state !== 'victory' && this.state !== 'defeat') this.elapsed += dt;
+    this._watchDeaths();
     if (!this._statsOn && g.arsenal) { this._statsOn = true; this._applyStats(); }   // (the arsenal comes after the match)
     if (!this._intro) this._shopIntro();
     this._emptySwitch();
@@ -327,6 +335,7 @@ export class Match {
   onKill(zombie, info) {
     const g = this.game;
     const d = zombie.def, head = !!info?.headshot, elite = !!zombie.elite;
+    this._tallyKill(zombie, info);
     if (info?.shooter !== g.localId) {
       g.bots?.onKill?.(info?.shooter, head);
       // finished by someone else (an AI teammate, a guest): our damage share pays an assist
@@ -334,8 +343,43 @@ export class Match {
       if (share > 0) this._assist(killMoney(d, head, elite) * share, killXp(d, head, elite) * share);
       return;
     }
-    this._reward(killMoney(d, head, elite), killXp(d, head, elite), head);
+    this._reward(killMoney(d, head, elite), killXp(d, head, elite), head, info.weapon);
     g.hud?.killFeed('你', info.weapon || 'knife', d.zh + (elite ? '（精英）' : ''), head);
+  }
+
+  // ---------------------------------------------------------------- tallies (scoreboard / results)
+  /** The tally row of a player / AI teammate / guest id (this.tally). */
+  tallyOf(id) {
+    let t = this.tally.get(id);
+    if (!t) this.tally.set(id, t = { k: 0, h: 0, a: 0, d: 0, b: 0, wk: {}, dd: 0 });
+    return t;
+  }
+
+  /**
+   * A kill (host / solo: onKill): the killer's kill, headshot and weapon; an assist for everyone else whose damage
+   * share pays one (rules.js assistShare: the same rule as the money, so the counts match the rewards).
+   */
+  _tallyKill(zombie, info) {
+    const by = info?.shooter;
+    if (by !== undefined && by !== null) {
+      const t = this.tallyOf(by);
+      t.k++;
+      if (info.headshot) t.h++;
+      const w = info.weapon || 'knife';
+      t.wk[w] = (t.wk[w] || 0) + 1;
+    }
+    for (const id of zombie.dmgBy?.keys() || []) if (id !== by && assistShare(zombie, id) > 0) this.tallyOf(id).a++;
+  }
+
+  /** Bleed-outs: ours (stats.died) and the AI teammates' (their tally rows), on the alive -> dead edge. */
+  _watchDeaths() {
+    const g = this.game, st = g.status;
+    if (st) { if (this._up && !st.alive) this.stats.died++; this._up = !!st.alive; }
+    for (const b of g.bots?.bots || []) {
+      const t = this.tallyOf(b.id);
+      if (t.up && !b.alive) t.dd++;
+      t.up = !!b.alive;
+    }
   }
 
   /** An assist (host: onKill; guests: the host's 'rw' row with a): money (+ 賞金獵人) and XP, no kill traits. */
@@ -352,6 +396,12 @@ export class Match {
   onDamage(zombie, dealt, shooter) {
     if (!(dealt > 0)) return;
     const g = this.game;
+    // the tally counts what the zombies' owner applied (a guest's own hits are predictions: the host's count wins)
+    if (!this.isMirror) {
+      const t = this.tallyOf(shooter);
+      t.d += dealt;
+      if (zombie.def?.boss) t.b += dealt;
+    }
     if (shooter === g.localId) {
       this.stats.damage += dealt;
       if (zombie.def?.boss) this.stats.bossDamage += dealt;
@@ -359,10 +409,12 @@ export class Match {
   }
 
   /** Our kill (host: onKill; guests: the host's 'rw' row): money (+ 賞金獵人), XP and the on-kill traits. */
-  _reward(money, xp, head) {
+  _reward(money, xp, head, weapon) {
     const g = this.game, t = this.traits, st = g.status;
     this.stats.kills++;
     if (head) this.stats.headshots++;
+    const wk = this.stats.weaponKills, w = weapon || 'knife';
+    wk[w] = (wk[w] || 0) + 1;
     if (money > 0) this.addMoney(money * (1 + 0.1 * (t.bounty || 0)));
     this.addXp(xp);
     if (t.leech && st) st.heal(2 * t.leech * (head ? 2 : 1));
@@ -384,6 +436,7 @@ export class Match {
       this.game.onLevelUp?.(this.level);
     }
     if (this.level > lv0) this._levelUpFx();
+    this.stats.level = this.level;
     const a = xpFor(this.level), b = xpFor(this.level + 1);
     this.xpFrac = this.level >= MAX_LEVEL ? 1 : (this.xp - a) / (b - a);
   }
@@ -465,6 +518,7 @@ export class Match {
     if (!this.canUpgrade()) { g.audio?.play('ui_deny'); g.hud?.toast('強化只在購買時間開放'); return false; }
     if (lv >= u.max || !this.spend(upgradePrice(id, lv))) { if (lv >= u.max) g.audio?.play('ui_deny'); return false; }
     this.upgrades[id] = lv + 1;
+    this.stats.upgrades++;
     this._applyStats();
     if (id === 'hp') g.status?.heal(UPGRADE.hp.value(lv + 1) - UPGRADE.hp.value(lv));
     if (id === 'ammo') {
@@ -775,7 +829,7 @@ export class Match {
   /** Host credited us with a kill: { m: killMoney (before our moneyMul / traits), x: XP, n, h, w }; a: an assist ({ m, x }). */
   applyReward(r) {
     if (r.a) { this._assist(r.m, r.x); return; }
-    this._reward(r.m, r.x, !!r.h);
+    this._reward(r.m, r.x, !!r.h, r.w);
     this.game.hud?.killFeed('你', r.w, r.n, !!r.h);
   }
 }
